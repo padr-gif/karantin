@@ -60,8 +60,9 @@ SHADE = {'t': 1.0, 's': .82, 'e': .64}     # верх, грань к +y, гра�
 class Spr:
     def __init__(s, w=230, h=200, ox=115, oy=150):
         s.im = Image.new('RGBA', (w, h), (0, 0, 0, 0)); s.d = ImageDraw.Draw(s.im); s.ox, s.oy = ox, oy
+        s.zb = [-1e9] * (w * h)   # глубина: чем больше x + y + z, тем ближе к зрителю
     def P(s, x, y, z): return (s.ox + (x - y) * U, s.oy + (x + y) * HH - z)
-    def face(s, pts, col, tex='paint', shade=1.0, edge=None, vert=None):
+    def face(s, pts, col, tex='paint', shade=1.0, edge=None, vert=None, wp=None):
         col = mul(hx(col), shade); m = Image.new('L', s.im.size, 0); ImageDraw.Draw(m).polygon(pts, fill=255)
         px, mp, T = s.im.load(), m.load(), TEX[tex]
         p0, p1, p3 = pts[0], pts[1], pts[-1]
@@ -69,13 +70,19 @@ class Spr:
         det = e1[0] * e2[1] - e1[1] * e2[0] or 1e-6
         L1, L2 = math.hypot(*e1) or 1, math.hypot(*e2) or 1
         if vert is None: vert = abs(e2[0]) < .01 * L2 + .5 and len(pts) == 4 and shade < .99   # вертикальная грань
-        gl = GLOSS.get(tex, 0)
+        gl = GLOSS.get(tex, 0); zb, Wd = s.zb, s.im.size[0]
+        dep = (lambda q: q[0] + q[1] + q[2] / 30)
+        D0, D1, D3 = (dep(wp[0]), dep(wp[1]), dep(wp[-1])) if wp else (None, 0, 0)
         xs, ys = [p[0] for p in pts], [p[1] for p in pts]
         for y in range(max(0, int(min(ys)) - 1), min(s.im.size[1], int(max(ys)) + 2)):
             for x in range(max(0, int(min(xs)) - 1), min(s.im.size[0], int(max(xs)) + 2)):
                 if not mp[x, y]: continue
                 dx, dy = x + .5 - p0[0], y + .5 - p0[1]
                 a = (dx * e2[1] - dy * e2[0]) / det; b = (e1[0] * dy - e1[1] * dx) / det   # 0..1 по граням
+                if D0 is not None:
+                    dd = D0 + a * (D1 - D0) + b * (D3 - D0); zi = y * Wd + x
+                    if dd < zb[zi] - .015: continue                                        # дальняя деталь не закрывает ближнюю
+                    zb[zi] = dd
                 k = T(a * L1, b * L2) * (1.05 - .1 * a)                                    # свет слева
                 if vert:
                     hz = b * L2
@@ -87,9 +94,10 @@ class Spr:
         if edge: s.d.line(pts + [pts[0]], fill=mul(col, edge) + (255,), width=1)
     def box(s, x0, y0, x1, y1, z0, z1, col, tex='paint', top=None, ttex=None, lip=True):
         P = s.P
-        s.face([P(x0, y1, z0), P(x1, y1, z0), P(x1, y1, z1), P(x0, y1, z1)], col, tex, SHADE['s'])
-        s.face([P(x1, y0, z0), P(x1, y1, z0), P(x1, y1, z1), P(x1, y0, z1)], col, tex, SHADE['e'])
-        s.face([P(x0, y0, z1), P(x1, y0, z1), P(x1, y1, z1), P(x0, y1, z1)], top or col, ttex or tex, SHADE['t'])
+        for q, sh, c_, t_ in (([(x0, y1, z0), (x1, y1, z0), (x1, y1, z1), (x0, y1, z1)], 's', col, tex),
+                              ([(x1, y0, z0), (x1, y1, z0), (x1, y1, z1), (x1, y0, z1)], 'e', col, tex),
+                              ([(x0, y0, z1), (x1, y0, z1), (x1, y1, z1), (x0, y1, z1)], 't', top or col, ttex or tex)):
+            s.face([P(*w) for w in q], c_, t_, SHADE[sh], wp=q)
         if lip:   # light rim on the top's front edges, a soft crease on the front corner
             c = mul(hx(top or col), 1.12) + (255,)
             s.d.line([P(x0, y1, z1), P(x1, y1, z1), P(x1, y0, z1)], fill=c)
@@ -97,18 +105,19 @@ class Spr:
     def sface(s, side, a0, a1, z0, z1, col, tex='paint', box=None, inset=.012, bevel=None):
         """прямоугольник на видимой грани коробки box=(x0,y0,x1,y1): side 's' (вдоль x) или 'e' (вдоль y); с фаской как у дверцы"""
         x0, y0, x1, y1 = box; P = s.P
-        if side == 's': y = y1 + inset; pts = [P(a0, y, z0), P(a1, y, z0), P(a1, y, z1), P(a0, y, z1)]
-        else: x = x1 + inset; pts = [P(x, a0, z0), P(x, a1, z0), P(x, a1, z1), P(x, a0, z1)]
+        if side == 's': y = y1 + inset; wq = [(a0, y, z0), (a1, y, z0), (a1, y, z1), (a0, y, z1)]
+        else: x = x1 + inset; wq = [(x, a0, z0), (x, a1, z0), (x, a1, z1), (x, a0, z1)]
+        pts = [P(*w) for w in wq]
         wpx = abs(a1 - a0) * U * 1.12; hpx = abs(z1 - z0)
         if tex == 'wood' and hpx > wpx * 1.3: tex = 'woodv'
-        s.face(pts, col, tex, SHADE[side], vert=False)
+        s.face(pts, col, tex, SHADE[side], vert=False, wp=wq)
         if bevel is None: bevel = tex != 'plain' and hpx >= 4 and wpx >= 4
         if bevel:
             c = mul(hx(col), SHADE[side]); hi, lo = mul(c, 1.22) + (255,), mul(c, .62) + (255,)
             s.d.line([pts[3], pts[2]], fill=hi); s.d.line([pts[0], pts[3]], fill=hi)
             s.d.line([pts[0], pts[1]], fill=lo); s.d.line([pts[1], pts[2]], fill=lo)
     def tface(s, x0, y0, x1, y1, z, col, tex='paint'):
-        P = s.P; s.face([P(x0, y0, z), P(x1, y0, z), P(x1, y1, z), P(x0, y1, z)], col, tex, 1.0)
+        P = s.P; wq = [(x0, y0, z), (x1, y0, z), (x1, y1, z), (x0, y1, z)]; s.face([P(*w) for w in wq], col, tex, 1.0, wp=wq)
     def soft(s, x0, y0, x1, y1, z0, z1, col, tex='fabric'):
         """мягкая подушка: коробка + тёмный шов по видимым краям + светлая «выпуклость» по центру верха"""
         s.box(x0, y0, x1, y1, z0, z1, col, tex, lip=False); P = s.P; sc = mul(hx(col), .58) + (255,)
@@ -136,7 +145,11 @@ class Spr:
                 if gl: k *= 1 + gl * 1.6 * math.exp(-((u - .22) / .07) ** 2)
                 if staves and int(u * staves * 2) % 2 == 0: k *= .93
                 if yb - yy < 6 and z0 < 1: k *= .8 + .2 * max(0, yb - yy) / 6
-                if 0 <= xx < W and 0 <= yy < H: px[xx, yy] = grime(mul(c, k), xx, yy, tex, (yb - yy) if z0 < 1 else 99) + (255,)
+                if 0 <= xx < W and 0 <= yy < H:
+                    l = (xx - x0) / (w or 1); sq = math.sqrt(max(0, 1 - l * l))
+                    dd = cx + cy + r * 1.414 * sq + (z0 + (yb + RY * sq - yy)) / 30; zi = yy * W + xx
+                    if dd < s.zb[zi] - .015: continue
+                    s.zb[zi] = dd; px[xx, yy] = grime(mul(c, k), xx, yy, tex, (yb - yy) if z0 < 1 else 99) + (255,)
         for z in bands:
             _, yz = s.P(cx, cy, z); t = (z - z0) / max(1, z1 - z0); w = RX * (1 + bulge * math.sin(math.pi * t)) + .6
             for xx in range(int(x0 - w), int(x0 + w) + 1):
@@ -406,16 +419,17 @@ def _(s):
     for k, (xx, zz, c, hh) in enumerate(((.12, .1, '#c8a46a', .3), (.5, .1, '#b08a52', .38), (.15, .66, '#c84a40', .2), (.38, .66, '#4a7ab0', .2), (.6, .66, '#e8c040', .2), (.2, 1.22, '#8a9a6a', .25), (.55, 1.22, '#d8d4c8', .3))):
         s.box(xx, .36, xx + .26 if k < 2 else xx + .18, .64, h(zz) + 3, h(zz + hh), c, 'paint')
 
-@ex('f_stove_0_1', 'Плита', '60×60, высота 85')
+@ex('f_stove_0_1', 'Плита', '60×60, высота 85, 4 конфорки')
 def _(s):
     b = (.2, .2, .8, .8); c = '#ececE8'
-    s.box(*b, 0, h(.85), c, 'metal'); s.box(.2, .2, .8, .3, h(.85), h(1.0), mul(hx(c), .95), 'metal')
-    for xx in (.3, .43, .57, .7): s.dot((xx, .3, h(.94)), '#3a3c40', 1)
-    for x, y in ((.33, .4), (.67, .4), (.33, .68), (.67, .68)):
-        p = s.P(x, y, h(.85)); s.d.ellipse([p[0] - 6, p[1] - 3, p[0] + 6, p[1] + 3], fill=(36, 36, 40, 255)); s.d.ellipse([p[0] - 3, p[1] - 1.5, p[0] + 3, p[1] + 1.5], fill=(80, 80, 86, 255))
-    s.sface('s', .24, .76, h(.08), h(.62), '#2a2a2e', 'metal', box=b); s.sface('s', .3, .7, h(.14), h(.56), '#4a5660', 'metal', box=b)
-    s.sface('s', .26, .74, h(.66), h(.69), '#a8acb0', 'metal', box=b, inset=.02)
-    s.sface('s', .24, .76, h(.72), h(.8), mul(hx(c), .92), 'metal', box=b)
+    s.box(*b, 0, h(.85), c, 'metal')
+    s.box(.2, .2, .8, .27, h(.85), h(.97), mul(hx(c), .95), 'metal')              # задний бортик
+    for xx in (.32, .44, .56, .68): s.dot((xx, .275, h(.91)), '#3a3c40')            # ручки-переключатели
+    for x, y in ((.36, .4), (.64, .4), (.36, .64), (.64, .64)):
+        p = s.P(x, y, h(.85)); s.d.ellipse([p[0] - 4, p[1] - 2, p[0] + 4, p[1] + 2], fill=(34, 34, 38, 255)); s.d.ellipse([p[0] - 2, p[1] - 1, p[0] + 2, p[1] + 1], fill=(92, 92, 98, 255))
+    s.sface('s', .25, .75, h(.08), h(.6), '#2a2a2e', 'metal', box=b); s.sface('s', .3, .7, h(.14), h(.54), '#465460', 'metal', box=b, bevel=False)
+    s.sface('s', .27, .73, h(.64), h(.67), '#a8acb0', 'metal', box=b, inset=.02)    # ручка духовки
+    s.sface('s', .22, .78, h(.72), h(.81), mul(hx(c), .9), 'metal', box=b)          # ящик под горелками
 
 @ex('f_cabinet_0_1', 'Кухонная тумба', '60×60, высота 85, столешница')
 def _(s):
