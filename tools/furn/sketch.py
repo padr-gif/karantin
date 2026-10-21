@@ -22,27 +22,49 @@ def vn(x, y, s):
     return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v
 
 # материалы: как шумят пиксели
+# материалы в координатах грани: u — вдоль нижнего края, v — вверх по грани (в экранных пикселях)
+def _grain(u, v, seed, along):
+    a, b = (u, v) if along else (v, u)
+    return .9 + .1 * vn(a / 10, b / 1.7, seed) + .05 * vn(a / 3, b / .9, seed + 1) + .035 * hsh(int(u), int(v), seed + 2)
 TEX = {
-    'wood':   lambda x, y: .9 + .14 * vn(x / 1.5, y / 7, 1) + .06 * hsh(x, y, 2),
-    'metal':  lambda x, y: .95 + .06 * vn(x / 5, y / 5, 3) + .04 * hsh(x, y, 4),
-    'paint':  lambda x, y: .94 + .08 * vn(x / 4, y / 4, 5) + .05 * hsh(x, y, 6),
-    'fabric': lambda x, y: .9 + .1 * ((x + y) % 2) * .5 + .1 * vn(x / 3, y / 3, 7) + .05 * hsh(x, y, 8),
-    'stone':  lambda x, y: .86 + .2 * vn(x / 2.5, y / 2.5, 9) + .08 * hsh(x, y, 10),
-    'plain':  lambda x, y: 1,
+    'wood':   lambda u, v: _grain(u, v, 1, True),      # волокна вдоль длинной стороны
+    'woodv':  lambda u, v: _grain(u, v, 11, False),    # волокна вертикально (дверцы, клёпки)
+    'metal':  lambda u, v: .95 + .05 * vn(u / 14, v / 1.2, 3) + .025 * hsh(int(u), int(v), 4),   # шлифованный металл
+    'paint':  lambda u, v: .95 + .06 * vn(u / 5, v / 5, 5) + .03 * hsh(int(u), int(v), 6),
+    'fabric': lambda u, v: .92 + .06 * ((int(u) + int(v)) % 2) + .07 * vn(u / 4, v / 4, 7) + .03 * hsh(int(u), int(v), 8),
+    'stone':  lambda u, v: .88 + .14 * vn(u / 3, v / 3, 9) + .06 * hsh(int(u), int(v), 10),
+    'plain':  lambda u, v: 1,
 }
+GLOSS = {'metal': .12, 'stone': .08, 'paint': .04}   # блик у светлого края у гладких материалов
 SHADE = {'t': 1.0, 's': .82, 'e': .64}     # верх, грань к +y, грань к +x (как в игре)
 
 class Spr:
     def __init__(s, w=230, h=200, ox=115, oy=150):
         s.im = Image.new('RGBA', (w, h), (0, 0, 0, 0)); s.d = ImageDraw.Draw(s.im); s.ox, s.oy = ox, oy
     def P(s, x, y, z): return (s.ox + (x - y) * U, s.oy + (x + y) * HH - z)
-    def face(s, pts, col, tex='paint', shade=1.0, edge=None):
+    def face(s, pts, col, tex='paint', shade=1.0, edge=None, vert=None):
         col = mul(hx(col), shade); m = Image.new('L', s.im.size, 0); ImageDraw.Draw(m).polygon(pts, fill=255)
         px, mp, T = s.im.load(), m.load(), TEX[tex]
+        p0, p1, p3 = pts[0], pts[1], pts[-1]
+        e1, e2 = (p1[0] - p0[0], p1[1] - p0[1]), (p3[0] - p0[0], p3[1] - p0[1])
+        det = e1[0] * e2[1] - e1[1] * e2[0] or 1e-6
+        L1, L2 = math.hypot(*e1) or 1, math.hypot(*e2) or 1
+        if vert is None: vert = abs(e2[0]) < .01 * L2 + .5 and len(pts) == 4 and shade < .99   # вертикальная грань
+        gl = GLOSS.get(tex, 0)
         xs, ys = [p[0] for p in pts], [p[1] for p in pts]
         for y in range(max(0, int(min(ys)) - 1), min(s.im.size[1], int(max(ys)) + 2)):
             for x in range(max(0, int(min(xs)) - 1), min(s.im.size[0], int(max(xs)) + 2)):
-                if mp[x, y]: px[x, y] = mul(col, T(x, y)) + (255,)
+                if not mp[x, y]: continue
+                dx, dy = x + .5 - p0[0], y + .5 - p0[1]
+                a = (dx * e2[1] - dy * e2[0]) / det; b = (e1[0] * dy - e1[1] * dx) / det   # 0..1 по граням
+                k = T(a * L1, b * L2) * (1.05 - .1 * a)                                    # свет слева
+                if vert:
+                    hz = b * L2
+                    if hz < 7: k *= .78 + .22 * hz / 7                                     # тень у пола
+                    if gl: k *= 1 + gl * math.exp(-((a - .18) / .09) ** 2)                # блик
+                else:
+                    k *= 1.03 - .06 * b                                                    # верх: дальний край темнее
+                px[x, y] = mul(col, k) + (255,)
         if edge: s.d.line(pts + [pts[0]], fill=mul(col, edge) + (255,), width=1)
     def box(s, x0, y0, x1, y1, z0, z1, col, tex='paint', top=None, ttex=None, lip=True):
         P = s.P
@@ -53,28 +75,63 @@ class Spr:
             c = mul(hx(top or col), 1.12) + (255,)
             s.d.line([P(x0, y1, z1), P(x1, y1, z1), P(x1, y0, z1)], fill=c)
             s.d.line([P(x1, y1, z0), P(x1, y1, z1)], fill=mul(hx(col), .55) + (255,))
-    def sface(s, side, a0, a1, z0, z1, col, tex='paint', box=None, inset=.012):
-        """прямоугольник на видимой грани коробки box=(x0,y0,x1,y1): side 's' (вдоль x) или 'e' (вдоль y)"""
+    def sface(s, side, a0, a1, z0, z1, col, tex='paint', box=None, inset=.012, bevel=None):
+        """прямоугольник на видимой грани коробки box=(x0,y0,x1,y1): side 's' (вдоль x) или 'e' (вдоль y); с фаской как у дверцы"""
         x0, y0, x1, y1 = box; P = s.P
         if side == 's': y = y1 + inset; pts = [P(a0, y, z0), P(a1, y, z0), P(a1, y, z1), P(a0, y, z1)]
         else: x = x1 + inset; pts = [P(x, a0, z0), P(x, a1, z0), P(x, a1, z1), P(x, a0, z1)]
-        s.face(pts, col, tex, SHADE[side])
+        wpx = abs(a1 - a0) * U * 1.12; hpx = abs(z1 - z0)
+        if tex == 'wood' and hpx > wpx * 1.3: tex = 'woodv'
+        s.face(pts, col, tex, SHADE[side], vert=False)
+        if bevel is None: bevel = tex != 'plain' and hpx >= 4 and wpx >= 4
+        if bevel:
+            c = mul(hx(col), SHADE[side]); hi, lo = mul(c, 1.22) + (255,), mul(c, .62) + (255,)
+            s.d.line([pts[3], pts[2]], fill=hi); s.d.line([pts[0], pts[3]], fill=hi)
+            s.d.line([pts[0], pts[1]], fill=lo); s.d.line([pts[1], pts[2]], fill=lo)
     def tface(s, x0, y0, x1, y1, z, col, tex='paint'):
         P = s.P; s.face([P(x0, y0, z), P(x1, y0, z), P(x1, y1, z), P(x0, y1, z)], col, tex, 1.0)
+    def soft(s, x0, y0, x1, y1, z0, z1, col, tex='fabric'):
+        """мягкая подушка: коробка + тёмный шов по видимым краям + светлая «выпуклость» по центру верха"""
+        s.box(x0, y0, x1, y1, z0, z1, col, tex, lip=False); P = s.P; sc = mul(hx(col), .58) + (255,)
+        s.d.line([P(x0, y0, z1), P(x1, y0, z1), P(x1, y1, z1), P(x0, y1, z1), P(x0, y0, z1)], fill=sc)
+        s.d.line([P(x0, y1, z0), P(x0, y1, z1)], fill=sc); s.d.line([P(x1, y1, z0), P(x1, y1, z1)], fill=sc); s.d.line([P(x1, y0, z0), P(x1, y0, z1)], fill=sc)
+        s.d.line([P(x0, y1, z0), P(x1, y1, z0), P(x1, y0, z0)], fill=sc)
+        cx, cy = (x0 + x1) / 2, (y0 + y1) / 2; px = s.im.load(); X, Y = P(cx, cy, z1)
+        rx, ry = abs(P(x1, cy, z1)[0] - X) * .55, (abs(P(cx, y1, z1)[1] - Y) + 1) * .5
+        for yy in range(int(Y - ry), int(Y + ry) + 1):
+            for xx in range(int(X - rx * 1.6), int(X + rx * 1.6) + 1):
+                if 0 <= xx < s.im.size[0] and 0 <= yy < s.im.size[1] and px[xx, yy][3]:
+                    d = ((xx - X) / (rx * 1.6 + .1)) ** 2 + ((yy - Y) / (ry + .1)) ** 2
+                    if d < 1: c = px[xx, yy]; px[xx, yy] = mul(c, 1 + .1 * (1 - d)) + (255,)
     def line(s, a, b, col, w=1): s.d.line([s.P(*a), s.P(*b)], fill=hx(col) + (255,), width=w)
     def dot(s, p, col, r=0): x, y = s.P(*p); s.d.rectangle([x - r, y - r, x + r, y + r], fill=hx(col) + (255,))
-    def cyl(s, cx, cy, r, z0, z1, col, tex='metal', top=None, ry=None):
-        x, y0 = s.P(cx, cy, z0); _, y1 = s.P(cx, cy, z1); rx = r * U * 1.41; ry = ry or rx / 2
-        col = hx(col); m = Image.new('L', s.im.size, 0); md = ImageDraw.Draw(m)
-        md.rectangle([x - rx, y1, x + rx, y0], fill=255); md.ellipse([x - rx, y0 - ry, x + rx, y0 + ry], fill=255)
-        px, mp, T = s.im.load(), m.load(), TEX[tex]
-        for yy in range(int(y1 - ry) - 1, int(y0 + ry) + 2):
-            for xx in range(int(x - rx) - 1, int(x + rx) + 2):
-                if 0 <= xx < s.im.size[0] and 0 <= yy < s.im.size[1] and mp[xx, yy]:
-                    t = (xx - (x - rx)) / (2 * rx); k = 1.15 if t < .25 else 1.0 if t < .5 else .86 if t < .78 else .7
-                    px[xx, yy] = mul(col, k * T(xx, yy)) + (255,)
-        tc = mul(hx(top or col), 1.08)
-        s.d.ellipse([x - rx, y1 - ry, x + rx, y1 + ry], fill=tc + (255,))
+    def cyl(s, cx, cy, r, z0, z1, col, tex='metal', top=None, ry=None, bands=(), band_col=None, staves=0, bulge=0.0, rim=None):
+        x0, yb = s.P(cx, cy, z0); _, yt = s.P(cx, cy, z1); RX = r * U * 1.41; RY = ry or RX / 2
+        px = s.im.load(); c = hx(col); T = TEX[tex]; W, H = s.im.size; gl = GLOSS.get(tex, 0)
+        for yy in range(int(yt), int(yb + RY) + 1):
+            t = (yb - yy) / max(1, yb - yt); w = RX * (1 + bulge * math.sin(math.pi * min(1, max(0, t))))
+            for xx in range(int(x0 - w), int(x0 + w) + 1):
+                if yy > yb and ((xx - x0) / RX) ** 2 + ((yy - yb) / RY) ** 2 > 1: continue
+                u = (xx - (x0 - w)) / (2 * w or 1)
+                u = min(1, max(0, u)); k = (1.14 - .42 * u ** 1.3) * T(u * 40, yb - yy)                       # круглый свет слева-направо
+                if gl: k *= 1 + gl * 1.6 * math.exp(-((u - .22) / .07) ** 2)
+                if staves and int(u * staves * 2) % 2 == 0: k *= .93
+                if yb - yy < 6 and z0 < 1: k *= .8 + .2 * max(0, yb - yy) / 6
+                if 0 <= xx < W and 0 <= yy < H: px[xx, yy] = mul(c, k) + (255,)
+        for z in bands:
+            _, yz = s.P(cx, cy, z); t = (z - z0) / max(1, z1 - z0); w = RX * (1 + bulge * math.sin(math.pi * t)) + .6
+            for xx in range(int(x0 - w), int(x0 + w) + 1):
+                dy = RY * math.sqrt(max(0, 1 - ((xx - x0) / w) ** 2)); u = (xx - (x0 - w)) / (2 * w)
+                k = 1.2 - .5 * u
+                for d in (0, 1, 2):
+                    yy = int(yz + dy) - 1 + d
+                    if 0 <= xx < W and 0 <= yy < H: px[xx, yy] = mul(hx(band_col), k * (1.1 if d == 0 else 1)) + (255,)
+        tc = hx(top) if top else mul(c, 1.1); rc = hx(rim) if rim else mul(tc, .78)
+        s.d.ellipse([x0 - RX, yt - RY, x0 + RX, yt + RY], fill=rc + (255,))
+        if RX > 3 and RY > 2:
+            s.d.ellipse([x0 - RX + 1.5, yt - RY + 1, x0 + RX - 1.5, yt + RY - 1], fill=tc + (255,))
+            s.d.arc([x0 - RX + 1.5, yt - RY + 1, x0 + RX - 1.5, yt + RY - 1], 200, 300, fill=mul(tc, 1.12) + (255,))
+        return x0, yt, RX, RY
     def outline(s):
         src = s.im.copy(); sp = src.load(); px = s.im.load(); W, H = s.im.size
         for y in range(H):
@@ -128,13 +185,14 @@ def _(s):
 
 @sk('Кресло', '80×85 см, сиденье 45, спинка 95 · вздремнуть сидя')
 def _(s):
-    c = '#8c4a3a'; c2 = mul(hx(c), 1.1)
+    c = '#8c4a3a'; c2 = mul(hx(c), 1.08)
     legs(s, .12, .1, .88, .92, .06, h(.12), WOOD_D)
-    s.box(.12, .1, .88, .92, h(.12), h(.3), c, 'fabric')                           # основание
-    s.box(.12, .1, .88, .3, h(.3), h(.95), c, 'fabric')                            # спинка
-    s.box(.12, .3, .26, .92, h(.3), h(.62), c, 'fabric'); s.box(.74, .3, .88, .92, h(.3), h(.62), c, 'fabric')   # подлокотники
-    s.box(.26, .3, .74, .9, h(.3), h(.45), c2, 'fabric')                           # подушка сиденья
-    s.box(.28, .28, .72, .36, h(.45), h(.82), c2, 'fabric')                        # подушка спинки
+    s.box(.12, .1, .88, .92, h(.12), h(.3), mul(hx(c), .9), 'fabric')
+    s.soft(.12, .1, .88, .3, h(.3), h(.95), c)
+    s.soft(.12, .3, .26, .92, h(.3), h(.64), c); s.soft(.74, .3, .88, .92, h(.3), h(.64), c)
+    s.soft(.26, .38, .74, .9, h(.3), h(.46), c2)
+    s.soft(.28, .28, .72, .4, h(.46), h(.84), c2)
+    s.soft(.4, .44, .6, .58, h(.46), h(.56), '#d8c49a')                               # маленькая подушка
 
 @sk('Журнальный столик', '100×55, высота 45 см · газеты и журналы')
 def _(s):
@@ -174,9 +232,9 @@ def _(s):
     s.box(*b, 0, h(1.25), c, 'wood')
     s.box(.05, .48, 1.55, .7, h(.68), h(.74), c, 'wood')                           # полка клавиатуры
     s.tface(.12, .5, 1.48, .66, h(.74) + .2, '#f2efe6', 'plain')
-    for k in range(20):
+    for k in range(21):
         if k % 7 in (2, 6): continue
-        xx = .16 + k * .066; s.tface(xx, .5, xx + .035, .57, h(.74) + .5, '#1a1616', 'plain')
+        xx = .17 + k * .064; s.box(xx, .5, xx + .032, .565, h(.74), h(.74) + 1.5, '#1a1616', 'plain', lip=False)   # чёрные клавиши группами 2 и 3
     s.box(.05, .48, .13, .7, h(.12), h(.68), c, 'wood'); s.box(1.47, .48, 1.55, .7, h(.12), h(.68), c, 'wood')   # щёки
     s.box(.12, .62, .18, .7, 0, h(.12), c, 'wood'); s.box(1.42, .62, 1.48, .7, 0, h(.12), c, 'wood')
     s.box(.7, .16, .9, .2, h(1.25), h(1.4), '#e8e2d0', 'paint')                    # ноты
@@ -365,20 +423,22 @@ def _(s):
     s.box(x0, y0, x1, y0 + .08, 0, h(1.0), w, 'wood')                              # изголовье
     s.box(x0, y0 + .08, x1, y1, h(.08), h(.3), w, 'wood'); legs(s, x0, y0 + .08, x1, y1, .07, h(.08), w)
     s.box(x0 + .04, y0 + .1, x1 - .04, y1 - .04, h(.3), h(.5), '#ece8de', 'fabric')   # матрас
-    s.box(x0 + .02, .78, x1 - .02, y1 - .02, h(.48), h(.54), '#8a3e36', 'fabric')     # одеяло
-    s.box(x0 + .02, .78, x1 - .02, .9, h(.54), h(.56), '#f0ece2', 'fabric')           # отворот
-    for xa in (.12, .74): s.box(xa, .16, xa + .52, .5, h(.5), h(.62), '#f4f0e6', 'fabric')   # две подушки
+    s.soft(x0 + .01, .74, x1 + .01, y1 + .01, h(.34), h(.55), '#8a3e36')               # одеяло свисает по краям
+    s.soft(x0 + .01, .74, x1 + .01, .88, h(.55), h(.58), '#f0ece2')                     # отворот
+    for xa in (.12, .74): s.soft(xa, .16, xa + .52, .5, h(.5), h(.64), '#f4f0e6')   # две подушки
     s.box(x0, y1 - .06, x1, y1, h(.08), h(.42), w, 'wood')                         # изножье
 
 @ex('f_sofa_0_1', 'Диван', '200×90, сиденье 45, спинка 85', (2, 1))
 def _(s):
-    c = '#8c4a3a'; c2 = mul(hx(c), 1.1); x0, x1, y0, y1 = .02, 1.98, .08, .94
+    c = '#8c4a3a'; c2 = mul(hx(c), 1.08); x0, x1, y0, y1 = .02, 1.98, .08, .94
     legs(s, x0 + .04, y0 + .04, x1 - .04, y1 - .04, .06, h(.1), WOOD_D)
-    s.box(x0, y0, x1, y1, h(.1), h(.28), c, 'fabric')
-    s.box(x0, y0, x1, y0 + .22, h(.28), h(.85), c, 'fabric')                       # спинка
-    s.box(x0, y0 + .22, x0 + .16, y1, h(.28), h(.6), c, 'fabric'); s.box(x1 - .16, y0 + .22, x1, y1, h(.28), h(.6), c, 'fabric')
+    s.box(x0, y0, x1, y1, h(.1), h(.28), mul(hx(c), .9), 'fabric')
+    s.soft(x0, y0, x1, y0 + .2, h(.28), h(.85), c)                                  # спинка
+    s.soft(x0, y0 + .2, x0 + .16, y1, h(.28), h(.62), c); s.soft(x1 - .16, y0 + .2, x1, y1, h(.28), h(.62), c)   # подлокотники
     for k in range(3):
-        a = x0 + .17 + k * .55; s.box(a, y0 + .22, a + .53, y1 - .02, h(.28), h(.45), c2, 'fabric'); s.box(a + .02, y0 + .2, a + .51, y0 + .32, h(.45), h(.8), c2, 'fabric')
+        a = x0 + .17 + k * .547
+        s.soft(a, y0 + .3, a + .54, y1 - .02, h(.28), h(.46), c2)                    # сиденья
+        s.soft(a + .02, y0 + .2, a + .52, y0 + .34, h(.46), h(.8), c2)               # подушки спинки
 
 @ex('f_tv_0_1', 'Телевизор на тумбе', 'тумба 120×40×50, кинескоп', (1.2, 1))
 def _(s):
@@ -418,11 +478,14 @@ def _(s):
 
 @ex('f_toilet_0_1', 'Унитаз', '40×65, бачок 80')
 def _(s):
-    s.box(.32, .14, .68, .32, h(.4), h(.8), WHITE, 'stone')                        # бачок
-    s.box(.4, .2, .6, .3, h(.8), h(.82), '#d0d4d6', 'stone')
-    s.box(.38, .3, .62, .6, 0, h(.3), WHITE, 'stone')                              # ножка
-    s.box(.3, .3, .7, .78, h(.3), h(.42), WHITE, 'stone')                          # чаша
-    s.tface(.36, .38, .64, .72, h(.42) + .3, '#a8b4ba'); s.tface(.4, .44, .6, .66, h(.42) + .3, '#86a0ae')
+    s.box(.38, .16, .62, .4, 0, h(.3), '#e4e6e2', 'stone')                           # задняя часть основания
+    s.box(.3, .12, .7, .34, h(.3), h(.8), WHITE, 'stone')                            # бачок стоит на чаше
+    s.box(.29, .11, .71, .35, h(.8), h(.83), '#f4f6f2', 'stone')
+    s.box(.44, .18, .56, .26, h(.83), h(.85), '#b8bec4', 'metal', lip=False)          # кнопка
+    s.cyl(.5, .52, .12, 0, h(.3), '#e4e6e2', 'stone')                                # ножка
+    x, y, rx, ry = s.cyl(.5, .52, .19, h(.3), h(.42), WHITE, 'stone', top='#f2f4f0')  # чаша с сиденьем
+    s.d.ellipse([x - rx * .62, y - ry * .58, x + rx * .62, y + ry * .58], fill=(150, 170, 182, 255))
+    s.d.ellipse([x - rx * .4, y - ry * .3, x + rx * .4, y + ry * .45], fill=(118, 150, 170, 255))
 
 @ex('f_bookshelf_0_1', 'Книжный шкаф', '80×30, высота 200')
 def _(s):
@@ -479,13 +542,11 @@ def _(s):
     s.box(.2, .78, .24, .82, 0, h(.6), mul(hx(c), .78), 'wood', lip=False); s.box(.76, .78, .8, .82, 0, h(.6), mul(hx(c), .78), 'wood', lip=False); s.box(.78, .2, .82, .24, 0, h(.6), mul(hx(c), .7), 'wood', lip=False)
     s.line((.24, .81, h(.04)), (.76, .81, h(.56)), mul(hx(c), .7), 2)
 
-@ex('barrel', 'Бочка для воды', 'Ø60, высота 90')
+@ex('barrel', 'Бочка для воды', 'Ø55, высота 90, дуб и железо')
 def _(s):
-    s.cyl(.5, .5, .28, 0, h(.9), '#2a5a9a', 'metal', top='#3a6aaa')
-    rx = .28 * U * 1.41; ry = rx / 2
-    for z in (h(.15), h(.75)): x, y = s.P(.5, .5, z); s.d.arc([x - rx, y - ry, x + rx, y + ry], 0, 180, fill=(24, 52, 96, 255), width=2)
-    x, y = s.P(.5, .5, h(.9)); s.d.ellipse([x - rx * .75, y - ry * .75, x + rx * .75, y + ry * .75], fill=(36, 74, 124, 255))
-    s.dot((.5 + .14, .5 - .02, h(.9) + 1), '#c8ccd2', 1)   # пробка
+    x, y, rx, ry = s.cyl(.5, .5, .25, 0, h(.88), '#8a5a34', 'woodv', bulge=.1, staves=9, bands=(h(.1), h(.44), h(.78)), band_col='#4a4c50', top='#9e6e40', rim='#5a3a20')
+    for k in (-.5, 0, .5): s.d.line([(x + k * rx, y - ry * .82 * math.sqrt(1 - k * k)), (x + k * rx, y + ry * .82 * math.sqrt(1 - k * k))], fill=(110, 74, 42, 255))
+    s.box(.67, .78, .73, .84, h(.08), h(.14), '#8a6a40', 'wood', lip=False)
 
 def sheet_existing(out, atlas='assets/atlas.json', sprites='assets/sprites'):
     import json, textwrap, os
@@ -584,3 +645,27 @@ def sheet_barrels(out):
     img.save(out)
 if __name__ == '__main__' and len(sys.argv) > 2 and sys.argv[2] == 'barrels':
     sheet_barrels(sys.argv[1])
+
+def render_item(fn, size):
+    sw, sl = size; s = Spr(ox=115 - (sw - sl) * U / 2, oy=150 - (sw + sl - 2) * HH / 2); fn(s); im = s.outline()
+    fl = Image.new('RGBA', im.size, (0, 0, 0, 0)); fd = ImageDraw.Draw(fl)
+    for tx in range(math.ceil(sw)):
+        for ty in range(math.ceil(sl)): fd.polygon([s.P(tx, ty, 0), s.P(tx + 1, ty, 0), s.P(tx + 1, ty + 1, 0), s.P(tx, ty + 1, 0)], fill=(52, 44, 36, 255), outline=(70, 60, 48, 255))
+    fl.alpha_composite(im); return fl.crop(fl.getbbox())
+def sheet_all(out, only=None):
+    import textwrap
+    items = [(n, note, fn, size) for _, n, note, fn, size in EX] + list(SK)
+    if only: items = [it for it in items if any(o in it[0] for o in only)]
+    cols = min(5, len(items)); cw, chh, K = 360, 420, 3
+    rows = math.ceil(len(items) / cols)
+    img = Image.new('RGB', (cols * cw + 20, rows * chh + 20), (24, 28, 28)); d = ImageDraw.Draw(img)
+    fb = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 23); fs = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 17)
+    for k, (name, note, fn, size) in enumerate(items):
+        sp = render_item(fn, size); cx, cy = 10 + (k % cols) * cw, 10 + (k // cols) * chh; bh = chh - 90
+        sc = min(K, (cw - 20) / sp.width, bh / sp.height); r = sp.resize((max(1, int(sp.width * sc)), max(1, int(sp.height * sc))), Image.NEAREST)
+        img.paste(r, (cx + (cw - r.width) // 2, cy + bh - r.height), r)
+        d.text((cx + 12, cy + bh + 10), name, fill=(230, 224, 208), font=fb)
+        for n, ln in enumerate(textwrap.wrap(note, 34)[:2]): d.text((cx + 12, cy + bh + 40 + n * 20), ln, fill=(150, 156, 150), font=fs)
+    img.save(out); print(len(items), img.size)
+if __name__ == '__main__' and len(sys.argv) > 2 and sys.argv[2] == 'all':
+    sheet_all(sys.argv[1], sys.argv[3:] or None)
