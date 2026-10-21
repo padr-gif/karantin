@@ -243,3 +243,68 @@ paint = function (size, fn) {
   } catch (e) {}
   return c;
 };
+
+// ---- small details on the kitchen pieces ----
+const fvBox = (F, u0, u1, d0, d1, z0, z1, rgb, f) => { const a = F.at(u0, d0), b = F.at(u1, d1); box(Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1]), z0, z1, rgb, f); };
+FV.stove = function (fu, f) {
+  const F = fvFrame(fu), H = 31, c = [234, 234, 230], D = F.depth;
+  fvBox(F, 0, 1, 0, D, 0, H, c, f);
+  fvBox(F, 0, 1, D * .82, D, H, H + 9, shade(c, .96), f);                       // back panel with the knobs
+  resetT();
+  for (const u of [.18, .34, .66, .82]) { fvEll(F, u, D * .86, H + 5, 2.2, 1.4, C([60, 60, 66], f)); fvEll(F, u, D * .86, H + 5.4, 1, .7, C([170, 170, 176], f)); }
+  fvTopRect(F, .42, .58, D * .83, D * .9, H + 6.5, C([60, 160, 220], f * 1.1));     // little clock
+  for (const [u, d] of [[.27, .22], [.73, .22], [.27, .58], [.73, .58]]) { fvEll(F, u, d * D, H + .3, 5.4, 2.8, C([30, 30, 34], f)); fvEll(F, u, d * D, H + .5, 3.6, 1.9, C([62, 62, 68], f)); fvEll(F, u, d * D, H + .7, 1.2, .7, C([120, 120, 126], f)); }
+  fvQuad(F, .1, .9, 4, 21, [34, 34, 38], f); fvQuad(F, .16, .84, 7, 18, [58, 66, 74], f);   // oven door with its glass
+  fvLine(F, .2, 22.5, .8, 22.5, [170, 170, 172], f, 1.8);                          // door handle
+  fvQuad(F, .1, .9, 25.5, 29, shade(c, .9), f);                                    // control strip
+  for (const u of [.25, .5, .75]) fvLine(F, u, 27, u, 27.6, [60, 60, 66], f, 2.2);
+};
+FV.sink = function (fu, f) {
+  const F = fvFrame(fu), H = 30, wood = COL.cabinet, top = [212, 208, 198], D = F.depth;
+  fvBox(F, .02, .98, .04, D, 0, H - 3, wood, f); fvBox(F, 0, 1, 0, D, H - 3, H, top, f);
+  resetT();
+  fvTopRect(F, .2, .8, D * .16, D * .7, H + .3, C([150, 156, 162], f)); fvTopRect(F, .25, .75, D * .21, D * .65, H + .3, C([112, 120, 128], f));
+  fvEll(F, .5, D * .45, H + .4, 1.3, .7, C([60, 64, 70], f));                     // drain
+  fvBox(F, .47, .53, D * .78, D * .88, H, H + 11, [196, 200, 206], f);             // faucet
+  fvBox(F, .48, .52, D * .52, D * .84, H + 9, H + 11, [196, 200, 206], f);
+  fvBox(F, .38, .43, D * .8, D * .86, H, H + 4, [180, 70, 64], f); fvBox(F, .57, .62, D * .8, D * .86, H, H + 4, [70, 110, 180], f);   // hot / cold
+  resetT();
+  fvQuad(F, .07, .48, 4, H - 7, shade(wood, 1.1), f); fvQuad(F, .52, .93, 4, H - 7, shade(wood, 1.1), f);
+  fvLine(F, .42, 14, .42, 18, [230, 210, 160], f, 1.6); fvLine(F, .58, 14, .58, 18, [230, 210, 160], f, 1.6);
+};
+FV.cabinet = function (fu, f) {
+  const F = fvFrame(fu), H = 30, wood = COL.cabinet, top = [212, 208, 198], D = F.depth;
+  fvBox(F, .02, .98, .04, D, 0, H - 3, wood, f); fvBox(F, 0, 1, -.02, D, H - 3, H, top, f);   // the worktop overhangs a little
+  resetT();
+  fvQuad(F, .06, .94, H - 9, H - 4.5, shade(wood, 1.14), f); fvLine(F, .44, H - 6.8, .56, H - 6.8, [230, 210, 160], f, 1.5);   // drawer
+  fvQuad(F, .06, .48, 3, H - 11, shade(wood, 1.1), f); fvQuad(F, .52, .94, 3, H - 11, shade(wood, 1.1), f);
+  fvLine(F, .42, 11, .42, 15, [230, 210, 160], f, 1.6); fvLine(F, .58, 11, .58, 15, [230, 210, 160], f, 1.6);
+  fvQuad(F, .02, .98, 0, 2, shade(wood, .55), f);                                  // toe kick
+  if ((fu.x * 7 + fu.y * 3) % 3 === 0) {   // something left on the worktop
+    fvBox(F, .2, .34, D * .4, D * .6, H, H + 7, [196, 70, 56], f); fvBox(F, .2, .34, D * .4, D * .6, H + 7, H + 8, [220, 220, 216], f);
+  } else if ((fu.x + fu.y) % 3 === 1) { fvTopRect(F, .55, .85, D * .25, D * .7, H + .4, C([150, 104, 60], f)); }   // chopping board
+  resetT();
+};
+FV.fridge = function (fu, f) {
+  const F = fvFrame(fu), H = 66, c = [228, 230, 226], D = F.depth;
+  fvBox(F, 0, 1, 0, D, 2, H, c, f); fvBox(F, .04, .96, .05, D * .95, 0, 2, [60, 60, 64], f);
+  resetT();
+  fvQuad(F, .04, .96, 4, 40, shade(c, 1.03), f); fvQuad(F, .04, .96, 42, H - 3, shade(c, 1.03), f);
+  fvLine(F, .84, 22, .84, 36, [150, 154, 158], f, 2); fvLine(F, .84, 45, .84, 54, [150, 154, 158], f, 2);
+  // magnets and a note when the door is in view
+  fvQuad(F, .2, .36, 46, 56, [244, 236, 190], f); fvQuad(F, .45, .52, 52, 56, [200, 60, 60], f); fvQuad(F, .3, .4, 30, 34, [70, 130, 200], f);
+  // the top edge gets a slight highlight so the box doesn't look flat from the back
+  const p = [F.at(0, 0), F.at(1, 0)]; ctx.strokeStyle = C(c, f * 1.12, .7); ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(SX(p[0][0], p[0][1]), SY(p[0][0], p[0][1], H)); ctx.lineTo(SX(p[1][0], p[1][1]), SY(p[1][0], p[1][1], H)); ctx.stroke();
+};
+FV.counter2 = FV.cabinet;
+FV.table = function (fu, f) {
+  const [x0, y0, x1, y1] = fu.r, c = [146, 106, 68], t = .06;
+  for (const [a, b] of [[x0 + .06, y0 + .06], [x1 - .06 - t, y0 + .06], [x0 + .06, y1 - .06 - t], [x1 - .06 - t, y1 - .06 - t]]) box(a, b, a + t, b + t, 0, 21, shade(c, .78), f);
+  box(x0 + .05, y0 + .05, x1 - .05, y1 - .05, 18, 21, shade(c, .85), f);   // apron under the top
+  box(x0, y0, x1, y1, 21, 24, c, f); resetT();
+  // a mug and a plate
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  ctx.fillStyle = C([236, 234, 228], f); ctx.beginPath(); ctx.ellipse(SX(cx - .12, cy + .06), SY(cx - .12, cy + .06, 24.3), 6, 3, 0, 0, 6.283); ctx.fill();
+  ctx.fillStyle = C([210, 206, 196], f); ctx.beginPath(); ctx.ellipse(SX(cx - .12, cy + .06), SY(cx - .12, cy + .06, 24.4), 3.6, 1.8, 0, 0, 6.283); ctx.fill();
+  box(cx + .1, cy - .12, cx + .2, cy - .02, 24, 30, [70, 110, 160], f); resetT();
+};
