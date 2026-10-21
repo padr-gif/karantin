@@ -294,5 +294,232 @@ def sheet(out):
         for n, ln in enumerate(textwrap.wrap(note, 36)): d.text((cx + 14, cy + box_h + 50 + n * 24), ln, fill=(150, 156, 150), font=fs)
     img.save(out); print(len(SK), 'эскизов', img.size)
 
-if __name__ == '__main__':
+if __name__ == '__main__' and not (len(sys.argv) > 2 and sys.argv[2] == 'existing'):
     sheet(sys.argv[1] if len(sys.argv) > 1 else 'sketch.png')
+
+# ---------- нынешняя мебель в реальных пропорциях ----------
+EX = []
+def ex(key, name, note, size=(1, 1)):
+    def deco(fn): EX.append((key, name, note, fn, size)); return fn
+    return deco
+GLASS_W, WHITE, STEEL = '#e8eae6', '#eceeea', '#b4bac0'
+
+@ex('f_wardrobe_0_1', 'Шкаф платяной', '100×60, высота 200')
+def _(s):
+    b = (.0, .2, 1.0, .8); c = WOOD
+    s.box(*b, 0, h(2.0), c, 'wood'); s.box(-.02, .18, 1.02, .82, h(2.0), h(2.05), WOOD_D, 'wood')
+    s.sface('s', .03, .49, h(.08), h(1.95), mul(hx(c), 1.1), 'wood', box=b); s.sface('s', .51, .97, h(.08), h(1.95), mul(hx(c), 1.1), 'wood', box=b)
+    for x in (.44, .56): s.box(x, .8, x + .02, .83, h(.95), h(1.15), '#d8b870', 'metal', lip=False)
+    s.sface('s', .02, .98, 0, h(.06), WOOD_D, 'wood', box=b)
+
+@ex('f_fridge_0_1', 'Холодильник', '60×65, высота 185')
+def _(s):
+    b = (.2, .17, .8, .83)
+    s.box(*b, h(.04), h(1.85), GLASS_W, 'metal'); s.box(.22, .2, .78, .8, 0, h(.04), '#3a3c40', 'metal', lip=False)
+    s.sface('s', .22, .78, h(.06), h(1.2), mul(hx(GLASS_W), 1.03), 'metal', box=b); s.sface('s', .22, .78, h(1.23), h(1.82), mul(hx(GLASS_W), 1.03), 'metal', box=b)
+    s.box(.72, .83, .74, .86, h(.75), h(1.1), '#9aa0a6', 'metal', lip=False); s.box(.72, .83, .74, .86, h(1.3), h(1.55), '#9aa0a6', 'metal', lip=False)
+    s.sface('s', .3, .4, h(1.4), h(1.52), '#f0e6b0', 'paint', box=b, inset=.02); s.sface('s', .5, .55, h(.9), h(.95), '#c84a40', 'paint', box=b, inset=.02)
+
+@ex('f_shelf_1_1', 'Стеллаж', '90×40, высота 180, металл')
+def _(s):
+    w = '#7a7e84'; x0, x1, y0, y1 = .05, .95, .3, .7
+    for x in (x0, x1 - .04):
+        for y in (y0, y1 - .04): s.box(x, y, x + .04, y + .04, 0, h(1.8), w, 'metal', lip=False)
+    for z in (h(.1), h(.66), h(1.22), h(1.76)): s.box(x0, y0, x1, y1, z, z + 3, w, 'metal')
+    for k, (xx, zz, c, hh) in enumerate(((.12, .1, '#c8a46a', .3), (.5, .1, '#b08a52', .38), (.15, .66, '#c84a40', .2), (.38, .66, '#4a7ab0', .2), (.6, .66, '#e8c040', .2), (.2, 1.22, '#8a9a6a', .25), (.55, 1.22, '#d8d4c8', .3))):
+        s.box(xx, .36, xx + .26 if k < 2 else xx + .18, .64, h(zz) + 3, h(zz + hh), c, 'paint')
+
+@ex('f_stove_0_1', 'Плита', '60×60, высота 85')
+def _(s):
+    b = (.2, .2, .8, .8); c = '#ececE8'
+    s.box(*b, 0, h(.85), c, 'metal'); s.box(.2, .2, .8, .3, h(.85), h(1.0), mul(hx(c), .95), 'metal')
+    for xx in (.3, .43, .57, .7): s.dot((xx, .3, h(.94)), '#3a3c40', 1)
+    for x, y in ((.33, .4), (.67, .4), (.33, .68), (.67, .68)):
+        p = s.P(x, y, h(.85)); s.d.ellipse([p[0] - 6, p[1] - 3, p[0] + 6, p[1] + 3], fill=(36, 36, 40, 255)); s.d.ellipse([p[0] - 3, p[1] - 1.5, p[0] + 3, p[1] + 1.5], fill=(80, 80, 86, 255))
+    s.sface('s', .24, .76, h(.08), h(.62), '#2a2a2e', 'metal', box=b); s.sface('s', .3, .7, h(.14), h(.56), '#4a5660', 'metal', box=b)
+    s.sface('s', .26, .74, h(.66), h(.69), '#a8acb0', 'metal', box=b, inset=.02)
+    s.sface('s', .24, .76, h(.72), h(.8), mul(hx(c), .92), 'metal', box=b)
+
+@ex('f_cabinet_0_1', 'Кухонная тумба', '60×60, высота 85, столешница')
+def _(s):
+    b = (.2, .22, .8, .8)
+    s.box(*b, h(.08), h(.81), WOOD, 'wood'); s.box(.21, .24, .79, .78, 0, h(.08), WOOD_D, 'wood', lip=False)
+    s.box(.18, .2, .82, .83, h(.81), h(.85), '#d8d4c8', 'stone')
+    s.sface('s', .23, .77, h(.62), h(.77), mul(hx(WOOD), 1.12), 'wood', box=b); s.box(.46, .8, .54, .82, h(.68), h(.71), '#d8b870', 'metal', lip=False)
+    s.sface('s', .23, .49, h(.12), h(.58), mul(hx(WOOD), 1.1), 'wood', box=b); s.sface('s', .51, .77, h(.12), h(.58), mul(hx(WOOD), 1.1), 'wood', box=b)
+    for x in (.45, .53): s.box(x, .8, x + .02, .82, h(.3), h(.42), '#d8b870', 'metal', lip=False)
+
+@ex('f_sink_0_1', 'Мойка', '60×60, высота 85, кран')
+def _(s):
+    b = (.2, .22, .8, .8)
+    s.box(*b, h(.08), h(.81), WOOD, 'wood'); s.box(.21, .24, .79, .78, 0, h(.08), WOOD_D, 'wood', lip=False)
+    s.box(.18, .2, .82, .83, h(.81), h(.85), '#c8ccce', 'metal')
+    s.tface(.28, .32, .72, .74, h(.85) + .3, '#8a9298'); s.tface(.31, .35, .69, .71, h(.85) + .3, '#6a747c'); s.dot((.5, .53, h(.85) + .5), '#3a4048')
+    s.box(.47, .22, .53, .28, h(.85), h(1.12), STEEL, 'metal'); s.box(.48, .26, .52, .44, h(1.07), h(1.12), STEEL, 'metal')
+    s.sface('s', .23, .49, h(.12), h(.76), mul(hx(WOOD), 1.1), 'wood', box=b); s.sface('s', .51, .77, h(.12), h(.76), mul(hx(WOOD), 1.1), 'wood', box=b)
+    for x in (.45, .53): s.box(x, .8, x + .02, .82, h(.5), h(.62), '#d8b870', 'metal', lip=False)
+
+@ex('f_bed_0_1', 'Кровать двуспальная', '140×200, матрас на 50, изголовье 100', (1.4, 2))
+def _(s):
+    w = WOOD_D; x0, x1, y0, y1 = .02, 1.38, .02, 1.98
+    s.box(x0, y0, x1, y0 + .08, 0, h(1.0), w, 'wood')                              # изголовье
+    s.box(x0, y0 + .08, x1, y1, h(.08), h(.3), w, 'wood'); legs(s, x0, y0 + .08, x1, y1, .07, h(.08), w)
+    s.box(x0 + .04, y0 + .1, x1 - .04, y1 - .04, h(.3), h(.5), '#ece8de', 'fabric')   # матрас
+    s.box(x0 + .02, .78, x1 - .02, y1 - .02, h(.48), h(.54), '#8a3e36', 'fabric')     # одеяло
+    s.box(x0 + .02, .78, x1 - .02, .9, h(.54), h(.56), '#f0ece2', 'fabric')           # отворот
+    for xa in (.12, .74): s.box(xa, .16, xa + .52, .5, h(.5), h(.62), '#f4f0e6', 'fabric')   # две подушки
+    s.box(x0, y1 - .06, x1, y1, h(.08), h(.42), w, 'wood')                         # изножье
+
+@ex('f_sofa_0_1', 'Диван', '200×90, сиденье 45, спинка 85', (2, 1))
+def _(s):
+    c = '#8c4a3a'; c2 = mul(hx(c), 1.1); x0, x1, y0, y1 = .02, 1.98, .08, .94
+    legs(s, x0 + .04, y0 + .04, x1 - .04, y1 - .04, .06, h(.1), WOOD_D)
+    s.box(x0, y0, x1, y1, h(.1), h(.28), c, 'fabric')
+    s.box(x0, y0, x1, y0 + .22, h(.28), h(.85), c, 'fabric')                       # спинка
+    s.box(x0, y0 + .22, x0 + .16, y1, h(.28), h(.6), c, 'fabric'); s.box(x1 - .16, y0 + .22, x1, y1, h(.28), h(.6), c, 'fabric')
+    for k in range(3):
+        a = x0 + .17 + k * .55; s.box(a, y0 + .22, a + .53, y1 - .02, h(.28), h(.45), c2, 'fabric'); s.box(a + .02, y0 + .2, a + .51, y0 + .32, h(.45), h(.8), c2, 'fabric')
+
+@ex('f_tv_0_1', 'Телевизор на тумбе', 'тумба 120×40×50, кинескоп', (1.2, 1))
+def _(s):
+    b = (.0, .3, 1.2, .7)
+    s.box(*b, 0, h(.5), WOOD_D, 'wood')
+    s.sface('s', .04, .58, h(.06), h(.44), mul(hx(WOOD_D), 1.15), 'wood', box=b); s.sface('s', .62, 1.16, h(.06), h(.44), mul(hx(WOOD_D), 1.15), 'wood', box=b)
+    s.box(.32, .34, .88, .66, h(.5), h(.54), '#2a2a2e', 'metal')
+    s.box(.34, .3, .86, .62, h(.54), h(1.02), '#2e2e32', 'metal')                  # корпус
+    s.sface('s', .38, .82, h(.6), h(.98), '#1a1c20', 'metal', box=(.34, .3, .86, .62)); s.sface('s', .41, .79, h(.63), h(.95), '#3a5466', 'metal', box=(.34, .3, .86, .62))
+    s.line((.5, .45, h(1.02)), (.42, .4, h(1.25)), '#9aa0a6'); s.line((.6, .45, h(1.02)), (.7, .4, h(1.25)), '#9aa0a6')   # антенна
+
+@ex('f_dresser_0_1', 'Комод', '100×45, высота 90')
+def _(s):
+    b = (.0, .3, 1.0, .75)
+    s.box(*b, h(.06), h(.86), WOOD, 'wood'); s.box(-.02, .28, 1.02, .77, h(.86), h(.9), WOOD_L, 'wood')
+    s.box(.04, .32, .96, .73, 0, h(.06), WOOD_D, 'wood', lip=False)
+    for k in range(4):
+        z0 = h(.1 + k * .19); s.sface('s', .04, .96, z0, z0 + h(.16), mul(hx(WOOD), 1.12), 'wood', box=b)
+        s.box(.44, .75, .56, .77, z0 + h(.07), z0 + h(.1), '#d8b870', 'metal', lip=False)
+    s.box(.1, .38, .3, .6, h(.9), h(1.1), '#e8e2d0', 'paint')                     # рамка с фото
+
+@ex('f_table_0_1', 'Стол обеденный', '120×80, высота 75', (1.2, 1))
+def _(s):
+    c = WOOD_L; legs(s, .06, .16, 1.14, .84, .06, h(.71), mul(hx(c), .8))
+    s.box(.08, .18, 1.12, .82, h(.62), h(.71), mul(hx(c), .88), 'wood', lip=False)
+    s.box(.0, .1, 1.2, .9, h(.71), h(.75), c, 'wood')
+    p = s.P(.4, .5, h(.75)); s.d.ellipse([p[0] - 7, p[1] - 3.5, p[0] + 7, p[1] + 3.5], fill=(238, 236, 230, 255)); s.d.ellipse([p[0] - 4, p[1] - 2, p[0] + 4, p[1] + 2], fill=(212, 208, 198, 255))
+    s.cyl(.78, .42, .05, h(.75), h(.85), '#4a7ab0', 'paint')
+
+@ex('f_bath_0_1', 'Ванна', '170×75, высота 60', (1, 1.7))
+def _(s):
+    b = (.12, .0, .88, 1.7)
+    s.box(*b, 0, h(.6), WHITE, 'stone')
+    s.tface(.2, .08, .8, 1.62, h(.6) + .3, '#c8d0d4', 'stone'); s.tface(.24, .12, .76, 1.58, h(.6) + .3, '#98aab6', 'stone')
+    s.tface(.27, .4, .73, 1.55, h(.6) + .4, '#7ea6c4', 'plain')                    # вода
+    s.box(.46, .0, .54, .1, h(.6), h(.82), STEEL, 'metal'); s.box(.47, .06, .53, .2, h(.76), h(.82), STEEL, 'metal')
+
+@ex('f_toilet_0_1', 'Унитаз', '40×65, бачок 80')
+def _(s):
+    s.box(.32, .14, .68, .32, h(.4), h(.8), WHITE, 'stone')                        # бачок
+    s.box(.4, .2, .6, .3, h(.8), h(.82), '#d0d4d6', 'stone')
+    s.box(.38, .3, .62, .6, 0, h(.3), WHITE, 'stone')                              # ножка
+    s.box(.3, .3, .7, .78, h(.3), h(.42), WHITE, 'stone')                          # чаша
+    s.tface(.36, .38, .64, .72, h(.42) + .3, '#a8b4ba'); s.tface(.4, .44, .6, .66, h(.42) + .3, '#86a0ae')
+
+@ex('f_bookshelf_0_1', 'Книжный шкаф', '80×30, высота 200')
+def _(s):
+    b = (.1, .35, .9, .65); c = WOOD_D
+    s.box(.1, .35, .9, .4, 0, h(2.0), c, 'wood')                                    # задняя стенка
+    s.box(.1, .35, .14, .65, 0, h(2.0), c, 'wood'); s.box(.86, .35, .9, .65, 0, h(2.0), c, 'wood')
+    cols = ['#8a2e2a', '#2e4a7a', '#3a6a3a', '#c8a040', '#6a3a6a', '#d8d4c8', '#9a5a2a']
+    for k, z in enumerate((.05, .5, .95, 1.4)):
+        s.box(.14, .4, .86, .65, h(z), h(z) + 3, c, 'wood')
+        x = .16; n = 0
+        while x < .8:
+            w = .05 + .03 * hsh(k, n, 3); hh = .26 + .12 * hsh(n, k, 4)
+            s.box(x, .44, min(.84, x + w), .62, h(z) + 3, h(z) + 3 + h(hh), cols[(k * 3 + n) % len(cols)], 'paint', lip=False); x += w + .005; n += 1
+    s.box(.1, .35, .9, .65, h(1.96), h(2.0), c, 'wood')
+
+@ex('f_hanger_0_1', 'Вешалка напольная', 'Ø40, высота 175')
+def _(s):
+    s.cyl(.5, .5, .15, 0, h(.04), WOOD_D, 'wood'); s.line((.5, .5, h(.04)), (.5, .5, h(1.75)), mul(hx(WOOD_D), 1.1), 3)
+    for dx, dy in ((-.12, 0), (.12, 0), (0, -.12), (0, .12)): s.line((.5, .5, h(1.62)), (.5 + dx, .5 + dy, h(1.7)), WOOD_D, 2)
+    s.box(.32, .48, .46, .56, h(.9), h(1.6), '#a8342e', 'fabric', lip=False); s.box(.54, .5, .66, .6, h(1.0), h(1.6), '#3a5a8a', 'fabric', lip=False)
+
+@ex('f_nightstand_0_1', 'Тумбочка', '45×40, высота 55')
+def _(s):
+    b = (.28, .3, .72, .7)
+    s.box(*b, h(.05), h(.52), WOOD, 'wood'); s.box(.26, .28, .74, .72, h(.52), h(.55), WOOD_L, 'wood')
+    legs(s, .29, .31, .71, .69, .04, h(.05), WOOD_D)
+    s.sface('s', .31, .69, h(.34), h(.48), mul(hx(WOOD), 1.12), 'wood', box=b); s.box(.47, .7, .53, .72, h(.4), h(.42), '#d8b870', 'metal', lip=False)
+    s.cyl(.4, .45, .06, h(.55), h(.6), '#3a3a3e', 'metal'); s.line((.4, .45, h(.6)), (.4, .45, h(.8)), '#3a3a3e'); s.cyl(.4, .45, .08, h(.78), h(.88), '#e8d4a0', 'fabric')   # ночник
+
+@ex('f_medcab_0_1', 'Аптечный шкаф', '60×40, высота 180, стекло')
+def _(s):
+    b = (.2, .3, .8, .7)
+    s.box(*b, h(.1), h(1.8), '#e4e6e2', 'metal'); s.box(.22, .32, .78, .68, 0, h(.1), '#9aa0a6', 'metal', lip=False)
+    s.sface('s', .24, .76, h(.14), h(.7), '#d4d8da', 'metal', box=b)
+    s.sface('s', .24, .76, h(.76), h(1.74), '#a4bcc8', 'metal', box=b)
+    for z in (h(1.08), h(1.4)): s.sface('s', .26, .74, z, z + 2, '#e8eaea', 'plain', box=b, inset=.02)
+    for xx, zz, c in ((.3, .8, '#c84a40'), (.42, .8, '#f0f0ec'), (.56, .8, '#e8c040'), (.34, 1.12, '#4a7ab0'), (.5, 1.12, '#f0f0ec'), (.62, 1.44, '#8a6a3a')): s.sface('s', xx, xx + .08, h(zz), h(zz + .2), c, 'paint', box=b, inset=.03)
+    s.sface('s', .46, .54, h(1.5), h(1.62), '#e84a40', 'plain', box=b, inset=.035); s.sface('s', .485, .515, h(1.47), h(1.65), '#e84a40', 'plain', box=b, inset=.036)
+
+@ex('f_counter2_0_1', 'Прилавок с кассой', '120×60, высота 95', (1.2, 1))
+def _(s):
+    b = (.0, .25, 1.2, .85)
+    s.box(*b, 0, h(.92), '#d8d4c8', 'paint'); s.box(-.02, .23, 1.22, .87, h(.92), h(.96), '#4a4a50', 'stone')
+    s.sface('s', .02, 1.18, h(.4), h(.46), '#c84a40', 'paint', box=b)
+    s.box(.7, .4, 1.0, .66, h(.96), h(1.04), '#3a3a3e', 'metal'); s.box(.74, .4, .96, .5, h(1.04), h(1.22), '#2a2a2e', 'metal')
+    s.sface('s', .76, .94, h(1.08), h(1.2), '#4a8a5a', 'metal', box=(.74, .4, .96, .5))
+
+@ex('crate', 'Ящик деревянный', '60×60×60')
+def _(s):
+    b = (.2, .2, .8, .8); c = '#a07a4a'
+    s.box(*b, 0, h(.6), c, 'wood')
+    for z in (h(.2), h(.4)):
+        s.line((.2, .8, z), (.8, .8, z), mul(hx(c), .62)); s.line((.8, .8, z), (.8, .2, z), mul(hx(c), .5))
+    s.box(.2, .78, .24, .82, 0, h(.6), mul(hx(c), .78), 'wood', lip=False); s.box(.76, .78, .8, .82, 0, h(.6), mul(hx(c), .78), 'wood', lip=False); s.box(.78, .2, .82, .24, 0, h(.6), mul(hx(c), .7), 'wood', lip=False)
+    s.line((.24, .81, h(.04)), (.76, .81, h(.56)), mul(hx(c), .7), 2)
+
+@ex('barrel', 'Бочка для воды', 'Ø60, высота 90')
+def _(s):
+    s.cyl(.5, .5, .28, 0, h(.9), '#2a5a9a', 'metal', top='#3a6aaa')
+    rx = .28 * U * 1.41; ry = rx / 2
+    for z in (h(.15), h(.75)): x, y = s.P(.5, .5, z); s.d.arc([x - rx, y - ry, x + rx, y + ry], 0, 180, fill=(24, 52, 96, 255), width=2)
+    x, y = s.P(.5, .5, h(.9)); s.d.ellipse([x - rx * .75, y - ry * .75, x + rx * .75, y + ry * .75], fill=(36, 74, 124, 255))
+    s.dot((.5 + .14, .5 - .02, h(.9) + 1), '#c8ccd2', 1)   # пробка
+
+def sheet_existing(out, atlas='assets/atlas.json', sprites='assets/sprites'):
+    import json, textwrap, os
+    meta = json.load(open(atlas))['frames']; sheets = {}
+    cols, K, cw, chh = 4, 3, 440, 470
+    rows = math.ceil(len(EX) / cols)
+    img = Image.new('RGB', (cols * cw + 40, rows * chh + 130), (24, 28, 28)); d = ImageDraw.Draw(img)
+    fb = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 26); fs = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 19); ft = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 40); fl = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 17)
+    d.text((30, 30), 'Нынешняя мебель: было → в реальных пропорциях', fill=(240, 196, 119), font=ft)
+    for k, (key, name, note, fn, size) in enumerate(EX):
+        cx, cy = 20 + (k % cols) * cw, 120 + (k // cols) * chh; box_h = chh - 110
+        sw, sl = size; s = Spr(ox=115 - (sw - sl) * U / 2, oy=150 - (sw + sl - 2) * HH / 2); fn(s); im = s.outline()
+        fl_ = Image.new('RGBA', im.size, (0, 0, 0, 0)); fd = ImageDraw.Draw(fl_)
+        for tx in range(math.ceil(sw)):
+            for ty in range(math.ceil(sl)): fd.polygon([s.P(tx, ty, 0), s.P(tx + 1, ty, 0), s.P(tx + 1, ty + 1, 0), s.P(tx, ty + 1, 0)], fill=(52, 44, 36, 255), outline=(70, 60, 48, 255))
+        fl_.alpha_composite(im); new = fl_.crop(fl_.getbbox())
+        old = None
+        f = meta.get(key)
+        if f:
+            if f[0] not in sheets: sheets[f[0]] = Image.open(os.path.join(sprites, f[0] + '.png')).convert('RGBA')
+            o = sheets[f[0]].crop((f[1], f[2], f[1] + f[3], f[2] + f[4]))
+            # same floor tile under the old sprite (anchor f[5], f[6] = tile centre)
+            ob = Image.new('RGBA', (o.width + 80, o.height + 40), (0, 0, 0, 0)); od = ImageDraw.Draw(ob); ax, ay = f[5] + 40, f[6] + 20
+            od.polygon([(ax, ay - 16), (ax + 32, ay), (ax, ay + 16), (ax - 32, ay)], fill=(52, 44, 36, 255), outline=(70, 60, 48, 255)); ob.alpha_composite(o, (40, 20)); old = ob.crop(ob.getbbox())
+        # both at the same scale, bottoms aligned
+        sc = min(K, (box_h - 10) / max(new.height, old.height if old else 1), (cw - 40) / ((old.width if old else 0) + new.width + 4))
+        def put(im_, x):
+            r = im_.resize((max(1, int(im_.width * sc)), max(1, int(im_.height * sc))), Image.NEAREST); img.paste(r, (x, cy + box_h - r.height), r); return r.width
+        x = cx + 10
+        if old: wv = put(old, x); d.text((x, cy + box_h + 4), 'было', fill=(130, 136, 130), font=fl); x += wv + int(18 * sc / 2) + 10
+        wv = put(new, x); d.text((x, cy + box_h + 4), 'стало', fill=(240, 196, 119), font=fl)
+        d.text((cx + 14, cy + box_h + 30), name, fill=(230, 224, 208), font=fb)
+        for n, ln in enumerate(textwrap.wrap(note, 38)): d.text((cx + 14, cy + box_h + 64 + n * 22), ln, fill=(150, 156, 150), font=fs)
+    img.save(out); print(len(EX), 'предметов', img.size)
+
+if __name__ == '__main__' and len(sys.argv) > 2 and sys.argv[2] == 'existing':
+    sheet_existing(sys.argv[1])
