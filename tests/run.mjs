@@ -94,6 +94,13 @@ await D("P.inv = [mkItem('rag'), mkItem('glass')]; RECIPES.find(r => r.name === 
 check('заточка из осколка и тряпки', await D("countItem('shiv') === 1"));
 check('варежки греют', await D("P.cloth = {}; const a = insulation(); P.cloth.hands = mkItem('mittens'); insulation() > a"));
 
+console.log('Размер экрана');
+await D("window.__iw = Object.getOwnPropertyDescriptor(window, 'innerWidth'); Object.defineProperty(window, 'innerWidth', {get: () => 400, configurable: true})");
+await sleep(300);
+check('холст сам подстроился под новый размер без события resize', await D("cv.style.width") === '400px');
+await D("Object.defineProperty(window, 'innerWidth', window.__iw)"); await sleep(300);
+check('и вернулся обратно', await D("cv.style.width === innerWidth + 'px'"));
+
 console.log('Живая игра 15 секунд');
 await fresh("['coward']");
 await D("P.weapon = mkItem('shotgun'); P.weapon.mag = 2; P.inv.push(mkItem('shells')); gameMin += 14 * 60; for (let i = 0; i < 25; i++) spawnZombie(4, false);");
