@@ -12,13 +12,28 @@
   document.addEventListener('touchmove', e => { if (e.touches && e.touches.length > 1) e.preventDefault(); }, {passive:false});
 })();
 // ---- landscape only ----
-const portraitMQ = matchMedia('(orientation: portrait) and (max-width: 900px)');
+// On touch devices the game is landscape only: in portrait a full-screen plate covers everything and the game pauses.
+const portraitMQ = matchMedia('(orientation: portrait) and (pointer: coarse)');
+const isPortrait = () => portraitMQ.matches || (isTouch && innerHeight > innerWidth * 1.05);
 function checkOrient() {
-  const p = portraitMQ.matches; $('rotate').hidden = !p;
-  if (p && mode === 'play' && !paused) openPause();
+  const p = isPortrait(); document.documentElement.classList.toggle('portrait', p);
+  if (p) { atkHeld = false; keys.clear(); if (joy) { joy.id = null; joy.x = joy.y = 0; } }
+  if (p && typeof mode !== 'undefined' && mode === 'play' && !paused) openPause();
 }
 portraitMQ.addEventListener ? portraitMQ.addEventListener('change', checkOrient) : portraitMQ.addListener(checkOrient);
-function tryLandscape() { try { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} }
+addEventListener('resize', checkOrient); addEventListener('orientationchange', () => setTimeout(checkOrient, 120));
+const standaloneApp = () => matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches || navigator.standalone === true;
+// browsers only lock the orientation in fullscreen, so ask for both (must be called from a tap)
+function tryLandscape() {
+  const lock = () => { try { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} };
+  try {
+    const d = document.documentElement;
+    if (isTouch && !standaloneApp() && !document.fullscreenElement && d.requestFullscreen) d.requestFullscreen({navigationUI:'hide'}).then(lock, lock);
+    else lock();
+  } catch (e) { lock(); }
+}
+document.addEventListener('pointerdown', () => { if (isTouch && !document.fullscreenElement) tryLandscape(); }, true);
+checkOrient();
 // ---- windows close on a tap outside ----
 $('panel').addEventListener('pointerdown', e => { if (e.target === $('panel')) { e.preventDefault(); closePanel(); } });
 $('pause').addEventListener('pointerdown', e => { if (e.target === $('pause')) { e.preventDefault(); resume(); } });

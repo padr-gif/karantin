@@ -80,3 +80,7 @@ npm run site      # собрать сайт в site/ (страница, мани
 npm run deploy    # собрать и опубликовать в ветку gh-pages
 npm run appicon   # перерисовать иконку приложения (tools/icons/appicon.py)
 ```
+
+## Шрифты
+
+Oswald, PT Sans и PT Mono лежат в `assets/fonts` (лицензия SIL OFL, файлы `OFL-*.txt`) и вшиваются в страницу при сборке. Внешних запросов к Google Fonts нет: если их сервер недоступен, игра всё равно запускается.

@@ -25,8 +25,11 @@ export function build({dev = false, pwa = false, out = 'dist/karantin.html'} = {
 
   // 3. page
   const head = pwa ? '<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#0c0f12"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Карантин"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" href="icon-192.png">'
-    + "<script>if ('serviceWorker' in navigator && location.protocol.startsWith('http')) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));</script>" : '';
-  const html = rd('src/index.html').replace('<!--@@PWA@@-->', head).replace('/*@@CSS@@*/', () => rd('src/styles.css')).replace('/*@@SCRIPT@@*/', () => js);
+ : '';
+  // fonts live in the page itself: an outside font server that hangs must never block the game from starting
+  const FONTS = [['Oswald', 500, 'oswald-500'], ['Oswald', 700, 'oswald-700'], ['PT Sans', 400, 'ptsans-400'], ['PT Sans', 700, 'ptsans-700'], ['PT Mono', 400, 'ptmono-400']];
+  const fonts = FONTS.map(([fam, w, f]) => `@font-face{font-family:"${fam}";font-weight:${w};font-style:normal;font-display:swap;src:url(data:font/woff;base64,${fs.readFileSync(path.join(ROOT, 'assets/fonts', f + '.woff')).toString('base64')}) format("woff")}`).join('\n');
+  const html = rd('src/index.html').replace('/*@@FONTS@@*/', () => fonts).replace('<!--@@PWA@@-->', head).replace('/*@@CSS@@*/', () => rd('src/styles.css')).replace('/*@@SCRIPT@@*/', () => js);
   const dst = path.join(ROOT, out);
   fs.mkdirSync(path.dirname(dst), {recursive: true});
   fs.writeFileSync(dst, html);
