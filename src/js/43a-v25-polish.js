@@ -1,7 +1,9 @@
 // ================= v25: notifications & event banners, zombies tumbling through windows, livelier animation, doorways, bigger doll, recipe info =================
 
 // ---- notifications: icon, colour by meaning, a bar that runs out like an item transfer ----
-const NTF_LIFE = 3200;
+// action messages leave quickly; injuries and danger stay a little longer; event banners have their own timer (EV_LIFE)
+const NTF_LIFE = 1800, NTF_LIFE_CRIT = 2800;
+const ntfLife = t => ntfKind(t) === 'crit' ? NTF_LIFE_CRIT : NTF_LIFE;
 function ntfKind(t) {
   if (/укус|кров|рваная|перелом|сломал|разорван|загрыз|напали|ломятся|выбит|сорвали|схвач|вцепился|отравл|тошнит|мутит|жар|воспал|порезался|умира|сгорел|кончил|погиб/i.test(t)) return 'crit';
   if (/найдено|подобрано|готов|заведен|зажило|вырос|сохранено|набрал|напился|посажено|урожай|залатан|зашито|прочитано|получено|закатан|высушен|перевязан|наложена|обработаны|снята|прибит|разобран|слил/i.test(t)) return 'good';
@@ -21,13 +23,13 @@ toast = function (text) {
   if (!text) return;
   const ev = eventFor(text); if (ev) { eventBanner(ev[0], text, ev[1], ev[2]); return; }
   const box = ntfBox();
-  for (const t of box.children) if (t._text === text && !t._gone) { const u = t.querySelector('u'); if (u) { u.style.animation = 'none'; void u.offsetWidth; u.style.animation = ''; } t.classList.remove('bump'); void t.offsetWidth; t.classList.add('bump'); clearTimeout(t._tm); t._tm = setTimeout(() => dropNtf(t), NTF_LIFE); return; }
+  for (const t of box.children) if (t._text === text && !t._gone) { const u = t.querySelector('u'); if (u) { u.style.animation = 'none'; void u.offsetWidth; u.style.animation = ''; } t.classList.remove('bump'); void t.offsetWidth; t.classList.add('bump'); clearTimeout(t._tm); t._tm = setTimeout(() => dropNtf(t), ntfLife(text)); return; }
   const el = mk('div', 'ntf ' + ntfKind(text)); el._text = text;
   el.appendChild(svgIc(ntfIcon(text))); el.appendChild(mk('span', 'nt', text));
-  const bar = mk('i', 'nbar'), u = mk('u'); u.style.animationDuration = NTF_LIFE + 'ms'; bar.appendChild(u); el.appendChild(bar);
+  const bar = mk('i', 'nbar'), u = mk('u'); u.style.animationDuration = ntfLife(text) + 'ms'; bar.appendChild(u); el.appendChild(bar);
   box.appendChild(el);
   while (box.children.length > 3) dropNtf(box.firstChild, true);
-  el._tm = setTimeout(() => dropNtf(el), NTF_LIFE);
+  el._tm = setTimeout(() => dropNtf(el), ntfLife(text));
 };
 function dropNtf(el, now) { if (!el || el._gone) return; el._gone = true; clearTimeout(el._tm); if (now) { el.remove(); return; } el.classList.add('out'); setTimeout(() => el.remove(), 320); }
 // ---- special events get their own banner ----
@@ -63,7 +65,7 @@ function zWindowCheck(z, px, py) {
   const gx = ax ? clamp(z.x, tx + .25, tx + .75) : cx - from * .85, gy = ax ? cy - from * .85 : clamp(z.y, ty + .25, ty + .75);
   if (blocked(gx, gy, z.r)) { z.x = px; z.y = py; return true; }
   const ob = obs[i];
-  z.vt = {t:0, dur:.9 + rng() * .35, fx:px, fy:py, tx:gx, ty:gy, glass:!!(ob && ob.broken && !ob.open)};
+  z.vt = {t:0, dur:.9 + rng() * .35, fx:px, fy:py, tx:gx, ty:gy, glass:!!(ob && ob.broken && !ob.open && !ob.cleared)};
   z.face = Math.atan2(gy - py, gx - px); noise(cx, cy, 4); SFX.knock(cx, cy);
   return true;
 }

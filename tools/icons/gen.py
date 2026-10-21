@@ -604,6 +604,44 @@ for sk, (c, em) in EMB.items():
 # drop the placeholders
 for k in [k for k in ICONS if k.endswith('2') and not k.startswith('book_')]: del ICONS[k]
 
+# ---- v26: gloves, glass, shiv, water filter ----
+def glove(i, c, cuff, dx=0, stitch=None, mitt=False):
+    c = col(c)
+    i.box(9 + dx, 20, 20 + dx, 28, cuff)                                   # cuff
+    i.ball(8 + dx, 9, 21 + dx, 22, c, hl=False); i.rect(8 + dx, 15, 21 + dx, 21, c)   # palm
+    if mitt:
+        i.ball(4 + dx, 12, 10 + dx, 19, sh(c, .9), hl=False)                # thumb
+        i.ell(9 + dx, 3, 20 + dx, 15, c)
+    else:
+        for k, x in enumerate((9, 12, 15, 18)):                          # fingers
+            top = (6, 3, 3, 5)[k]
+            i.box(x + dx, top, x + 2 + dx, 14, sh(c, 1.04 - k * .04))
+        i.box(4 + dx, 13, 8 + dx, 18, sh(c, .9))                          # thumb
+    i.hl(9 + dx, 9, 11 + dx, 18, 1.18)
+    if stitch:
+        for y in range(16, 21, 2): i.p(14 + dx, y, stitch)
+@icon('gloves')
+def _(i): glove(i, '#c89a3c', '#3a5a8a'); i.rect(10, 22, 19, 22, '#5a7aaa')
+@icon('glovesR')
+def _(i): glove(i, (186, 168, 134, 255), (150, 128, 100, 255), stitch='#6a4a6a'); i.p(11, 10, '#8a6a8a'); i.p(17, 18, '#7a9a6a')
+@icon('mittens')
+def _(i): glove(i, '#a8342e', (236, 232, 222, 255), mitt=True); [i.p(x, 12, (236, 232, 222, 255)) for x in (11, 14, 17)]; [i.p(x, 17, (236, 232, 222, 255)) for x in (12, 15, 18)]
+@icon('glass')
+def _(i):
+    for pts, c in (([(4, 22), (12, 9), (15, 24)], (176, 214, 226, 255)), ([(14, 26), (20, 7), (26, 20)], (150, 196, 212, 255)), ([(9, 28), (17, 25), (12, 20)], (196, 226, 236, 255))):
+        i.poly(pts, c)
+    i.line([(12, 11), (13, 21)], (238, 248, 252, 255)); i.line([(20, 10), (23, 18)], (230, 244, 250, 255))
+@icon('shiv')
+def _(i):
+    i.poly([(13, 18), (24, 3), (27, 5), (17, 21)], (172, 212, 224, 255)); i.line([(15, 18), (25, 4)], (238, 248, 252, 255))
+    i.line([(5, 27), (14, 18)], (190, 172, 136, 255), 5); [i.line([(6 + k * 3, 23 + k * -3 + 4), (9 + k * 3, 26 + k * -3 + 4)], (140, 120, 92, 255)) for k in range(3)]
+@icon('filter')
+def _(i):
+    i.cyl(9, 4, 22, 28, (176, 206, 214, 255), top=(120, 150, 160, 255))
+    i.rect(10, 9, 21, 12, (210, 196, 160, 255)); i.rect(10, 13, 21, 17, (46, 44, 46, 255)); i.rect(10, 18, 21, 20, (210, 196, 160, 255))
+    i.rect(10, 22, 21, 27, (120, 180, 220, 255)); i.rect(11, 22, 12, 27, (170, 210, 236, 255))
+    for x in (12, 15, 18): i.p(x, 21, (120, 180, 220, 255))
+
 def build(out_png, out_json, preview=None):
     names = list(ICONS)
     cols, S = 8, 96

@@ -74,7 +74,7 @@ function drawWallTile(x, y, i, cut) {
         if (ax) { line3(x + .5, y + .5, sill, x + .5, y + .5, lint); line3(x + .06, y + .5, (sill + lint) / 2, x + .94, y + .5, (sill + lint) / 2); }
         else { line3(x + .5, y + .5, sill, x + .5, y + .5, lint); line3(x + .5, y + .06, (sill + lint) / 2, x + .5, y + .94, (sill + lint) / 2); }
         ctx.stroke();
-      } else {
+      } else if (!o.cleared) {   // jagged glass left in the frame (gone once the shards are cleared out)
         ctx.fillStyle = `rgba(190,215,225,${.45 * f})`; ctx.beginPath();
         const pts = ax ? [[x + .06, sill], [x + .2, sill + U * .35], [x + .3, sill + U * .1], [x + .45, sill + U * .28], [x + .6, sill], [x + .8, sill + U * .22], [x + .94, sill]] : null;
         if (ax) { pts.forEach(([px, pz], k) => k ? ctx.lineTo(SX(px, y + .5), SY(px, y + .5, pz)) : ctx.moveTo(SX(px, y + .5), SY(px, y + .5, pz))); }

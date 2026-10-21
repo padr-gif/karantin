@@ -463,7 +463,7 @@ attack = function () {
     const tx = Math.floor(P.x + Math.cos(P.face) * .8), ty = Math.floor(P.y + Math.sin(P.face) * .8), i = ty * MW + tx;
     if (get(tx, ty) === WIN && !obs[i].broken && !obs[i].bhp) {
       obs[i].broken = true; noise(P.x, P.y, 9); toast('Окно разбито'); SFX.glass(tx + .5, ty + .5); emit('glass', tx + .5, ty + .5, 1.2, 16, P.face, 1.6, 2.2);
-      if (!P.weapon && rng() < .5) { P.bleed = true; toast('Порезался о стекло'); }
+      if (!P.weapon) glassCut(.5, 'Разбил стекло кулаком и порезался');
     }
   }
   if (n && P.weapon) {

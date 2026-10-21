@@ -125,6 +125,7 @@ function openSettings(from) {
   bind('sDay', [[.5, 'Медленно'], [1, 'Обычно'], [2, 'Быстро']], 'dayLen');
   bind('sGfx', [[1.5, 'Экономия'], [2, 'Обычная'], [3, 'Максимум']], 'gfx');
   bind('sRain', onoff, 'rain'); bind('sShake', onoff, 'shake'); bind('sGore', onoff, 'gore'); bind('sHints', onoff, 'hints'); bind('sAuto', onoff, 'autosave');
+  bind('sUia', [[1, 'Нет'], [.8, '20%'], [.6, '40%'], [.4, '60%']], 'uia');
 }
 function openCreate() {
   show('create'); prevCache.clear();

@@ -22,8 +22,8 @@ function lookPal(lk, weapon) {
   if (weapon) { pal[11] = WCOL[weapon][0]; pal[12] = WCOL[weapon][1]; }
   return pal;
 }
-const SETTINGS_DEF = {gfx:2, mini:true, vol:.7, zoom:0, dayLen:1, rain:true, shake:true, gore:true, hints:true, autosave:true};
+const SETTINGS_DEF = {gfx:2, mini:true, vol:.7, zoom:0, dayLen:1, rain:true, shake:true, gore:true, hints:true, autosave:true, uia:1};
 const settings = Object.assign({}, SETTINGS_DEF);
 function loadSettings() { try { const s = JSON.parse(localStorage.getItem('karantin-settings') || 'null'); if (s) Object.assign(settings, s); } catch (e) {} applySettings(); }
 function saveSettings() { try { localStorage.setItem('karantin-settings', JSON.stringify(settings)); } catch (e) {} applySettings(); }
-function applySettings() { zoomOff = settings.zoom; gfxCap = settings.gfx || 2; resize(); document.body.classList.toggle('nohints', !settings.hints); }
+function applySettings() { zoomOff = settings.zoom; gfxCap = settings.gfx || 2; resize(); document.body.classList.toggle('nohints', !settings.hints); document.body.style.setProperty('--uia', settings.uia || 1); }
