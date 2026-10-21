@@ -61,6 +61,7 @@ class Spr:
     def __init__(s, w=230, h=200, ox=115, oy=150):
         s.im = Image.new('RGBA', (w, h), (0, 0, 0, 0)); s.d = ImageDraw.Draw(s.im); s.ox, s.oy = ox, oy
         s.zb = [-1e9] * (w * h)   # глубина: чем больше x + y + z, тем ближе к зрителю
+        s.ob = [0] * (w * h); s.cur = 0   # чей это пиксель: швы и блики подушки рисуются только по ней самой
     def P(s, x, y, z): return (s.ox + (x - y) * U, s.oy + (x + y) * HH - z)
     def face(s, pts, col, tex='paint', shade=1.0, edge=None, vert=None, wp=None):
         col = mul(hx(col), shade); m = Image.new('L', s.im.size, 0); ImageDraw.Draw(m).polygon(pts, fill=255)
@@ -82,7 +83,7 @@ class Spr:
                 if D0 is not None:
                     dd = D0 + a * (D1 - D0) + b * (D3 - D0); zi = y * Wd + x
                     if dd < zb[zi] - .015: continue                                        # дальняя деталь не закрывает ближнюю
-                    zb[zi] = dd
+                    zb[zi] = dd; s.ob[zi] = s.cur
                 k = T(a * L1, b * L2) * (1.05 - .1 * a)                                    # свет слева
                 if vert:
                     hz = b * L2
@@ -118,19 +119,38 @@ class Spr:
             s.d.line([pts[0], pts[1]], fill=lo); s.d.line([pts[1], pts[2]], fill=lo)
     def tface(s, x0, y0, x1, y1, z, col, tex='paint'):
         P = s.P; wq = [(x0, y0, z), (x1, y0, z), (x1, y1, z), (x0, y1, z)]; s.face([P(*w) for w in wq], col, tex, 1.0, wp=wq)
+    def own_line(s, pts, col, oid):
+        """линия по точкам, но только по пикселям своей детали (не сквозь соседние)"""
+        W, H = s.im.size; px = s.im.load()
+        for (ax, ay), (bx, by) in zip(pts, pts[1:]):
+            n = int(max(abs(bx - ax), abs(by - ay))) + 1
+            for k in range(n + 1):
+                x, y = int(round(ax + (bx - ax) * k / n)), int(round(ay + (by - ay) * k / n))
+                if 0 <= x < W and 0 <= y < H and s.ob[y * W + x] == oid: px[x, y] = col
     def soft(s, x0, y0, x1, y1, z0, z1, col, tex='fabric'):
-        """мягкая подушка: коробка + тёмный шов по видимым краям + светлая «выпуклость» по центру верха"""
+        """мягкая подушка: коробка + тёмный шов по своим видимым краям + светлая «выпуклость» по центру верха"""
+        s.cur += 1; oid = s.cur
         s.box(x0, y0, x1, y1, z0, z1, col, tex, lip=False); P = s.P; sc = mul(hx(col), .58) + (255,)
-        s.d.line([P(x0, y0, z1), P(x1, y0, z1), P(x1, y1, z1), P(x0, y1, z1), P(x0, y0, z1)], fill=sc)
-        s.d.line([P(x0, y1, z0), P(x0, y1, z1)], fill=sc); s.d.line([P(x1, y1, z0), P(x1, y1, z1)], fill=sc); s.d.line([P(x1, y0, z0), P(x1, y0, z1)], fill=sc)
-        s.d.line([P(x0, y1, z0), P(x1, y1, z0), P(x1, y0, z0)], fill=sc)
-        cx, cy = (x0 + x1) / 2, (y0 + y1) / 2; px = s.im.load(); X, Y = P(cx, cy, z1)
+        s.own_line([P(x0, y0, z1), P(x1, y0, z1), P(x1, y1, z1), P(x0, y1, z1), P(x0, y0, z1)], sc, oid)
+        for q in ((x0, y1), (x1, y1), (x1, y0)): s.own_line([P(q[0], q[1], z0), P(q[0], q[1], z1)], sc, oid)
+        s.own_line([P(x0, y1, z0), P(x1, y1, z0), P(x1, y0, z0)], sc, oid)
+        cx, cy = (x0 + x1) / 2, (y0 + y1) / 2; px = s.im.load(); X, Y = P(cx, cy, z1); W = s.im.size[0]
         rx, ry = abs(P(x1, cy, z1)[0] - X) * .55, (abs(P(cx, y1, z1)[1] - Y) + 1) * .5
         for yy in range(int(Y - ry), int(Y + ry) + 1):
             for xx in range(int(X - rx * 1.6), int(X + rx * 1.6) + 1):
-                if 0 <= xx < s.im.size[0] and 0 <= yy < s.im.size[1] and px[xx, yy][3]:
+                if 0 <= xx < W and 0 <= yy < s.im.size[1] and s.ob[yy * W + xx] == oid:
                     d = ((xx - X) / (rx * 1.6 + .1)) ** 2 + ((yy - Y) / (ry + .1)) ** 2
                     if d < 1: c = px[xx, yy]; px[xx, yy] = mul(c, 1 + .1 * (1 - d)) + (255,)
+        s.cur += 1
+    def ring(s, side, box, u, zc, r, fills, inset=.014):
+        """круг на передней ('s') или правой ('e') стенке — в проекции, как настоящий люк: fills — [(доля радиуса, цвет)] от внешнего к внутреннему"""
+        x0, y0, x1, y1 = box; P = s.P
+        for kr, col in fills:
+            rr = r * kr; pts = []
+            for t in range(32):
+                a = t / 32 * 2 * math.pi; du, dz = rr * math.cos(a), rr * math.sin(a) * M
+                pts.append(P(u + du, y1 + inset, zc + dz) if side == 's' else P(x1 + inset, u + du, zc + dz))
+            s.d.polygon(pts, fill=hx(col) + (255,))
     def line(s, a, b, col, w=1): s.d.line([s.P(*a), s.P(*b)], fill=hx(col) + (255,), width=w)
     def dot(s, p, col, r=0): x, y = s.P(*p); s.d.rectangle([x - r, y - r, x + r, y + r], fill=hx(col) + (255,))
     def cyl(s, cx, cy, r, z0, z1, col, tex='metal', top=None, ry=None, bands=(), band_col=None, staves=0, bulge=0.0, rim=None):
@@ -191,9 +211,8 @@ def _(s):
     s.sface('s', .22, .78, h(.74), h(.83), '#d0d4d6', box=b)                    # панель управления
     s.sface('s', .26, .4, h(.77), h(.8), '#6a7078', 'metal', box=b)             # дозатор
     s.dot((.62, .81, h(.785)), '#3a3c40', 1); s.dot((.7, .81, h(.785)), '#40a050')
-    x, y = s.P(.5, .8, h(.38)); r = 10
-    s.d.ellipse([x - r - 2, y - r - 1, x + r + 2, y + r + 1], fill=(150, 154, 160, 255)); s.d.ellipse([x - r, y - r + 1, x + r, y + r - 1], fill=(58, 64, 72, 255))
-    s.d.ellipse([x - r + 3, y - r + 4, x + r - 3, y + r - 4], fill=(104, 138, 160, 255)); s.d.ellipse([x - 5, y - 6, x, y - 2], fill=(180, 204, 218, 255))
+    s.ring('s', b, .5, h(.4), .2, [(1, '#9aa0a6'), (.86, '#3a4048'), (.7, '#68889e'), (.38, '#8eaec2')])   # люк: обод, уплотнитель, стекло, блик
+    s.ring('s', b, .44, h(.46), .2, [(.18, '#c4d8e4')])
     s.sface('s', .22, .78, 0, h(.06), '#9a9ea2', 'metal', box=b)               # цоколь
 
 @sk('Умывальник с зеркалом', 'раковина 55×45, верх на 85 см · вода, пока есть водопровод')
