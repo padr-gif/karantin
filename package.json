@@ -1,6 +1,6 @@
 {
   "name": "karantin",
-  "version": "0.41.0",
+  "version": "0.42.0",
   "private": true,
   "description": "Карантин — мобильная зомби-выживалка в браузере",
   "type": "module",

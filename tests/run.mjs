@@ -125,6 +125,14 @@ if (W2) {
 check('мебель за стеной не выбирается', await D(`(() => { toggleEditor(true); const f = furns.find(f => !FIXED.has(f.type) && Math.hypot(f.cx - P.x, f.cy - P.y) < 3.2 && !reachOK(clamp(P.x, f.r[0], f.r[2]), clamp(P.y, f.r[1], f.r[3])));
   if (!f) return true; const R = cv.getBoundingClientRect(), k = SCALE / DEV; editorTap(SX(f.cx, f.cy) * k + R.left, SY(f.cx, f.cy, 10) * k + R.top); const ok = EDIT.sel !== f; toggleEditor(false); return ok; })()`));
 
+console.log('Гладкая графика (проба)');
+await fresh();
+await D("settings.smooth = true; applySettings();"); await sleep(1500);
+check('гладкий режим рисует мир без ошибок', await D("HDQ > 1 && CHUNKS.size > 0 && [...CHUNKS.values()].every(c => c.q === HDQ)"), await D("[HDQ, CHUNKS.size]"));
+check('мебель рисуется фигурами', await D("[...SPR.keys()].some(k => /^F\\d+v$/.test(k))"));
+await D("settings.smooth = false; applySettings();"); await sleep(500);
+check('и возвращается к пикселям', await D("HDQ === 1 && [...CHUNKS.values()].every(c => c.q === 1)"));
+
 console.log('Живая игра 15 секунд');
 await fresh("['coward']");
 await D("P.weapon = mkItem('shotgun'); P.weapon.mag = 2; P.inv.push(mkItem('shells')); gameMin += 14 * 60; for (let i = 0; i < 25; i++) spawnZombie(4, false);");
