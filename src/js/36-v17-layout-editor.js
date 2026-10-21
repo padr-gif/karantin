@@ -2,7 +2,7 @@
 // ---- readable recipe cards: every requirement is a named chip, green when you have it ----
 const PNAMES = {campfire:'Огонь', burner:'Горелка', seeds:'Грядка', barrel:'Бочка'};
 recipeCard = function (title, parts, result, buttons, note) {
-  const r = mk('div', 'recipe rc4');
+  const r = mk('div', 'recipe rc4'); r.dataset.result = result; r.dataset.parts = parts.map(p => (p.ok ? '+' : '-') + (p.id || '')).join(',');
   const out = mk('div', 'rout'); out.appendChild(iconEl(result, 36)); r.appendChild(out);
   const mid = mk('div', 'rmid'); mid.appendChild(mk('b', '', title));
   const chips = mk('div', 'chips');

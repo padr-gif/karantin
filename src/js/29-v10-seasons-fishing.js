@@ -65,8 +65,7 @@ function ach(id) {
   if (achDone[id]) return; achDone[id] = Date.now();
   try { localStorage.setItem('karantin-ach', JSON.stringify(achDone)); } catch (e) {}
   const a = ACH.find(a => a[0] === id); if (!a) return;
-  const el = document.createElement('div'); el.className = 'toast gold'; el.textContent = '★ ' + a[1] + ' — ' + a[2];
-  const box = $('toasts'); box.appendChild(el); setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 450); }, 4200);
+  eventBanner('Достижение: ' + a[1], a[2], 'gold', 'i-star');
   SFX.equip();
 }
 function checkAch() {

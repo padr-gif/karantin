@@ -108,6 +108,8 @@ function update(dt) {
     z.mv = 0;
     z.reachA = (z.reachA || 0) + clamp((z.state === 'chase' ? 1 : 0) - (z.reachA || 0), -dt * 2, dt * 2);
     if (z.trapT > 0) { z.trapT -= dt; z.stun = Math.max(z.stun, .1); }
+    if (z.vt) { tickZVault(z, dt); continue; }
+    if (z.down > 0) { z.down -= dt; z.downT = (z.downT || 0) + dt; z.wind = 0; z.mv = 0; continue; }
     if (z.stun > 0) { z.stun -= dt; z.wind = 0; continue; }
     const dx = P.x - z.x, dy = P.y - z.y, d = Math.hypot(dx, dy);
     const zsg = sight * sightK(z), sees = d < zsg && los(z.x, z.y, P.x, P.y);
@@ -164,8 +166,10 @@ function update(dt) {
       z.sway += dt * 5;
       const sw = Math.sin(z.sway) * .25;
       const ax = mx - my * sw, ay = my + mx * sw;
+      if (!z.crawl && !z.pal.fast) sp *= .5 + .78 * Math.abs(Math.sin(z.walk * .5 + z.seed * 3));  // shambling: pushes on each step, drags in between
       const px = z.x, py = z.y;
       move(z, ax * sp * dt, ay * sp * dt);
+      if (zWindowCheck(z, px, py)) continue;
       const moved = Math.hypot(z.x - px, z.y - py); z.walk += moved * 6.5; z.mv = clamp(moved / dt / 1.6, 0, 1);
       const ta = Math.atan2(my, mx);
       z.face += Math.atan2(Math.sin(ta - z.face), Math.cos(ta - z.face)) * Math.min(1, dt * 6);
