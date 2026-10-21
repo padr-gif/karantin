@@ -1,0 +1,16 @@
+{
+  "name": "karantin",
+  "version": "0.36.0",
+  "private": true,
+  "description": "Карантин — мобильная зомби-выживалка в браузере",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "node serve.mjs",
+    "test": "node build.mjs --dev && node tests/run.mjs",
+    "icons": "python3 tools/icons/gen.py assets/sprites/icons.png assets/icons.json"
+  },
+  "devDependencies": {
+    "playwright": "1.56.0"
+  }
+}

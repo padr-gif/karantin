@@ -1,0 +1,277 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Карантин</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=PT+Mono&family=PT+Sans:wght@400;700&display=swap&subset=cyrillic">
+<style>
+/*@@CSS@@*/
+</style>
+
+<canvas id="game" aria-label="Игровое поле"></canvas>
+<div id="vig"></div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+    <symbol id="i-map" viewBox="0 0 24 24"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path class="fill" d="M12 20s-7.5-4.6-7.5-10.2A4.2 4.2 0 0 1 12 7.2a4.2 4.2 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z"/></symbol>
+    <symbol id="i-food" viewBox="0 0 24 24"><path d="M7 3v18M4.5 3v4.5a2.5 2.5 0 0 0 5 0V3M17 21V3c-2.5 1-3.5 4-3.5 9H17"/></symbol>
+    <symbol id="i-drop" viewBox="0 0 24 24"><path class="fill" d="M12 3s6 6.8 6 11a6 6 0 0 1-12 0c0-4.2 6-11 6-11z"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path class="fill" d="M13.5 2L5 13.5h6L10 22l9-12h-6z"/></symbol>
+    <symbol id="i-strike" viewBox="0 0 24 24"><path d="M20 4l-9.5 9.5M20 4h-5M20 4v5M10.5 13.5l-4 4M5 14.5l4.5 4.5M3.5 20.5l2-2"/></symbol>
+    <symbol id="i-run" viewBox="0 0 24 24"><circle cx="15" cy="4.5" r="2"/><path d="M7 21l3.5-6 3 2.5V22M10.5 15l1.5-6 4 3.5h3.5M12 9l-4.5 1-2 3"/></symbol>
+    <symbol id="i-sneak" viewBox="0 0 24 24"><path d="M8 3.5c1.8 0 2.8 2 2.8 4.8S9.8 12 8 12s-2.8-1-2.8-3.7S6.2 3.5 8 3.5zM6.6 14.5h2.9v1.8a1.45 1.45 0 0 1-2.9 0zM16 8c1.8 0 2.8 2 2.8 4.8s-1 3.7-2.8 3.7-2.8-1-2.8-3.7S14.2 8 16 8zM14.6 19h2.9v.8a1.45 1.45 0 0 1-2.9 0z"/></symbol>
+    <symbol id="i-bag" viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0v11a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zM9 6.5V5a3 3 0 0 1 6 0v1.5M6 13h12M10 13v3h4v-3"/></symbol>
+    <symbol id="i-hand" viewBox="0 0 24 24"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V11M11 11V4a1.5 1.5 0 0 1 3 0v7M14 11V5.5a1.5 1.5 0 0 1 3 0V13M17 9.5a1.5 1.5 0 0 1 3 0v4.5a7 7 0 0 1-7 7h-1a6 6 0 0 1-5-2.8l-3-4.8a1.5 1.5 0 0 1 2.6-1.5L8 13.5"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5.5 5.5"/></symbol>
+    <symbol id="i-door" viewBox="0 0 24 24"><path d="M6 21V3.5h12V21M3.5 21h17M14.5 12.5v.01"/></symbol>
+    <symbol id="i-bed" viewBox="0 0 24 24"><path d="M3 19V6M3 15h18v4M21 15v-2.5a3 3 0 0 0-3-3h-7.5V15M7 12.5a1.6 1.6 0 1 0 0-.01"/></symbol>
+    <symbol id="i-fire" viewBox="0 0 24 24"><path d="M12 3c.8 3.6 5.5 5.2 5.5 10.5a5.5 5.5 0 0 1-11 0c0-2.8 1.6-4.2 2.2-6 1.6 1 2.3 2.7 2.3 2.7S12.6 7 12 3z"/></symbol>
+    <symbol id="i-car" viewBox="0 0 24 24"><path d="M4.5 16.5v-4l2.2-5.5h10.6l2.2 5.5v4zM4.5 16.5v2M19.5 16.5v2M4.5 12.5h15M8 14.5h.01M16 14.5h.01"/></symbol>
+    <symbol id="i-hammer" viewBox="0 0 24 24"><path d="M3.5 20.5l9-9M11 6l3.5-3 6 6-3 3.5-3-3-2 2-3.5-3.5z"/></symbol>
+    <symbol id="i-cross" viewBox="0 0 24 24"><path d="M9.5 4h5v5.5H20v5h-5.5V20h-5v-5.5H4v-5h5.5z"/></symbol>
+    <symbol id="i-bottle" viewBox="0 0 24 24"><path d="M10 2.5h4M10.5 2.5v4.5L8.5 10v10.5h7V10l-2-3V2.5M8.5 14h7"/></symbol>
+    <symbol id="i-light" viewBox="0 0 24 24"><path d="M7 3h10l-2.2 6v11.5H9.2V9zM9.2 9h5.6M12 12.5v2.5"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.6 6.6 0 0 0 10.5 10.5z"/></symbol>
+    <symbol id="i-rain" viewBox="0 0 24 24"><path d="M7 15.5a4 4 0 0 1-.3-8 5.3 5.3 0 0 1 10.1-1.2A4.3 4.3 0 0 1 17 15.5zM8.5 18.5l-1 2.5M12.5 18.5l-1 2.5M16.5 18.5l-1 2.5"/></symbol>
+    <symbol id="i-snow" viewBox="0 0 24 24"><path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9M9.5 4.5L12 6.5l2.5-2M9.5 19.5l2.5-2 2.5 2"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-skull" viewBox="0 0 24 24"><path d="M12 3a7 7 0 0 0-7 7c0 2.6 1.2 4.2 3 5.2V19h8v-3.8c1.8-1 3-2.6 3-5.2a7 7 0 0 0-7-7zM10 19v2M14 19v2"/><path d="M9.3 10.8h.01M14.7 10.8h.01" style="stroke-width:3.4"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-fist" viewBox="0 0 24 24"><path d="M7 11V8.5a1.5 1.5 0 0 1 3 0V11M10 10V7.5a1.5 1.5 0 0 1 3 0V10M13 10V8a1.5 1.5 0 0 1 3 0v3M16 10.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-1.5A5.5 5.5 0 0 1 6 15.5V13a2 2 0 0 1 2-2h3a1.8 1.8 0 0 1 0 3.6H9"/></symbol>
+    <symbol id="i-tool" viewBox="0 0 24 24"><path d="M14.5 6.5a4 4 0 0 0 5.2 5.2l-8.9 8.9a2.1 2.1 0 0 1-3-3l8.9-8.9a4 4 0 0 0-2.2-5.2 4 4 0 0 1 5.6 0"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></symbol>
+    <symbol id="i-swap" viewBox="0 0 24 24"><path d="M5 9h13l-3.5-3.5M19 15H6l3.5 3.5"/></symbol>
+    <symbol id="i-horn" viewBox="0 0 24 24"><path d="M4 9.5h3l6-4.5v14l-6-4.5H4zM16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11"/></symbol>
+    <symbol id="i-window" viewBox="0 0 24 24"><path d="M4.5 3.5h15v17h-15zM12 3.5v17M4.5 12h15"/></symbol>
+    <symbol id="i-curtain" viewBox="0 0 24 24"><path d="M3 4h18M5 4c0 6 1.2 11.5 4.5 16H5zM19 4c0 6-1.2 11.5-4.5 16H19z"/></symbol>
+    <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M8.5 2.5h7a1.5 1.5 0 0 1 1.5 1.5v16a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 7 20V4a1.5 1.5 0 0 1 1.5-1.5zM11 18.5h2M20.5 9a8.5 8.5 0 0 1 0 6M3.5 15a8.5 8.5 0 0 1 0-6"/></symbol>
+    <symbol id="i-left" viewBox="0 0 24 24"><path d="M15 4l-8 8 8 8"/></symbol>
+    <symbol id="i-right" viewBox="0 0 24 24"><path d="M9 4l8 8-8 8"/></symbol>
+    <symbol id="i-sofa" viewBox="0 0 24 24"><path d="M4 11V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3M2.5 12.5a1.5 1.5 0 0 1 3 0V15h13v-2.5a1.5 1.5 0 0 1 3 0V18h-19zM5 18v2M19 18v2"/></symbol>
+    <symbol id="i-temp" viewBox="0 0 24 24"><path d="M10 13.5V5a2 2 0 0 1 4 0v8.5a4 4 0 1 1-4 0zM12 9v7"/></symbol>
+  </defs>
+</svg>
+
+<div id="hud" hidden>
+  <div class="left">
+    <div class="vitals">
+      <button type="button" id="bPause" class="ibtn" aria-label="Меню"><svg class="ic"><use href="#i-menu"/></svg></button>
+      <button type="button" class="gauge stat" data-k="hp" title="Здоровье" aria-label="Здоровье"><svg class="ring" viewBox="0 0 40 40"><circle class="tr" cx="20" cy="20" r="17"/><circle class="fg" cx="20" cy="20" r="17"/></svg><svg class="ic"><use href="#i-heart"/></svg></button>
+      <button type="button" class="gauge stat" data-k="sat" title="Сытость" aria-label="Сытость"><svg class="ring" viewBox="0 0 40 40"><circle class="tr" cx="20" cy="20" r="17"/><circle class="fg" cx="20" cy="20" r="17"/></svg><svg class="ic"><use href="#i-food"/></svg></button>
+      <button type="button" class="gauge stat" data-k="hyd" title="Вода" aria-label="Вода"><svg class="ring" viewBox="0 0 40 40"><circle class="tr" cx="20" cy="20" r="17"/><circle class="fg" cx="20" cy="20" r="17"/></svg><svg class="ic"><use href="#i-drop"/></svg></button>
+      <button type="button" class="gauge stat" data-k="en" title="Бодрость" aria-label="Бодрость"><svg class="ring" viewBox="0 0 40 40"><circle class="tr" cx="20" cy="20" r="17"/><circle class="fg" cx="20" cy="20" r="17"/></svg><svg class="ic"><use href="#i-bolt"/></svg></button>
+    </div>
+    <div id="moodles"></div>
+    <div class="saved" id="saveInd"></div>
+  </div>
+  <div class="right">
+    <div class="clock">
+      <svg class="ic wx" id="wxIc"><use href="#i-sun"/></svg>
+      <div class="ct"><div class="time" id="time">09:00</div><div class="pod" id="pod" hidden>Утро</div><div class="day" id="day">День 1</div></div>
+      <div class="cside"><span id="temp">14°</span><span id="kills">0</span></div>
+    </div>
+    <div class="zoom"><button type="button" id="zOut" class="ibtn sm" aria-label="Отдалить"><svg class="ic"><use href="#i-minus"/></svg></button><button type="button" id="zIn" class="ibtn sm" aria-label="Приблизить"><svg class="ic"><use href="#i-plus"/></svg></button></div>
+  </div>
+</div>
+<div id="toasts"></div>
+<div id="editBar" hidden><svg class="ic"><use href="#i-sofa"/></svg><span id="edTxt"></span><button type="button" id="edBreak"><svg class="ic"><use href="#i-hammer"/></svg>Разобрать</button><button type="button" id="edRot"><svg class="ic"><use href="#i-swap"/></svg>Повернуть</button><button type="button" id="edDone" class="done">Готово</button></div>
+<div id="rotate" hidden><svg class="ic rot"><use href="#i-rotate"/></svg><b>Поверни телефон горизонтально</b><span>Карантин играется только в альбомной ориентации</span></div>
+<div id="stick" hidden><div id="knob"></div></div>
+
+<div id="ctrl" hidden>
+  <div id="dock">
+    <button type="button" id="weapon" class="wslot" aria-label="Сменить оружие"><span id="wico"></span><span class="wbar"><i id="wdur"></i></span><strong id="wname">Кулаки</strong></button>
+    <div id="hotbar"></div>
+    <button type="button" id="bEdit" class="hslot editslot" aria-label="Обустройство" title="Обустройство: переставить мебель (R)"><svg class="ic"><use href="#i-sofa"/></svg><span class="hk">R</span></button>
+    <button type="button" id="bMap" class="hslot mapslot" aria-label="Карта" title="Карта (M)"><svg class="ic"><use href="#i-map"/></svg><span class="hk">M</span></button>
+  </div>
+  <div id="pad">
+    <button class="act off" id="bAct" type="button"><svg class="ic" id="bActIc"><use href="#i-hand"/></svg><span class="at"><b id="bActV">Действие</b><small id="bActN"></small></span></button>
+    <button class="more" id="bMore" type="button" hidden aria-label="Другие действия">+1</button>
+    <div id="actAlt"></div>
+    <button class="act bar" id="bBar" type="button" hidden><svg class="ic"><use href="#i-hammer"/></svg><span class="at"><b>Заколотить</b><small>доской</small></span></button>
+    <button class="btn" id="bAtk" type="button" aria-label="Удар"><svg class="ic"><use href="#i-strike"/></svg></button>
+    <button class="btn sm" id="bSneak" type="button" aria-label="Красться"><svg class="ic"><use href="#i-sneak"/></svg></button>
+    <button class="btn sm" id="bRun" type="button" aria-label="Бег"><svg class="ic"><use href="#i-run"/></svg></button>
+    <button class="btn sm" id="bInv" type="button" aria-label="Рюкзак"><svg class="ic"><use href="#i-bag"/></svg><span class="cap" id="invCap"></span></button>
+  </div>
+  <div id="actMenu" hidden></div>
+  <div id="carPad" hidden>
+    <button type="button" class="cbtn steer" id="cL" aria-label="Руль влево"><svg class="ic"><use href="#i-left"/></svg></button>
+    <button type="button" class="cbtn steer" id="cR" aria-label="Руль вправо"><svg class="ic"><use href="#i-right"/></svg></button>
+    <button type="button" class="cbtn pedal brake" id="cBrake"><b>Тормоз</b><small>держи — назад</small></button>
+    <button type="button" class="cbtn pedal gas" id="cGas"><b>Газ</b></button>
+    <button type="button" class="cbtn exit" id="cExit" aria-label="Выйти из машины"><svg class="ic"><use href="#i-door"/></svg><small>Выйти</small></button>
+    <button type="button" class="cbtn horn" id="cHorn" aria-label="Гудок"><svg class="ic"><use href="#i-horn"/></svg></button>
+    <div id="carHud"><div class="spd"><b id="spd">0</b><small>км/ч</small></div><span class="gear" id="gear">N</span>
+      <div class="cbars"><label>Бак<span class="cb"><i id="fuelI"></i></span></label><label>Кузов<span class="cb"><i id="hullI"></i></span></label></div></div>
+  </div>
+  <div id="hint">WASD — идти · Shift — бег · C — красться · ЛКМ — удар/действие · ПКМ — действие<br>E — действие · Q — список действий · T — перезарядка · 1–5 — быстрые слоты · I — рюкзак · M — карта · колесо — масштаб</div>
+</div>
+
+<section class="screen" id="menu">
+  <div class="card menu-card">
+    <span class="stamp">Округ закрыт · связи нет</span>
+    <h1>Карантин</h1>
+    <p class="lead">2026 год. Город закрыт на карантин, на улицах мертвецы, помощи не будет. Выжить нельзя — можно только продержаться. Осень, зима, весна, лето… сколько дней ты протянешь?</p>
+    <nav class="mlist">
+      <button class="go" id="mContinue" type="button" hidden>Продолжить</button>
+      <button class="go" id="mNew" type="button">Новая игра</button>
+      <button class="mbtn" id="mLoad" type="button">Загрузить</button>
+      <button class="mbtn" id="mSettings" type="button">Настройки</button>
+      <button class="mbtn" id="mAch" type="button">Достижения</button>
+      <button class="mbtn" id="mHelp" type="button">Как играть</button>
+    </nav>
+    <div class="rec" id="rec">Загрузка спрайтов…</div>
+  </div>
+</section>
+
+<section class="screen" id="create" hidden>
+  <div class="card wide">
+    <div class="card-head"><h2 class="h2s">Новый выживший</h2><span class="rec">Внешность и сложность</span></div>
+    <div class="create">
+      <div class="prev-wrap"><canvas id="cPrev" width="96" height="120" aria-label="Предпросмотр персонажа"></canvas><span class="rec">Поворачивается сам</span></div>
+      <div class="opts">
+        <div class="opt"><span class="olbl">Пол</span><div class="seg" id="oGender"></div></div>
+        <div class="opt"><span class="olbl">Кожа</span><div class="sw" id="oSkin"></div></div>
+        <div class="opt"><span class="olbl">Волосы</span><div class="sw" id="oHair"></div></div>
+        <div class="opt"><span class="olbl">Куртка</span><div class="sw" id="oShirt"></div></div>
+        <div class="opt"><span class="olbl">Штаны</span><div class="sw" id="oPants"></div></div>
+        <div class="opt"><span class="olbl">Профессия</span><div class="seg" id="oProf"></div></div>
+        <p class="rec" id="oProfInfo"></p>
+        <div class="opt"><span class="olbl">Черты <b class="tpts" id="oTraitPts">Очки: 2</b></span><div class="traits" id="oTraits"></div></div>
+        <p class="rec" id="oTraitInfo"></p>
+        <div class="opt"><span class="olbl">Сложность</span><div class="seg" id="oDiff"></div></div>
+        <p class="rec" id="oDiffInfo"></p>
+        <div class="opt"><span class="olbl">Сезон</span><div class="seg" id="oSeason"></div></div>
+        <p class="rec" id="oSeasonInfo"></p>
+        <div class="opt"><span class="olbl">Свет</span><div class="seg" id="oPower"></div></div>
+        <div class="opt"><span class="olbl">Вода</span><div class="seg" id="oWater"></div></div>
+        <p class="rec">Через сколько дней в городе отключат электричество и водопровод</p>
+        <div class="opt"><span class="olbl">Мертвецы</span><div class="seg" id="oMut"></div></div>
+      </div>
+    </div>
+    <div class="row-btns"><button class="mbtn" id="cBack" type="button">Назад</button><button class="go" id="cStart" type="button">Начать</button></div>
+  </div>
+</section>
+
+<section class="screen" id="saves" hidden>
+  <div class="card wide">
+    <div class="card-head"><h2 class="h2s" id="svTitle">Загрузить</h2><span class="rec" id="svWhere"></span></div>
+    <div class="slots" id="svList"></div>
+    <div class="row-btns"><button class="mbtn" id="svBack" type="button">Назад</button></div>
+  </div>
+</section>
+
+<section class="screen" id="settings" hidden>
+  <div class="card wide">
+    <div class="card-head"><h2 class="h2s">Настройки</h2><span class="rec">Сохраняются в этом браузере</span></div>
+    <div class="setlist">
+      <div class="set"><div><b>Графика</b><small>Чёткость картинки. «Экономия» быстрее на слабых телефонах</small></div><div class="seg" id="sGfx"></div></div>
+      <div class="set"><div><b>Звук</b><small>Шаги, удары, стоны мертвецов, дождь</small></div><div class="seg" id="sVol"></div></div>
+      <div class="set"><div><b>Масштаб</b><small>Размер пикселей на экране</small></div><div class="seg" id="sZoom"></div></div>
+      <div class="set"><div><b>Длина суток</b><small>Сколько реального времени идёт игровая минута</small></div><div class="seg" id="sDay"></div></div>
+      <div class="set"><div><b>Капли дождя</b><small>Только картинка, дождь всё равно идёт</small></div><div class="seg" id="sRain"></div></div>
+      <div class="set"><div><b>Тряска экрана</b><small>При укусах</small></div><div class="seg" id="sShake"></div></div>
+      <div class="set"><div><b>Брызги крови</b></div><div class="seg" id="sGore"></div></div>
+      <div class="set"><div><b>Подсказки клавиш</b><small>Для клавиатуры</small></div><div class="seg" id="sHints"></div></div>
+      <div class="set"><div><b>Автосохранение</b><small>Каждые 2 игровых часа и при выходе</small></div><div class="seg" id="sAuto"></div></div>
+    </div>
+    <div class="row-btns"><button class="go" id="setBack" type="button">Готово</button></div>
+  </div>
+</section>
+
+<section class="screen" id="help" hidden>
+  <div class="card wide">
+    <div class="card-head"><h2 class="h2s">Как играть</h2></div>
+    <ul class="notes">
+      <li>Обыскивай холодильники, шкафы, полки, ящики в сараях и машины. В окне обыска можно забрать вещи или оставить лишнее.</li>
+      <li>Мертвецы идут на шум и свет. Бег, драка и стук молотка шумят, скрытный шаг почти бесшумен.</li>
+      <li>Заколачивай окна и двери досками: нужен молоток.</li>
+      <li>Спи в кровати. Пей из-под крана, пока не отключили воду, потом ставь бочки для дождя.</li>
+      <li>После отключения света еда из холодильников портится, а плита не работает. Готовь на костре.</li>
+      <li>Мясо жарь на сковороде, макароны и рис вари в кастрюле с водой.</li>
+      <li>Раны бывают разные: царапина затянется сама, порез и рваную рану нужно перевязать, повязку менять раз в полсуток. Грязная рана воспаляется: помогут антисептик и антибиотики. Укус не лечится.</li>
+      <li>Громилы и аварии ломают кости. Сделай шину из доски и бинта, иначе перелом будет срастаться неделями. Боль снимают таблетки.</li>
+      <li>Чем больше мертвецов рядом, тем сильнее паника: руки трясутся, удары мажут. Скука, холод и боль копят уныние, его прогоняют книги, музыка, горячая еда и сладкое.</li>
+      <li>Красться выгодно: мертвецы замечают тебя не сразу (над головой «?»), а удар со спины по тому, кто тебя не видит, почти всегда смертелен. В кустах и в темноте тебя видно хуже.</li>
+      <li>Пистолет и ружьё убивают быстро, но выстрел слышно на несколько кварталов. Патроны ищи у полиции и военных.</li>
+      <li>Ползуны лежат в траве и хватают за ноги, бегуны выходят ночью. Смотри под ноги и не гуляй после заката.</li>
+      <li>Одежда рвётся от укусов: зашей её набором для шитья и тряпками. Разводной ключ и металлолом нужны, чтобы чинить машины, сливать бензин и прибивать листы металла на заколоченные окна.</li>
+      <li>Шумовая приманка вдали от дома загремит и уведёт мертвецов и даже орду. Ящики для хранения можно подписать: кнопка «Разложить» разнесёт вещи из рюкзака по полкам.</li>
+    </ul>
+    <div class="keys" id="keysHelp"></div>
+    <div class="row-btns"><button class="go" id="helpBack" type="button">Понятно</button></div>
+  </div>
+</section>
+
+<section class="screen" id="ach" hidden>
+  <div class="card wide">
+    <div class="card-head"><h2 class="h2s">Достижения</h2><span class="rec" id="achCount"></span></div>
+    <div class="achs" id="achList"></div>
+    <div class="row-btns"><button class="go" id="achBack" type="button">Назад</button></div>
+  </div>
+</section>
+
+<section class="screen" id="pause" hidden>
+  <div class="card menu-card">
+    <span class="stamp">Пауза</span>
+    <div class="rec" id="pInfo"></div>
+    <nav class="mlist">
+      <button class="go" id="pResume" type="button">Продолжить</button>
+      <button class="mbtn" id="pSave" type="button">Сохранить</button>
+      <button class="mbtn" id="pLoad" type="button">Загрузить</button>
+      <button class="mbtn" id="pAch" type="button">Достижения</button>
+      <button class="mbtn" id="pSettings" type="button">Настройки</button>
+      <button class="mbtn" id="pMenu" type="button">Выйти в главное меню</button>
+    </nav>
+  </div>
+</section>
+
+<section class="screen" id="story" hidden>
+  <div class="card story">
+    <span class="stamp" id="stWhen">12 сентября</span>
+    <h2 class="h2s st-title" id="stTitle"></h2>
+    <p class="lead" id="stText"></p>
+    <div class="st-foot"><span class="rec" id="stDots"></span><div class="row-btns"><button class="mbtn" id="stSkip" type="button">Пропустить</button><button class="go" id="stNext" type="button">Далее</button></div></div>
+  </div>
+</section>
+<section class="screen" id="dead" hidden>
+  <div class="card">
+    <span class="stamp red">Связь потеряна</span>
+    <h2>Так закончилась твоя история</h2>
+    <dl class="facts">
+      <dt>Продержался</dt><dd id="dTime">—</dd>
+      <dt>Убито мертвецов</dt><dd id="dKills">0</dd>
+      <dt>Причина</dt><dd id="dCause">—</dd>
+      <dt>Рекорд</dt><dd id="dRec">—</dd>
+    </dl>
+    <div class="row-btns"><button class="go" id="bAgain" type="button">Новая игра</button><button class="mbtn" id="dLoad" type="button">Загрузить</button><button class="mbtn" id="dMenu" type="button">Главное меню</button></div>
+  </div>
+</section>
+
+<section class="screen" id="sleep" hidden>
+  <div class="card">
+    <span class="stamp">Сон</span>
+    <div class="zz" id="sTime">00:00</div>
+    <div class="rec" id="sEn">Бодрость 0%</div>
+    <div class="seg" id="alarmSeg" hidden></div><div class="rec" id="alarmInfo" hidden></div>
+    <button class="go" id="bWake" type="button">Проснуться</button>
+  </div>
+</section>
+
+<div id="panel" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="pnTitle">
+    <div class="sheet-head"><div><h3 id="pnTitle">Рюкзак</h3><span class="pn-sub" id="pnSub"></span></div><button class="close" id="pnClose" type="button">Закрыть</button></div>
+    <div class="tabs" id="pnTabs"></div>
+    <div class="rows" id="pnBody"></div>
+  </div>
+</div>
+<script>
+/*@@SCRIPT@@*/
+</script>
+
+</body></html>
