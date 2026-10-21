@@ -29,13 +29,32 @@ def _grain(u, v, seed, along):
 TEX = {
     'wood':   lambda u, v: _grain(u, v, 1, True),      # волокна вдоль длинной стороны
     'woodv':  lambda u, v: _grain(u, v, 11, False),    # волокна вертикально (дверцы, клёпки)
-    'metal':  lambda u, v: .95 + .05 * vn(u / 14, v / 1.2, 3) + .025 * hsh(int(u), int(v), 4),   # шлифованный металл
-    'paint':  lambda u, v: .95 + .06 * vn(u / 5, v / 5, 5) + .03 * hsh(int(u), int(v), 6),
+    'metal':  lambda u, v: .92 + .07 * vn(u / 9, v / 1.4, 3) + .07 * hsh(int(u), int(v), 4),     # крашеный металл
+    'paint':  lambda u, v: .91 + .09 * vn(u / 4, v / 4, 5) + .07 * hsh(int(u), int(v), 6),
     'fabric': lambda u, v: .92 + .06 * ((int(u) + int(v)) % 2) + .07 * vn(u / 4, v / 4, 7) + .03 * hsh(int(u), int(v), 8),
-    'stone':  lambda u, v: .88 + .14 * vn(u / 3, v / 3, 9) + .06 * hsh(int(u), int(v), 10),
+    'stone':  lambda u, v: .84 + .18 * vn(u / 2.5, v / 2.5, 9) + .1 * hsh(int(u), int(v), 10),
     'plain':  lambda u, v: 1,
 }
-GLOSS = {'metal': .12, 'stone': .08, 'paint': .04}   # блик у светлого края у гладких материалов
+GLOSS = {'metal': .07, 'stone': .05, 'paint': .02}
+GRIME = 1.0          # 0 — чисто, 1 — обжитый заброшенный дом
+RUST = (126, 70, 38)
+def grime(c, x, y, tex, hz=99):
+    """потёртость поверх готового цвета: зерно, пятна, грязь у пола, царапины, ржавчина и разводы"""
+    if not GRIME or tex == 'plain': return c
+    g = GRIME
+    k = 1 + g * (.13 * (hsh(x, y, 41) - .5))                                   # крупное пиксельное зерно
+    k *= 1 - g * .09 * max(0, vn(x / 8, y / 8, 42) - .5) * 2.4                 # пятна грязи
+    if hz < 14: k *= 1 - g * .16 * (1 - hz / 14)                               # пыль и грязь у пола
+    if hsh(x // 2, y, 43) > .985: k *= 1 + g * .25                             # светлые царапины
+    if hsh(x, y // 2, 44) > .99: k *= 1 - g * .3                               # сколы
+    c = mul(c, k)
+    if tex == 'metal' and hz < 18 and vn(x / 3, y / 3, 45) > .62 + hz / 40:   # ржавчина только снизу, мелкими пятнами
+        t = min(1, (vn(x / 3, y / 3, 45) - .55) * 2) * g * .55; c = tuple(round(c[i] + (RUST[i] - c[i]) * t) for i in range(3))
+    if tex == 'metal' and c[0] > 170 and c[2] > 160: c = (c[0], round(c[1] * .985), round(c[2] * .95))   # белая эмаль желтеет
+    if tex in ('fabric', 'stone') and vn(x / 9, y / 9, 46) > .7:               # разводы и выцветание
+        c = mul(c, .9) if tex == 'fabric' else tuple(round(v * .92 + 168 * .08 * (1 if i < 2 else .7)) for i, v in enumerate(c))
+    return c
+   # блик у светлого края у гладких материалов
 SHADE = {'t': 1.0, 's': .82, 'e': .64}     # верх, грань к +y, грань к +x (как в игре)
 
 class Spr:
@@ -64,7 +83,7 @@ class Spr:
                     if gl: k *= 1 + gl * math.exp(-((a - .18) / .09) ** 2)                # блик
                 else:
                     k *= 1.03 - .06 * b                                                    # верх: дальний край темнее
-                px[x, y] = mul(col, k) + (255,)
+                px[x, y] = grime(mul(col, k), x, y, tex, b * L2 if vert else 99) + (255,)
         if edge: s.d.line(pts + [pts[0]], fill=mul(col, edge) + (255,), width=1)
     def box(s, x0, y0, x1, y1, z0, z1, col, tex='paint', top=None, ttex=None, lip=True):
         P = s.P
@@ -117,7 +136,7 @@ class Spr:
                 if gl: k *= 1 + gl * 1.6 * math.exp(-((u - .22) / .07) ** 2)
                 if staves and int(u * staves * 2) % 2 == 0: k *= .93
                 if yb - yy < 6 and z0 < 1: k *= .8 + .2 * max(0, yb - yy) / 6
-                if 0 <= xx < W and 0 <= yy < H: px[xx, yy] = mul(c, k) + (255,)
+                if 0 <= xx < W and 0 <= yy < H: px[xx, yy] = grime(mul(c, k), xx, yy, tex, (yb - yy) if z0 < 1 else 99) + (255,)
         for z in bands:
             _, yz = s.P(cx, cy, z); t = (z - z0) / max(1, z1 - z0); w = RX * (1 + bulge * math.sin(math.pi * t)) + .6
             for xx in range(int(x0 - w), int(x0 + w) + 1):
