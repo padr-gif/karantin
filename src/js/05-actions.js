@@ -125,10 +125,11 @@ function getAction(excl) {
   let best = null, bd = 1.15;
   for (const f of furns) {
     if (f.gone) continue;
-    if (Math.abs(f.cx - P.x) > 1.6 || Math.abs(f.cy - P.y) > 1.6) continue;
-    const d = Math.hypot(f.cx - P.x, f.cy - P.y);
+    if (Math.abs(f.cx - P.x) > 2.6 || Math.abs(f.cy - P.y) > 2.6) continue;
+    // distance to the nearest edge, so a long bed or sofa can be used from any side
+    const qx = clamp(P.x, f.r[0], f.r[2]), qy = clamp(P.y, f.r[1], f.r[3]), d = Math.hypot(qx - P.x, qy - P.y) + .42;
     if (d >= bd || (excl && excl.has(f))) continue;
-    if (!reachOK(f.cx, f.cy)) continue;
+    if (!reachOK(qx, qy)) continue;
     let a = null;
     if (f.type === 'bed') a = {kind:'sleep', label:'Спать', f};
     else if (f.type === 'sink') a = {kind:'sink', label:'Попить', f};

@@ -125,6 +125,14 @@ if (W2) {
 check('мебель за стеной не выбирается', await D(`(() => { toggleEditor(true); const f = furns.find(f => !FIXED.has(f.type) && Math.hypot(f.cx - P.x, f.cy - P.y) < 3.2 && !reachOK(clamp(P.x, f.r[0], f.r[2]), clamp(P.y, f.r[1], f.r[3])));
   if (!f) return true; const R = cv.getBoundingClientRect(), k = SCALE / DEV; editorTap(SX(f.cx, f.cy) * k + R.left, SY(f.cx, f.cy, 10) * k + R.top); const ok = EDIT.sel !== f; toggleEditor(false); return ok; })()`));
 
+console.log('Мебель в реальный размер');
+await fresh();
+check('большая мебель занимает все свои клетки', await D("(() => { const b = furns.filter(f => f.big); return b.length > 10 && b.every(f => f.tiles.length > 1 && f.tiles.every(t => furn[t] === furns.indexOf(f) + 1)); })()"), await D("furns.filter(f => f.big).length"));
+check('проходы в домах не перекрыты', await D("houses.every(h => houseOk([h]))"));
+check('спрайты новой мебели есть', await D("furns.every(f => frameOf(furnName(f)))"), await D("furns.filter(f => !frameOf(furnName(f))).map(furnName).slice(0, 5)"));
+check('большая мебель переживает сохранение', await D("(() => { const sig = () => furns.filter(f => f.big).map(f => f.tiles.join(',')).join('|'); const a = sig(); applySave(JSON.parse(JSON.stringify(serialize()))); return a === sig(); })()"));
+check('у большой мебели есть действие', await D("(() => { const f = furns.find(f => f.big && (f.type === 'bed' || f.type === 'sofa' || f.type === 'wardrobe')); if (!f) return true; const t = f.tiles[0]; P.x = f.r[0] - .35; P.y = (f.r[1] + f.r[3]) / 2; const a = getAction(); return !!a; })()"));
+
 console.log('Гладкая графика (проба)');
 await fresh();
 await D("settings.smooth = true; applySettings();"); await sleep(1500);

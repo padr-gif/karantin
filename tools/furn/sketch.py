@@ -62,7 +62,20 @@ class Spr:
         s.im = Image.new('RGBA', (w, h), (0, 0, 0, 0)); s.d = ImageDraw.Draw(s.im); s.ox, s.oy = ox, oy
         s.zb = [-1e9] * (w * h)   # глубина: чем больше x + y + z, тем ближе к зрителю
         s.ob = [0] * (w * h); s.cur = 0   # чей это пиксель: швы и блики подушки рисуются только по ней самой
-    def P(s, x, y, z): return (s.ox + (x - y) * U, s.oy + (x + y) * HH - z)
+        s.rot, s.piv, s.v, s.fp, s.track = 0, (.5, .5), 0, None, True   # поворот (0..3, как WDI в игре), его центр, вариант, след на полу
+    def R(s, x, y):
+        if not s.rot: return x, y
+        dx, dy = x - s.piv[0], y - s.piv[1]
+        dx, dy = ((-dy, dx), (-dx, -dy), (dy, -dx))[s.rot - 1]
+        return s.piv[0] + dx, s.piv[1] + dy
+    def RV(s, nx, ny): return (nx, ny) if not s.rot else ((-ny, nx), (-nx, -ny), (ny, -nx))[s.rot - 1]
+    def foot(s, x0, y0, x1, y1):
+        if not s.track: return
+        f = s.fp; s.fp = [min(x0, x1), min(y0, y1), max(x0, x1), max(y0, y1)] if f is None else [min(f[0], x0, x1), min(f[1], y0, y1), max(f[2], x0, x1), max(f[3], y0, y1)]
+    def Rbox(s, x0, y0, x1, y1):
+        a, b = s.R(x0, y0); c, d = s.R(x1, y1); return min(a, c), min(b, d), max(a, c), max(b, d)
+    def P0(s, x, y, z): return (s.ox + (x - y) * U, s.oy + (x + y) * HH - z)
+    def P(s, x, y, z): x, y = s.R(x, y); return s.P0(x, y, z)
     def face(s, pts, col, tex='paint', shade=1.0, edge=None, vert=None, wp=None):
         col = mul(hx(col), shade); m = Image.new('L', s.im.size, 0); ImageDraw.Draw(m).polygon(pts, fill=255)
         px, mp, T = s.im.load(), m.load(), TEX[tex]
@@ -94,7 +107,7 @@ class Spr:
                 px[x, y] = grime(mul(col, k), x, y, tex, b * L2 if vert else 99) + (255,)
         if edge: s.d.line(pts + [pts[0]], fill=mul(col, edge) + (255,), width=1)
     def box(s, x0, y0, x1, y1, z0, z1, col, tex='paint', top=None, ttex=None, lip=True):
-        P = s.P
+        s.foot(x0, y0, x1, y1); x0, y0, x1, y1 = s.Rbox(x0, y0, x1, y1); P = s.P0
         for q, sh, c_, t_ in (([(x0, y1, z0), (x1, y1, z0), (x1, y1, z1), (x0, y1, z1)], 's', col, tex),
                               ([(x1, y0, z0), (x1, y1, z0), (x1, y1, z1), (x1, y0, z1)], 'e', col, tex),
                               ([(x0, y0, z1), (x1, y0, z1), (x1, y1, z1), (x0, y1, z1)], 't', top or col, ttex or tex)):
@@ -105,10 +118,16 @@ class Spr:
             s.d.line([P(x1, y1, z0), P(x1, y1, z1)], fill=mul(hx(col), .55) + (255,))
     def sface(s, side, a0, a1, z0, z1, col, tex='paint', box=None, inset=.012, bevel=None):
         """прямоугольник на видимой грани коробки box=(x0,y0,x1,y1): side 's' (вдоль x) или 'e' (вдоль y); с фаской как у дверцы"""
-        x0, y0, x1, y1 = box; P = s.P
-        if side == 's': y = y1 + inset; wq = [(a0, y, z0), (a1, y, z0), (a1, y, z1), (a0, y, z1)]
-        else: x = x1 + inset; wq = [(x, a0, z0), (x, a1, z0), (x, a1, z1), (x, a0, z1)]
-        pts = [P(*w) for w in wq]
+        x0, y0, x1, y1 = box
+        if side == 's': y = y1 + inset; wq = [(a0, y, z0), (a1, y, z0), (a1, y, z1), (a0, y, z1)]; n = (0, 1)
+        else: x = x1 + inset; wq = [(x, a0, z0), (x, a1, z0), (x, a1, z1), (x, a0, z1)]; n = (1, 0)
+        n = s.RV(*n)
+        if n[0] < 0 or n[1] < 0: return                                    # грань смотрит от зрителя — не видна
+        side = 's' if n == (0, 1) else 'e'
+        wq = [s.R(q[0], q[1]) + (q[2],) for q in wq]
+        if n == (0, 1) and wq[0][0] > wq[1][0]: wq = [wq[1], wq[0], wq[3], wq[2]]   # слева направо на экране
+        if n == (1, 0) and wq[0][1] > wq[1][1]: wq = [wq[1], wq[0], wq[3], wq[2]]
+        pts = [s.P0(*w) for w in wq]
         wpx = abs(a1 - a0) * U * 1.12; hpx = abs(z1 - z0)
         if tex == 'wood' and hpx > wpx * 1.3: tex = 'woodv'
         s.face(pts, col, tex, SHADE[side], vert=False, wp=wq)
@@ -118,7 +137,7 @@ class Spr:
             s.d.line([pts[3], pts[2]], fill=hi); s.d.line([pts[0], pts[3]], fill=hi)
             s.d.line([pts[0], pts[1]], fill=lo); s.d.line([pts[1], pts[2]], fill=lo)
     def tface(s, x0, y0, x1, y1, z, col, tex='paint'):
-        P = s.P; wq = [(x0, y0, z), (x1, y0, z), (x1, y1, z), (x0, y1, z)]; s.face([P(*w) for w in wq], col, tex, 1.0, wp=wq)
+        x0, y0, x1, y1 = s.Rbox(x0, y0, x1, y1); wq = [(x0, y0, z), (x1, y0, z), (x1, y1, z), (x0, y1, z)]; s.face([s.P0(*w) for w in wq], col, tex, 1.0, wp=wq)
     def own_line(s, pts, col, oid):
         """линия по точкам, но только по пикселям своей детали (не сквозь соседние)"""
         W, H = s.im.size; px = s.im.load()
@@ -130,7 +149,7 @@ class Spr:
     def soft(s, x0, y0, x1, y1, z0, z1, col, tex='fabric'):
         """мягкая подушка: коробка + тёмный шов по своим видимым краям + светлая «выпуклость» по центру верха"""
         s.cur += 1; oid = s.cur
-        s.box(x0, y0, x1, y1, z0, z1, col, tex, lip=False); P = s.P; sc = mul(hx(col), .58) + (255,)
+        s.box(x0, y0, x1, y1, z0, z1, col, tex, lip=False); x0, y0, x1, y1 = s.Rbox(x0, y0, x1, y1); P = s.P0; sc = mul(hx(col), .58) + (255,)
         s.own_line([P(x0, y0, z1), P(x1, y0, z1), P(x1, y1, z1), P(x0, y1, z1), P(x0, y0, z1)], sc, oid)
         for q in ((x0, y1), (x1, y1), (x1, y0)): s.own_line([P(q[0], q[1], z0), P(q[0], q[1], z1)], sc, oid)
         s.own_line([P(x0, y1, z0), P(x1, y1, z0), P(x1, y0, z0)], sc, oid)
@@ -145,6 +164,8 @@ class Spr:
     def ring(s, side, box, u, zc, r, fills, inset=.014):
         """круг на передней ('s') или правой ('e') стенке — в проекции, как настоящий люк: fills — [(доля радиуса, цвет)] от внешнего к внутреннему"""
         x0, y0, x1, y1 = box; P = s.P
+        n = s.RV(*((0, 1) if side == 's' else (1, 0)))
+        if n[0] < 0 or n[1] < 0: return
         for kr, col in fills:
             rr = r * kr; pts = []
             for t in range(32):
@@ -154,7 +175,8 @@ class Spr:
     def line(s, a, b, col, w=1): s.d.line([s.P(*a), s.P(*b)], fill=hx(col) + (255,), width=w)
     def dot(s, p, col, r=0): x, y = s.P(*p); s.d.rectangle([x - r, y - r, x + r, y + r], fill=hx(col) + (255,))
     def cyl(s, cx, cy, r, z0, z1, col, tex='metal', top=None, ry=None, bands=(), band_col=None, staves=0, bulge=0.0, rim=None):
-        x0, yb = s.P(cx, cy, z0); _, yt = s.P(cx, cy, z1); RX = r * U * 1.41; RY = ry or RX / 2
+        s.foot(cx - r, cy - r, cx + r, cy + r); cx, cy = s.R(cx, cy)
+        x0, yb = s.P0(cx, cy, z0); _, yt = s.P0(cx, cy, z1); RX = r * U * 1.41; RY = ry or RX / 2
         px = s.im.load(); c = hx(col); T = TEX[tex]; W, H = s.im.size; gl = GLOSS.get(tex, 0)
         for yy in range(int(yt), int(yb + RY) + 1):
             t = (yb - yy) / max(1, yb - yt); w = RX * (1 + bulge * math.sin(math.pi * min(1, max(0, t))))
@@ -171,7 +193,7 @@ class Spr:
                     if dd < s.zb[zi] - .015: continue
                     s.zb[zi] = dd; px[xx, yy] = grime(mul(c, k), xx, yy, tex, (yb - yy) if z0 < 1 else 99) + (255,)
         for z in bands:
-            _, yz = s.P(cx, cy, z); t = (z - z0) / max(1, z1 - z0); w = RX * (1 + bulge * math.sin(math.pi * t)) + .6
+            _, yz = s.P0(cx, cy, z); t = (z - z0) / max(1, z1 - z0); w = RX * (1 + bulge * math.sin(math.pi * t)) + .6
             for xx in range(int(x0 - w), int(x0 + w) + 1):
                 dy = RY * math.sqrt(max(0, 1 - ((xx - x0) / w) ** 2)); u = (xx - (x0 - w)) / (2 * w)
                 k = 1.2 - .5 * u
@@ -435,7 +457,7 @@ def _(s):
     for x in (x0, x1 - .04):
         for y in (y0, y1 - .04): s.box(x, y, x + .04, y + .04, 0, h(1.8), w, 'metal', lip=False)
     for z in (h(.1), h(.66), h(1.22), h(1.76)): s.box(x0, y0, x1, y1, z, z + 3, w, 'metal')
-    for k, (xx, zz, c, hh) in enumerate(((.12, .1, '#c8a46a', .3), (.5, .1, '#b08a52', .38), (.15, .66, '#c84a40', .2), (.38, .66, '#4a7ab0', .2), (.6, .66, '#e8c040', .2), (.2, 1.22, '#8a9a6a', .25), (.55, 1.22, '#d8d4c8', .3))):
+    for k, (xx, zz, c, hh) in enumerate(() if s.v == 0 else ((.12, .1, '#c8a46a', .3), (.5, .1, '#b08a52', .38), (.15, .66, '#c84a40', .2), (.38, .66, '#4a7ab0', .2), (.6, .66, '#e8c040', .2), (.2, 1.22, '#8a9a6a', .25), (.55, 1.22, '#d8d4c8', .3))):
         s.box(xx, .36, xx + .26 if k < 2 else xx + .18, .64, h(zz) + 3, h(zz + hh), c, 'paint')
 
 @ex('f_stove_0_1', 'Плита', '60×60, высота 85, 4 конфорки')
@@ -475,14 +497,14 @@ def _(s):
     s.box(x0, y0, x1, y0 + .08, 0, h(1.0), w, 'wood')                              # изголовье
     s.box(x0, y0 + .08, x1, y1, h(.08), h(.3), w, 'wood'); legs(s, x0, y0 + .08, x1, y1, .07, h(.08), w)
     s.box(x0 + .04, y0 + .1, x1 - .04, y1 - .04, h(.3), h(.5), '#ece8de', 'fabric')   # матрас
-    s.soft(x0 + .01, .74, x1 + .01, y1 + .01, h(.34), h(.55), '#8a3e36')               # одеяло свисает по краям
+    s.soft(x0 + .01, .74, x1 + .01, y1 + .01, h(.34), h(.55), ('#8a3e36', '#3e5a80', '#5a6a40')[s.v % 3])               # одеяло свисает по краям (3 расцветки)
     s.soft(x0 + .01, .74, x1 + .01, .88, h(.55), h(.58), '#f0ece2')                     # отворот
     for xa in (.12, .74): s.soft(xa, .16, xa + .52, .5, h(.5), h(.64), '#f4f0e6')   # две подушки
     s.box(x0, y1 - .06, x1, y1, h(.08), h(.42), w, 'wood')                         # изножье
 
 @ex('f_sofa_0_1', 'Диван', '200×90, сиденье 45, спинка 85', (2, 1))
 def _(s):
-    c = '#8c4a3a'; c2 = mul(hx(c), 1.08); x0, x1, y0, y1 = .02, 1.98, .08, .94
+    c = ('#8c4a3a', '#46607a', '#5e6a46')[s.v % 3]; c2 = mul(hx(c), 1.08); x0, x1, y0, y1 = .02, 1.98, .08, .94
     legs(s, x0 + .04, y0 + .04, x1 - .04, y1 - .04, .06, h(.1), WOOD_D)
     s.box(x0, y0, x1, y1, h(.1), h(.28), mul(hx(c), .9), 'fabric')
     s.soft(x0, y0, x1, y0 + .2, h(.28), h(.85), c)                                  # спинка
@@ -599,6 +621,32 @@ def _(s):
     x, y, rx, ry = s.cyl(.5, .5, .25, 0, h(.88), '#8a5a34', 'woodv', bulge=.1, staves=9, bands=(h(.1), h(.44), h(.78)), band_col='#4a4c50', top='#9e6e40', rim='#5a3a20')
     for k in (-.5, 0, .5): s.d.line([(x + k * rx, y - ry * .82 * math.sqrt(1 - k * k)), (x + k * rx, y + ry * .82 * math.sqrt(1 - k * k))], fill=(110, 74, 42, 255))
     s.box(.67, .78, .73, .84, h(.08), h(.14), '#8a6a40', 'wood', lip=False)
+
+@ex('f_bed1_0_1', 'Кровать односпальная', '90×195, матрас на 50', (1, 2))
+def _(s):
+    w = WOOD_D; x0, x1, y0, y1 = .06, .94, .02, 1.97
+    s.box(x0, y0, x1, y0 + .07, 0, h(.9), w, 'wood')
+    s.box(x0, y0 + .07, x1, y1, h(.08), h(.3), w, 'wood'); legs(s, x0, y0 + .07, x1, y1, .06, h(.08), w)
+    s.box(x0 + .04, y0 + .1, x1 - .04, y1 - .04, h(.3), h(.5), '#ece8de', 'fabric')
+    s.soft(x0 + .01, .72, x1 + .01, y1 + .01, h(.34), h(.55), ('#8a3e36', '#3e5a80', '#5a6a40')[s.v % 3])
+    s.soft(x0 + .01, .72, x1 + .01, .86, h(.55), h(.58), '#f0ece2')
+    s.soft(.18, .14, .82, .46, h(.5), h(.64), '#f4f0e6')
+    s.box(x0, y1 - .06, x1, y1, h(.08), h(.4), w, 'wood')
+@ex('f_tv1_0_1', 'Телевизор на столике', 'столик 80×40×55')
+def _(s):
+    legs(s, .12, .32, .88, .7, .05, h(.5), WOOD_D)
+    s.box(.1, .3, .9, .72, h(.5), h(.55), WOOD, 'wood'); s.box(.14, .34, .86, .68, h(.14), h(.17), WOOD, 'wood', lip=False)
+    s.box(.22, .34, .78, .66, h(.55), h(.58), '#2a2a2e', 'metal')
+    s.box(.24, .3, .76, .62, h(.58), h(1.04), '#2e2e32', 'metal')
+    s.sface('s', .28, .72, h(.63), h(1.0), '#1a1c20', 'metal', box=(.24, .3, .76, .62)); s.sface('s', .31, .69, h(.66), h(.97), '#3a5466', 'metal', box=(.24, .3, .76, .62), bevel=False)
+    s.line((.45, .45, h(1.04)), (.38, .4, h(1.26)), '#9aa0a6'); s.line((.55, .45, h(1.04)), (.64, .4, h(1.26)), '#9aa0a6')
+@ex('f_table1_0_1', 'Стол квадратный', '80×80, высота 75')
+def _(s):
+    c = WOOD_L; legs(s, .12, .12, .88, .88, .06, h(.71), mul(hx(c), .8))
+    s.box(.14, .14, .86, .86, h(.62), h(.71), mul(hx(c), .88), 'wood', lip=False)
+    s.box(.08, .08, .92, .92, h(.71), h(.75), c, 'wood')
+    p = s.P(.4, .45, h(.75)); s.d.ellipse([p[0] - 6, p[1] - 3, p[0] + 6, p[1] + 3], fill=(238, 236, 230, 255)); s.d.ellipse([p[0] - 3, p[1] - 1.5, p[0] + 3, p[1] + 1.5], fill=(212, 208, 198, 255))
+    s.cyl(.66, .38, .045, h(.75), h(.84), '#4a7ab0', 'paint')
 
 def sheet_existing(out, atlas='assets/atlas.json', sprites='assets/sprites'):
     import json, textwrap, os
@@ -724,6 +772,10 @@ def _(s):
     bx(s, .6, .3, .74, .48, h(1.85), h(1.94), '#3a3a3e', 'metal'); s.dot((.67, .485, h(1.9)), '#e0c060')   # радио
 @det('Стеллаж')
 def _(s):
+    if s.v: _shelf_items(s)
+    for (x, y) in ((.05, .66), (.91, .66)):
+        for z in (h(.1), h(.66), h(1.22), h(1.76)): s.dot((x + .02, y + .04, z + 1.5), '#4a4e54')   # болты
+def _shelf_items(s):
     for xx, zz, c in ((.66, 1.76, '#c84a3a'), (.78, 1.76, '#e8e8e4')): jar(s, xx, .5, .06, h(zz) + 3, h(zz) + 3 + h(.2), c)
     bx(s, .14, .38, .44, .62, h(1.76) + 3, h(1.92), '#9a7a4a'); s.sface('s', .18, .32, h(1.8), h(1.86), '#e8e2cc', box=(.14, .38, .44, .62), bevel=False)   # коробка с наклейкой
     for (x, y) in ((.05, .66), (.91, .66)):
@@ -909,3 +961,45 @@ def sheet_all(out, only=None):
     img.save(out); print(len(items), img.size)
 if __name__ == '__main__' and len(sys.argv) > 2 and sys.argv[2] == 'all':
     sheet_all(sys.argv[1], sys.argv[3:] or None)
+
+
+# ---------- кадры для игры: каждая мебель с 4 сторон, лист + атлас ----------
+GAME_VARS = {'bed': 3, 'bed1': 3, 'sofa': 3, 'shelf': 2, 'bookshelf': 2}
+def game_type(key): return key[2:].rsplit('_', 2)[0] if key.startswith('f_') else key
+def render_game(fn, name, size, rot, v):
+    sw, sl = size; W, Hh = 320, 300
+    s = Spr(W, Hh, ox=W // 2, oy=Hh - 90); s.rot, s.piv, s.v = rot, (sw / 2, sl / 2), v
+    fn(s); fp = s.fp
+    s.track = False
+    if name in DETAIL: s.cur = 900; DETAIL[name](s)
+    im = s.outline()
+    cx, cy = s.R((fp[0] + fp[2]) / 2, (fp[1] + fp[3]) / 2); ax, ay = s.P0(cx, cy, 0)
+    bb = im.getbbox(); crop = im.crop(bb)
+    return crop, (ax - bb[0], ay - bb[1]), (fp[2] - fp[0], fp[3] - fp[1])
+def export_game(png_out, atlas_path, sheet='furn2'):
+    import json
+    frames, sizes = [], {}
+    for key, name, note, fn, size in EX:
+        t = game_type(key)
+        rots = (0,) if t == 'barrel' else (0, 1, 2, 3)
+        for v in range(GAME_VARS.get(t, 1)):
+            for r in rots:
+                im, (ax, ay), fsz = render_game(fn, name, size, r, v)
+                nm = 'barrel' if t == 'barrel' else f'f_{t}_{v}_{r}'
+                frames.append((nm, im, ax, ay)); sizes.setdefault(t, [round(fsz[0], 3), round(fsz[1], 3)])
+    # простая укладка полками
+    W = 2048; x = y = rowh = 0; pos = {}
+    for nm, im, ax, ay in sorted(frames, key=lambda f: -f[1].height):
+        if x + im.width > W: x = 0; y += rowh + 1; rowh = 0
+        pos[nm] = (x, y); x += im.width + 1; rowh = max(rowh, im.height)
+    sheet_im = Image.new('RGBA', (W, y + rowh + 1), (0, 0, 0, 0))
+    meta = json.load(open(atlas_path)); fr = meta['frames']
+    for nm, im, ax, ay in frames:
+        px, py = pos[nm]; sheet_im.paste(im, (px, py))
+        if nm in fr and not fr[nm][0] == sheet and 'old_' + nm not in fr: fr['old_' + nm] = fr[nm]   # старый кадр остаётся запасным
+        fr[nm] = [sheet, px, py, im.width, im.height, round(ax), round(ay)]
+    meta['fsize'] = sizes
+    sheet_im.save(png_out, optimize=True); json.dump(meta, open(atlas_path, 'w'), separators=(',', ':'))
+    print(len(frames), 'кадров', sheet_im.size, 'размеры:', sizes)
+if __name__ == '__main__' and len(sys.argv) > 2 and sys.argv[2] == 'game':
+    export_game(sys.argv[1], sys.argv[3] if len(sys.argv) > 3 else 'assets/atlas.json')
