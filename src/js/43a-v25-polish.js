@@ -39,16 +39,17 @@ const EVENTS = [
   [/^стемнело/i, 'Ночь', 'night', 'i-moon'],
 ];
 const eventFor = t => { for (const e of EVENTS) if (e[0].test(t)) return [e[1], e[2], e[3]]; return null; };
+const EV_LIFE = 3800;   // compact banner, one at a time: a newer event replaces the older one
 function eventBanner(title, text, kind, icon) {
   let box = $('events'); if (!box) { box = mk('div'); box.id = 'events'; document.body.appendChild(box); }
   const el = mk('div', 'evb ' + (kind || ''));
   const ic = mk('div', 'evi'); ic.appendChild(svgIc(icon || 'i-star')); el.appendChild(ic);
   const tx = mk('div', 'evt'); tx.appendChild(mk('b', '', title)); if (text && text !== title) tx.appendChild(mk('span', '', text)); el.appendChild(tx);
-  const bar = mk('i', 'nbar'), u = mk('u'); u.style.animationDuration = '5200ms'; bar.appendChild(u); el.appendChild(bar);
-  box.appendChild(el); while (box.children.length > 2) box.firstChild.remove();
-  const sync = () => document.body.classList.toggle('evon', box.children.length > 0);
+  const bar = mk('i', 'nbar'), u = mk('u'); u.style.animationDuration = EV_LIFE + 'ms'; bar.appendChild(u); el.appendChild(bar);
+  box.appendChild(el); while (box.children.length > 1) box.firstChild.remove();
+  const sync = () => { document.body.classList.toggle('evon', box.children.length > 0); document.body.style.setProperty('--evh', box.offsetHeight + 'px'); };   // toasts sit right under the banner, however tall it is
   sync();
-  setTimeout(() => { el.classList.add('out'); setTimeout(() => { el.remove(); sync(); }, 400); }, 5200);
+  setTimeout(() => { el.classList.add('out'); setTimeout(() => { el.remove(); sync(); }, 400); }, EV_LIFE);
 }
 
 // ---- zombies tumble through open or broken windows instead of gliding through the wall ----

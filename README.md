@@ -27,6 +27,7 @@ assets/sprites/*.png  листы спрайтов (персонажи, зомб�
 assets/atlas.json     координаты кадров на листах
 assets/icons.json     координаты иконок предметов
 tools/icons/gen.py    генератор пиксельных иконок (Python + Pillow)
+tools/webp.py         WebP-копии листов для сайта (assets/sprites/webp/, пересоздаются при сборке сайта сами)
 tests/run.mjs         автотесты
 build.mjs, serve.mjs  сборка и сервер для разработки
 ```

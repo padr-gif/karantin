@@ -21,7 +21,8 @@
   var t = document.getElementById('bootTip'); if (t) t.textContent = tips[Math.floor(Math.random() * tips.length)];
   window.__boot = function (k, text) { var b = document.getElementById('bootBar'), s = document.getElementById('bootStat'); if (b && k != null) b.style.width = Math.round(Math.max(4, Math.min(100, k * 100))) + '%'; if (s && text) s.textContent = text; };
   window.__boot(.04, 'Загружаю город…');
-  if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0 && !/[?&]dbg/.test(location.search)) { try { navigator.serviceWorker.register('sw.js').catch(function () {}); } catch (e) {} }
+  // service worker registers once the game has loaded: its copy of the files then comes from the browser cache instead of a second download
+  window.__regSW = function () { if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0 && !/[?&]dbg/.test(location.search)) { try { navigator.serviceWorker.register('sw.js').catch(function () {}); } catch (e) {} } };
 })();
 </script>
 

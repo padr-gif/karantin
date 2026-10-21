@@ -59,7 +59,7 @@ mode = 'menu'; show('menu'); setMenuEnabled(false);
 $('keysHelp').textContent = isTouch
   ? 'Левая половина экрана — джойстик. Тап справа или «Удар» — атака. «Действие» — обыскать, открыть, готовить, спать. Держи телефон горизонтально.'
   : 'WASD — идти · Shift — бег · C — красться · мышь — направление · ЛКМ или Пробел — удар/выстрел · E — действие · B — забить доской · T — перезарядка · I — рюкзак · M — карта · Esc — пауза · колесо — масштаб';
-function hideBoot() { const b = $('boot'); if (!b) return; try { window.__boot(1, 'Готово'); } catch (e) {} setTimeout(() => { b.classList.add('gone'); setTimeout(() => b.remove(), 500); }, 150); }
+function hideBoot() { try { window.__regSW && window.__regSW(); } catch (e) {} const b = $('boot'); if (!b) return; try { window.__boot(1, 'Готово'); } catch (e) {} setTimeout(() => { b.classList.add('gone'); setTimeout(() => b.remove(), 500); }, 150); }
 function bootFail(e) {
   ART.failed = true; $('rec').textContent = 'Не удалось загрузить спрайты. Обнови страницу.';
   const s = $('bootStat'), r = $('bootRetry'); if (s) s.textContent = 'Не удалось загрузить игру: ' + ((e && e.message) || 'ошибка'); if (r) { r.hidden = false; r.onclick = () => location.reload(); }

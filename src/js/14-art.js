@@ -12,14 +12,15 @@ function loadArt() {
     const N = names.length, q = names.slice(); let done = 0;
     const boot = (k, t) => { try { window.__boot && window.__boot(k, t); } catch (e) {} };
     boot(.12, 'Распаковываю спрайты…');
-    const one = n => new Promise((res, rej) => {
+    // on the site sheets are WebP files with a PNG twin; a browser that can't show WebP gets the PNG on the retry
+    const one = (n, again) => new Promise((res, rej) => {
       const im = new Image(), t = setTimeout(() => rej(new Error('спрайт ' + n + ' не распаковался')), 60000);
       im.onload = () => { clearTimeout(t); (im.decode ? im.decode().catch(() => {}) : Promise.resolve()).then(() => { ART.imgs[n] = im; done++; boot(.12 + .83 * done / N, 'Распаковываю спрайты: ' + done + ' из ' + N); res(); }); };
       im.onerror = () => { clearTimeout(t); rej(new Error('спрайт ' + n + ' повреждён')); };
-      im.src = ART_EMBED.png[n];
+      im.src = again && ART_EMBED.alt ? ART_EMBED.alt[n] : ART_EMBED.png[n];
     });
-    const next = () => q.length ? (n => one(n).catch(() => one(n)))(q.shift()).then(next) : Promise.resolve();
-    return Promise.all([next(), next()]).then(() => { ART.meta = ART_EMBED.meta; ART.ready = true; if (ART_EMBED.png.icons) document.documentElement.style.setProperty('--icons', 'url(' + ART_EMBED.png.icons + ')'); boot(.97, 'Почти готово…'); });
+    const next = () => q.length ? (n => one(n).catch(() => one(n, true)))(q.shift()).then(next) : Promise.resolve();
+    return Promise.all([next(), next()]).then(() => { ART.meta = ART_EMBED.meta; ART.ready = true; if (ART_EMBED.png.icons) document.documentElement.style.setProperty('--icons', 'url(' + (ART.imgs.icons.currentSrc || ART.imgs.icons.src) + ')'); boot(.97, 'Почти готово…'); });
   }
   return fetch('art/atlas.json').then(r => { if (!r.ok) throw new Error('atlas'); return r.json(); }).then(meta =>
     Promise.all(names.map(n => new Promise((res, rej) => { const im = new Image(); im.onload = () => { ART.imgs[n] = im; res(); }; im.onerror = rej; im.src = 'art/' + n + '.png'; })))
