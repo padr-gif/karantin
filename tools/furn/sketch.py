@@ -294,7 +294,7 @@ def sheet(out):
         for n, ln in enumerate(textwrap.wrap(note, 36)): d.text((cx + 14, cy + box_h + 50 + n * 24), ln, fill=(150, 156, 150), font=fs)
     img.save(out); print(len(SK), 'эскизов', img.size)
 
-if __name__ == '__main__' and not (len(sys.argv) > 2 and sys.argv[2] == 'existing'):
+if __name__ == '__main__' and len(sys.argv) <= 2:
     sheet(sys.argv[1] if len(sys.argv) > 1 else 'sketch.png')
 
 # ---------- нынешняя мебель в реальных пропорциях ----------
@@ -523,3 +523,64 @@ def sheet_existing(out, atlas='assets/atlas.json', sprites='assets/sprites'):
 
 if __name__ == '__main__' and len(sys.argv) > 2 and sys.argv[2] == 'existing':
     sheet_existing(sys.argv[1])
+
+# ---------- бочка: варианты ----------
+BV = []
+def bv(name, note):
+    def deco(fn): BV.append((name, note, fn)); return fn
+    return deco
+def barrel(s, cx, cy, r, z1, col, tex, bulge=0.0, staves=0, bands=(), band_col=None, top=None, rim=None):
+    """Бочка в пикселях: ширина по колонкам, затенение слева-направо, обручи по передней половине, крышка эллипсом."""
+    x0, yb = s.P(cx, cy, 0); _, yt = s.P(cx, cy, z1); RX = r * U * 1.41; RY = RX / 2
+    px = s.im.load(); col = hx(col); T = TEX[tex]; W, H = s.im.size
+    for yy in range(int(yt), int(yb + RY) + 1):
+        t = (yb - yy) / max(1, yb - yt); w = RX * (1 + bulge * math.sin(math.pi * min(1, max(0, t))))
+        for xx in range(int(x0 - w), int(x0 + w) + 1):
+            u = (xx - (x0 - w)) / (2 * w)                    # 0 слева … 1 справа
+            if yy > yb and ((xx - x0) / RX) ** 2 + ((yy - yb) / RY) ** 2 > 1: continue   # дно — полуэллипс
+            k = 1.16 if u < .2 else 1.04 if u < .45 else .9 if u < .72 else .72
+            if staves and int(u * staves * 2) % 2 == 0: k *= .93
+            if 0 <= xx < W and 0 <= yy < H: px[xx, yy] = mul(col, k * T(xx, yy)) + (255,)
+    for z in bands:                                       # обруч: дуга по передней половине
+        _, yz = s.P(cx, cy, z); t = z / z1; w = RX * (1 + bulge * math.sin(math.pi * t)) + .6
+        for xx in range(int(x0 - w), int(x0 + w) + 1):
+            dy = RY * math.sqrt(max(0, 1 - ((xx - x0) / w) ** 2)); u = (xx - (x0 - w)) / (2 * w)
+            k = 1.2 if u < .25 else 1 if u < .6 else .75
+            for d in (0, 1, 2):
+                yy = int(yz + dy) - 1 + d
+                if 0 <= xx < W and 0 <= yy < H: px[xx, yy] = mul(hx(band_col), k * (1.08 if d == 0 else 1)) + (255,)
+    tc = hx(top or mul(col, 1.1)); rc = hx(rim or mul(col, .78))
+    s.d.ellipse([x0 - RX, yt - RY, x0 + RX, yt + RY], fill=rc + (255,))
+    s.d.ellipse([x0 - RX + 2, yt - RY + 1, x0 + RX - 2, yt + RY - 1], fill=tc + (255,))
+    return x0, yt, RX, RY
+@bv('А. Пластиковая бочка', '200 л, рёбра жёсткости, 2 пробки')
+def _(s):
+    x, y, rx, ry = barrel(s, .5, .5, .26, h(.9), '#2a62a8', 'paint', bands=(h(.3), h(.6)), band_col='#3a78c0', top='#3470b8', rim='#1e4a86')
+    for dx in (-.42, .38): s.d.ellipse([x + dx * rx - 3, y - 2, x + dx * rx + 3, y + 2], fill=(214, 220, 226, 255)); s.d.point((x + dx * rx, y), fill=(150, 156, 162, 255))
+    s.box(.66, .76, .72, .82, h(.08), h(.14), '#c8ccd2', 'metal', lip=False)
+@bv('Б. Деревянная бочка', 'дубовые клёпки, 3 железных обруча')
+def _(s):
+    x, y, rx, ry = barrel(s, .5, .5, .25, h(.88), '#8a5a34', 'wood', bulge=.1, staves=9, bands=(h(.1), h(.44), h(.78)), band_col='#4a4c50', top='#9e6e40', rim='#5a3a20')
+    for k in (-.5, 0, .5): s.d.line([(x + k * rx, y - ry * .82 * math.sqrt(1 - k * k)), (x + k * rx, y + ry * .82 * math.sqrt(1 - k * k))], fill=(110, 74, 42, 255))
+    s.box(.67, .78, .73, .84, h(.08), h(.14), '#8a6a40', 'wood', lip=False)
+@bv('В. Бак под водостоком', 'труба с крыши льёт дождь в бак')
+def _(s):
+    s.box(.46, .02, .54, .1, h(1.05), h(2.4), '#8a8e94', 'metal', lip=False)   # труба по стене
+    s.box(.46, .02, .54, .44, h(1.0), h(1.08), '#8a8e94', 'metal', lip=False)   # отвод к баку
+    x, y, rx, ry = barrel(s, .5, .55, .26, h(.85), '#2a62a8', 'paint', bands=(h(.28), h(.56)), band_col='#3a78c0', top='#4a86b8', rim='#1e4a86')
+    s.d.ellipse([x - rx + 4, y - ry + 2, x + rx - 4, y + ry - 2], fill=(64, 104, 140, 255))   # вода внутри
+    s.d.ellipse([x - rx * .5, y - ry * .5, x + rx * .1, y + ry * .1], fill=(110, 150, 184, 255))
+    s.box(.66, .8, .72, .86, h(.08), h(.14), '#c8ccd2', 'metal', lip=False)
+def sheet_barrels(out):
+    K, cw = 4, 560
+    img = Image.new('RGB', (cw * 3 + 40, 800), (24, 28, 28)); d = ImageDraw.Draw(img)
+    fb = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 30); fs = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 21)
+    for k, (name, note, fn) in enumerate(BV):
+        s = Spr(); fn(s); im = s.outline()
+        fl = Image.new('RGBA', im.size, (0, 0, 0, 0)); ImageDraw.Draw(fl).polygon([s.P(0, 0, 0), s.P(1, 0, 0), s.P(1, 1, 0), s.P(0, 1, 0)], fill=(52, 44, 36, 255), outline=(70, 60, 48, 255))
+        fl.alpha_composite(im); sp = fl.crop(fl.getbbox()); sp = sp.resize((sp.width * K, sp.height * K), Image.NEAREST)
+        cx = 20 + k * cw; img.paste(sp, (cx + (cw - sp.width) // 2, 640 - sp.height), sp)
+        d.text((cx + 20, 670), name, fill=(230, 224, 208), font=fb); d.text((cx + 20, 712), note, fill=(150, 156, 150), font=fs)
+    img.save(out)
+if __name__ == '__main__' and len(sys.argv) > 2 and sys.argv[2] == 'barrels':
+    sheet_barrels(sys.argv[1])
