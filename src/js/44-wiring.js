@@ -62,9 +62,10 @@ $('keysHelp').textContent = isTouch
 function hideBoot() { try { window.__regSW && window.__regSW(); } catch (e) {} const b = $('boot'); if (!b) return; try { window.__boot(1, 'Готово'); } catch (e) {} setTimeout(() => { b.classList.add('gone'); setTimeout(() => b.remove(), 500); }, 150); }
 function bootFail(e) {
   ART.failed = true; $('rec').textContent = 'Не удалось загрузить спрайты. Обнови страницу.';
-  const s = $('bootStat'), r = $('bootRetry'); if (s) s.textContent = 'Не удалось загрузить игру: ' + ((e && e.message) || 'ошибка'); if (r) { r.hidden = false; r.onclick = () => location.reload(); }
+  const s = $('bootStat'), r = $('bootRetry'); if (s) s.textContent = 'Не удалось загрузить игру: ' + ((e && e.message) || 'ошибка'); if (r) { r.hidden = false; r.onclick = startLoad; }   // retry keeps the sheets that already arrived
 }
-loadArt().then(() => { setMenuEnabled(true); refreshMenu(); hideBoot(); }).catch(bootFail);
+function startLoad() { const r = $('bootRetry'); if (r) r.hidden = true; loadArt().then(() => { setMenuEnabled(true); refreshMenu(); hideBoot(); }).catch(bootFail); }
+startLoad();
 let menuDrift = 0, last = performance.now();
 let frameErr = 0;
 function frame(t) {

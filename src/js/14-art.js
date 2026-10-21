@@ -6,20 +6,70 @@ const SHADE = [.58, .72, .86, 1];
 /*@@ART_EMBED@@*/
 // Sheets are decoded two at a time with progress on the loading screen; a sheet that fails is retried once.
 // (Ten big images at once used to stall weak phones, and a single 20-second cap for all of them was too tight.)
+// On the site sheets are separate files: they are fetched as streams so the loading screen shows real megabytes,
+// a slow connection is never cut off (only 25 s with no bytes at all counts as a failure), each sheet gets three tries,
+// and a sheet already loaded is kept when the player presses "retry".
+function loadArtFiles() {
+  const names = Object.keys(ART_EMBED.png).filter(n => !ART.imgs[n]), size = ART_EMBED.size || {};
+  const boot = (k, t) => { try { window.__boot && window.__boot(k, t); } catch (e) {} };
+  const total = Object.values(size).reduce((a, b) => a + b, 0) || 1, mb = v => (v / 1048576).toFixed(1).replace('.', ',');
+  let got = Object.keys(ART.imgs).reduce((a, n) => a + (size[n] || 0), 0), done = Object.keys(ART.imgs).length;
+  const N = Object.keys(ART_EMBED.png).length;
+  const show = () => boot(.08 + .84 * Math.min(1, got / total), done < N ? 'Загружаю спрайты: ' + mb(got) + ' из ' + mb(total) + ' МБ' : 'Почти готово…');
+  show();
+  const pre = window.__pre || {};
+  const download = (n, url, first) => new Promise((res, rej) => {
+    const ac = window.AbortController ? new AbortController() : null; let tm = 0, mine = 0;
+    const quiet = () => { clearTimeout(tm); tm = setTimeout(() => { if (ac) ac.abort(); rej(new Error('сеть молчит')); }, 25000); };
+    quiet();
+    const req = first && pre[n] ? pre[n] : fetch(url, ac ? {signal: ac.signal} : undefined);
+    req.then(r => {
+      if (!r.ok) throw new Error('код ' + r.status);
+      const type = r.headers.get('content-type') || '';
+      if (!r.body || !r.body.getReader) return r.blob();
+      const rd = r.body.getReader(), parts = [];
+      const pump = () => rd.read().then(({done: end, value}) => {
+        if (end) return new Blob(parts, {type});
+        quiet(); parts.push(value); mine += value.length; got += value.length; show(); return pump();
+      });
+      return pump();
+    }).then(b => { clearTimeout(tm); res(b); }, e => { clearTimeout(tm); got -= mine; show(); rej(e); });
+  });
+  const decode = blob => new Promise((res, rej) => {
+    const im = new Image(); im.onload = () => (im.decode ? im.decode().catch(() => {}) : Promise.resolve()).then(() => res(im)); im.onerror = () => rej(new Error('не открылся'));
+    im.src = URL.createObjectURL(blob);
+  });
+  let decoding = Promise.resolve();   // big sheets are unpacked one at a time: weak phones choke on several at once
+  const one = (n, tries, alt) => {
+    const url = alt ? ART_EMBED.alt[n] : ART_EMBED.png[n];
+    return download(n, url, tries === 0 && !alt)
+      .then(b => (decoding = decoding.catch(() => {}).then(() => decode(b))))
+      .then(im => { ART.imgs[n] = im; done++; show(); }, e => {
+        if (!alt && ART_EMBED.alt && /не открылся|код 4/.test(e.message)) return one(n, tries, true);   // no WebP here (or no such file): take the PNG
+        if (tries < 2) return one(n, tries + 1, alt);
+        throw new Error('спрайт ' + n + ' не загрузился (' + e.message + ')');
+      });
+  };
+  return Promise.all(names.map(n => one(n, 0, false))).then(() => {
+    ART.meta = ART_EMBED.meta; ART.ready = true;
+    document.documentElement.style.setProperty('--icons', 'url(' + ART.imgs.icons.src + ')');
+    boot(.97, 'Почти готово…');
+  });
+}
 function loadArt() {
   const names = ART_EMBED ? Object.keys(ART_EMBED.png) : ['obj'];
+  if (ART_EMBED && ART_EMBED.alt) return loadArtFiles();
   if (ART_EMBED) {
     const N = names.length, q = names.slice(); let done = 0;
     const boot = (k, t) => { try { window.__boot && window.__boot(k, t); } catch (e) {} };
     boot(.12, 'Распаковываю спрайты…');
-    // on the site sheets are WebP files with a PNG twin; a browser that can't show WebP gets the PNG on the retry
-    const one = (n, again) => new Promise((res, rej) => {
+    const one = n => new Promise((res, rej) => {
       const im = new Image(), t = setTimeout(() => rej(new Error('спрайт ' + n + ' не распаковался')), 60000);
       im.onload = () => { clearTimeout(t); (im.decode ? im.decode().catch(() => {}) : Promise.resolve()).then(() => { ART.imgs[n] = im; done++; boot(.12 + .83 * done / N, 'Распаковываю спрайты: ' + done + ' из ' + N); res(); }); };
       im.onerror = () => { clearTimeout(t); rej(new Error('спрайт ' + n + ' повреждён')); };
-      im.src = again && ART_EMBED.alt ? ART_EMBED.alt[n] : ART_EMBED.png[n];
+      im.src = ART_EMBED.png[n];
     });
-    const next = () => q.length ? (n => one(n).catch(() => one(n, true)))(q.shift()).then(next) : Promise.resolve();
+    const next = () => q.length ? (n => one(n).catch(() => one(n)))(q.shift()).then(next) : Promise.resolve();
     return Promise.all([next(), next()]).then(() => { ART.meta = ART_EMBED.meta; ART.ready = true; if (ART_EMBED.png.icons) document.documentElement.style.setProperty('--icons', 'url(' + (ART.imgs.icons.currentSrc || ART.imgs.icons.src) + ')'); boot(.97, 'Почти готово…'); });
   }
   return fetch('art/atlas.json').then(r => { if (!r.ok) throw new Error('atlas'); return r.json(); }).then(meta =>

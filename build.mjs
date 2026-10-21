@@ -31,16 +31,16 @@ export function build({dev = false, pwa = false, out = 'dist/karantin.html'} = {
   // 1. sprite atlas: frame rects + every sheet (a data URL, or a file on the site)
   const meta = JSON.parse(rd('assets/atlas.json'));
   meta.icons = JSON.parse(rd('assets/icons.json'));
-  const png = {}, alt = {};
+  const png = {}, alt = {}, size = {};
   for (const name of JSON.parse(rd('assets/sheets.json')).order) {
     const buf = fs.readFileSync(path.join(ROOT, 'assets/sprites', name + '.png'));
     if (!pwa) { png[name] = 'data:image/png;base64,' + buf.toString('base64'); continue; }
     const h = hash(buf), wf = webpOf(name, h);
     alt[name] = put(`${name}.${h}.png`, buf, !!wf);
     png[name] = wf ? put(`${name}.${h}.webp`, fs.readFileSync(wf)) : alt[name];
-    preload.push(`<link rel="preload" as="image" href="${png[name]}"${wf ? ' type="image/webp"' : ''}>`);
+    size[name] = wf ? fs.statSync(wf).size : buf.length;
   }
-  const art = 'const ART_EMBED = ' + JSON.stringify(pwa ? {meta, png, alt} : {meta, png}) + ';';
+  const art = 'const ART_EMBED = ' + JSON.stringify(pwa ? {meta, png, alt, size} : {meta, png}) + ';';
 
   // 2. game code: all files from src/js in name order share one scope
   const dir = path.join(ROOT, 'src/js');
@@ -50,6 +50,8 @@ export function build({dev = false, pwa = false, out = 'dist/karantin.html'} = {
   js = js.replace('/*@@DEBUG@@*/', dev ? "if (/[?&]dbg\\b/.test(location.search)) window.__dbg = s => eval(s);" : '');
 
   // 3. page
+  // the sheets start downloading straight from <head>, while the browser is still busy with the game code
+  if (pwa) preload.push(`<script>window.__pre={};(function(u){try{if(window.fetch)for(var k in u)window.__pre[k]=fetch(u[k]);}catch(e){}})(${JSON.stringify(png)})</script>`);
   const head = (pwa ? preload.join('') : '') + (pwa ? '<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#0c0f12"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Карантин"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" href="icon-192.png">'
  : '');
   // fonts live in the page itself: an outside font server that hangs must never block the game from starting
