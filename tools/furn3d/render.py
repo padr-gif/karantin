@@ -211,9 +211,34 @@ def wardrobe():
     m.add(rbox((.3, y0 + .3, Hh + .1), (.18, .2, .07), .03), 'woodlx')                         # коробка на шкафу
     return m
 
+def pixelize(im, colors=24, outline=True, shadow_levels=3):
+    """пиксель-арт поверх рендера: жёсткий силуэт, ограниченная палитра (ступеньки света), тонкий тёмный контур"""
+    a = np.array(im).astype(float); al = a[..., 3]
+    obj = (al > 140) & (a[..., :3].max(-1) > 20)                     # сама мебель (не тень на полу)
+    rgb = a[..., :3].copy()
+    q = Image.fromarray(np.where(obj[..., None], rgb, 0).astype(np.uint8), 'RGB').quantize(colors + 1, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE).convert('RGB')
+    qa = np.array(q).astype(float)
+    out = np.zeros_like(a)
+    out[obj, :3] = qa[obj]; out[obj, 3] = 255
+    sh = (~obj) & (al > 8)                                           # тень на полу: несколько ровных ступеней
+    lv = np.ceil(al[sh] / 255 / .55 * shadow_levels) / shadow_levels * .55 * 255
+    out[sh, :3] = 15; out[sh, 3] = lv
+    if outline:
+        H, W = obj.shape; edge = np.zeros_like(obj); src = np.zeros((H, W, 3))
+        for dy, dx in ((0, 1), (0, -1), (1, 0), (-1, 0)):
+            nb = np.zeros_like(obj); ns = np.zeros((H, W, 3))
+            ys, yd = (slice(0, H - dy), slice(dy, H)) if dy >= 0 else (slice(-dy, H), slice(0, H + dy))
+            xs, xd = (slice(0, W - dx), slice(dx, W)) if dx >= 0 else (slice(-dx, W), slice(0, W + dx))
+            nb[yd, xd] = obj[ys, xs]; ns[yd, xd] = out[ys, xs, :3]
+            new = nb & ~obj & ~edge; src[new] = ns[new]; edge |= new
+        out[edge, :3] = src[edge] * .3 + 8; out[edge, 3] = 255
+    return Image.fromarray(np.clip(out, 0, 255).astype(np.uint8), 'RGBA')
+
 def sheet(out):
     items = [fridge(), bed(), sofa(), wardrobe()]
-    ims = [render(it)[0] for it in items]
+    raw = [render(it)[0] for it in items]
+    mode = (sys.argv[2] if len(sys.argv) > 2 else 'smooth')
+    ims = raw if mode == 'smooth' else [pixelize(i, *( (28, True) if mode == 'pix1' else (14, True) )) for i in raw]
     K = 3; pad = 20
     W = sum(i.width * K + pad for i in ims) + pad; H = max(i.height for i in ims) * K + 2 * pad
     bg = Image.new('RGBA', (W, H), (48, 44, 40, 255)); x = pad
