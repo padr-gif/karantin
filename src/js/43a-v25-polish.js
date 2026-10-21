@@ -101,12 +101,7 @@ const scrDir = a => { const vx = Math.cos(a) - Math.sin(a), vy = (Math.cos(a) + 
 function playerPose(an) {
   if (reduceMotion || an === 'death') return null;
   const a = P.fd != null ? P.fd : P.face, [vx, vy] = scrDir(a), t = animT, p = {ox:0, oy:0, r:0, sx:1, sy:1};
-  if (P.moving) {
-    const ph = P.walk, run = P.running;
-    p.oy -= Math.abs(Math.sin(ph)) * (run ? 1.6 : .9);                       // lift on every step
-    p.r = vx * (run ? .085 : P.sneak ? .03 : .035) + Math.sin(ph) * (run ? .025 : .018);  // lean into the run, sway on the steps
-    const sq = Math.cos(ph * 2) * (run ? .025 : .012); p.sy += sq; p.sx -= sq * .6;
-  } else { const b = Math.sin(t * 2.3); p.sy += b * .012; p.sx -= b * .006; }   // breathing
+  // no bob, lean or breathing: rotating and squashing pixel sprites made the picture shake while walking
   if (P.atkT != null && P.atkT < P.atkDur) { const k = P.atkT / P.atkDur, l = Math.sin(Math.PI * k) * (k < .35 ? -.6 : 1) * 2.4; p.ox += vx * l; p.oy += vy * l; p.r += vx * Math.sin(Math.PI * k) * .05; }
   if (P.hurt > 0) { p.ox += (Math.random() - .5) * P.hurt * 3; p.r -= vx * P.hurt * .12; }
   if (P.sneak && !P.moving) p.sy -= .02;
@@ -116,17 +111,9 @@ function zombiePose(z, an) {
   if (reduceMotion || (an === 'death' && !z.crawl && !(z.down > 0))) return null;
   const [vx, vy] = scrDir(z.face), s = z.seed || 0, t = animT, p = {ox:0, oy:0, r:0, sx:1, sy:1};
   if (z.vt) { p.oy -= z.vz || 0; p.r = vx * .25 * Math.sin(Math.PI * z.vt.t / z.vt.dur); return p; }
-  if (z.crawl) { const ph = z.walk * .9; p.ox += vx * Math.sin(ph) * .8; p.oy += Math.abs(Math.sin(ph)) * -.6; p.sx += Math.sin(ph) * .03; return p; }
+  if (z.crawl) return p;
   if (z.down > 0) return p;
-  const mv = z.mv || 0, ph = z.walk * .5 + s * 6;
-  if (mv > .05) {
-    const limp = .6 + .8 * Math.max(0, Math.sin(ph + s * 3));
-    p.oy -= Math.abs(Math.sin(ph)) * 1.1 * limp;
-    p.r = Math.sin(ph) * (.06 + s * .04) + vx * (z.state === 'chase' ? .1 : .04);   // lurch side to side, lean towards the prey
-    p.ox += Math.sin(ph) * .7;
-  } else {
-    p.r = Math.sin(t * (.9 + s) + s * 9) * .035; p.sy += Math.sin(t * 1.7 + s * 5) * .01;   // swaying on the spot
-  }
+  // walking and idle sway removed (it shook the picture); lunges and staggering from hits stay
   if (z.wind > 0) { const k = 1 - z.wind / .35; p.ox += vx * (k < .5 ? -1 : 2.2) * 1.5; p.oy += vy * (k < .5 ? -1 : 2.2) * 1.5; p.r += vx * .12 * k; }
   if (z.stun > 0) p.r -= vx * Math.min(.3, z.stun) * .5;
   return p;
@@ -200,7 +187,7 @@ buildInvDoll = function (body) { buildInvDoll25(body); const c = document.getEle
 // ---- recipe detail: what you get and where to find what is missing ----
 const RES_INFO = {'Костёр':'Горит около четырёх часов: на нём готовят и греются. Дождь заливает огонь, в доме разводить нельзя.', 'Бочка для дождевой воды':'Собирает дождевую воду, до 20 литров. Ставь на улице, сырую воду лучше вскипятить.',
   'Грядка':'Сажай семена и поливай: через пару дней будет урожай. Мороз губит всходы.', 'Ящик для хранения':'Вмещает 24 вещи. Подпиши табличкой, и кнопка «Разложить» разнесёт вещи по ящикам. Еда в нём портится медленнее.'};
-const SRC_HINT = {plank:'разбери мебель в режиме обустройства (R) или поищи в ящиках с инструментом', scrap:'разбери машину ключом или ломом', rag:'распусти ненужную одежду или поищи в комодах и шкафах', sticks:'наломай хвороста у любого дерева',
+const SRC_HINT = {plank:'разбери мебель в режиме обустройства (кнопка с диваном внизу) или поищи в ящиках с инструментом', scrap:'разбери машину ключом или ломом', rag:'распусти ненужную одежду или поищи в комодах и шкафах', sticks:'наломай хвороста у любого дерева',
   berries:'собери с кустов летом и осенью', mushroom:'поищи под деревьями в конце лета и осенью', water:'набери в бутылку у раковины, из бочки или бачка унитаза', fish:'порыбачь у пруда в парке', bottle:'остаётся, когда выпьешь воду или газировку',
   meat:'в холодильниках, пока работает электричество', jar:'на кухонных полках и в ящиках', carrot:'вырасти на грядке', potato:'вырасти на грядке', cabbage:'вырасти на грядке', campfire:'разведи костёр: 2 доски и спички', burner:'газовая горелка: кухни и хозтовары'};
 function whereFind(id) {

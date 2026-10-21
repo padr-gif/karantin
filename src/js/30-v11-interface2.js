@@ -60,9 +60,7 @@ function tapWorld(cx, cy) {
   let best = null, bd = 1.4;
   for (const a of getActions()) { const [x, y] = actPos(a), d = Math.hypot(x - wx, y - wy); if (d < bd) { bd = d; best = a; } }
   if (best) { doAction(best); return true; }
-  if (Math.hypot(wx - P.x, wy - P.y) > 14) return false;
-  const far = getActionAt(wx, wy);
-  if (far) { const [x, y] = actPos(far); if (Math.hypot(x - wx, y - wy) < 1.6) { const path = findPath(x, y); if (!path) { toast('Туда не пройти'); return true; } goTo = {x, y, t:actTarget(far), time:12, path}; showTapMark(x, y); return true; } }
+  // tapping somewhere further away no longer walks you there: you move with the stick only
   return false;
 }
 let tapMark = null;

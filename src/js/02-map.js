@@ -136,7 +136,7 @@ function addFurnIn(Hs, type, room, center) {
 }
 function mkDoorAt(x, y, s, inner, Hs) {
   set(x, y, DOOR);
-  obs[y * MW + x] = inner ? {t:'door', open:true, hp:60, dead:false, bhp:0, sw:1} : {t:'door', open:false, hp:70, dead:false, bhp:0, sw:(s === 0 || s === 2) ? 1 : -1, locked:rng() < .45};
+  obs[y * MW + x] = inner ? {t:'door', open:false, hp:60, dead:false, bhp:0, sw:1} : {t:'door', open:false, hp:70, dead:false, bhp:0, sw:(s === 0 || s === 2) ? 1 : -1, locked:rng() < .45};
   if (!inner) Hs.doors.push({x, y, s});
 }
 function buildResidential(Hs) {
@@ -265,7 +265,7 @@ function buildHouse(hx, hy, w, h, kind, opts) {
     inner = hx + ri(3, w - 4); Hs.inner = inner;
     for (let y = hy + 1; y < hy + h - 1; y++) set(inner, y, WALL);
     const dy = ri(hy + 1, hy + h - 2); set(inner, dy, DOOR);
-    obs[dy * MW + inner] = {t:'door', open:true, hp:60, dead:false, bhp:0, sw:1};
+    obs[dy * MW + inner] = {t:'door', open:false, hp:60, dead:false, bhp:0, sw:1};
   }
   const sides = opts && opts.sides ? opts.sides.slice() : shuffle([0, 1, 2, 3]);
   const nd = comm ? (kind === 'store' || kind === 'police' ? 2 : 1) : kind === 'shed' ? 1 : (rng() < .45 ? 2 : 1);

@@ -4,3 +4,6 @@ dist/
 .DS_Store
 __pycache__/
 site/
+*.png
+!assets/**/*.png
+!pwa/*.png

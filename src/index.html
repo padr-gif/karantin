@@ -106,7 +106,7 @@
   <div id="dock">
     <button type="button" id="weapon" class="wslot" aria-label="Сменить оружие"><span id="wico"></span><span class="wbar"><i id="wdur"></i></span><strong id="wname">Кулаки</strong></button>
     <div id="hotbar"></div>
-    <button type="button" id="bEdit" class="hslot editslot" aria-label="Обустройство" title="Обустройство: переставить мебель (R)"><svg class="ic"><use href="#i-sofa"/></svg><span class="hk">R</span></button>
+    <button type="button" id="bEdit" class="hslot editslot" aria-label="Обустройство" title="Обустройство: переставить мебель"><svg class="ic"><use href="#i-sofa"/></svg></button>
     <button type="button" id="bMap" class="hslot mapslot" aria-label="Карта" title="Карта (M)"><svg class="ic"><use href="#i-map"/></svg><span class="hk">M</span></button>
   </div>
   <div id="pad">
@@ -153,20 +153,25 @@
 </section>
 
 <section class="screen" id="create" hidden>
-  <div class="card wide">
-    <div class="card-head"><h2 class="h2s">Новый выживший</h2><span class="rec">Внешность и сложность</span></div>
+  <div class="card wide cwrap">
+    <div class="card-head"><h2 class="h2s">Новый выживший</h2>
+      <div class="ctabs" id="cTabs" role="tablist"><button type="button" data-t="look" class="on">Внешность</button><button type="button" data-t="who">Профессия и черты</button><button type="button" data-t="world">Мир</button></div></div>
     <div class="create">
-      <div class="prev-wrap"><canvas id="cPrev" width="96" height="120" aria-label="Предпросмотр персонажа"></canvas><span class="rec">Поворачивается сам</span></div>
-      <div class="opts">
+      <div class="prev-wrap"><canvas id="cPrev" width="96" height="120" aria-label="Предпросмотр персонажа"></canvas><span class="csum" id="cSum"></span></div>
+      <div class="opts" data-tab="look">
         <div class="opt"><span class="olbl">Пол</span><div class="seg" id="oGender"></div></div>
         <div class="opt"><span class="olbl">Кожа</span><div class="sw" id="oSkin"></div></div>
         <div class="opt"><span class="olbl">Волосы</span><div class="sw" id="oHair"></div></div>
         <div class="opt"><span class="olbl">Куртка</span><div class="sw" id="oShirt"></div></div>
         <div class="opt"><span class="olbl">Штаны</span><div class="sw" id="oPants"></div></div>
+      </div>
+      <div class="opts" data-tab="who" hidden>
         <div class="opt"><span class="olbl">Профессия</span><div class="seg" id="oProf"></div></div>
         <p class="rec" id="oProfInfo"></p>
         <div class="opt"><span class="olbl">Черты <b class="tpts" id="oTraitPts">Очки: 2</b></span><div class="traits" id="oTraits"></div></div>
         <p class="rec" id="oTraitInfo"></p>
+      </div>
+      <div class="opts" data-tab="world" hidden>
         <div class="opt"><span class="olbl">Сложность</span><div class="seg" id="oDiff"></div></div>
         <p class="rec" id="oDiffInfo"></p>
         <div class="opt"><span class="olbl">Сезон</span><div class="seg" id="oSeason"></div></div>

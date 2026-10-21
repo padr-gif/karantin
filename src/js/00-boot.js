@@ -17,6 +17,8 @@ function resize() {
   const cw = innerWidth, chh = innerHeight;
   cv.width = Math.round(cw * DEV); cv.height = Math.round(chh * DEV);
   cv.style.width = cw + 'px'; cv.style.height = chh + 'px';
+  // 100vh on phones can include the strip under the system buttons; panels size themselves to what is really visible
+  document.documentElement.style.setProperty('--vh', chh + 'px');
   const D0 = Math.min(gfxCap, window.devicePixelRatio || 1);
   kBase = Math.max(1, Math.round(Math.max(cw, chh) / 24 * D0 / 32));
   if (kBase + zoomOff < 1) zoomOff = 1 - kBase;

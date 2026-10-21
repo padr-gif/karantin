@@ -57,11 +57,13 @@ function drawWallTile(x, y, i, cut) {
         if (o.cc) { pp(.06, .94, cc); for (let q = 0; q < 4; q++) pp(.15 + q * .21, .2 + q * .21, cd); }
         else { pp(.06, .26, cc); pp(.74, .94, cc); pp(.15, .19, cd); pp(.81, .85, cd); }
       }
-      if (!o.broken && o.open) {
-        const mid = (sill + lint) / 2;
-        plane(mid, lint, night ? `rgba(255,206,120,${.62 * f})` : `rgba(160,192,210,${.4 * f})`);
+      const wk = o.ang == null ? (o.open ? 1 : 0) : o.ang;   // 0 shut … 1 lower sash fully raised (animated)
+      if (!o.broken && wk > .02) {
+        const mid = (sill + lint) / 2, z0 = sill + (mid - sill) * wk;
+        plane(z0, lint, night ? `rgba(255,206,120,${.62 * f})` : `rgba(160,192,210,${.4 * f})`);
         ctx.strokeStyle = C(COL.frame, f * .9); ctx.lineWidth = Math.max(1.5, U * .04); ctx.beginPath();
-        if (ax) { line3(x + .5, y + .5, mid, x + .5, y + .5, lint); line3(x + .06, y + .5, mid, x + .94, y + .5, mid); } else { line3(x + .5, y + .5, mid, x + .5, y + .5, lint); line3(x + .5, y + .06, mid, x + .5, y + .94, mid); }
+        if (ax) { line3(x + .5, y + .5, z0, x + .5, y + .5, lint); line3(x + .06, y + .5, mid, x + .94, y + .5, mid); line3(x + .06, y + .5, z0, x + .94, y + .5, z0); }
+        else { line3(x + .5, y + .5, z0, x + .5, y + .5, lint); line3(x + .5, y + .06, mid, x + .5, y + .94, mid); line3(x + .5, y + .06, z0, x + .5, y + .94, z0); }
         ctx.stroke();
       } else if (!o.broken) {
         plane(sill, lint, night ? `rgba(255,206,120,${.62 * f})` : `rgba(160,192,210,${.4 * f})`);

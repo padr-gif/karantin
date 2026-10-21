@@ -59,7 +59,7 @@ function packBits(arr) { const b = new Uint8Array(Math.ceil(arr.length / 8)); fo
 function unpackBits(str, arr) { const s = atob(str); arr.fill(0); for (let i = 0; i < arr.length; i++) if (s.charCodeAt(i >> 3) & (1 << (i & 7))) arr[i] = 1; }
 function serialize() {
   const obsL = [];
-  for (let i = 0; i < NT; i++) { const o = obs[i]; if (!o) continue; obsL.push(o.t === 'door' ? [i, 0, o.open ? 1 : 0, r2(o.hp), o.dead ? 1 : 0, r2(o.bhp), o.locked ? 1 : 0, o.alarm ? 1 : 0] : [i, 1, o.broken ? 1 : 0, r2(o.ghp), r2(o.bhp), o.open ? 1 : 0, o.cc ? 1 : 0, o.cur || 0, o.cleared ? 1 : 0]); }
+  for (let i = 0; i < NT; i++) { const o = obs[i]; if (!o) continue; obsL.push(o.t === 'door' ? [i, 0, o.open ? 1 : 0, r2(o.hp), o.dead ? 1 : 0, r2(o.bhp), o.locked ? 1 : 0, o.alarm ? 1 : 0] : [i, 1, o.broken ? 1 : 0, r2(o.ghp), r2(o.bhp), o.open ? 1 : 0, o.cc ? 1 : 0, o.cur || 0, o.cleared ? 1 : 0, o.stiff == null ? -1 : o.stiff]); }
   return {v:3, seed:world.seed, diff:world.diff, look:P.look,
     gm:r2(gameMin), sm:startMin, poff:powerOffAt, woff:waterOffAt, pm:powerMsg, wm:waterMsg, rain:r2(rain), rt:rainTarget, wt:r2(weatherTimer), st:r2(spawnTimer), kills,
     p:{x:r2(P.x), y:r2(P.y), face:r2(P.face), hp:r2(P.hp), sat:r2(P.sat), hyd:r2(P.hyd), en:r2(P.en), bleed:P.bleed, cloth:P.cloth || {}, cold:r2(P.cold || 0), wet:r2(P.wet || 0), stress:r2(P.stress || 0), boost:P.boost || {}, readMag:P.readMag || {}, flu:r2(P.flu || 0), fluR:r2(P.fluR || 0), bored:r2(P.bored || 0), stats:P.stats || {}, mapRead:!!P.mapRead, skills:P.skills || {}, prof:P.prof || 'none', inf:P.inf, infT:r2(P.infT), pois:r2(P.pois), weapon:P.weapon, armor:P.armor || null, inv:P.inv, cap:P.cap, sneak:P.sneak},
@@ -85,7 +85,7 @@ function applySave(d) {
   Object.assign(P, d.p); P.fd = P.face;
   for (const o of d.obs) { const ob = obs[o[0]]; if (!ob) continue;
     if (o[1] === 0) { ob.open = !!o[2]; ob.hp = o[3]; ob.dead = !!o[4]; ob.bhp = o[5]; ob.locked = !!o[6]; ob.alarm = !!o[7]; ob.ang = ob.open && !ob.dead ? 1 : 0; }
-    else { ob.broken = !!o[2]; ob.ghp = o[3]; ob.bhp = o[4]; if (o.length > 5) { ob.open = !!o[5]; ob.cc = !!o[6]; ob.cur = o[7] || null; ob.cleared = !!o[8]; } } }
+    else { ob.broken = !!o[2]; ob.ghp = o[3]; ob.bhp = o[4]; if (o.length > 5) { ob.open = !!o[5]; ob.cc = !!o[6]; ob.cur = o[7] || null; ob.cleared = !!o[8]; if (o[9] >= 0) ob.stiff = o[9]; } } }
   d.furn.forEach((f, k) => { if (furns[k]) { furns[k].searched = !!f[0]; furns[k].items = f[1]; } });
   if (d.fmov) { for (const m of d.fmov) { const f = furns[m[0]]; if (!f) continue; if (furn[f.y * MW + f.x] === m[0] + 1) furn[f.y * MW + f.x] = 0; Object.assign(f, {x:m[1], y:m[2], cx:m[3], cy:m[4], wd:m[5], sx:m[6], sy:m[7], blockDoor:!!m[8], moved:true}); f.r = [f.cx - f.sx / 2, f.cy - f.sy / 2, f.cx + f.sx / 2, f.cy + f.sy / 2]; if (m[9]) { Object.assign(f, {gone:true, cx:-999, cy:-999, r:[-999, -999, -999, -999], items:[], searched:true}); continue; } furn[f.y * MW + f.x] = m[0] + 1; } clearCaches(); buildFlow(); }
   for (const c of d.cars) { const p = props[c[0]]; if (p && p.type === 'car') { p.searched = !!c[1]; p.items = c[2]; if (c[4] != null) { p.fuel = c[4]; p.key = !!c[5]; p.hp = c[6]; } if (c[3]) { makeDyn(p); unparkCar(p); p.cx = c[3][0]; p.cy = c[3][1]; p.ang = c[3][2]; p.v = 0; parkCar(p); } } }

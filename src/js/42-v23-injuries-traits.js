@@ -562,7 +562,8 @@ function extraAction(excl) {
     if (Math.abs(p.cx - P.x) > 3 || Math.abs(p.cy - P.y) > 3) continue;
     const qx = clamp(P.x, p.r[0], p.r[2]), qy = clamp(P.y, p.r[1], p.r[3]), d = Math.hypot(P.x - qx, P.y - qy);
     if (d > .75 || !reachOK(qx, qy)) continue;
-    if (p.hp < 100 && !p.stripped && hasTool('wrench')) cand.push([d, {kind:'carfix', label:countItem('scrap') ? 'починить кузов (' + Math.round(p.hp) + '%)' : 'ремонт: нужен металлолом', f:p, tk:'cf' + k}]);
+    // repair is always offered on a damaged car, and the label says what is missing
+    if (p.hp < 100 && !p.stripped) { const w = hasTool('wrench'), sc = countItem('scrap'); cand.push([d, {kind:'carfix', label:w && sc ? 'починить кузов (' + Math.round(p.hp) + '%)' : 'починить: нужен ' + [!w && 'разводной ключ', !sc && 'металлолом'].filter(Boolean).join(' и '), f:p, tk:'cf' + k}]); }
     if (p.fuel >= 1 && P.inv.some(i => i.id === 'jerrycan' && (i.fuel || 0) < 99)) cand.push([d + .01, {kind:'siphon', label:'слить бензин (' + Math.round(p.fuel) + '%)', f:p, tk:'sp' + k}]);
     if (!p.stripped && (hasTool('wrench') || hasTool('crowbar'))) cand.push([d + .02, {kind:'strip', label:'разобрать на металлолом', f:p, tk:'st' + k}]);
   }
@@ -590,8 +591,8 @@ getAction = function (excl) {
 const XACT = {
   carfix(a) {
     const p = a.f, lv = skillLv('mech');
-    if (!hasTool('wrench')) { toast('Нужен разводной ключ'); return; }
-    if (!countItem('scrap')) { toast('Нужен металлолом: его дают разобранные машины'); return; }
+    if (!hasTool('wrench')) { toast('Нужен разводной ключ: ищи в гаражах и ящиках с инструментом'); return; }
+    if (!countItem('scrap')) { toast('Нужен металлолом: разбери другую машину ключом или ломом'); return; }
     job(6 * (1 - .07 * lv), () => { if (!countItem('scrap')) return; removeItem('scrap'); p.hp = Math.min(100, p.hp + 18 + 7 * lv); addXp('mech', 3); ach('fixcar'); SFX.hammer(); noise(p.cx, p.cy, 7); toast('Кузов залатан: ' + Math.round(p.hp) + '%'); }, {noisy:5});
   },
   siphon(a) {

@@ -88,7 +88,7 @@ function relocate(f, x, y, wd) {
   const sx = wd[0] ? base[1] : base[0], sy = wd[0] ? base[0] : base[1], t = get(x, y);
   let cx = x + .5, cy = y + .5;
   const wt = get(x + wd[0], y + wd[1]);
-  if (!center && t !== DOOR && (wt === WALL || wt === WIN)) { cx = x + .5 + wd[0] * (1 - HWV - sx / 2 - .02); cy = y + .5 + wd[1] * (1 - HWV - sy / 2 - .02); }
+  if (t !== DOOR && (wt === WALL || wt === WIN)) { cx = x + .5 + wd[0] * (1 - HWV - sx / 2 - .02); cy = y + .5 + wd[1] * (1 - HWV - sy / 2 - .02); }
   const oi = f.y * MW + f.x, ni = y * MW + x, idx = furn[oi] || furns.indexOf(f) + 1, ox = f.x, oy = f.y;
   furn[oi] = 0; furn[ni] = idx;
   Object.assign(f, {x, y, wd, sx, sy, cx, cy, r:[cx - sx / 2, cy - sy / 2, cx + sx / 2, cy + sy / 2], moved:true, blockDoor:t === DOOR});

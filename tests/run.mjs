@@ -68,10 +68,11 @@ check('у всех предметов есть иконка', await D("Object.ke
 console.log('Окна, перчатки, фильтр');
 await fresh();
 // окно дома, у которого с одной стороны комната, с другой улица
-const W = await D(`(() => { for (const Hs of houses) for (let y = Math.floor(Hs.iy0) - 1; y <= Hs.iy1 + 1; y++) for (let x = Math.floor(Hs.ix0) - 1; x <= Hs.ix1 + 1; x++) {
+const findWin = `(() => { for (const Hs of houses) for (let y = Math.floor(Hs.iy0) - 1; y <= Hs.iy1 + 1; y++) for (let x = Math.floor(Hs.ix0) - 1; x <= Hs.ix1 + 1; x++) {
   if (get(x, y) !== WIN) continue; const ax = alongX(x, y), pts = ax ? [[x + .5, y - .7], [x + .5, y + 1.7]] : [[x - .7, y + .5], [x + 1.7, y + .5]];
   const inn = pts.find(p => insideHouse(p[0], p[1])), out = pts.find(p => !insideHouse(p[0], p[1]));
-  if (inn && out && !blocked(inn[0], inn[1], .3) && !blocked(out[0], out[1], .3)) return {i:y * MW + x, x, y, inn, out}; } return null; })()`);
+  if (inn && out && !blocked(inn[0], inn[1], .3) && !blocked(out[0], out[1], .3)) return {i:y * MW + x, x, y, inn, out}; } return null; })()`;
+const W = await D(findWin);
 check('нашлось окно для проверки', !!W);
 if (W) {
   const setup = `const ob = obs[${W.i}]; ob.broken = true; ob.open = false; ob.cleared = false; ob.bhp = 0; ob.cur = [150, 60, 56]; ob.cc = false; P.wounds = []; P.cloth = {};`;
@@ -100,6 +101,29 @@ await sleep(300);
 check('холст сам подстроился под новый размер без события resize', await D("cv.style.width") === '400px');
 await D("Object.defineProperty(window, 'innerWidth', window.__iw)"); await sleep(300);
 check('и вернулся обратно', await D("cv.style.width === innerWidth + 'px'"));
+
+console.log('Версия 0.41');
+await fresh();
+const W2 = await D(findWin);
+check('внутренние двери закрыты, но не заперты', await D("houses.length > 0 && obs.filter(o => o && o.t === 'door' && o.sw === 1 && o.hp === 60).every(o => !o.open && !o.locked)"));
+check('тап по пустому месту не ведёт персонажа', await D("const x = P.x, y = P.y; tapWorld(5, 5); goTo == null"));
+await D("P.wounds = []; const w = addWound('cut', 'arm', 'левая кисть'); w.band = 1; w.t = 10;");
+check('кисть — отдельная часть тела', await D("WHERE2REG[wounds()[0].where] === 'handL' && bodySvg().includes('data-r=\"handL\"')"));
+await D("openPanel('inv'); panel.tab = 'self'; renderPanel(); [...document.querySelectorAll('.wound button')].find(b => /Снять/.test(b.textContent)).click();");
+check('повязку можно снять', await D("!wounds()[0].band && bleeding(wounds()[0])"));
+await D("closePanel()");
+if (W2) {
+  await D(`const ob = obs[${W2.i}]; ob.broken = false; ob.open = false; ob.bhp = 0; ob.stiff = 2; P.x = ${W2.inn[0]}; P.y = ${W2.inn[1]}; P.inv = P.inv.filter(i => i.id !== 'crowbar'); P.weapon = null; winAction({kind:'window', o:{i:${W2.i}, x:${W2.x}, y:${W2.y}}});`);
+  check('заклинившее окно без лома не открыть', await D(`!obs[${W2.i}].open`));
+  const tries = await D(`(() => { const ob = obs[${W2.i}]; ob.stiff = 1; ob.tries = 0; let n = 0; while (!ob.open && n < 40) { winAction({kind:'window', o:{i:${W2.i}, x:${W2.x}, y:${W2.y}}}); n++; } return n; })()`);
+  check('тугое окно открывается за несколько попыток', tries >= 1 && tries < 40, tries);
+  await D(`winAction({kind:'window', o:{i:${W2.i}, x:${W2.x}, y:${W2.y}}})`);
+  check('закрывается с первого раза', await D(`!obs[${W2.i}].open`));
+  await sleep(200);
+  check('створка едет плавно', await D(`obs[${W2.i}].ang > 0 && obs[${W2.i}].ang < 1`), await D(`obs[${W2.i}].ang`));
+}
+check('мебель за стеной не выбирается', await D(`(() => { toggleEditor(true); const f = furns.find(f => !FIXED.has(f.type) && Math.hypot(f.cx - P.x, f.cy - P.y) < 3.2 && !reachOK(clamp(P.x, f.r[0], f.r[2]), clamp(P.y, f.r[1], f.r[3])));
+  if (!f) return true; const R = cv.getBoundingClientRect(), k = SCALE / DEV; editorTap(SX(f.cx, f.cy) * k + R.left, SY(f.cx, f.cy, 10) * k + R.top); const ok = EDIT.sel !== f; toggleEditor(false); return ok; })()`));
 
 console.log('Живая игра 15 секунд');
 await fresh("['coward']");
