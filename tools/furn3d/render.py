@@ -238,7 +238,13 @@ def sheet(out):
     items = [fridge(), bed(), sofa(), wardrobe()]
     raw = [render(it)[0] for it in items]
     mode = (sys.argv[2] if len(sys.argv) > 2 else 'smooth')
-    ims = raw if mode == 'smooth' else [pixelize(i, *( (28, True) if mode == 'pix1' else (14, True) )) for i in raw]
+    def chunky(i, k=2, colors=14):
+        w, h = i.width // k, i.height // k
+        sm = pixelize(i.resize((w, h), Image.BOX), colors)
+        return sm.resize((w * k, h * k), Image.NEAREST)
+    MODES = {'pix1': lambda i: pixelize(i, 28), 'pix2': lambda i: pixelize(i, 14), 'pix3': lambda i: pixelize(i, 10),
+             'pix4': lambda i: chunky(i, 2, 14)}
+    ims = raw if mode == 'smooth' else [MODES[mode](i) for i in raw]
     K = 3; pad = 20
     W = sum(i.width * K + pad for i in ims) + pad; H = max(i.height for i in ims) * K + 2 * pad
     bg = Image.new('RGBA', (W, H), (48, 44, 40, 255)); x = pad
