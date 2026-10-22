@@ -149,7 +149,7 @@ await fresh();
 await D("SFX.init()"); await sleep(1500);
 { const n = await D("Object.keys(SMP).length"); check('записи звуков загружены', n >= 50, n); }
 check('звуки шагов, дверей и мебели играют без ошибок', await D("(() => { SFX.step(true, false); SFX.step(false, true); SFX.door(true); SFX.door(false); SFX.rustle(); SFX.pickup(); SFX.equip(); for (const t of ['wardrobe', 'dresser', 'locker', 'fridge', 'car', 'bin']) { SFX.contOpen(t); SFX.contClose(t); SFX.rummage(t); } return true; })()"));
-check('поверхность под ногами определяется', await D("['wood', 'carpet', 'concrete', 'grass', 'snow'].includes(surfaceAt(P.x, P.y))"));
+check('поверхность под ногами определяется', await D("['wood', 'carpet', 'tile', 'bare', 'concrete', 'grass', 'snow'].includes(surfaceAt(P.x, P.y))"));
 
 console.log('Детальная графика');
 await fresh();
