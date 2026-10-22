@@ -140,6 +140,7 @@ function keyPx(a, i, pal) {
 function recolor8(f, pal) {
   const c = mkCanvas(f[3], f[4]), g = c.getContext('2d');
   g.drawImage(ART.imgs[f[0]], f[1], f[2], f[3], f[4], 0, 0, f[3], f[4]);
+  if (f[8] === 1) return {cv:c, ax:f[5], ay:f[6], w:f[3], h:f[4], s:f[7] || 1};   // цветной кадр (готовая модель): не перекрашиваем
   const d = g.getImageData(0, 0, f[3], f[4]), a = d.data;
   for (let i = 0; i < a.length; i += 4) if (a[i + 3]) keyPx(a, i, pal);
   g.putImageData(d, 0, 0);

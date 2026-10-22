@@ -8,11 +8,16 @@ NC = {'SCALAR': 1, 'VEC2': 2, 'VEC3': 3, 'VEC4': 4, 'MAT4': 16}
 
 class GLB:
     def __init__(s, path):
+        import os
+        s.dir = os.path.dirname(path)
         d = open(path, 'rb').read()
-        assert d[:4] == b'glTF'
-        jl = struct.unpack_from('<I', d, 12)[0]
-        s.j = json.loads(d[20:20 + jl]); bl = struct.unpack_from('<I', d, 20 + jl)[0]
-        s.bin = d[28 + jl:28 + jl + bl]
+        if d[:4] == b'glTF':                                   # .glb: JSON и буфер в одном файле
+            jl = struct.unpack_from('<I', d, 12)[0]
+            s.j = json.loads(d[20:20 + jl]); bl = struct.unpack_from('<I', d, 20 + jl)[0]
+            s.bin = d[28 + jl:28 + jl + bl]
+        else:                                                  # .gltf: буфер и картинки — отдельные файлы рядом
+            s.j = json.loads(d.decode('utf-8'))
+            s.bin = open(os.path.join(s.dir, s.j['buffers'][0]['uri']), 'rb').read()
     def view(s, i):
         v = s.j['bufferViews'][i]; o = v.get('byteOffset', 0); return s.bin[o:o + v['byteLength']], v.get('byteStride')
     def acc(s, i):
@@ -26,7 +31,9 @@ class GLB:
             out = out.astype(np.float32) / np.iinfo(dt).max
         return out if n > 1 else out[:, 0]
     def image(s, i):
+        import os
         im = s.j['images'][i]
+        if 'uri' in im: return Image.open(os.path.join(s.dir, im['uri'])).convert('RGBA')
         raw, _ = s.view(im['bufferView']); return Image.open(io.BytesIO(raw)).convert('RGBA')
     def summary(s):
         j = s.j

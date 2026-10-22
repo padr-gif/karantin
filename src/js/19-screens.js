@@ -155,7 +155,7 @@ function recolorFrame(name, pal) {
   const c = mkCanvas(f[3], f[4]), g = c.getContext('2d');
   g.drawImage(ART.imgs[f[0]], f[1], f[2], f[3], f[4], 0, 0, f[3], f[4]);
   const d = g.getImageData(0, 0, f[3], f[4]), a = d.data;
-  for (let i = 0; i < a.length; i += 4) if (a[i + 3]) keyPx(a, i, pal);
+  if (f[8] !== 1) for (let i = 0; i < a.length; i += 4) if (a[i + 3]) keyPx(a, i, pal);   // цветные кадры не перекрашиваем
   g.putImageData(d, 0, 0);
   return {c, ax:f[5], ay:f[6]};
 }

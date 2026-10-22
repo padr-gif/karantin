@@ -95,26 +95,48 @@ class Char:
         return out
 
 # ---- рендер в проекции игры ----
+def interp_one(A, tv, bary): return np.einsum('nk,nkj->nj', bary, A[tv])
 SS = 3
 def render(ch, Gm, face, K=2, root_xy=True):
     HX, HY, ZP = 32 * K, 16 * K, 31 * K
     geo = ch.skinned(Gm)
     allP = np.concatenate([P for P, _ in geo])
     zmin = allP[:, 2].min()
-    hips = Gm[ch.name.get('mixamorig:Hips', ch.name.get('Hips'))][:3, 3] @ AX.T
+    hk = next(k for k in ('mixamorig:Hips', 'Hips', 'pelvis') if k in ch.name); hips = Gm[ch.name[hk]][:3, 3] @ AX.T
     c, s_ = math.cos(face), math.sin(face); R = np.array([[c, -s_, 0], [s_, c, 0], [0, 0, 1]])
     V, Nn, UV, TRI, PRIM = [], [], [], [], []; off = 0
     for pi, ((P, N), p) in enumerate(zip(geo, ch.prims)):
         Q = P.copy(); Q[:, 2] -= zmin
         if root_xy: Q[:, :2] -= hips[:2]                       # точка персонажа — под тазом
         Q = Q @ R.T; V.append(Q); Nn.append((N if N is not None else np.zeros_like(P)) @ R.T)
-        UV.append(p['UV'] if p['UV'] is not None else np.zeros((len(P), 2))); TRI.append(p['I'] + off); PRIM.append(np.full(len(p['I']), pi)); off += len(P)
+        UV.append(p['UV'] if p['UV'] is not None else np.zeros((len(P), 2))); TRI.append(p['I'] + off); PRIM.append(np.full(len(p['I']), pi)); p['_off'] = off; off += len(P)
     V = np.concatenate(V); Nn = np.concatenate(Nn); UV = np.concatenate(UV); tri = np.concatenate(TRI); tprim = np.concatenate(PRIM)
     sx = (V[:, 0] - V[:, 1]) * HX; sy = (V[:, 0] + V[:, 1]) * HY - V[:, 2] * ZP
     x0, x1 = math.floor(sx.min()) - 3, math.ceil(sx.max()) + 3; y0, y1 = math.floor(sy.min()) - 3, math.ceil(sy.max()) + 3
     W, H = (x1 - x0) * SS, (y1 - y0) * SS
     scr = np.stack([(sx - x0) * SS, (sy - y0) * SS, -(V @ VIEW)], -1)
-    zb, tid, b1, b2 = raster(scr, tri, W, H)
+    # прозрачные по текстуре части (волосы, борода, брови — «карточки» с альфой) растеризуем отдельно и
+    # берём их пиксель, только если он ближе непрозрачного и альфа текстуры в этой точке > .5
+    isA = np.array([bool(ch.prims[i].get('alpha')) for i in tprim])
+    def rast(mask):
+        t2 = tri.copy(); t2[~mask] = 0                                       # вырожденный треугольник растеризатор пропускает
+        return raster(scr, t2, W, H)
+    zb, tid, b1, b2 = rast(~isA)
+    if isA.any():
+        za, ta, a1, a2 = [x.ravel() for x in rast(isA)]
+        shp = zb.shape; zb, tid, b1, b2 = [x.ravel() for x in (zb, tid, b1, b2)]
+        cand = (ta >= 0) & (za < zb)
+        if cand.any():
+            T2 = ta[cand]; bb = np.stack([1 - a1[cand] - a2[cand], a1[cand], a2[cand]], -1)
+            uv2 = np.einsum('nk,nkj->nj', bb, UV[tri[T2]]); alpha = np.zeros(len(T2))
+            for i, p in enumerate(ch.prims):
+                sel = tprim[T2] == i
+                if not sel.any() or p['img'] is None: continue
+                h_, w_ = p['img'].shape[:2]
+                alpha[sel] = p['img'][((uv2[sel, 1] % 1) * (h_ - 1)).astype(int), ((uv2[sel, 0] % 1) * (w_ - 1)).astype(int), 3]
+            ok = alpha > .5; idx = np.flatnonzero(cand)[ok]
+            tid[idx] = ta[idx]; b1[idx] = a1[idx]; b2[idx] = a2[idx]; zb[idx] = za[idx]
+        zb, tid, b1, b2 = [x.reshape(shp) for x in (zb, tid, b1, b2)]
     hit = tid >= 0; T_ = tid[hit]; w1, w2 = b1[hit], b2[hit]; bary = np.stack([1 - w1 - w2, w1, w2], -1); tv = tri[T_]
     interp = lambda A: np.einsum('nk,nkj->nj', bary, A[tv])
     n = interp(Nn); n /= np.maximum(np.linalg.norm(n, axis=-1, keepdims=True), 1e-9)
@@ -128,6 +150,11 @@ def render(ch, Gm, face, K=2, root_xy=True):
             u = (uv[sel, 0] % 1) * (w - 1); v = (uv[sel, 1] % 1) * (h - 1)
             col[sel] = img[v.astype(int), u.astype(int), :3] * p['col'][:3]
         else: col[sel] = p['col'][:3]
+        if p.get('tint') is not None: col[sel] = col[sel] * p['tint']           # волосы: серая текстура × цвет
+        if p.get('vcol') is not None:                                           # одежда «по костям»: цвет ткани × светотень текстуры
+            vc = interp_one(p['vcol'], tri[T_[sel]] - p['_off'], bary[sel])
+            lumt = col[sel].mean(1, keepdims=True); k = vc[:, 3:4]
+            col[sel] = col[sel] * (1 - k) + vc[:, :3] * np.clip(lumt / max(p.get('_mean', .45), .05), .55, 1.35) * k
     dif = np.clip(n @ LIGHT, 0, 1); sky = .5 + .5 * n[:, 2]; fill = np.clip(n @ VIEW, 0, 1)
     lum = .3 * (.55 + .45 * sky) + .72 * dif + .14 * fill
     rgb = np.clip(col * lum[:, None], 0, 1) ** (1 / 1.08)
