@@ -186,47 +186,66 @@ def p_drink(t, fem):
     return c
 
 # ---------------- зомби ----------------
+# Не «голливудские» руки вперёд, а мёртвое тело: плечи опущены, голова завалена набок, руки висят и болтаются
+# от шагов, одна приподнята к цели. Ходьба шаркающая, неровная: левая нога шагает, правая волочится с вывернутой стопой.
 def z_base(fem):
     c = stand(fem)
-    c['lean'] = .38; c['hpitch'] = -.18; c['hroll'] = .12
-    for sd in 'LR':
-        c['ap' + sd] = 1.2; c['aa' + sd] = .1; c['el' + sd] = .35; c['wr' + sd] = .9
-        c['kn' + sd] = .18; c['th' + sd] = .1
-    c['apR'] = .9; c['elR'] = .6                     # руки не одинаковые: одна чуть ниже
+    c['lean'] = .3; c['roll'] = .06; c['hpitch'] = -.02; c['hroll'] = .22; c['hyaw'] = .1
+    c['apL'], c['aaL'], c['elL'], c['wrL'] = .34, .16, .75, .6            # левая рука полусогнута, чуть тянется вперёд
+    c['apR'], c['aaR'], c['elR'], c['wrR'] = .08, .18, .2, .3             # правая висит плетью
+    c['thL'], c['thR'] = .08, .02; c['knL'], c['knR'] = .2, .14; c['taR'] = .07; c['ftR'] = .38
     return c
 def z_idle(t, fem):
     c = z_base(fem); ph = 2 * math.pi * t
-    c['roll'] = .07 * math.sin(ph); c['apL'] += .06 * math.sin(ph); c['apR'] += .06 * math.sin(ph + 1)
-    c['hroll'] = .12 + .06 * math.sin(ph + .5)
+    c['roll'] = .06 + .06 * math.sin(ph); c['lean'] = .3 + .03 * math.sin(2 * ph)
+    c['hroll'] = .22 + .07 * math.sin(ph + .5); c['hyaw'] = .1 + .12 * math.sin(ph * .5)
+    c['apR'] = .08 + .1 * math.sin(ph + 1.2); c['apL'] = .34 + .06 * math.sin(ph)
+    c['knL'] = .2 + .05 * max(0, math.sin(ph)); c['knR'] = .14 + .05 * max(0, -math.sin(ph))
     return c
 def z_walk(t, fem):
     c = z_base(fem); ph = 2 * math.pi * t
-    for sd, off, amp in (('L', 0, .34), ('R', math.pi, .2)):          # правая нога волочится
-        q = ph + off; sn, cs = math.sin(q), math.cos(q)
-        c['th' + sd] = .08 + amp * sn; c['kn' + sd] = .15 + (.7 if sd == 'L' else .3) * max(0, cs) ** 1.5
-        c['ft' + sd] = .46 - .1 * max(0, cs) + (.25 if sd == 'L' else .05) * max(0, -sn) * max(0, -cs) * 2
-    c['roll'] = .12 * math.sin(ph); c['twist'] = .06 * math.sin(ph); c['hroll'] = .12 + .08 * math.sin(ph)
-    c['apL'] += .1 * math.sin(ph + math.pi); c['apR'] += .1 * math.sin(ph)
+    # левая — неровный шаг с подъёмом; правая — короткий мах без подъёма колена, носок волочится
+    qL, qR = ph, ph + math.pi
+    c['thL'] = .1 + .36 * math.sin(qL); c['knL'] = .2 + .75 * max(0, math.cos(qL)) ** 1.4
+    c['ftL'] = .46 - .1 * max(0, math.cos(qL)) + .45 * max(0, -math.sin(qL)) * max(0, -math.cos(qL))
+    c['thR'] = .03 + .2 * math.sin(qR); c['knR'] = .14 + .18 * max(0, math.cos(qR)); c['ftR'] = .3 + .12 * max(0, math.sin(qR))
+    # тело заваливается на опорную ногу, хромота: просадка на правую
+    sup = math.sin(ph)
+    c['roll'] = .06 + .14 * sup; c['twist'] = .1 * math.sin(ph); c['lean'] = .3 + .05 * math.cos(2 * ph)
+    c['lift'] = -.025 * max(0, -sup)                                        # «проваливается» на волочащейся ноге
+    c['hroll'] = .22 + .1 * math.sin(ph + .6); c['hyaw'] = .1 - .08 * math.sin(ph)
+    # руки болтаются от толчков корпуса, с запаздыванием
+    c['apR'] = .08 + .2 * math.sin(ph - .8); c['aaR'] = .18 + .06 * math.sin(2 * ph); c['elR'] = .2 + .12 * max(0, math.sin(ph - .8))
+    c['apL'] = .34 + .14 * math.sin(ph + math.pi - .8); c['elL'] = .75 + .1 * math.sin(ph)
     return c
 def z_chase(t, fem):
-    c = z_base(fem); ph = _gait(c, t, .52, 1.0, .2, .12, .15)
-    c['lean'] = .5; c['roll'] = .08 * math.sin(ph); c['twist'] = .1 * math.sin(ph)
-    for sd, off in (('L', math.pi), ('R', 0)):
-        c['ap' + sd] = 1.45 + .15 * math.sin(ph + off); c['el' + sd] = .2; c['wr' + sd] = .6
+    """погоня: тяжёлая быстрая трусца, корпус сильно вперёд, обе руки тянутся к жертве (ниже плеч), рывками"""
+    c = z_base(fem); ph = _gait(c, t, .5, 1.05, .22, .14, .12)
+    c['thR'] *= .8; c['knR'] *= .8                                          # правая всё ещё короче
+    c['lean'] = .55 + .05 * math.cos(2 * ph); c['roll'] = .09 * math.sin(ph); c['twist'] = .14 * math.sin(ph)
+    c['hpitch'] = -.32; c['hroll'] = .14 + .06 * math.sin(ph)
+    for sd, off, base in (('L', math.pi, 1.15), ('R', 0, .95)):
+        q = math.sin(ph + off)
+        c['ap' + sd] = base + .25 * q; c['aa' + sd] = .12; c['el' + sd] = .35 + .25 * max(0, -q); c['wr' + sd] = .5
+        c['eh' + sd] = (1, 0, .4)
     return c
 def z_attack(t, fem):
-    c = z_base(fem); k = kf(t, [(0, 0), (.5, 1), (1, .25)])
-    c['lean'] = .38 + .4 * k; c['hpitch'] = -.18 + .25 * k
-    for sd in 'LR': c['ap' + sd] = 1.2 + .45 * k; c['el' + sd] = .35 + .6 * k; c['aa' + sd] = .1 + .1 * k; c['wr' + sd] = .9 - .5 * k
-    c['thL'] = .1 + .35 * k; c['knL'] = .18 + .2 * k; c['thR'] = .1 - .2 * k
+    """бросок: замах обеими руками, рывок корпусом вперёд с выпадом, хват и откат"""
+    c = z_base(fem); k = kf(t, [(0, 0), (.3, -.25), (.55, 1), (.8, 1), (1, .3)])
+    c['lean'] = .35 + .45 * max(k, 0); c['hpitch'] = -.1 + .3 * max(k, 0); c['hroll'] = .1
+    for sd in 'LR':
+        c['ap' + sd] = 1.0 + .75 * k; c['el' + sd] = .9 - .55 * max(k, 0); c['aa' + sd] = .22 - .14 * max(k, 0); c['wr' + sd] = .2
+        c['eh' + sd] = (1, 0, .4)
+    c['thL'] = .1 + .5 * max(k, 0); c['knL'] = .2 + .35 * max(k, 0); c['thR'] = .02 - .3 * max(k, 0); c['knR'] = .14 + .1 * max(k, 0)
     return c
 def z_hit(t, fem):
     c = z_base(fem); k = math.sin(math.pi * min(1, t * 1.3))
-    c['lean'] = .38 - .45 * k; c['hpitch'] = -.18 - .4 * k
-    for sd in 'LR': c['ap' + sd] = 1.2 - .5 * k; c['aa' + sd] = .1 + .4 * k
+    c['lean'] = .3 - .5 * k; c['hpitch'] = -.02 - .45 * k; c['hroll'] = .22 - .3 * k
+    for sd in 'LR': c['ap' + sd] = .3 - .35 * k; c['aa' + sd] = .15 + .5 * k; c['el' + sd] = .3 + .3 * k
+    c['knL'] = .2 + .25 * k; c['thR'] = .02 - .2 * k
     return c
 def z_death(t, fem):
-    c = p_death(t, fem); c['hroll'] = .12
+    c = p_death(t, fem); c['hroll'] = .22
     return c
 
 PLAYER = {'idle': (6, p_idle, 'loop'), 'walk': (16, p_walk, 'loop'), 'run': (12, p_run, 'loop'), 'sneak': (16, p_sneak, 'loop'),

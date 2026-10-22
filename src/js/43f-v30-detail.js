@@ -89,3 +89,16 @@ function fpsTick() {
   }
 }
 requestAnimationFrame(fpsTick);
+
+// ---- память кэша: куски мира в детальном режиме ×3 весят ~5 МБ каждый; держим не больше ~48 МБ ----
+// (раньше лимит был числом кусков — 22, это до 105 МБ при ×3). Выкидываем самые давние, но не те, что нужны в этом кадре.
+const CHUNK_BUDGET = 48 * 1048576;
+const evict30 = evict;
+evict = function () {
+  evict30();
+  if (HDQ <= 1) return;
+  let bytes = 0; for (const ch of CHUNKS.values()) bytes += ch.c.width * ch.c.height * 4;
+  if (bytes <= CHUNK_BUDGET) return;
+  const arr = [...CHUNKS].filter(e => e[1].used < frameNo - 1).sort((a, b) => a[1].used - b[1].used);
+  for (const [k, ch] of arr) { if (bytes <= CHUNK_BUDGET * .8) break; bytes -= ch.c.width * ch.c.height * 4; CHUNKS.delete(k); }
+};
