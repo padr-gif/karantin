@@ -194,14 +194,14 @@ def outfit(o, B):
         parts.append((F, 'pants'))
     Fh = DAT['faces_helper-hair']; hz = zn[Fh].min(1)
     hair = o.get('hair', 'short')
-    if hair != 'bald':
-        cut = {'short': 1.62, 'side': 1.6, 'bob': 1.5, 'long': 1.3}[hair]
+    if hair not in ('bald', 'buzz'):                  # buzz — не оболочка, а покраска кожи головы (см. paint)
+        cut = {'short': 1.62, 'buzz': 1.635, 'side': 1.6, 'bob': 1.5, 'long': 1.3}[hair]
         F = Fh[hz > cut]
         if hair == 'side':                                    # венчик: без макушки
             c = L[F].mean(1); F = F[(zn[F].max(1) < 1.70) | (c[:, 0] < -.04)]
         c = L[F].mean(1); ey = L[np.unique(DAT['faces_helper-l-eye'])].mean(0)
         F = F[~((c[:, 0] > ey[0] - .045) & (c[:, 2] < ey[2] + .05))]          # открыть лоб и лицо
-        shell(F, .004 if hair in ('short', 'side') else .01); parts.append((F, 'hair'))
+        shell(F, .0018 if hair == 'buzz' else .004 if hair in ('short', 'side') else .01); parts.append((F, 'hair'))   # buzz — машинка, почти по коже
     # ботинки: стопа и щиколотка чуть толще, без пальцев
     fv = np.unique(DAT['faces_body']); fv = fv[(VCLS[fv] == CLS_NAMES.index('foot')) | ((VCLS[fv] == CLS_NAMES.index('shin')) & (L[fv, 2] < .1))]
     Fb = DAT['faces_body']; m = np.isin(Fb, fv).any(1); Fm = Fb[m]
@@ -223,7 +223,7 @@ def noise(p, f=14.0, s=0):
             + .5 * np.sin(x * 2.9 + z * 1.7 + s) * np.sin(y * 3.1 - z * 2.3))
 def palette(o):
     skin = hexc(o.get('skin', '#e8b07a')); hc = hexc(o.get('hairc', '#6a3a1e'))
-    return {'skin': (skin, .04, .55, 'skin'), 'hair': (hc, .1, .4, 'hair'), 'beard': (hc * .85, .03, .7, 'hair'),
+    return {'skin': (skin, .04, .55, 'skin'), 'hair': (hc, .1, .4, 'hair'), 'beard': (hc * .85, .03, .7, 'hair'), 'stubble': (hc * .95, .02, .8, 'hair'), 'buzz': (hc * .9, .05, .7, 'hair'),
             'brow': (hc * .6, 0, .8, None), 'eye': (hexc('#d8cdc2') * .85, .3, .2, None), 'iris': (hexc('#2e2018'), .4, .2, None), 'lip': (skin * np.array([.85, .6, .55]), 0, .8, None),
             'shirt': (hexc(o.get('shirt', '#8fa6c6')), .03, .8, 'cloth'), 'pants': (hexc(o.get('pants', '#55575c')), .03, .8, 'cloth'),
             'shoe': (hexc('#2a2a2c'), .15, .4, None), 'sole': (hexc('#161616'), 0, .8, None),
@@ -262,6 +262,9 @@ def paint(o, B, part, cls, p):
         out[(cls == 3) & (dist < .15)] = 'sleeve'
     elif top in ('jacket', 'long'):                                          # длинный рукав до запястья (слот рукава)
         out[(cls == 3) | (cls == 4)] = 'sleeve'
+    if o.get('sling'):                                                       # ремень сумки через плечо: с левого плеча к правому бедру
+        t = (zs + .06 - zz) / (zs + .06 - (B['waist'] + .02)); yl = ys * .85 - t * ys * 1.55
+        out[body_ & (t > -.05) & (t < 1.05) & (np.abs(y - yl) < .02 + .008 * front)] = 'strap'
     if o.get('pack'):                                                        # лямки рюкзака спереди
         out[sh & front & (np.abs(ay - .5 * ys) < .028) & (zz > zs - .3)] = 'strap'
     if o.get('blood'):
@@ -279,7 +282,16 @@ def paint(o, B, part, cls, p):
     face = hd & (x > ex - .03)
     brow = face & (np.abs(ay - eyy - .002) < .016) & (np.abs(zz - (ez + .021 - (ay - eyy) ** 2 * 8)) < .0038)
     out[brow] = 'brow'
-    if o.get('beard'):
+    if o.get('hair') == 'buzz':                                               # стрижка машинкой: волосы «нарисованы» по коже головы
+        scalp = hd & (((x > ex - .03) & (zz > ez + .042 + .012 * (ay / .06) ** 2)) | ((x <= ex - .03) & (zz > ez - .035 - .03 * np.clip((ex - .03 - x) / .08, 0, 1))))
+        scalp &= ~((ay > .062) & (zz < ez + .02) & (x > ex - .11))            # уши открыты
+        out[scalp] = 'buzz'
+    if o.get('beard') == 'stubble' or (o.get('beard') and o.get('hair') == 'buzz'):   # щетина: челюсть, подбородок, над губой; неровно
+        st = hd & (x > ex - .075) & (zz < ez - .038) & (ay < .066) & ~((ay < .016) & (np.abs(zz - (ez - .072)) < .006))
+        st &= noise(p, 90, 3) > -.55
+        out[st] = 'stubble'
+        out[face & (ay < .02) & (np.abs(zz - (ez - .072)) < .0045)] = 'lip'
+    elif o.get('beard'):
         out[hd & (x > ex - .075) & (zz < ez - .042) & (ay < .066)] = 'beard'
     elif o.get('blood'):
         out[face & (ay < .028) & (zz < ez - .06) & (zz > ez - .1)] = 'blood'
@@ -313,10 +325,10 @@ def rbox_mesh(c, h, n=4, pw=4.0):
     return np.array(V), np.array(F)
 
 # ---------- кадр ----------
-SLOT = {'outline': 0, 'glass': 0, 'skin': 1, 'eye': 1, 'lip': 1, 'hair': 2, 'beard': 2, 'brow': 2, 'shirt': 3, 'sleeve': 4,
+SLOT = {'outline': 0, 'glass': 0, 'skin': 1, 'eye': 1, 'lip': 1, 'hair': 2, 'beard': 2, 'stubble': 2, 'buzz': 2, 'brow': 2, 'shirt': 3, 'sleeve': 4,
         'pants': 5, 'shoe': 6, 'sole': 6, 'iris': 7, 'mouth': 8, 'blood': 9, 'pack': 10, 'strap': 10, 'belt': 13, 'buckle': 13}
-LUMK = {'eye': 1.4, 'lip': .82, 'beard': .78, 'brow': .55, 'sole': .6, 'buckle': 3.2, 'strap': .72, 'mouth': 1.0}
-TEX = {'skin': 'skin', 'eye': None, 'lip': 'skin', 'hair': 'hair', 'beard': 'hair', 'shirt': 'cloth', 'sleeve': 'cloth', 'pants': 'cloth',
+LUMK = {'eye': 1.4, 'lip': .82, 'beard': .78, 'stubble': .98, 'buzz': .92, 'brow': .55, 'sole': .6, 'buckle': 3.2, 'strap': .72, 'mouth': 1.0}
+TEX = {'skin': 'skin', 'eye': None, 'lip': 'skin', 'hair': 'hair', 'beard': 'hair', 'stubble': 'hair', 'buzz': 'hair', 'shirt': 'cloth', 'sleeve': 'cloth', 'pants': 'cloth',
        'pack': 'cloth', 'strap': 'cloth', 'blood': 'cloth'}
 SPEC = {'skin': (.04, .55), 'hair': (.1, .4), 'eye': (.3, .2), 'iris': (.4, .2), 'shoe': (.15, .4), 'belt': (.3, .3), 'buckle': (.6, .2), 'glass': (.4, .2)}
 LUM_MAX = 1.6
@@ -341,6 +353,15 @@ def scene(o, pose, face):
         Lrest = np.concatenate([Lrest, pv]); Pp = np.concatenate([Pp, pv @ Rs[bi].T + ts[bi]])
         parts = parts + [(pf + n0, 'pack')]
         clsw = np.concatenate([CLSW, np.tile(np.eye(len(CLS_NAMES))[0], (len(pv), 1))])
+    if o.get('sling'):                                     # сумка-слинг на груди, на кости spine01 (как рюкзак)
+        fb = np.unique(DAT['faces_body']); zs = B['sh'][2]
+        band = fb[(VCLS[fb] == 0) & (np.abs(Lrest[fb, 2] - (zs - .17)) < .03) & (np.abs(Lrest[fb, 1] - .06) < .04)]
+        fx = Lrest[band, 0].max()
+        pv, pf = rbox_mesh((fx + .03, .07, zs - .17), (.03, .075, .1))
+        bi = BI['spine01']; n0 = len(Lrest)
+        Lrest = np.concatenate([Lrest, pv]); Pp = np.concatenate([Pp, pv @ Rs[bi].T + ts[bi]])
+        parts = parts + [(pf + n0, 'pack')]
+        clsw = np.concatenate([clsw, np.tile(np.eye(len(CLS_NAMES))[0], (len(pv), 1))])
     # падение (смерть): назад, вокруг стоп, с выносом вперёд, чтобы тело легло около точки персонажа
     fall = pose.get('_fall', 0) if isinstance(pose, dict) else 0
     if fall:
