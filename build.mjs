@@ -40,7 +40,10 @@ export function build({dev = false, pwa = false, out = 'dist/karantin.html'} = {
     png[name] = wf ? put(`${name}.${h}.webp`, fs.readFileSync(wf)) : alt[name];
     size[name] = wf ? fs.statSync(wf).size : buf.length;
   }
-  const art = 'const ART_EMBED = ' + JSON.stringify(pwa ? {meta, png, alt, size} : {meta, png}) + ';';
+  // звуки (assets/sounds/*.mp3, Kenney CC0) — встраиваем как data URL: их немного и они маленькие
+  const snd = {}, sdir = path.join(ROOT, 'assets/sounds');
+  if (fs.existsSync(sdir)) for (const f of fs.readdirSync(sdir).filter(f => f.endsWith('.mp3')).sort()) snd[f.slice(0, -4)] = 'data:audio/mpeg;base64,' + fs.readFileSync(path.join(sdir, f)).toString('base64');
+  const art = 'const ART_EMBED = ' + JSON.stringify(pwa ? {meta, png, alt, size} : {meta, png}) + ';\nconst SND_EMBED = ' + JSON.stringify(snd) + ';';
 
   // 2. game code: all files from src/js in name order share one scope
   const dir = path.join(ROOT, 'src/js');

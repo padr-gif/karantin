@@ -144,6 +144,13 @@ check('сохранение хранит одежду', await D("(() => { const 
 check('старое сохранение получает стартовую одежду', await D("(() => { const d = JSON.parse(JSON.stringify(serialize())); d.p.cloth = {}; applySave(d); return P.cloth.shirt && P.cloth.shirt.id === 'tshirt'; })()"));
 { const miss = await D("Object.keys(ITEMS).filter(k => ITEMS[k].kind === 'cloth' && !ART.meta.icons[k] && !ART.meta.icons[ICONA[k]])"); check('у всей одежды есть иконки', miss.length === 0, miss); }
 
+console.log('Звуки');
+await fresh();
+await D("SFX.init()"); await sleep(1500);
+{ const n = await D("Object.keys(SMP).length"); check('записи звуков загружены', n >= 50, n); }
+check('звуки шагов, дверей и мебели играют без ошибок', await D("(() => { SFX.step(true, false); SFX.step(false, true); SFX.door(true); SFX.door(false); SFX.rustle(); SFX.pickup(); SFX.equip(); for (const t of ['wardrobe', 'dresser', 'locker', 'fridge', 'car', 'bin']) { SFX.contOpen(t); SFX.contClose(t); SFX.rummage(t); } return true; })()"));
+check('поверхность под ногами определяется', await D("['wood', 'carpet', 'concrete', 'grass', 'snow'].includes(surfaceAt(P.x, P.y))"));
+
 console.log('Детальная графика');
 await fresh();
 await D("settings.smooth = true; applySettings();"); await sleep(1500);
