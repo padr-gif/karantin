@@ -32,7 +32,7 @@ function enterCar(p, silent) {
   makeDyn(p); unparkCar(p);
   P.car = p; P.act = null; P.sneak = false; P.x = p.cx; P.y = p.cy;
   p.engine = p.fuel > 0 && p.hp > 0;
-  if (!silent) { SFX.door(true); toast(p.hp <= 0 ? 'Машина разбита, не заводится' : p.fuel > 0 ? 'Завёл мотор. Бензин ' + Math.round(p.fuel) + '%' : 'Бак пустой. Нужна канистра бензина'); }
+  if (!silent) { (SFX.carDoor || SFX.door)(true); toast(p.hp <= 0 ? 'Машина разбита, не заводится' : p.fuel > 0 ? 'Завёл мотор. Бензин ' + Math.round(p.fuel) + '%' : 'Бак пустой. Нужна канистра бензина'); }
   $('bSneak').hidden = $('bRun').hidden = true; setAtk(true);
 }
 function exitCar() {
@@ -44,7 +44,7 @@ function exitCar() {
   if (!s) { toast('Двери не открыть: вокруг тесно'); return; }
   p.v = 0; p.engine = false; P.car = null;
   P.x = p.cx + s[0]; P.y = p.cy + s[1]; P.face = Math.atan2(s[1], s[0]); P.fd = P.face;
-  parkCar(p); SFX.door(false);
+  parkCar(p); (SFX.carDoor || SFX.door)(false);
   $('bSneak').hidden = $('bRun').hidden = false; setAtk(false);
 }
 function honk() { const p = P.car; if (!p || (p.hornT || 0) > 0) return; p.hornT = .6; SFX.horn(); noise(p.cx, p.cy, 20); }

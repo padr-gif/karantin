@@ -37,7 +37,7 @@ function winAction(a) {
   const ob = obs[a.o.i], x = a.o.x, y = a.o.y;
   if (a.kind === 'window') {
     if (ob.open && cellOccupied(x, y)) { toast('Что-то мешает закрыть'); return true; }
-    ob.open = !ob.open; SFX.wood ? SFX.wood(x + .5, y + .5) : 0; noise(P.x, P.y, 2); fogDirty = true;
+    ob.open = !ob.open; SFX.window ? SFX.window(ob.open) : SFX.wood(x + .5, y + .5); noise(P.x, P.y, 2); fogDirty = true;
     if (ob.open) toast('Окно открыто: можно перелезть. Мертвецы тоже пролезут');
   } else if (a.kind === 'curtain') { ob.cc = !ob.cc; SFX.rustle(); fogDirty = true; }
   else if (a.kind === 'hangcur') { removeItem('curtain'); ob.cur = [150, 60, 56]; ob.cc = true; SFX.rustle(); toast('Шторы повешены и задёрнуты'); renderInv(); }
