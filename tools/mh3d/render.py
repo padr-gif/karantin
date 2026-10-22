@@ -358,7 +358,9 @@ def grip(sc):
     def P_(b):
         i = BI[b]; return Rs[i] @ B['heads'][i] + ts[i]
     I, Pk, W = P_('finger2-1.R'), P_('finger5-1.R'), P_('wrist.R')
-    g = (I + Pk) / 2 * .65 + W * .35; d = nrm(I - Pk); ref = P_('spine02')
+    M = P_('finger3-1.R')
+    g = (I + Pk) / 2 * .65 + W * .35; ref = P_('spine02')
+    d = nrm(nrm(I - Pk) + 1.1 * nrm(M - W))            # из кулака вдоль руки: опущенная бита смотрит вниз-вперёд
     pts = np.array([g, g + d, ref])
     if fall: pts = pts @ rot((0, 1, 0), -fall * math.pi / 2 * .97).T; pts[:, 0] += .85 * fall
     pts[:, 2] -= sc['zmin']
@@ -445,7 +447,7 @@ def keyed(fr, outline=.45):
     lum = np.clip(fr['lum'], 0, LUM_MAX)
     q = np.clip(np.round((np.minimum(lum, 1) - .5) / .5 * 7), 0, 7).astype(int)
     out[body_, 0] = fr['slot'][body_] * 16 + 8; out[body_, 1] = q[body_] * 32 + 8
-    out[body_, 2] = np.round(lum[body_] / LUM_MAX * 255).astype(np.uint8); out[body_, 3] = 255
+    out[body_, 2] = (np.round(lum[body_] / LUM_MAX * 63) * 4).astype(np.uint8); out[body_, 3] = 255   # 64 уровня: листы легче
     if outline:
         edge = np.zeros_like(body_)
         edge[:, 1:] |= body_[:, :-1]; edge[:, :-1] |= body_[:, 1:]; edge[1:, :] |= body_[:-1, :]; edge[:-1, :] |= body_[1:, :]

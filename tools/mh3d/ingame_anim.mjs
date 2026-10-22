@@ -11,9 +11,11 @@ for (let i = 0; i < 50; i++) { try { ver = await (await fetch('http://127.0.0.1:
 const ws = new WebSocket(ver.find(t => t.type === 'page').webSocketDebuggerUrl);
 await new Promise(r => ws.onopen = r);
 let id = 0; const pend = new Map();
-ws.onmessage = e => { const m = JSON.parse(e.data); if (m.id && pend.has(m.id)) { pend.get(m.id)(m); pend.delete(m.id); } };
+const errs = [];
+ws.onmessage = e => { const m = JSON.parse(e.data); if (m.method === 'Runtime.exceptionThrown') errs.push(m.params.exceptionDetails.exception ? m.params.exceptionDetails.exception.description : m.params.exceptionDetails.text); if (m.id && pend.has(m.id)) { pend.get(m.id)(m); pend.delete(m.id); } };
 const cmd = (method, params = {}) => new Promise(r => { const i = ++id; pend.set(i, r); ws.send(JSON.stringify({id: i, method, params})); });
 const ev = async expr => { const r = await cmd('Runtime.evaluate', {expression: expr, awaitPromise: true, returnByValue: true}); if (r.result.exceptionDetails) throw new Error(JSON.stringify(r.result.exceptionDetails).slice(0, 600)); return r.result.result.value; };
+await cmd('Runtime.enable');
 await cmd('Emulation.setDeviceMetricsOverride', {width: +W, height: +H, deviceScaleFactor: 1, mobile: false});
 await cmd('Page.navigate', {url: PAGE});
 for (let i = 0; i < 300; i++) { try { if (await ev("!!(window.__dbg && !document.getElementById('mNew').disabled)")) break; } catch (e) {} await sleep(300); }
@@ -48,5 +50,5 @@ await D(`P.weapon = mkItem('bat'); P.face = Math.atan2(zs[0].y - P.y, zs[0].x - 
 for (let k = 0; k < 2; k++) { await D(`P.cd = 0; attack(); true`); for (let j = 0; j < 7; j++) { await sleep(70); await snap(); } }
 fs.mkdirSync(OUT, {recursive: true});
 frames.forEach((f, i) => fs.writeFileSync(OUT + '/f' + String(i).padStart(3, '0') + '.png', Buffer.from(f, 'base64')));
-console.log('кадров', frames.length);
+console.log('кадров', frames.length, 'ошибок JS', errs.length, errs.slice(0, 3).join(' | ').slice(0, 400));
 ws.close(); chrome.kill();
