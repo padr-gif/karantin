@@ -8,7 +8,7 @@ const fartType = t => FART[t] || t;
 function fsizeOf(t) { const m = ART.meta && ART.meta.fsize; return m && m[fartType(t)]; }
 const artOf = f => f.art || fartType(f.type);
 // smaller pieces for rooms where the full-size one doesn't fit
-const FALLBACK = {bed:['bed1'], tv:['tv1'], table:['table1']};
+const FALLBACK = {bed:['bed1'], tv:['tv1'], table:['table1'], bath:['bath1'], sofa:['sofa1']};   // уменьшенные: односпальная, сидячая ванна, кресло
 const isWallT9 = t => t === WALL || t === WIN;
 // rectangle a piece of type `t` takes when put on tile (x, y), back to the wall in direction wd (or free-standing)
 function rectFor(t, x, y, wd, dir, free, oneTile) {
@@ -85,8 +85,95 @@ function relocateBig(f, Hs, arts) {
   }
   return false;
 }
+// ---- планировка комнаты целиком: сначала большие вещи в полный размер, потом мелкие вокруг ----
+// Раньше всё ставилось по клетке вперемешку и только потом кровать «раздувалась» — тумбочка или унитаз уже
+// занимали соседнюю клетку, и кровать оставалась кубиком. Теперь: снимаем мебель комнаты, ставим по убыванию
+// размера; каждая вещь сначала пробует своё прежнее место, затем ближайшие места у стен; к каждой должен быть
+// подход, и все свободные клетки дома остаются достижимыми от дверей. Без rng — тот же мир, та же расстановка.
+const ESSENTIAL = new Set(['bed', 'bath', 'toilet', 'stove', 'fridge', 'sink', 'sofa']);
+const fArea = f => { const z = fsizeOf(f.type); return z ? z[0] * z[1] : 0; };
+const D8F = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+function canReach(f) {
+  // с соседней клетки, в том числе по диагонали: действие доступно до 0,73 м от края вещи (getAction)
+  return (f.tiles || []).some(t => D8F.some(([ox, oy]) => { const x = (t % MW) + ox, y = ((t / MW) | 0) + oy, j = y * MW + x; return (map[j] === FLOOR || map[j] === DOOR) && !furn[j]; }));
+}
+function roomSpots(room) {
+  const out = [];
+  for (let y = room.y0; y <= room.y1; y++) for (let x = room.x0; x <= room.x1; x++) {
+    if (get(x, y) !== FLOOR || furn[y * MW + x] || propAt[y * MW + x]) continue;
+    if (D4.some(([ox, oy]) => get(x + ox, y + oy) === DOOR)) continue;
+    const wds = WDS.filter(d => isWallT9(get(x + d[0], y + d[1]))); if (wds.length) out.push([x, y, wds]);
+  }
+  return out;
+}
+function placeInRoom(f, Hs, room, arts, placed) {
+  const spots = roomSpots(room).sort((a, b) => Math.hypot(a[0] - f.x0, a[1] - f.y0) - Math.hypot(b[0] - f.x0, b[1] - f.y0) || a[1] - b[1] || a[0] - b[0]);
+  for (const art of arts) for (const [x, y, wds] of spots) {
+    const ws = wds.slice().sort((a, b) => (a[0] === f.wd0[0] && a[1] === f.wd0[1] ? -1 : 0) - (b[0] === f.wd0[0] && b[1] === f.wd0[1] ? -1 : 0));
+    for (const wd of ws) for (const d of [1, -1]) {
+      const R = rectFor(art, x, y, wd, d, false); if (!R) continue;
+      if (!rectFits(f, R, wd, {gen:true, free:false, x, y})) { if (R.na === 1) break; continue; }
+      Object.assign(f, {x, y, cx:R.cx, cy:R.cy, sx:R.sx, sy:R.sy, r:R.r, wd, art:art === fartType(f.type) ? null : art, compact:false}); regFurn(f);
+      if (houseOk(Hs) && canReach(f) && placed.every(canReach)) { placed.push(f); return true; }
+      unregFurn(f);
+      if (R.na === 1) break;
+    }
+  }
+  return false;
+}
+function layoutRooms(done) {
+  for (const Hs of houses) {
+    if (!Hs || !Hs.rooms) continue;
+    const hi = houses.indexOf(Hs) + 1;
+    for (const room of Hs.rooms) {
+      const inRoom = f => !f.gone && hAt[f.y * MW + f.x] === hi && f.x >= room.x0 && f.x <= room.x1 && f.y >= room.y0 && f.y <= room.y1;
+      const list = furns.filter(f => inRoom(f) && f.wd && fsizeOf(f.type) && !isFreeGen(f));
+      const mid = furns.filter(f => inRoom(f) && isFreeGen(f));
+      if (!list.length) continue;
+      const all = [...list, ...mid];
+      const keep = new Map(all.map(f => [f, {x:f.x, y:f.y, cx:f.cx, cy:f.cy, sx:f.sx, sy:f.sy, r:f.r.slice(), wd:f.wd, art:f.art}]));
+      list.sort((a, b) => ESSENTIAL.has(fartType(b.type)) - ESSENTIAL.has(fartType(a.type)) || fArea(b) - fArea(a) || furns.indexOf(a) - furns.indexOf(b));
+      const clear = () => { for (const f of all) { if (!f.gone) unregFurn(f); Object.assign(f, keep.get(f), {gone:false, compact:false}); } };
+      // одна попытка; small — большие вещи сразу уменьшенными (односпальная кровать, малый стол)
+      const attempt = small => {
+        for (const f of all) unregFurn(f);
+        const placed = []; let lost = 0;
+        for (const f of list) {
+          const k = keep.get(f); f.x0 = k.x; f.y0 = k.y; f.wd0 = k.wd;
+          const fb = FALLBACK[fartType(f.type)] || [], arts = small && fb.length ? fb : [fartType(f.type)].concat(fb);
+          const ok = placeInRoom(f, Hs, room, arts, placed);
+          delete f.x0; delete f.y0; delete f.wd0;
+          if (ok) continue;
+          // совсем некуда: большая — компактной на прежней клетке, если там свободно; иначе вещи нет
+          if (!furn[k.y * MW + k.x]) {
+            Object.assign(f, k, {art:null, compact:Math.max(...fsizeOf(f.type)) > 1.06}); regFurn(f); f.big = false; f.dt = null;
+            if (houseOk(Hs) && canReach(f) && placed.every(canReach)) { placed.push(f); lost += f.compact ? .5 : 0; continue; }
+            unregFurn(f);
+          }
+          f.gone = true; lost += ESSENTIAL.has(fartType(f.type)) ? 10 : 1;
+        }
+        for (const f of mid) {   // стол — на своё место, если не отрезает проход и подход к мебели
+          if (furn[f.y * MW + f.x]) { f.gone = true; lost += .3; continue; }
+          regFurn(f); if (!houseOk(Hs) || !placed.every(canReach)) { unregFurn(f); f.gone = true; lost += .3; }
+        }
+        return lost;
+      };
+      const lost = attempt(false);
+      if (lost > 0 && list.some(f => FALLBACK[fartType(f.type)])) {
+        const snap = new Map(all.map(f => [f, {x:f.x, y:f.y, cx:f.cx, cy:f.cy, sx:f.sx, sy:f.sy, r:f.r.slice(), wd:f.wd, art:f.art, gone:!!f.gone, compact:!!f.compact}]));
+        clear();
+        if (attempt(true) >= lost) { clear(); for (const f of all) unregFurn(f); for (const [f, st] of snap) Object.assign(f, st); for (const f of all) if (!f.gone) regFurn(f); }
+      }
+      for (const f of all) done.add(f);
+    }
+  }
+}
+// стол посреди кухни и прочие отдельно стоящие — их планировка не трогает
+const isFreeGen = f => Math.abs(f.cx - (f.x + .5)) < .01 && Math.abs(f.cy - (f.y + .5)) < .01 && f.wd && f.wd[0] === 0 && f.wd[1] === -1 && !isWallT9(get(f.x, f.y - 1));
 function growFurniture() {
+  const laid = new Set(); layoutRooms(laid);
   for (const f of furns) {
+    if (laid.has(f)) continue;
     if (f.gone || !fsizeOf(f.type) || !f.wd) continue;
     const free = Math.abs(f.cx - (f.x + .5)) < .01 && Math.abs(f.cy - (f.y + .5)) < .01;
     const Hs = houses[(hAt[f.y * MW + f.x] || 0) - 1], old = {cx:f.cx, cy:f.cy, sx:f.sx, sy:f.sy, r:f.r.slice(), wd:f.wd};

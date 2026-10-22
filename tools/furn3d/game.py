@@ -402,12 +402,13 @@ def counterc():
 COMPACT = {'bed': lambda v=0: _bed(.86, .86, v, 1), 'bath': sitbath, 'sofa': armchair,
            'table': lambda: _table(.78, .78), 'tv': tvc, 'counter2': counterc}
 
-VARIANTS = {'bed': 3, 'bed1': 3, 'sofa': 3, 'shelf': 2, 'bookshelf': 2}
+VARIANTS = {'bed': 3, 'bed1': 3, 'sofa': 3, 'sofa1': 3, 'shelf': 2, 'bookshelf': 2}
 MODELS = {'tv': tv, 'tv1': tv1, 'toilet': toilet,
           'fridge': fridge, 'stove': stove, 'sink': sink, 'cabinet': cabinet, 'counter2': counter2,
           'dresser': dresser, 'nightstand': nightstand, 'wardrobe': wardrobe, 'medcab': medcab,
           'bed': bed, 'bed1': bed1, 'bath': bath, 'sofa': sofa, 'table': table, 'table1': table1,
-          'shelf': shelf, 'bookshelf': bookshelf, 'crate': crate, 'hanger': hanger}
+          'shelf': shelf, 'bookshelf': bookshelf, 'crate': crate, 'hanger': hanger,
+          'bath1': lambda: sitbath(), 'sofa1': lambda v=0: armchair(v)}
 NEW = ['fridge', 'stove', 'sink', 'cabinet', 'counter2', 'dresser', 'nightstand', 'wardrobe', 'medcab']
 
 # повороты как в tools/furn/sketch.py (Spr.R): модель вокруг центра следа
