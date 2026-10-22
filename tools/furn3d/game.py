@@ -536,7 +536,109 @@ EXTRA_MODELS = {'armchair': armchair, 'coffeetab': coffeetab, 'floorlamp': floor
                 'wdesk': wdesk, 'chair': chair, 'mirror': mirror, 'laundry': laundry, 'washer': washer, 'kbin': kbin,
                 'pantry': pantry, 'bsink': bsink, 'towels': towels, 'shoerack': shoerack, 'boxes': boxes, 'radiator': radiator}
 
-VARIANTS = {'bed': 3, 'bed1': 3, 'sofa': 3, 'sofa1': 3, 'shelf': 2, 'bookshelf': 2, 'armchair': 3}
+# ---------- варианты декора и центр комнаты: сундук, стулья к столу, растения, торшеры, коробки; мелочи на полу ----------
+mat('palm', '#5c8a3a', .04, .7); mat('snake', '#4e7a3e', .05, .6, lambda p: 1 + .18 * (np.sin(p[..., 2] * 90) > .5))
+mat('cactus', '#5a8a52', .05, .6); mat('pot2', '#d8d2c4', .2, .4); mat('pot3', '#3c4a5a', .2, .4)
+mat('shade2', '#c8a070', 0, .9, lambda p: 1 + .03 * np.sin(p[..., 2] * 300)); mat('lacq', '#2e2a28', .4, .25)
+mat('woodp', '#b88a5a', .05, .6, wood_pat(0)); mat('woodpv', '#a87e52', .05, .6, wood_pat(2)); mat('iron', '#3a3c40', .35, .35)
+mat('fabric_g', '#6a7a5a', 0, .9); mat('fabric_r', '#8a3a36', 0, .9)
+_plant0 = plant
+def plant(v=0):
+    if v == 0: return _plant0()
+    m = Model(); c = .25
+    pot = 'pot2' if v == 1 else 'pot3'
+    m.add(cut(cylz(c, c, .15, 0, .34, .03), cylz(c, c, .12, .3, .4)), pot); m.add(cylz(c, c, .125, .26, .3), 'soil')
+    r = np.random.default_rng(40 + v)
+    if v == 1:                                                                                      # сансевиерия: мечи листьев
+        for i in range(9):
+            a = r.uniform(0, 2 * np.pi); d = r.uniform(0, .07); h = r.uniform(.6, .95); tilt = r.uniform(.03, .1)
+            m.add(capsule((c + np.cos(a) * d, c + np.sin(a) * d, .3), (c + np.cos(a) * (d + tilt), c + np.sin(a) * (d + tilt), h), .028), 'snake')
+    else:                                                                                           # пальма: стебли и веера
+        for i in range(7):
+            a = i / 7 * 2 * np.pi + r.uniform(-.2, .2); h = r.uniform(.75, 1.05); L = r.uniform(.25, .35)
+            tip = (c + np.cos(a) * L, c + np.sin(a) * L, h - .12)
+            m.add(capsule((c, c, .32), (c + np.cos(a) * L * .4, c + np.sin(a) * L * .4, h), .012), 'palm')
+            for k in range(4):
+                b = a + (k - 1.5) * .25
+                m.add(capsule((c + np.cos(a) * L * .4, c + np.sin(a) * L * .4, h), (c + np.cos(b) * L * 1.15, c + np.sin(b) * L * 1.15, h - .18), .022), 'palm')
+    return m, (.5, .5)
+_floorlamp0 = floorlamp
+def floorlamp(v=0):
+    if v == 0: return _floorlamp0()
+    m = Model(); c = .2                                                                             # дуговой: ткань тёплого цвета, лакированная стойка
+    m.add(cylz(c, c, .13, 0, .04, .015), 'lacq'); m.add(cylz(c, c, .016, .03, 1.3, .006), 'lacq')
+    m.add(cut(cylz(c, c, .17, 1.2, 1.5, .02), cylz(c, c, .15, 1.18, 1.52)), 'shade2'); m.add(sphere((c, c, 1.3), .04), 'bulb')
+    for z in (.5, .9): m.add(cylz(c, c, .025, z, z + .02, .005), 'brass')
+    return m, (.4, .4)
+_boxes0 = boxes
+def boxes(v=0):
+    if v == 0: return _boxes0()
+    m = Model()
+    if v == 1:                                                                                      # одна большая, открытая, с тряпками
+        m.add(cut(rbox((.3, .3, .24), (.27, .25, .24), .015), rbox((.3, .3, .5), (.25, .23, .1), .01)), 'cardboard')
+        m.add(rbox((.3, .3, .44), (.2, .18, .06), .05), 'cloth_r'); m.add(rbox((.47, .3, .5), (.02, .2, .1), .005), 'cardboard2')
+    else:                                                                                           # три небольшие рядом
+        m.add(rbox((.18, .2, .15), (.15, .15, .15), .012), 'cardboard2'); m.add(rbox((.44, .22, .12), (.13, .14, .12), .012), 'cardboard')
+        m.add(rbox((.3, .45, .1), (.16, .12, .1), .01), 'cardboard'); m.add(rbox((.18, .2, .31), (.11, .11, .01), .004), 'sheet_w')
+    return m, (.6, .6)
+_chair0 = chair
+def chair(v=0):
+    if v == 0: return _chair0()
+    m = Model(); W = .45                                                                             # кухонный: металл и сиденье из кожзама
+    m.add(rbox((W / 2, W / 2 + .02, .46), (W / 2 - .03, W / 2 - .05, .035), .03), 'fabric_r')
+    for x in (.05, W - .05):
+        for y in (.07, W - .04): m.add(cylz(x, y, .014, 0, .44, .005), 'iron')
+        m.add(cylz(x, .05, .014, .44, .9, .005), 'iron')
+    m.add(rbox((W / 2, .05, .8), (W / 2 - .04, .02, .1), .03), 'fabric_r')
+    return m, (W, W)
+def chest(v=0):
+    """сундук в ногах кровати: доски, кованые уголки, ручки"""
+    m = Model(); W, D, Hh = .9, .45, .48; w = 'woodn' if v == 0 else 'woodp'; wd_ = 'woodnd' if v == 0 else 'woodpv'
+    m.add(rbox((W / 2, D / 2, Hh / 2 - .02), (W / 2 - .01, D / 2 - .01, Hh / 2 - .03), .015), wd_)
+    m.add(rbox((W / 2, D / 2, Hh - .03), (W / 2, D / 2, .04), .03), w)                                # крышка
+    for x in (.03, W - .03):
+        for y in (.03, D - .03): m.add(rbox((x, y, Hh / 2), (.025, .025, Hh / 2), .006), 'iron')
+    for z in (.12, .3): m.add(rbox((W / 2, D - .005, z), (W / 2 - .03, .006, .012), .004), 'iron')
+    for x in (.03, W - .03): m.add(capsule((x, D / 2 - .08, .32), (x, D / 2 + .08, .32), .012), 'iron')
+    m.add(rbox((W / 2, D + .004, Hh - .1), (.035, .01, .04), .006), 'brass')
+    return m, (W, D)
+# мелочи на полу — плоские, сквозь них ходят; рисуются в слое пола
+def dec_clothes(v):
+    m = Model(); cs = [('cloth_b', 'cloth_w'), ('cloth_r', 'fabric_g'), ('fabric_g', 'cloth_b')][v]
+    m.add(rbox((0, 0, .03), (.22, .15, .03), .05), cs[0]); m.add(rbox((.08, .06, .07), (.13, .1, .03), .04), cs[1])
+    m.add(capsule((-.15, .1, .03), (-.3, .2, .02), .035), cs[0])
+    return m
+def dec_books(v):
+    m = Model(); r = np.random.default_rng(70 + v); z = 0
+    for k in range(4 + v):
+        h = r.uniform(.025, .045); m.add(rbox((r.uniform(-.02, .02), r.uniform(-.02, .02), z + h / 2), (.1, .07, h / 2), .006), 'bk%d' % r.integers(0, 8)); z += h
+    if v: m.add(rbox((.2, .05, .02), (.07, .1, .015), .004), 'bk3')
+    return m
+def dec_bottles(v):
+    m = Model(); r = np.random.default_rng(80 + v)
+    for k in range(3 + v):
+        a = r.uniform(0, 2 * np.pi); d = r.uniform(0, .15); x, y = np.cos(a) * d, np.sin(a) * d
+        if r.random() < .5: m.add(capsule((x, y, .035), (x + .2, y + .05, .035), .035), 'glass_d')              # лежит
+        else: m.add(cylz(x, y, .035, 0, .22, .02), 'glass_d'); m.add(cylz(x, y, .014, .22, .29, .005), 'glass_d')
+    return m
+def dec_newspaper(v):
+    m = Model(); m.add(rbox((0, 0, .006), (.2, .14, .006), .003), 'sheet_w'); m.add(rbox((.06, .05, .014), (.18, .13, .005), .003), 'sheet_w')
+    m.add(rbox((.02, -.02, .021), (.08, .02, .002), .001), 'blk')
+    return m
+def dec_shoes(v):
+    m = Model(); c = 'shoe' if v == 0 else 'shoe2'
+    m.add(rbox((0, 0, .04), (.12, .045, .04), .035), c); m.add(rbox((.05, .13, .03), (.045, .12, .03), .03), c)
+    return m
+def dec_trash(v):
+    m = Model()
+    m.add(sphere((0, 0, .17), .17), 'blk'); m.add(capsule((0, 0, .3), (0, 0, .38), .03), 'blk')
+    if v: m.add(sphere((.2, .1, .1), .1), 'blk'); m.add(rbox((-.18, .12, .02), (.06, .05, .02), .01), 'cardboard')
+    return m
+DECOR = {'clothes': (dec_clothes, 3), 'books': (dec_books, 2), 'bottles': (dec_bottles, 2), 'newspaper': (dec_newspaper, 1),
+         'shoes': (dec_shoes, 2), 'trash': (dec_trash, 2)}
+EXTRA_MODELS.update({'chest': chest, 'plant': plant, 'floorlamp': floorlamp, 'boxes': boxes, 'chair': chair})
+
+VARIANTS = {'bed': 3, 'bed1': 3, 'sofa': 3, 'sofa1': 3, 'shelf': 2, 'bookshelf': 2, 'armchair': 3, 'plant': 3, 'floorlamp': 2, 'boxes': 3, 'chair': 2, 'chest': 2}
 MODELS = {'tv': tv, 'tv1': tv1, 'toilet': toilet,
           'fridge': fridge, 'stove': stove, 'sink': sink, 'cabinet': cabinet, 'counter2': counter2,
           'dresser': dresser, 'nightstand': nightstand, 'wardrobe': wardrobe, 'medcab': medcab,
@@ -607,6 +709,7 @@ def export(names=None):
     for k, (s_, x, y, w, h, ax, ay) in ((k, v) for k, v in fr.items() if v[0] == 'furn2'):
         frames[k] = (sheet.crop((x, y, x + w, y + h)), (ax, ay))
     for n in names:
+        if n == 'decor': frames.update(decor_frames(1)); continue
         for r in range(4):
             for v in range(VARIANTS.get(n, 1)):
                 im, (ax, ay), _ = frame(n, r, v)
@@ -660,6 +763,7 @@ def export_hd(names=None, procs=2):
     """все модели ×HD_K в отдельный лист furn3 (кадры hd_f_…, восьмое поле — масштаб)"""
     import multiprocessing as mp
     names = names or list(MODELS); hd_setup()
+    want_decor = 'decor' in names; names = [n for n in names if n != 'decor']
     jobs = [(n, r, v) for n in names for v in range(VARIANTS.get(n[2:] if n.startswith('c:') else n, 1)) for r in range(4)]
     ap = os.path.join(ROOT, 'assets/atlas.json'); sp = os.path.join(ROOT, 'assets/sprites/furn3.png')
     meta = json.load(open(ap)); fr = meta['frames']
@@ -672,6 +776,8 @@ def export_hd(names=None, procs=2):
         for i, (k, im, a) in enumerate(pool.imap_unordered(frame_hd, jobs)):
             frames[k] = (im, a); print('\r%d/%d %s' % (i + 1, len(jobs), k), end='', flush=True)
     print()
+    if want_decor:
+        for k, v in decor_frames(HD_K).items(): frames['hd_' + k] = v
     W = 4096; order = sorted(frames, key=lambda k: (-frames[k][0].height, k))
     x = y = rowh = 0; pos = {}
     for k in order:
@@ -686,6 +792,18 @@ def export_hd(names=None, procs=2):
     sh = os.path.join(ROOT, 'assets/sheets.json'); so = json.load(open(sh))
     if 'furn3' not in so['order']: so['order'].insert(so['order'].index('furn2') + 1, 'furn3'); json.dump(so, open(sh, 'w'))
     print('детальных кадров', len(frames), 'лист', out.size, '≈ %.0f МБ в памяти' % (out.width * out.height * 4 / 1e6))
+
+def decor_frames(K=1):
+    """кадры dec_<вид>_<вариант>: K=1 — пиксельные (лист furn2), K=3 — детальные"""
+    out = {}
+    for kind, (fn, n) in DECOR.items():
+        for v in range(n):
+            if K > 1: F.HX, F.HY, F.ZP = 32 * K, 16 * K, 31 * K; F.SS = 2
+            F.FLOOR_SHADOW = True
+            im, (ox, oy) = F.render(fn(v), cells=(0, 0))
+            px = soft_outline(im, K) if K > 1 else F.pixelize(im, 40, outline=True)
+            bb = px.getbbox(); out['dec_%s_%d' % (kind, v)] = (px.crop(bb), (int(round(ox - bb[0])), int(round(oy - bb[1]))))
+    return out
 
 if __name__ == '__main__':
     if sys.argv[1] == 'preview': preview(sys.argv[2], sys.argv[3:] or None)
