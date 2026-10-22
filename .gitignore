@@ -7,3 +7,4 @@ site/
 *.png
 !assets/**/*.png
 !pwa/*.png
+tools/mh3d/raster.so
