@@ -17,13 +17,39 @@ function smpPick(g) {
   if (keys.length > 1 && k === SMP_LAST[g]) k = keys[(keys.indexOf(k) + 1) % keys.length];
   SMP_LAST[g] = k; return SMP[k];
 }
+// ---- мягкий приглушённый звук: общая шина записей ----
+// срез верхов (как сквозь стены и одежду), мягкое начало и затухание каждого звука, лёгкая «комната» для хвоста;
+// дома глуше и гулче, на улице чуть звонче — переход между ними плавный
+let BUS = null;
+function makeIR(ac, sec) {
+  const n = Math.floor(ac.sampleRate * sec), b = ac.createBuffer(2, n, ac.sampleRate);
+  for (let c = 0; c < 2; c++) { const d = b.getChannelData(c); let y = 0; for (let i = 0; i < n; i++) { y = y * .82 + (Math.random() * 2 - 1) * .18; d[i] = y * Math.pow(1 - i / n, 3.2); } }
+  return b;
+}
+function bus() {
+  const ac = SFX.ac; if (!ac || !SFX.out) return null; if (BUS) return BUS;
+  const inp = ac.createGain(), hp = ac.createBiquadFilter(), shelf = ac.createBiquadFilter(), lp = ac.createBiquadFilter(), dry = ac.createGain(), conv = ac.createConvolver(), wet = ac.createGain();
+  hp.type = 'highpass'; hp.frequency.value = 70;
+  shelf.type = 'highshelf'; shelf.frequency.value = 1500; shelf.gain.value = -6;
+  lp.type = 'lowpass'; lp.frequency.value = 2800; lp.Q.value = .4;
+  dry.gain.value = .9; wet.gain.value = .16; conv.buffer = makeIR(ac, 1.2);
+  inp.connect(hp); hp.connect(shelf); shelf.connect(lp); lp.connect(dry); dry.connect(SFX.out); lp.connect(conv); conv.connect(wet); wet.connect(SFX.out);
+  return (BUS = {inp, lp, wet, inside:null});
+}
+function busPlace() {                                                             // дом / улица — плавно, за полсекунды
+  const B = bus(); if (!B || !P) return; const ins = insideHouse(P.x, P.y); if (ins === B.inside) return; B.inside = ins;
+  const t = SFX.ac.currentTime; B.lp.frequency.setTargetAtTime(ins ? 2300 : 3200, t, .25); B.wet.gain.setTargetAtTime(ins ? .22 : .07, t, .25);
+}
 function smp(g, v, rate, delay, lp) {
-  const ac = SFX.ac, b = smpPick(g); if (!ac || !b || !SFX.out) return false;
-  const s = ac.createBufferSource(); s.buffer = b; s.playbackRate.value = (rate || 1) * (.94 + Math.random() * .12);
-  const gn = ac.createGain(); gn.gain.value = v * (SMP_GAIN[g] || 1) * SFX.vol();
+  const ac = SFX.ac, b = smpPick(g), B = bus(); if (!ac || !b || !B) return false;
+  busPlace();
+  const s = ac.createBufferSource(); s.buffer = b; const r = (rate || 1) * (.94 + Math.random() * .12); s.playbackRate.value = r;
+  const gn = ac.createGain(), t = ac.currentTime + (delay || 0), dur = b.duration / r, peak = v * .78 * (SMP_GAIN[g] || 1) * SFX.vol();
+  gn.gain.setValueAtTime(0, t); gn.gain.linearRampToValueAtTime(peak, t + .014);                 // мягкое начало, без щелчка
+  gn.gain.setTargetAtTime(0, t + dur * .55, dur * .18);                                          // плавное затухание вместо обрыва
   let node = s;
   if (lp) { const f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = lp; s.connect(f); node = f; }
-  node.connect(gn); gn.connect(SFX.out); s.start(ac.currentTime + (delay || 0));
+  node.connect(gn); gn.connect(B.inp); s.start(t); s.stop(t + dur + .05);
   return true;
 }
 const SMP_GAIN = {soft:.5, step_bare:1.2};   // выравниваем громкость записей
@@ -47,7 +73,7 @@ const step35 = SFX.step;
 SFX.step = function (inside, run) {
   if (!P) return step35(inside, run);
   const s = surfaceAt(P.x, P.y), k = (run ? 1.3 : .8) * (P.sneak ? .45 : 1) * Math.min(1.3, Math.max(.6, stepNoiseK()));
-  if (!smp('step_' + s, STEP_V[s] * k, run ? 1.06 : 1)) step35(inside, run);
+  if (!smp('step_' + s, STEP_V[s] * k, run ? 1.04 : .97, 0, P.sneak ? 1400 : run ? null : 2400)) step35(inside, run);
 };
 
 // ---- двери, окна, машина ----
