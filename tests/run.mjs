@@ -131,7 +131,7 @@ check('большая мебель занимает все свои клетки
 check('проходы в домах не перекрыты', await D("houses.every(h => houseOk([h]))"));
 check('спрайты новой мебели есть', await D("furns.every(f => frameOf(furnName(f)))"), await D("furns.filter(f => !frameOf(furnName(f))).map(furnName).slice(0, 5)"));
 check('большая мебель переживает сохранение', await D("(() => { const sig = () => furns.filter(f => f.big).map(f => f.tiles.join(',')).join('|'); const a = sig(); applySave(JSON.parse(JSON.stringify(serialize()))); return a === sig(); })()"));
-check('у большой мебели есть действие', await D("(() => { const f = furns.find(f => f.big && (f.type === 'bed' || f.type === 'sofa' || f.type === 'wardrobe')); if (!f) return true; const t = f.tiles[0]; P.x = f.r[0] - .35; P.y = (f.r[1] + f.r[3]) / 2; const a = getAction(); return !!a; })()"));
+check('у большой мебели есть действие', await D("(() => { const f = furns.find(f => f.big && (f.type === 'bed' || f.type === 'sofa' || f.type === 'wardrobe')); if (!f) return true; const cx = (f.r[0] + f.r[2]) / 2, cy = (f.r[1] + f.r[3]) / 2; for (const [x, y] of [[f.r[0] - .35, cy], [f.r[2] + .35, cy], [cx, f.r[1] - .35], [cx, f.r[3] + .35]]) { P.x = x; P.y = y; if (getAction()) return true; } return false; })()"));
 
 console.log('Детальная графика');
 await fresh();
