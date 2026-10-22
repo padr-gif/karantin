@@ -90,7 +90,8 @@ function relocateBig(f, Hs, arts) {
 // занимали соседнюю клетку, и кровать оставалась кубиком. Теперь: снимаем мебель комнаты, ставим по убыванию
 // размера; каждая вещь сначала пробует своё прежнее место, затем ближайшие места у стен; к каждой должен быть
 // подход, и все свободные клетки дома остаются достижимыми от дверей. Без rng — тот же мир, та же расстановка.
-const ESSENTIAL = new Set(['bed', 'bath', 'toilet', 'stove', 'fridge', 'sink', 'sofa']);
+const drop = f => { f.gone = true; f.big = false; f.tiles = []; f.dt = null; };   // вещь не поместилась: её нет
+const ESSENTIAL = new Set(['bed', 'bath', 'toilet', 'stove', 'fridge', 'sink', 'sofa', 'bsink']);
 const fArea = f => { const z = fsizeOf(f.type); return z ? z[0] * z[1] : 0; };
 const D8F = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 function canReach(f) {
@@ -132,30 +133,35 @@ function layoutRooms(done) {
       if (!list.length) continue;
       const all = [...list, ...mid];
       const keep = new Map(all.map(f => [f, {x:f.x, y:f.y, cx:f.cx, cy:f.cy, sx:f.sx, sy:f.sy, r:f.r.slice(), wd:f.wd, art:f.art}]));
-      list.sort((a, b) => ESSENTIAL.has(fartType(b.type)) - ESSENTIAL.has(fartType(a.type)) || fArea(b) - fArea(a) || furns.indexOf(a) - furns.indexOf(b));
+      list.sort((a, b) => ESSENTIAL.has(fartType(b.type)) - ESSENTIAL.has(fartType(a.type)) || !!a.extra - !!b.extra || fArea(b) - fArea(a) || furns.indexOf(a) - furns.indexOf(b));
       const clear = () => { for (const f of all) { if (!f.gone) unregFurn(f); Object.assign(f, keep.get(f), {gone:false, compact:false}); } };
       // одна попытка; small — большие вещи сразу уменьшенными (односпальная кровать, малый стол)
       const attempt = small => {
         for (const f of all) unregFurn(f);
-        const placed = []; let lost = 0;
+        const placed = []; let lost = 0, midDone = false;
+        const placeMid = () => {   // стол — на своё место, если не отрезает проход и подход к мебели
+          midDone = true;
+          for (const f of mid) {
+            if (furn[f.y * MW + f.x]) { drop(f); lost += .3; continue; }
+            regFurn(f); if (!houseOk(Hs) || !placed.every(canReach)) { unregFurn(f); drop(f); lost += .3; }
+          }
+        };
         for (const f of list) {
+          if (f.extra && !midDone) placeMid();   // стол раньше декора: декор не должен его вытеснять
           const k = keep.get(f); f.x0 = k.x; f.y0 = k.y; f.wd0 = k.wd;
           const fb = FALLBACK[fartType(f.type)] || [], arts = small && fb.length ? fb : [fartType(f.type)].concat(fb);
           const ok = placeInRoom(f, Hs, room, arts, placed);
           delete f.x0; delete f.y0; delete f.wd0;
           if (ok) continue;
           // совсем некуда: большая — компактной на прежней клетке, если там свободно; иначе вещи нет
-          if (!furn[k.y * MW + k.x]) {
+          if (!furn[k.y * MW + k.x] && !f.extra) {   // декор без места просто не ставим
             Object.assign(f, k, {art:null, compact:Math.max(...fsizeOf(f.type)) > 1.06}); regFurn(f); f.big = false; f.dt = null;
             if (houseOk(Hs) && canReach(f) && placed.every(canReach)) { placed.push(f); lost += f.compact ? .5 : 0; continue; }
             unregFurn(f);
           }
-          f.gone = true; lost += ESSENTIAL.has(fartType(f.type)) ? 10 : 1;
+          drop(f); lost += ESSENTIAL.has(fartType(f.type)) ? 10 : f.extra ? .05 : 1;   // ради декора кровать не уменьшаем
         }
-        for (const f of mid) {   // стол — на своё место, если не отрезает проход и подход к мебели
-          if (furn[f.y * MW + f.x]) { f.gone = true; lost += .3; continue; }
-          regFurn(f); if (!houseOk(Hs) || !placed.every(canReach)) { unregFurn(f); f.gone = true; lost += .3; }
-        }
+        if (!midDone) placeMid();
         return lost;
       };
       const lost = attempt(false);
