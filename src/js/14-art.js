@@ -125,15 +125,23 @@ function blitObj(name, sx, sy) {
 // ---- characters: palette-keyed frames recoloured on demand (LRU) ----
 const SHADE8 = [.5, .58, .66, .74, .82, .89, .95, 1];
 const frameCache = new Map(); let recolorsThisFrame = 0;
+// один пиксель кадра персонажа: R — слот палитры, G — ступень тени; у кадров из tools/mh3d (метка G&31 = 8)
+// точная яркость лежит в B (0..255 -> 0..1.6), а тени на коже теплее — как в превью рендера
+function keyPx(a, i, pal) {
+  const s = a[i] >> 4, col = pal[s] || [255, 0, 255], flat = s === 0 || s === 7 || s === 8;
+  if ((a[i + 1] & 31) === 8) {
+    const m = flat ? 1 : a[i + 2] * (1.6 / 255), k = s === 1 && m < 1 ? Math.min(.6, (1 - m) * .6) : 0;
+    a[i] = Math.min(255, col[0] * m); a[i + 1] = Math.min(255, col[1] * m * (1 - k * .45)); a[i + 2] = Math.min(255, col[2] * m * (1 - k * .64));
+  } else {
+    const m = flat ? 1 : SHADE8[a[i + 1] >> 5];
+    a[i] = Math.min(255, col[0] * m); a[i + 1] = Math.min(255, col[1] * m); a[i + 2] = Math.min(255, col[2] * m);
+  }
+}
 function recolor8(f, pal) {
   const c = mkCanvas(f[3], f[4]), g = c.getContext('2d');
   g.drawImage(ART.imgs[f[0]], f[1], f[2], f[3], f[4], 0, 0, f[3], f[4]);
   const d = g.getImageData(0, 0, f[3], f[4]), a = d.data;
-  for (let i = 0; i < a.length; i += 4) {
-    if (!a[i + 3]) continue;
-    const s = a[i] >> 4, q = a[i + 1] >> 5, col = pal[s] || [255, 0, 255], m = (s === 0 || s === 7 || s === 8) ? 1 : SHADE8[q];
-    a[i] = Math.min(255, col[0] * m); a[i + 1] = Math.min(255, col[1] * m); a[i + 2] = Math.min(255, col[2] * m);
-  }
+  for (let i = 0; i < a.length; i += 4) if (a[i + 3]) keyPx(a, i, pal);
   g.putImageData(d, 0, 0);
   return {cv:c, ax:f[5], ay:f[6], w:f[3], h:f[4]};
 }

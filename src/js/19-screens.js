@@ -155,7 +155,7 @@ function recolorFrame(name, pal) {
   const c = mkCanvas(f[3], f[4]), g = c.getContext('2d');
   g.drawImage(ART.imgs[f[0]], f[1], f[2], f[3], f[4], 0, 0, f[3], f[4]);
   const d = g.getImageData(0, 0, f[3], f[4]), a = d.data;
-  for (let i = 0; i < a.length; i += 4) { if (!a[i + 3]) continue; const s = a[i] >> 4, q = a[i + 1] >> 6, col = pal[s] || [255, 0, 255], m = s === 0 || s === 7 || s === 8 ? 1 : SHADE[q]; a[i] = Math.min(255, col[0] * m); a[i + 1] = Math.min(255, col[1] * m); a[i + 2] = Math.min(255, col[2] * m); }
+  for (let i = 0; i < a.length; i += 4) if (a[i + 3]) keyPx(a, i, pal);
   g.putImageData(d, 0, 0);
   return {c, ax:f[5], ay:f[6]};
 }

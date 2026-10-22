@@ -30,7 +30,7 @@ def raster(sv, tri, W, H):
     return zb.reshape(H, W), tid.reshape(H, W), b1.reshape(H, W), b2.reshape(H, W)
 
 # ---------- данные MakeHuman ----------
-DAT = np.load(os.path.join(HERE, 'mh.npz'))
+with np.load(os.path.join(HERE, 'mh.npz')) as _z: DAT = {k: _z[k] for k in _z.files}   # целиком в память: безопасно для нескольких процессов
 SK = json.loads(bytes(DAT['skeleton']).decode())
 BONES = list(SK['bones'])
 def _order():
@@ -241,6 +241,8 @@ def paint(o, B, part, cls, p):
         if part == 'pants' and o.get('belt'):
             top = B['heads'][BI['root']][2] + .075; zz = p[:, 2]
             out[zz > top - .03] = 'belt'; out[(zz > top - .03) & (x > .05) & (np.abs(y) < .022)] = 'buckle'
+        if part == 'pants' and o.get('blood'):
+            out[(noise(p, 7, o['blood']) + .4 * noise(p, 19, 2 * o['blood']) > .9) & (x > -.02)] = 'blood'
         return out
     top = o.get('top', 'tank')
     zs, ys = B['sh'][2], B['sh'][1]                 # плечевой сустав в покое
@@ -254,9 +256,17 @@ def paint(o, B, part, cls, p):
         sh &= ~(~front & ell(0, zs + .08, .3 * ys, .1))                      # вырез на спине
     else:
         sh = body_ & ~(front & ell(0, zs + .075, .27 * ys, .062)) & ~(~front & ell(0, zs + .08, .27 * ys, .06))
-        dist = np.linalg.norm(np.stack([p[:, 0] - B['sh'][0], ay - ys, zz - zs], -1), axis=-1)
-        sh |= (cls == 3) & (dist < .15)                                      # короткий рукав
     out[sh] = 'shirt'
+    if top == 'tee':                                                         # короткий рукав
+        dist = np.linalg.norm(np.stack([p[:, 0] - B['sh'][0], ay - ys, zz - zs], -1), axis=-1)
+        out[(cls == 3) & (dist < .15)] = 'sleeve'
+    elif top in ('jacket', 'long'):                                          # длинный рукав до запястья (слот рукава)
+        out[(cls == 3) | (cls == 4)] = 'sleeve'
+    if o.get('pack'):                                                        # лямки рюкзака спереди
+        out[sh & front & (np.abs(ay - .5 * ys) < .028) & (zz > zs - .3)] = 'strap'
+    if o.get('blood'):
+        bl = (noise(p, 7, o['blood']) + .4 * noise(p, 19, 2 * o['blood']) > .72 - .25 * np.clip((zs - .1 - zz) / .3, 0, 1) * (x > 0)) & ((out == 'shirt') | (out == 'sleeve'))
+        out[bl] = 'blood'
     bottom = o.get('bottom', 'shorts')                     # тело под шортами/брюками — в цвет ткани (без просветов)
     if bottom in ('shorts', 'pants'):
         under = (zz < B['waist']) & ((cls == 0) | (cls == 6) | ((cls == 7) & (bottom == 'pants')))
@@ -271,6 +281,9 @@ def paint(o, B, part, cls, p):
     out[brow] = 'brow'
     if o.get('beard'):
         out[hd & (x > ex - .075) & (zz < ez - .042) & (ay < .066)] = 'beard'
+    elif o.get('blood'):
+        out[face & (ay < .028) & (zz < ez - .06) & (zz > ez - .1)] = 'blood'
+        out[face & (ay < .022) & (np.abs(zz - (ez - .072)) < .006)] = 'mouth'
     else:
         out[face & (ay < .02) & (np.abs(zz - (ez - .072)) < .0045)] = 'lip'
     if o.get('mustache'):
@@ -281,102 +294,187 @@ def paint(o, B, part, cls, p):
         out[face & (ay < .012) & (np.abs(zz - ez - .004) < .0028)] = 'glass'
     return out
 
-# ---------- рендер кадра ----------
-def render(o, face, pose=None, K=2):
-    HX, HY, ZP = 32 * K, 16 * K, 31 * K
+# ---------- рюкзак: скруглённый ящик на спине, жёстко на кости spine01 ----------
+def rbox_mesh(c, h, n=4, pw=4.0):
+    V, F = [], []
+    for k in range(3):
+        for sgn in (1, -1):
+            u, v = (k + 1) % 3, (k + 2) % 3
+            if sgn < 0: u, v = v, u
+            base = len(V)
+            for i in range(n + 1):
+                for j in range(n + 1):
+                    q = np.zeros(3); q[k] = sgn; q[u] = -1 + 2 * i / n; q[v] = -1 + 2 * j / n
+                    q = q / (np.abs(q) ** pw).sum() ** (1 / pw)
+                    V.append(np.array(c) + q * np.array(h))
+            for i in range(n):
+                for j in range(n):
+                    a = base + i * (n + 1) + j; F.append([a, a + n + 1, a + n + 2, a + 1])
+    return np.array(V), np.array(F)
+
+# ---------- кадр ----------
+SLOT = {'outline': 0, 'glass': 0, 'skin': 1, 'eye': 1, 'lip': 1, 'hair': 2, 'beard': 2, 'brow': 2, 'shirt': 3, 'sleeve': 4,
+        'pants': 5, 'shoe': 6, 'sole': 6, 'iris': 7, 'mouth': 8, 'blood': 9, 'pack': 10, 'strap': 10, 'belt': 13, 'buckle': 13}
+LUMK = {'eye': 1.4, 'lip': .82, 'beard': .78, 'brow': .55, 'sole': .6, 'buckle': 3.2, 'strap': .72, 'mouth': 1.0}
+TEX = {'skin': 'skin', 'eye': None, 'lip': 'skin', 'hair': 'hair', 'beard': 'hair', 'shirt': 'cloth', 'sleeve': 'cloth', 'pants': 'cloth',
+       'pack': 'cloth', 'strap': 'cloth', 'blood': 'cloth'}
+SPEC = {'skin': (.04, .55), 'hair': (.1, .4), 'eye': (.3, .2), 'iris': (.4, .2), 'shoe': (.15, .4), 'belt': (.3, .3), 'buckle': (.6, .2), 'glass': (.4, .2)}
+LUM_MAX = 1.6
+
+def scene(o, pose, face):
+    """поза -> вершины в мире, грани, части, всё для растеризации"""
     B = body(o)
     parts, Lrest = outfit(o, B)
     e = DAT['faces_helper-l-eye']; B['eye'] = Lrest[np.unique(e)].mean(0); B['sh'] = B['heads'][BI['upperarm01.L']]; B['waist'] = B['heads'][BI['root']][2] + .075
-    Rs, ts = pose_matrices(B, pose if pose is not None else idle_pose(o, B))
+    if pose is None: pose = idle_pose(o, B)
+    elif callable(pose): pose = pose(o, B)
+    Rs, ts = pose_matrices(B, pose)
     Pp = skin(Lrest, Rs, ts)
-    if o.get('beard'):                                       # борода — небольшой объём на подбородке
-        pass
+    clsw = CLSW
+    if o.get('pack'):                                      # рюкзак: ящик за спиной
+        fb = np.unique(DAT['faces_body']); zs = B['sh'][2]
+        band = fb[(VCLS[fb] == 0) & (np.abs(Lrest[fb, 2] - (zs - .2)) < .03) & (np.abs(Lrest[fb, 1]) < .05)]
+        bx = Lrest[band, 0].min()
+        pv, pf = rbox_mesh((bx - .075, 0, zs - .21), (.075, .155, .19))
+        bi = BI['spine01']; n0 = len(Lrest)
+        Lrest = np.concatenate([Lrest, pv]); Pp = np.concatenate([Pp, pv @ Rs[bi].T + ts[bi]])
+        parts = parts + [(pf + n0, 'pack')]
+        clsw = np.concatenate([CLSW, np.tile(np.eye(len(CLS_NAMES))[0], (len(pv), 1))])
+    # падение (смерть): назад, вокруг стоп, с выносом вперёд, чтобы тело легло около точки персонажа
+    fall = pose.get('_fall', 0) if isinstance(pose, dict) else 0
+    if fall:
+        a = -fall * math.pi / 2 * .97
+        Pp = Pp @ rot((0, 1, 0), a).T; Pp[:, 0] += .85 * fall
+    # стопы на полу: самая низкая точка тела — z = 0
+    used = np.unique(np.concatenate([F.ravel() for F, _ in parts]))
+    zmin = Pp[used, 2].min(); Pp[:, 2] -= zmin
     ca, sa = math.cos(face), math.sin(face)
     Pw = np.stack([Pp[:, 0] * ca - Pp[:, 1] * sa, Pp[:, 0] * sa + Pp[:, 1] * ca, Pp[:, 2]], -1)
+    return dict(B=B, parts=parts, Lrest=Lrest, Pw=Pw, clsw=clsw, pose=pose, Rs=Rs, ts=ts, face=face, fall=fall, zmin=zmin)
+
+def grip(sc):
+    """точка хвата и ось оружия правой руки в мире"""
+    B, Rs, ts, fall, face = sc['B'], sc['Rs'], sc['ts'], sc['fall'], sc['face']
+    def P_(b):
+        i = BI[b]; return Rs[i] @ B['heads'][i] + ts[i]
+    I, Pk, W = P_('finger2-1.R'), P_('finger5-1.R'), P_('wrist.R')
+    g = (I + Pk) / 2 * .65 + W * .35; d = nrm(I - Pk); ref = P_('spine02')
+    pts = np.array([g, g + d, ref])
+    if fall: pts = pts @ rot((0, 1, 0), -fall * math.pi / 2 * .97).T; pts[:, 0] += .85 * fall
+    pts[:, 2] -= sc['zmin']
+    ca, sa = math.cos(face), math.sin(face)
+    pts = np.stack([pts[:, 0] * ca - pts[:, 1] * sa, pts[:, 0] * sa + pts[:, 1] * ca, pts[:, 2]], -1)
+    return pts
+
+def frame(o, face, pose=None, K=2):
+    """кадр в формате игры: slot (номер цвета), lum (яркость), cov (покрытие), якорь и данные оружия"""
+    HX, HY, ZP = 32 * K, 16 * K, 31 * K
+    sc = scene(o, pose, face)
+    B, parts, Lrest, Pw, clsw = sc['B'], sc['parts'], sc['Lrest'], sc['Pw'], sc['clsw']
+    zshift = 0.0
     quads = np.concatenate([F for F, _ in parts]); pid = np.concatenate([np.full(len(F), i) for i, (F, _) in enumerate(parts)])
     tri = np.concatenate([quads[:, [0, 1, 2]], quads[:, [0, 2, 3]]]); tpart = np.concatenate([pid, pid])
-    Nw = np.zeros_like(Pw)
-    for F, _ in parts:
-        u = np.unique(F); n = vnormals(Pw, F); Nw[u] = n[u] if not Nw[u].any() else Nw[u]
     Nw = vnormals(Pw, quads)
-    # кадр фиксированного размера, как у старых персонажей
-    R = .45; Ht = 1.95
-    cs = np.array([[x, y, z] for x in (-R, R) for y in (-R, R) for z in (0, Ht)])
-    sx = (cs[:, 0] - cs[:, 1]) * HX; sy = (cs[:, 0] + cs[:, 1]) * HY - cs[:, 2] * ZP
-    x0, x1 = math.floor(sx.min()) - 2, math.ceil(sx.max()) + 2
-    y0, y1 = math.floor(sy.min()) - 2, math.ceil(sy.max()) + 2
+    used = np.unique(quads.ravel())
+    sxv = (Pw[used, 0] - Pw[used, 1]) * HX; syv = (Pw[used, 0] + Pw[used, 1]) * HY - Pw[used, 2] * ZP
+    x0, x1 = math.floor(sxv.min()) - 3, math.ceil(sxv.max()) + 3
+    y0, y1 = math.floor(syv.min()) - 3, math.ceil(syv.max()) + 3
     W, Hh = (x1 - x0) * SS, (y1 - y0) * SS
     scr = np.stack([((Pw[:, 0] - Pw[:, 1]) * HX - x0) * SS, ((Pw[:, 0] + Pw[:, 1]) * HY - Pw[:, 2] * ZP - y0) * SS, -(Pw @ VIEW)], -1)
     zb, tid, b1, b2 = raster(scr, tri, W, Hh)
     hit = tid >= 0; T_ = tid[hit]; w1, w2 = b1[hit], b2[hit]; w0 = 1 - w1 - w2
-    tv = tri[T_]
-    bary = np.stack([w0, w1, w2], -1)
+    tv = tri[T_]; bary = np.stack([w0, w1, w2], -1)
     interp = lambda A: np.einsum('nk,nkj->nj', bary, A[tv])
     n = interp(Nw); n /= np.maximum(np.linalg.norm(n, axis=-1, keepdims=True), 1e-9)
-    pw = interp(Pw); pr = interp(Lrest)
-    vmax = tv[np.arange(len(tv)), bary.argmax(1)]
-    cls = VCLS[vmax]; part = tpart[T_]
-    # тень: карта глубины со стороны света
-    u_ = nrm(np.cross(LIGHT, (0, 0, 1)) if abs(LIGHT[2]) < .99 else np.cross(LIGHT, (1, 0, 0))); v_ = np.cross(LIGHT, u_)
-    SR = 220
-    lpos = np.stack([Pw @ u_, Pw @ v_, -(Pw @ LIGHT)], -1)
-    mn = lpos[:, :2].min(0) - .02; sc = SR / (lpos[:, :2].max(0) + .02 - mn).max()
-    lsv = np.concatenate([(lpos[:, :2] - mn) * sc, lpos[:, 2:]], 1)
+    pw = interp(Pw); pr = interp(Lrest); part = tpart[T_]
+    # тень от света
+    u_ = nrm(np.cross(LIGHT, (0, 0, 1))); v_ = np.cross(LIGHT, u_)
+    SR = 260
+    lpos = np.stack([Pw[used] @ u_, Pw[used] @ v_], -1)
+    mn = lpos.min(0) - .02; scl = SR / (lpos.max(0) + .02 - mn).max()
+    lsv = np.stack([(Pw @ u_ - mn[0]) * scl, (Pw @ v_ - mn[1]) * scl, -(Pw @ LIGHT)], -1)
     lz, _, _, _ = raster(lsv, tri, SR, SR)
     q = np.stack([pw @ u_, pw @ v_, -(pw @ LIGHT)], -1)
-    qi = np.clip(((q[:, :2] - mn) * sc).astype(int), 0, SR - 1)
+    qi = np.clip(((q[:, :2] - mn) * scl).astype(int), 0, SR - 1)
     shadow = np.zeros(len(q))
     for dx in (-1, 0, 1):
         for dy in (-1, 0, 1):
-            zz = lz[np.clip(qi[:, 1] + dy, 0, SR - 1), np.clip(qi[:, 0] + dx, 0, SR - 1)]
-            shadow += (q[:, 2] > zz + .012)
+            shadow += (q[:, 2] > lz[np.clip(qi[:, 1] + dy, 0, SR - 1), np.clip(qi[:, 0] + dx, 0, SR - 1)] + .012)
     sh = 1 - .55 * shadow / 9
     dif = np.clip(n @ LIGHT, 0, 1) * sh
-    sky = .5 + .5 * n[:, 2]
-    # «псевдо-AO»: впадины и места касания темнее (по высоте и по углублению к оси тела)
-    fill = np.clip(n @ VIEW, 0, 1)                         # мягкий свет со стороны камеры: лица не тонут в тени
+    sky = .5 + .5 * n[:, 2]; fill = np.clip(n @ VIEW, 0, 1)
     lum = .27 * (.55 + .45 * sky) + .8 * dif + .14 * fill
-    pal = palette(o)
-    # материалы красятся по вершинам и смешиваются по треугольнику: ровные края одежды без «лесенки»
-    # раскраска по пикселю: точка тела в покое + плавные доли частей тела -> ровные края одежды
-    cls = interp(CLSW).argmax(1)
+    cls = interp(clsw).argmax(1)
     names = np.empty(len(T_), dtype=object)
     for i, (_, nm) in enumerate(parts):
         sel = part == i
         if sel.any(): names[sel] = paint(o, B, nm, cls[sel], pr[sel])
-    rgb = np.zeros((len(T_), 3)); hv = nrm(LIGHT + VIEW)
-    for nm, (col, spec, rough, tex) in pal.items():
-        sel = names == nm
-        if not sel.any(): continue
-        c = np.broadcast_to(col, (sel.sum(), 3)).copy(); Lm = lum[sel]
-        if tex == 'skin':
-            c *= (1 - .05 * np.clip(noise(pr[sel], 9, 1.7), -1, 1))[:, None]
-            warm = np.clip(1 - Lm, 0, 1)[:, None]
-            c = c * (1 - warm * .6) + c * np.array([1.0, .55, .36]) * warm * .6
-        elif tex == 'cloth':
-            c *= (1 - .035 * np.clip(noise(pr[sel], 12, 3.1), -1, 1))[:, None]
-        elif tex == 'hair':
+    hv = nrm(LIGHT + VIEW); slot = np.zeros(len(T_), int)
+    for nm in np.unique(names):
+        sel = names == nm; L = lum[sel] * LUMK.get(nm, 1.0); t = TEX.get(nm)
+        if t == 'skin': L = L * (1 - .05 * np.clip(noise(pr[sel], 9, 1.7), -1, 1))
+        elif t == 'cloth': L = L * (1 - .04 * np.clip(noise(pr[sel], 12, 3.1), -1, 1))
+        elif t == 'hair':
             st = np.sin(pr[sel, 1] * 160 + np.sin(pr[sel, 2] * 40) * 2) * .5 + np.sin(pr[sel, 2] * 90 + pr[sel, 0] * 50) * .3
-            c *= (1 + .1 * st)[:, None]
-        sp = np.clip(n[sel] @ hv, 0, 1) ** (2 / max(rough, .05) ** 2 * .5 + 2) * spec
-        rgb[sel] = c * Lm[:, None] + sp[:, None] * sh[sel, None] * .7
-    rgb = np.clip(rgb, 0, 1) ** (1 / 1.1)
-    img = np.zeros((Hh, W, 4)); img[hit, :3] = rgb; img[hit, 3] = 1
-    # тень на полу
-    gx, gy = np.meshgrid((np.arange(W) + .5) / SS + x0, (np.arange(Hh) + .5) / SS + y0)
-    a, b = gx / HX, gy / HY; fx, fy = (b + a) / 2, (b - a) / 2
-    rr = np.hypot(fx, fy) / .3; fl = (~hit) & (rr < 1)
-    img[fl, :3] = .05; img[fl, 3] = np.clip((1 - rr[fl]) * 1.6, 0, .42)
-    # уменьшение в float с премультипликацией: на краях (пальцы, волосы) цвет не «взрывается» в белый
-    pm = img.copy(); pm[..., :3] *= pm[..., 3:4]
-    pm = pm.reshape(Hh // SS, SS, W // SS, SS, 4).mean((1, 3))
-    al = pm[..., 3:4]
-    s_ = np.zeros_like(pm); s_[..., 3:4] = al * 255
-    s_[..., :3] = np.where(al > 1e-4, pm[..., :3] / np.maximum(al, 1e-4), 0) * 255
-    return Image.fromarray(np.clip(s_, 0, 255).astype(np.uint8), 'RGBA'), (-x0, -y0)
+            L = L * (1 + .1 * st)
+        sp, ro = SPEC.get(nm, (.03, .8))
+        L = L + np.clip(n[sel] @ hv, 0, 1) ** (2 / ro ** 2 * .5 + 2) * sp * sh[sel] * 1.2
+        lum[sel] = np.where(L < 1, np.clip(L, 0, 1) ** (1 / 1.1), L)
+        slot[sel] = SLOT[nm]
+    # уменьшение: покрытие, слот — большинством, яркость — средним
+    h, w = Hh // SS, W // SS
+    cov = hit.reshape(h, SS, w, SS).mean((1, 3))
+    S_ = np.full(Hh * W, -1); S_[hit.ravel()] = slot
+    Lm = np.zeros(Hh * W); Lm[hit.ravel()] = lum
+    S_ = S_.reshape(h, SS, w, SS).transpose(0, 2, 1, 3).reshape(h, w, SS * SS)
+    Lm = Lm.reshape(h, SS, w, SS).transpose(0, 2, 1, 3).reshape(h, w, SS * SS)
+    cnt = np.stack([(S_ == k).sum(-1) for k in range(16)], -1)
+    slot_o = cnt.argmax(-1)
+    lum_o = np.where(cov > 0, (Lm * (S_ >= 0)).sum(-1) / np.maximum((S_ >= 0).sum(-1), 1), 0)
+    g = grip(sc)
+    def proj(p): return np.array([(p[0] - p[1]) * 32, (p[0] + p[1]) * 16 - p[2] * 31])
+    hp = proj(g[0]); dv = (proj(g[1]) - hp) * .08
+    front = int(((g[0] - g[2])[:2] @ nrm(VIEW[:2])) > 0)
+    return dict(slot=slot_o, lum=lum_o, cov=cov, anchor=(-x0, -y0), wpn=[round(float(hp[0]), 2), round(float(hp[1]), 2), round(float(dv[0]), 3), round(float(dv[1]), 3), front])
 
-sys.path.insert(0, os.path.join(HERE, '..', 'char3d'))
-from render import finish  # noqa: E402  жёсткий силуэт и контур — тот же, что у SDF-персонажей
+def keyed(fr, outline=.45):
+    """кадр -> RGBA в кодировке игры: R = слот*16+8, G = грубая тень (старый формат) + метка 8, B = точная яркость"""
+    body_ = fr['cov'] >= .45
+    h, w = body_.shape
+    out = np.zeros((h, w, 4), np.uint8)
+    lum = np.clip(fr['lum'], 0, LUM_MAX)
+    q = np.clip(np.round((np.minimum(lum, 1) - .5) / .5 * 7), 0, 7).astype(int)
+    out[body_, 0] = fr['slot'][body_] * 16 + 8; out[body_, 1] = q[body_] * 32 + 8
+    out[body_, 2] = np.round(lum[body_] / LUM_MAX * 255).astype(np.uint8); out[body_, 3] = 255
+    if outline:
+        edge = np.zeros_like(body_)
+        edge[:, 1:] |= body_[:, :-1]; edge[:, :-1] |= body_[:, 1:]; edge[1:, :] |= body_[:-1, :]; edge[:-1, :] |= body_[1:, :]
+        edge &= ~body_
+        out[edge, 0] = 8; out[edge, 1] = 8; out[edge, 2] = 0; out[edge, 3] = int(255 * outline)
+    return Image.fromarray(out, 'RGBA')
+
+WARM = np.array([1.0, .55, .36])
+def decode(im, pal):
+    """как игра перекрашивает кадр (для превью): pal — {слот: (r, g, b)}"""
+    a = np.array(im).astype(float); out = a.copy()
+    m = a[..., 3] > 0; s = (a[..., 0].astype(int) >> 4); lum = a[..., 2] / 255 * LUM_MAX
+    flat = (s == 0) | (s == 7) | (s == 8); lum = np.where(flat, 1, lum)
+    col = np.array([pal.get(k, (255, 0, 255)) for k in range(16)], float)[s]
+    c = col * lum[..., None]
+    k = np.clip((1 - lum) * .6, 0, .6)[..., None] * (s == 1)[..., None]
+    c = c * (1 - k) + c * WARM * k
+    out[..., :3] = np.where(m[..., None], np.clip(c, 0, 255), 0)
+    return Image.fromarray(out.astype(np.uint8), 'RGBA')
+def look_pal(o):
+    h = lambda x: tuple(int(v * 255) for v in hexc(x))
+    sk = h(o.get('skin', '#e8b07a'))
+    return {0: (24, 20, 18), 1: sk, 2: h(o.get('hairc', '#6a3a1e')), 3: h(o.get('shirt', '#8fa6c6')), 4: h(o.get('sleeve', o.get('shirt', '#8fa6c6'))),
+            5: h(o.get('pants', '#55575c')), 6: (44, 38, 34), 7: (30, 24, 20), 8: (90, 20, 16), 9: (112, 22, 16), 10: (108, 86, 56), 13: (36, 32, 30)}
+def render(o, face, pose=None, K=2):
+    """превью: кадр в кодировке игры, перекрашенный как в игре"""
+    fr = frame(o, face, pose, K)
+    return decode(keyed(fr), look_pal(o)), fr['anchor']
+def finish(im): return im
 
 LOOKS = {
     'beard':   dict(hair='short', hairc='#7a4424', beard=True, skin='#eab47c', top='tank', shirt='#93a9c9', bottom='shorts', pants='#5a5c62', muscle=.6),
