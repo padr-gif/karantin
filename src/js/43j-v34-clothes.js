@@ -259,3 +259,7 @@ bodySvg = function (sel) {
   const fill = {chest:at(1) || skin, belly:at(1) || skin, armR:at(3) || at(2) || skin, armL:at(3) || at(2) || skin, legR:at(8) || skin, legL:at(8) || skin, head:at(12)};
   return bodySvg34(sel).replace(/data-r="(\w+)" fill="[^"]*"/g, (m, r) => fill[r] ? `data-r="${r}" fill="${fill[r]}"` : m);
 };
+
+// ---- пиксельный вайб по умолчанию: мир без сглаживания (детальный режим остаётся в настройках) ----
+SETTINGS_DEF.smooth = false;
+if (settings.gfxv !== 35) { settings.smooth = false; settings.gfxv = 35; try { localStorage.setItem('karantin-settings', JSON.stringify(settings)); } catch (e) {} }

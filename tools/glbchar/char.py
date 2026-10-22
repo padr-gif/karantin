@@ -97,7 +97,7 @@ class Char:
 # ---- рендер в проекции игры ----
 def interp_one(A, tv, bary): return np.einsum('nk,nkj->nj', bary, A[tv])
 SS = 3
-def render(ch, Gm, face, K=2, root_xy=True, rmap=False):
+def render(ch, Gm, face, K=2, root_xy=True, rmap=False, pixel=False):
     """rmap=True — ещё и карта областей тела (у примитивов p['rid'] — номер области вершины): R=номер·16, G=светотень, B=покрытие"""
     HX, HY, ZP = 32 * K, 16 * K, 31 * K
     geo = ch.skinned(Gm)
@@ -158,16 +158,30 @@ def render(ch, Gm, face, K=2, root_xy=True, rmap=False):
             col[sel] = col[sel] * (1 - k) + vc[:, :3] * np.clip(lumt / max(p.get('_mean', .45), .05), .55, 1.35) * k
     dif = np.clip(n @ LIGHT, 0, 1); sky = .5 + .5 * n[:, 2]; fill = np.clip(n @ VIEW, 0, 1)
     lum = .3 * (.55 + .45 * sky) + .72 * dif + .14 * fill
+    if pixel: lum = np.array([.58, .78, .96, 1.12])[np.digitize(lum, [.62, .86, 1.04])]   # пиксель-арт: 4 ступени света, без плавных переходов
     rgb = np.clip(col * lum[:, None], 0, 1) ** (1 / 1.08)
     img = np.zeros((H * W, 4)); img[hit.ravel(), :3] = rgb; img[hit.ravel(), 3] = 1
     im = img.reshape(H, W, 4)
-    # уменьшение с учётом покрытия
-    pm = im.copy(); pm[..., :3] *= pm[..., 3:4]
-    small = pm.reshape(H // SS, SS, W // SS, SS, 4).mean((1, 3))
-    a = small[..., 3:4]; small[..., :3] = np.where(a > 0, small[..., :3] / np.maximum(a, 1e-6), 0)
-    small[..., 3] = np.clip((small[..., 3] - .2) / .6, 0, 1)                # чёткий край силуэта
-    out = Image.fromarray((np.clip(small, 0, 1) * 255).astype(np.uint8), 'RGBA')
-    if not rmap: return out, (-x0, -y0)
+    if pixel:                                                                   # пиксель-арт: точка из центра ячейки, край — жёсткий
+        c0 = SS // 2; small = im[c0::SS, c0::SS].copy(); cov = im[..., 3].reshape(H // SS, SS, W // SS, SS).mean((1, 3))
+        small[..., 3] = (cov > .45).astype(float)
+        hole = (small[..., 3] > 0) & (im[c0::SS, c0::SS, 3] == 0)                # край без центральной точки — берём среднее цвета
+        if hole.any():
+            pm = im.copy(); pm[..., :3] *= pm[..., 3:4]; av = pm.reshape(H // SS, SS, W // SS, SS, 4).mean((1, 3))
+            small[hole, :3] = av[hole, :3] / np.maximum(av[hole, 3:4], 1e-6)
+        out = Image.fromarray((np.clip(small, 0, 1) * 255).astype(np.uint8), 'RGBA')
+        if not rmap: return out, (-x0, -y0)
+        pix_alpha = small[..., 3] > 0
+    else: pix_alpha = None
+    if pix_alpha is not None: pass
+    else:
+     # уменьшение с учётом покрытия
+     pm = im.copy(); pm[..., :3] *= pm[..., 3:4]
+     small = pm.reshape(H // SS, SS, W // SS, SS, 4).mean((1, 3))
+     a = small[..., 3:4]; small[..., :3] = np.where(a > 0, small[..., :3] / np.maximum(a, 1e-6), 0)
+     small[..., 3] = np.clip((small[..., 3] - .2) / .6, 0, 1)                # чёткий край силуэта
+     out = Image.fromarray((np.clip(small, 0, 1) * 255).astype(np.uint8), 'RGBA')
+     if not rmap: return out, (-x0, -y0)
     # область пикселя — по ближайшей вершине треугольника; светотень — только свет (без текстуры кожи)
     rid = np.zeros(len(T_), int)
     for pi, p in enumerate(ch.prims):
@@ -182,6 +196,10 @@ def render(ch, Gm, face, K=2, root_xy=True, rmap=False):
     rm = np.zeros(c.shape + (4,), np.uint8)
     rm[..., 0] = (mj + 1) * 16; rm[..., 1] = np.clip(l ** (1 / 1.08) / 1.5 * 255, 0, 255); rm[..., 2] = np.clip(c / (SS * SS) * 255, 0, 255); rm[..., 3] = np.where(c > 0, 255, 0)
     rm[c == 0] = 0
+    if pix_alpha is not None:                                                   # пиксель-арт: область есть у каждого видимого пикселя, покрытие полное
+        bands = np.array([.58, .78, .96, 1.12]) ** (1 / 1.08) / 1.5 * 255
+        g = rm[..., 1].astype(float); rm[..., 1] = bands[np.abs(g[..., None] - bands).argmin(-1)].astype(np.uint8)
+        rm[..., 2] = 255; rm[~pix_alpha] = 0; rm[pix_alpha & (c == 0), 3] = 0
     return out, (-x0, -y0), Image.fromarray(rm, 'RGBA')
 
 if __name__ == '__main__':

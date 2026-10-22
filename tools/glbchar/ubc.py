@@ -111,10 +111,10 @@ class Hero:
             over = {ch.name[nm]: v for nm, v in named.items() if nm in ch.name}
             out.append(ch.globals_(ch.local(over)))
         return out
-    def render(s, Gs, face, K=2, rmap=False):
-        return render_multi(s.parts, Gs, face, K, rmap)
+    def render(s, Gs, face, K=2, rmap=False, pixel=False):
+        return render_multi(s.parts, Gs, face, K, rmap, pixel)
 
-def render_multi(chars, Gs, face, K=2, rmap=False):
+def render_multi(chars, Gs, face, K=2, rmap=False, pixel=False):
     """как C.render, но несколько персонажей-частей (тело, волосы …) в одном кадре"""
     class Merged: pass
     m = Merged(); m.prims = []; m.name = chars[0].name
@@ -122,7 +122,7 @@ def render_multi(chars, Gs, face, K=2, rmap=False):
     for ch, Gm in zip(chars, Gs):
         for (P, N), p in zip(ch.skinned(Gm), ch.prims): geo.append((P, N)); m.prims.append(p)
     m.skinned = lambda _: geo
-    return C.render(m, Gs[0], face, K, rmap=rmap)
+    return C.render(m, Gs[0], face, K, rmap=rmap, pixel=pixel)
 
 if __name__ == '__main__':
     h = Hero()

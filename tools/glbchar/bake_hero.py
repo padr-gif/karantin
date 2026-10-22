@@ -10,7 +10,8 @@ HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(os.pat
 import ubc, char as C
 from render import nrm, VIEW
 
-K = 2
+K = 1
+C.SS = 4                                                                   # пиксель-арт: 1 пиксель кадра = 1 пиксель игры
 # наша анимация → (клип UAL, режим): loop — цикл, once — от начала до конца, end — до последнего кадра включительно
 CLIPS = {'idle': ('Idle_Loop', 'loop'), 'walk': ('Walk_Loop', 'loop'), 'run': ('Jog_Fwd_Loop', 'loop'), 'sneak': ('Crouch_Fwd_Loop', 'loop'),
          'attack': ('Sword_Attack', 'once'), 'punch': ('Punch_Jab', 'once'), 'hit': ('Hit_Chest', 'once'), 'search': ('Fixing_Kneeling', 'loop'),
@@ -36,7 +37,7 @@ def job(a):
     an, d, i = a
     clip, mode = CLIPS[an]; n = COUNTS[an]
     Gs = H.pose(clip, t_of(i, n, mode), calm=CALM.get(an, 0)); face = d * math.pi / 4
-    im, (ax, ay), rm = H.render(Gs, face, K, rmap=True)
+    im, (ax, ay), rm = H.render(Gs, face, K, rmap=True, pixel=True)
     # точка персонажа — под тазом; высота — по самой низкой точке тела (как в render)
     ch = H.parts[0]; geo = ch.skinned(Gs[0]); zmin = min(P[:, 2].min() for P, _ in geo)
     hk = 'pelvis'; hips = Gs[0][ch.name[hk]][:3, 3] @ C.AX.T
@@ -45,9 +46,9 @@ def job(a):
     hp = proj(g[0]); dv = (proj(g[1]) - hp) * .08
     front = int(((g[0] - g[2])[:2] @ nrm(VIEW[:2])) > 0)
     # тонкий тёмный контур, как у остальных спрайтов
-    al = im.getchannel('A'); grow = al.filter(ImageFilter.MaxFilter(3))
-    edge = Image.new('RGBA', im.size, (20, 16, 14, 0)); edge.putalpha(grow.point(lambda v: int(v * .8)))
-    edge.alpha_composite(im); im = edge
+    a = np.array(im); al = a[..., 3] > 0                                       # жёсткий контур в 1 пиксель, как у остального пиксель-арта
+    g = np.zeros_like(al); g[1:] |= al[:-1]; g[:-1] |= al[1:]; g[:, 1:] |= al[:, :-1]; g[:, :-1] |= al[:, 1:]
+    a[g & ~al] = (24, 20, 18, 255); im = Image.fromarray(a)
     bb = im.getbbox(); im = im.crop(bb); rm = rm.crop(bb)
     return 'pm_%s_%d_%d' % (an, d, i), np.array(im), np.array(rm), ax - bb[0], ay - bb[1], [round(float(hp[0]), 2), round(float(hp[1]), 2), round(float(dv[0]), 3), round(float(dv[1]), 3), front]
 

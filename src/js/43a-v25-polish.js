@@ -177,7 +177,7 @@ drawDoll = function () {
   g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(W / 2, foot, W * .2, 11, 0, 0, 6.283); g.fill();
   if (!fr) return;
   const k = Math.min((H - 30) / fr.ay, 3.2), b = 1 + Math.sin(animT * 2.3) * .012;
-  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+  g.imageSmoothingEnabled = (fr.s || 1) > 1; g.imageSmoothingQuality = 'high';               // пиксельный герой — без размытия
   g.translate(W / 2, foot); g.scale(k, k * b); g.drawImage(fr.cv, -fr.ax, -fr.ay); g.setTransform(1, 0, 0, 1, 0, 0);
 };
 const buildInvDoll25 = buildInvDoll;
