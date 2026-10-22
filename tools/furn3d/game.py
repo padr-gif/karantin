@@ -402,13 +402,148 @@ def counterc():
 COMPACT = {'bed': lambda v=0: _bed(.86, .86, v, 1), 'bath': sitbath, 'sofa': armchair,
            'table': lambda: _table(.78, .78), 'tv': tvc, 'counter2': counterc}
 
-VARIANTS = {'bed': 3, 'bed1': 3, 'sofa': 3, 'sofa1': 3, 'shelf': 2, 'bookshelf': 2}
+# ---------- больше мебели и декора: гостиная, спальня, кухня, ванная, прихожая ----------
+mat('shade', '#e8dcc0', 0, .9, lambda p: 1 + .03 * np.sin(p[..., 2] * 300)); mat('bulb', '#fff2c8', 0, .3)
+mat('wicker', '#b89a64', .02, .8, lambda p: 1 - .14 * ((np.sin(p[..., 2] * 160) > 0) ^ (np.sin((p[..., 0] + p[..., 1]) * 90) > 0)))
+mat('cloth_b', '#5a76a0', 0, .9); mat('cloth_r', '#a8504a', 0, .9); mat('cloth_w', '#dcd8cc', 0, .9)
+mat('ironrad', '#d8d4c8', .25, .4); mat('shoe', '#3a2a20', .2, .5); mat('shoe2', '#6a4a30', .15, .5)
+mat('pot', '#8c4e34', .05, .7); mat('steel2', '#8e9498', .5, .25); mat('blk', '#24262a', .2, .5)
+def coffeetab():
+    m = Model(); W, D, Hh = 1.0, .55, .45
+    m.add(rbox((W / 2, D / 2, Hh), (W / 2, D / 2, .025), .02), 'woodn')
+    m.add(rbox((W / 2, D / 2, .12), (W / 2 - .06, D / 2 - .06, .015), .008), 'woodnd')                    # нижняя полка
+    for x in (.05, W - .05):
+        for y in (.05, D - .05): m.add(rbox((x, y, Hh / 2), (.025, .025, Hh / 2), .01), 'woodnd')
+    m.add(rbox((.3, D / 2, .145), (.14, .1, .012), .004), 'sheet_w')                                     # газета на полке
+    return m, (W, D)
+def floorlamp():
+    m = Model(); c = .2
+    m.add(cylz(c, c, .14, 0, .03, .012), 'blk'); m.add(cylz(c, c, .014, .02, 1.45, .006), 'chrome')
+    shade = cylz(c, c, .2, 1.32, 1.6, .02)
+    m.add(cut(shade, cylz(c, c, .18, 1.3, 1.62)), 'shade'); m.add(sphere((c, c, 1.42), .045), 'bulb')
+    return m, (.4, .4)
+def plant():
+    m = Model(); c = .25
+    m.add(cut(cylz(c, c, .17, 0, .38, .03), cylz(c, c, .14, .33, .45)), 'pot'); m.add(cylz(c, c, .145, .3, .34), 'soil')
+    m.add(cylz(c, c, .02, .3, .75, .008), 'woodd')
+    r = np.random.default_rng(5)
+    for i in range(16):
+        a = r.uniform(0, 2 * np.pi); h = r.uniform(.6, 1.15); d = r.uniform(.05, .2)
+        m.add(sphere((c + np.cos(a) * d, c + np.sin(a) * d, h), r.uniform(.07, .11)), 'leaf' if i % 2 else 'leaf2')
+    return m, (.5, .5)
+def endtable():
+    m = Model(); W = .45
+    m.add(rbox((W / 2, W / 2, .55), (W / 2, W / 2, .02), .012), 'woodn')
+    for x in (.04, W - .04):
+        for y in (.04, W - .04): m.add(rbox((x, y, .27), (.02, .02, .27), .008), 'woodnd')
+    m.add(cylz(W / 2, W / 2 - .03, .06, .57, .6, .01), 'brass'); m.add(cylz(W / 2, W / 2 - .03, .012, .6, .78, .004), 'brass')   # настольная лампа
+    m.add(cut(cylz(W / 2, W / 2 - .03, .1, .72, .88, .01), cylz(W / 2, W / 2 - .03, .09, .7, .9)), 'shade')
+    return m, (W, W)
+def wdesk():
+    m = Model(); W, D, Hh = 1.1, .55, .75
+    m.add(rbox((W / 2, D / 2, Hh), (W / 2, D / 2, .022), .012), 'woodn')
+    m.add(rbox((W - .22, D / 2, (Hh - .02) / 2), (.2, D / 2 - .02, (Hh - .02) / 2), .01), 'woodnd')       # тумба с ящиками
+    for k in range(3):
+        z0 = .06 + k * .22; front(m, W - .4, W - .04, z0, z0 + .19, D - .02, 'woodn'); knob(m, W - .22, D, z0 + .1, .016)
+    for y in (.05, D - .05): m.add(rbox((.05, y, Hh / 2), (.025, .025, Hh / 2), .01), 'woodnd')
+    m.add(rbox((.05, D / 2, .2), (.02, D / 2 - .05, .02), .005), 'woodnd')
+    m.add(rbox((.3, .14, Hh + .04), (.13, .08, .015), .005), 'sheet_w')                                  # тетрадь
+    return m, (W, D)
+def chair():
+    m = Model(); W = .45
+    m.add(rbox((W / 2, W / 2 + .02, .45), (W / 2 - .02, W / 2 - .04, .025), .015), 'woodn')
+    for x in (.05, W - .05):
+        for y in (.06, W - .03): m.add(rbox((x, y, .22), (.02, .02, .22), .008), 'woodnd')
+        m.add(rbox((x, .04, .7), (.02, .02, .26), .008), 'woodnd')
+    for z in (.62, .8): m.add(rbox((W / 2, .04, z), (W / 2 - .05, .012, .04), .01), 'woodn')
+    return m, (W, W)
+def mirror():
+    m = Model(); W, D = .6, .25
+    m.add(rbox((W / 2, .08, .9), (W / 2 - .02, .03, .82), .03), 'woodnd')
+    m.add(rbox((W / 2, .115, .92), (W / 2 - .07, .006, .74), .02), 'mirror')
+    for x in (.08, W - .08): m.add(rbox((x, D / 2, .03), (.03, D / 2, .03), .01), 'woodnd')
+    return m, (W, D)
+def laundry():
+    m = Model(); W, D = .45, .4
+    m.add(cut(rbox((W / 2, D / 2, .28), (W / 2 - .02, D / 2 - .02, .28), .05), rbox((W / 2, D / 2, .5), (W / 2 - .05, D / 2 - .05, .2), .03)), 'wicker')
+    m.add(rbox((W / 2 - .04, D / 2, .5), (.12, .1, .06), .05), 'cloth_b'); m.add(rbox((W / 2 + .07, D / 2 + .03, .53), (.08, .07, .05), .04), 'cloth_r')
+    return m, (W, D)
+def washer():
+    m = Model(); W = .6
+    m.add(rbox((W / 2, W / 2, .43), (W / 2, W / 2 - .01, .42), .03), 'paint_w')
+    m.add(rbox((W / 2, W - .015, .8), (W / 2 - .02, .012, .045), .006), 'paint_w2')                          # панель
+    for x in (.12, .2): knob(m, x, W - .01, .8, .02, 'chrome')
+    m.add(rbox((.42, W - .005, .8), (.08, .006, .025), .004), 'glass_d')
+    door = cyl_y(W / 2, W, .42, .17, .02); m.add(door, 'chrome')
+    m.add(cyl_y(W / 2, W + .015, .42, .13, .012), 'glass_d')
+    return m, (W, W)
+def kbin():
+    m = Model(); c = .17
+    m.add(cylz(c, c, .14, 0, .5, .02), 'steel2'); m.add(cylz(c, c, .145, .48, .53, .02), 'steel2')
+    m.add(rbox((c, c + .15, .03), (.06, .04, .012), .006), 'blk')
+    return m, (.34, .34)
+def pantry():
+    m = Model(); W, D, Hh = .6, .58, 2.0
+    m.add(rbox((W / 2, D / 2, Hh / 2 + .04), (W / 2 - .01, D / 2 - .01, Hh / 2 - .04), .012), 'woodnd')
+    m.add(rbox((W / 2, D / 2 - .02, .04), (W / 2 - .02, D / 2 - .03, .04), .005), 'gap')
+    gapband(m, .02, W - .02, .1, Hh - .02, D - .01)
+    front(m, .02, W - .02, 1.12, Hh - .03, D - .01, 'woodnv'); front(m, .02, W - .02, .1, 1.08, D - .01, 'woodnv')
+    for z in (1.2, .98): hbar(m, W / 2 - .07, W / 2 + .07, D + .01, z, .012, 'brass')
+    return m, (W, D)
+def bsink():
+    m = Model(); W, D = .55, .45; cx = W / 2
+    m.add(rbox((cx, .14, .4), (.09, .07, .38), .05), 'enamel')                                              # ножка
+    bowl = rbox((cx, .22, .8), (W / 2 - .01, .2, .07), .06)
+    m.add(cut(bowl, rbox((cx, .24, .86), (W / 2 - .07, .14, .06), .05)), 'enamel')
+    m.add(cylz(cx, .06, .018, .86, .98, .006), 'chrome'); m.add(capsule((cx, .06, .97), (cx, .16, .95), .012), 'chrome')
+    for x in (cx - .1, cx + .1): m.add(sphere((x, .06, .88), .02), 'chrome')
+    return m, (W, D)
+def towels():
+    m = Model(); W, D = .5, .15
+    for x in (.04, W - .04): m.add(cylz(x, .07, .012, .3, 1.2, .006), 'chrome')
+    for z in (.45, .7, .95, 1.15): m.add(capsule((.04, .07, z), (W - .04, .07, z), .01), 'chrome')
+    m.add(rbox((W / 2, .08, .88), (W / 2 - .07, .03, .2), .02), 'cloth_b'); m.add(rbox((W / 2, .08, .55), (W / 2 - .1, .03, .1), .02), 'cloth_w')
+    return m, (W, D)
+def shoerack():
+    m = Model(); W, D = .8, .32
+    for z in (.04, .22, .4): m.add(rbox((W / 2, D / 2, z), (W / 2 - .01, D / 2 - .01, .014), .006), 'woodn')
+    for x in (.02, W - .02): m.add(rbox((x, D / 2, .21), (.015, D / 2 - .01, .21), .005), 'woodnd')
+    r = np.random.default_rng(9)
+    for z in (.054, .234):
+        for k in range(3):
+            x = .14 + k * .25; c = 'shoe' if r.random() < .6 else 'shoe2'
+            for dx in (-.045, .045): m.add(rbox((x + dx, D / 2 + .01, z + .04), (.035, .11, .035), .03), c)
+    return m, (W, D)
+def boxes():
+    m = Model()
+    m.add(rbox((.3, .3, .2), (.26, .24, .2), .015), 'cardboard'); m.add(rbox((.26, .28, .54), (.2, .18, .14), .012), 'cardboard2')
+    m.add(rbox((.3, .3, .4), (.26, .005, .02), .002), 'sheet_w'); m.add(rbox((.36, .32, .69), (.12, .1, .01), .004), 'cardboard')
+    return m, (.6, .6)
+def radiator():
+    m = Model(); W, D = .8, .15
+    for k in range(10):
+        x = .06 + k * (W - .12) / 9; m.add(rbox((x, D / 2, .38), (.028, .05, .26), .02), 'ironrad')
+    m.add(capsule((.04, D / 2, .15), (W - .04, D / 2, .15), .02), 'ironrad'); m.add(capsule((.04, D / 2, .6), (W - .04, D / 2, .6), .02), 'ironrad')
+    m.add(cylz(W - .03, D / 2, .015, .55, .7, .005), 'chrome')
+    return m, (W, D)
+def cyl_y(x, y, z, r, h):
+    """короткий цилиндр осью вдоль y (дверца стиральной машины)"""
+    def f(p):
+        d = np.stack([np.hypot(p[..., 0] - x, p[..., 2] - z) - r, np.abs(p[..., 1] - y) - h], -1)
+        return np.linalg.norm(np.maximum(d, 0), axis=-1) + np.minimum(d.max(-1), 0)
+    return f, (np.array([x - r, y - h, z - r]), np.array([x + r, y + h, z + r]))
+EXTRA_MODELS = {'armchair': armchair, 'coffeetab': coffeetab, 'floorlamp': floorlamp, 'plant': plant, 'endtable': endtable,
+                'wdesk': wdesk, 'chair': chair, 'mirror': mirror, 'laundry': laundry, 'washer': washer, 'kbin': kbin,
+                'pantry': pantry, 'bsink': bsink, 'towels': towels, 'shoerack': shoerack, 'boxes': boxes, 'radiator': radiator}
+
+VARIANTS = {'bed': 3, 'bed1': 3, 'sofa': 3, 'sofa1': 3, 'shelf': 2, 'bookshelf': 2, 'armchair': 3}
 MODELS = {'tv': tv, 'tv1': tv1, 'toilet': toilet,
           'fridge': fridge, 'stove': stove, 'sink': sink, 'cabinet': cabinet, 'counter2': counter2,
           'dresser': dresser, 'nightstand': nightstand, 'wardrobe': wardrobe, 'medcab': medcab,
           'bed': bed, 'bed1': bed1, 'bath': bath, 'sofa': sofa, 'table': table, 'table1': table1,
           'shelf': shelf, 'bookshelf': bookshelf, 'crate': crate, 'hanger': hanger,
           'bath1': lambda: sitbath(), 'sofa1': lambda v=0: armchair(v)}
+MODELS.update(EXTRA_MODELS)
 NEW = ['fridge', 'stove', 'sink', 'cabinet', 'counter2', 'dresser', 'nightstand', 'wardrobe', 'medcab']
 
 # повороты как в tools/furn/sketch.py (Spr.R): модель вокруг центра следа
