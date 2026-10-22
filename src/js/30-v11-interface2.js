@@ -83,7 +83,6 @@ function drawLootMarks() {
   const pulse = .6 + .4 * Math.sin(animT * 4);
   const mark = (x, y, z, col) => { const sx = SX(x, y), sy = SY(x, y, z); ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(sx, sy - 3); ctx.lineTo(sx + 2.4, sy); ctx.lineTo(sx, sy + 3); ctx.lineTo(sx - 2.4, sy); ctx.closePath(); ctx.fill(); };
   for (const f of furns) {
-    if (f.searched && f.items.length && CONT[f.type] && Math.abs(f.cx - P.x) < 9 && Math.abs(f.cy - P.y) < 9 && vis[f.y * MW + f.x]) { const sx = SX(f.cx, f.cy), sy = SY(f.cx, f.cy, 38); ctx.fillStyle = 'rgba(225,225,215,.75)'; ctx.beginPath(); ctx.arc(sx, sy, 1.7, 0, 6.283); ctx.fill(); }
     if (f.searched || !CONT[f.type] || !CONT[f.type].loot) continue;
     if (Math.abs(f.cx - P.x) > 9 || Math.abs(f.cy - P.y) > 9 || !vis[f.y * MW + f.x]) continue;
     mark(f.cx, f.cy, 38, `rgba(232,180,70,${pulse})`);

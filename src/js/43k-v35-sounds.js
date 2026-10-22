@@ -23,7 +23,7 @@ function smpPick(g) {
 let BUS = null;
 function makeIR(ac, sec) {
   const n = Math.floor(ac.sampleRate * sec), b = ac.createBuffer(2, n, ac.sampleRate);
-  for (let c = 0; c < 2; c++) { const d = b.getChannelData(c); let y = 0; for (let i = 0; i < n; i++) { y = y * .82 + (Math.random() * 2 - 1) * .18; d[i] = y * Math.pow(1 - i / n, 3.2); } }
+  for (let c = 0; c < 2; c++) { const d = b.getChannelData(c); let y = 0; for (let i = 0; i < n; i++) { y = y * .82 + (Math.random() * 2 - 1) * .18; d[i] = y * Math.pow(1 - i / n, 5); } }
   return b;
 }
 function bus() {
@@ -32,13 +32,13 @@ function bus() {
   hp.type = 'highpass'; hp.frequency.value = 70;
   shelf.type = 'highshelf'; shelf.frequency.value = 1500; shelf.gain.value = -6;
   lp.type = 'lowpass'; lp.frequency.value = 2800; lp.Q.value = .4;
-  dry.gain.value = .9; wet.gain.value = .16; conv.buffer = makeIR(ac, 1.2);
+  dry.gain.value = 1; wet.gain.value = .05; conv.buffer = makeIR(ac, .45);
   inp.connect(hp); hp.connect(shelf); shelf.connect(lp); lp.connect(dry); dry.connect(SFX.out); lp.connect(conv); conv.connect(wet); wet.connect(SFX.out);
   return (BUS = {inp, lp, wet, inside:null});
 }
 function busPlace() {                                                             // дом / улица — плавно, за полсекунды
   const B = bus(); if (!B || !P) return; const ins = insideHouse(P.x, P.y); if (ins === B.inside) return; B.inside = ins;
-  const t = SFX.ac.currentTime; B.lp.frequency.setTargetAtTime(ins ? 2300 : 3200, t, .25); B.wet.gain.setTargetAtTime(ins ? .22 : .07, t, .25);
+  const t = SFX.ac.currentTime; B.lp.frequency.setTargetAtTime(ins ? 2300 : 3200, t, .25); B.wet.gain.setTargetAtTime(ins ? .06 : .015, t, .25);
 }
 function smp(g, v, rate, delay, lp) {
   const ac = SFX.ac, b = smpPick(g), B = bus(); if (!ac || !b || !B) return false;

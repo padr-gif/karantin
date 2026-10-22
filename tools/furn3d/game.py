@@ -648,6 +648,29 @@ MODELS = {'tv': tv, 'tv1': tv1, 'toilet': toilet,
 MODELS.update(EXTRA_MODELS)
 NEW = ['fridge', 'stove', 'sink', 'cabinet', 'counter2', 'dresser', 'nightstand', 'wardrobe', 'medcab']
 
+# ---------- душ: если под ванну нет места ----------
+mat('showerglass', '#b9d3dc', .55, .08, lambda p: 1 + .10 * (np.sin((p[..., 0] - p[..., 1]) * 26 + p[..., 2] * 9) > .75))
+mat('tray', '#eceae3', .3, .25)
+def shower():
+    """душевая кабина у стены: поддон, стеклянные стенки в хромированной раме, лейка на стене"""
+    m = Model(); W = L = .9; H = 1.86
+    m.add(rbox((W / 2, L / 2, .06), (W / 2, L / 2, .06), .025), 'tray')                          # поддон
+    m.add(rbox((W / 2, L / 2, .115), (W / 2 - .06, L / 2 - .06, .006), .02), 'enamel2')          # дно поддона
+    m.add(cylz(W / 2 + .1, L / 2 + .12, .035, .11, .125, .004), 'chrome')                       # слив
+    t = .012
+    m.add(rbox((W - .02, L / 2, .13 + H / 2), (t, L / 2 - .02, H / 2), .004), 'showerglass')      # стекло сбоку
+    m.add(rbox((W * .3, L - .02, .13 + H / 2), (W * .3 - .02, t, H / 2), .004), 'showerglass')   # неподвижная половина спереди
+    m.add(rbox((W * .72, L - .055, .13 + H / 2), (W * .24, t, H / 2 - .01), .004), 'showerglass')  # сдвижная дверь чуть внутри
+    for x, y in ((W - .02, L - .02), (W - .02, .02), (.02, L - .02)):                             # стойки рамы
+        m.add(rbox((x, y, .13 + H / 2), (.016, .016, H / 2), .006), 'chrome')
+    m.add(rbox((W / 2, L - .02, .13 + H), (W / 2, .016, .016), .006), 'chrome')                  # верхняя планка
+    m.add(rbox((W - .02, L / 2, .13 + H), (.016, L / 2, .016), .006), 'chrome')
+    m.add(cylz(W * .3, .025, .01, .9, 1.75, .004), 'chrome')                                     # штанга на стене
+    m.add(cylz(W * .3, .06, .04, 1.72, 1.75, .01), 'chrome')                                     # лейка
+    m.add(rbox((W * .3, .03, 1.05), (.06, .015, .035), .01), 'chrome')                           # смеситель
+    return m, (W, L)
+MODELS['shower'] = shower
+
 # повороты как в tools/furn/sketch.py (Spr.R): модель вокруг центра следа
 def rotated(m, size, r):
     if not r: return m

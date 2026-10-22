@@ -170,6 +170,12 @@ await fresh();
   return true; })()`);
   check('через шкаф не перелезть', r); }
 
+console.log('Душ');
+await fresh();
+check('у душа свои кадры', await D("!!(ART.meta.frames['f_shower_0_0'] && ART.meta.frames['hd_f_shower_0_0'])"));
+check('компактная ванна рисуется душем', await D("(() => { const f = furns.find(f => f.type === 'bath'); if (!f) return true; const c = f.compact; f.compact = true; const n = furnName(f); f.compact = c; return n.startsWith('f_shower'); })()"));
+check('помыться: снимает стресс, ты мокрый', await D("(() => { const f = furns.find(f => f.type === 'bath' && !f.gone); if (!f) return true; P.x = (f.r[0] + f.r[2]) / 2; P.y = f.r[3] + .35; if (blocked(P.x, P.y, P.r)) P.y = f.r[1] - .35; zs.length = 0; P.stress = 50; P.wet = 0; P.washT = 0; const a = getActions().find(a => a.kind === 'wash'); if (!a) return 'нет действия'; doAction(a); const A = P.act; if (!A) return 'не началось'; P.act = null; finishAct(A); return P.stress < 50 && P.wet > 50; })()"));
+
 console.log('Детальная графика');
 await fresh();
 await D("settings.smooth = true; applySettings();"); await sleep(1500);
