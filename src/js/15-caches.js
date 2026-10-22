@@ -111,6 +111,8 @@ function drawGroundRange(gx0, gy0, gx1, gy1) {
       ctx.fillStyle = C(r[4], 1.08); ctx.fillRect(r[0] + .2, r[1] + .2, r[2] - r[0] - .4, r[3] - r[1] - .4);
     }
     resetT();
+    for (const d of Hs.decor || []) blitObj('dec_' + d.k + '_' + d.v, SX(d.x, d.y), SY(d.x, d.y, 0));   // мелочи на полу (43i)
+    resetT();
   }
   groundT(0);
   ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath();

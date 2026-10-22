@@ -107,9 +107,15 @@ function roomSpots(room) {
   }
   return out;
 }
+// куда вещи «хочется» встать по смыслу (тумбочка — у изголовья, ТВ — напротив дивана …): задаётся в 43i
+let furnTarget = (f, placed, room, Hs) => null;
+let furnPrio = f => ESSENTIAL.has(fartType(f.type)) ? 0 : f.extra ? 2 : 1;   // порядок расстановки (43i уточняет)
+let wallOk = (f, x, y, wd) => true;   // например, высокий шкаф не ставим перед окном
 function placeInRoom(f, Hs, room, arts, placed) {
-  const spots = roomSpots(room).sort((a, b) => Math.hypot(a[0] - f.x0, a[1] - f.y0) - Math.hypot(b[0] - f.x0, b[1] - f.y0) || a[1] - b[1] || a[0] - b[0]);
-  for (const art of arts) for (const [x, y, wds] of spots) {
+  const T = furnTarget(f, placed, room, Hs) || [f.x0 + .5, f.y0 + .5];
+  const spots = roomSpots(room).sort((a, b) => Math.hypot(a[0] + .5 - T[0], a[1] + .5 - T[1]) - Math.hypot(b[0] + .5 - T[0], b[1] + .5 - T[1]) || a[1] - b[1] || a[0] - b[0]);
+  for (const art of arts) for (const [x, y, wds0] of spots) {
+    const wds = wds0.filter(wd => wallOk(f, x, y, wd)); if (!wds.length) continue;
     const ws = wds.slice().sort((a, b) => (a[0] === f.wd0[0] && a[1] === f.wd0[1] ? -1 : 0) - (b[0] === f.wd0[0] && b[1] === f.wd0[1] ? -1 : 0));
     for (const wd of ws) for (const d of [1, -1]) {
       const R = rectFor(art, x, y, wd, d, false); if (!R) continue;
@@ -133,7 +139,7 @@ function layoutRooms(done) {
       if (!list.length) continue;
       const all = [...list, ...mid];
       const keep = new Map(all.map(f => [f, {x:f.x, y:f.y, cx:f.cx, cy:f.cy, sx:f.sx, sy:f.sy, r:f.r.slice(), wd:f.wd, art:f.art}]));
-      list.sort((a, b) => ESSENTIAL.has(fartType(b.type)) - ESSENTIAL.has(fartType(a.type)) || !!a.extra - !!b.extra || fArea(b) - fArea(a) || furns.indexOf(a) - furns.indexOf(b));
+      list.sort((a, b) => furnPrio(a) - furnPrio(b) || fArea(b) - fArea(a) || furns.indexOf(a) - furns.indexOf(b));
       const clear = () => { for (const f of all) { if (!f.gone) unregFurn(f); Object.assign(f, keep.get(f), {gone:false, compact:false}); } };
       // одна попытка; small — большие вещи сразу уменьшенными (односпальная кровать, малый стол)
       const attempt = small => {

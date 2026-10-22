@@ -48,7 +48,7 @@ await fresh();
 const saved = await D(`(() => {
   for (let k = 0; k < 4; k++) P.inv.push(mkItem('plank')); P.inv.push(mkItem('hammer'));
   RECIPES.find(r => r.name === 'Ящик для хранения').make(); stashes[0].label = 'food'; stashes[0].items.push(mkItem('canned'));
-  P.inv.push(mkItem('lure')); P.x += 2; useItem('lure'); logEv('проверка');
+  P.inv.push(mkItem('lure')); { let best = null; for (let r = 2; r < 40 && !best; r++) for (let dy = -r; dy <= r && !best; dy++) for (let dx = -r; dx <= r; dx++) { const x = Math.floor(P.x) + dx, y = Math.floor(P.y) + dy; if ([0, 1, 2].every(k => [GRASS, ROAD, WALK].includes(get(x + k, y)) && !propAt[y * MW + x + k])) { best = [x + 2.5, y + .5]; break; } } if (best) { P.x = best[0]; P.y = best[1]; } } useItem('lure'); logEv('проверка');
   const d = JSON.parse(JSON.stringify(serialize())); applySave(d);
   return {st:stashes.length, lab:stashes[0] && stashes[0].label, items:stashes[0] && stashes[0].items.length, lu:lures.length, log:P.log.some(l => l[1] === 'проверка')};
 })()`);
