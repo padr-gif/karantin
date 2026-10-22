@@ -122,7 +122,7 @@ function addFurnIn(Hs, type, room, center) {
     const i = y * MW + x, [sa, sb] = FSZ[t] || [.8, .7];
     const sx = wd[0] ? sb : sa, sy = wd[0] ? sa : sb;
     const cx = center ? x + .5 : x + .5 + wd[0] * (.5 - HWV - sx / 2 - .02 + .5), cy = center ? y + .5 : y + .5 + wd[1] * (.5 - HWV - sy / 2 - .02 + .5);
-    const f = {x, y, type, items:[], searched:false, wd, cx, cy, sx, sy, r:[cx - sx / 2, cy - sy / 2, cx + sx / 2, cy + sy / 2], v:type === 'sofa' ? ri(0, 2) : type === 'bookshelf' ? ri(0, 1) : 0};
+    const f = {x, y, type, items:[], searched:false, wd, cx, cy, sx, sy, r:[cx - sx / 2, cy - sy / 2, cx + sx / 2, cy + sy / 2], v:type === 'sofa' || type === 'bed' ? ri(0, 2) : type === 'bookshelf' ? ri(0, 1) : 0};
     furns.push(f); furn[i] = furns.length;
     if (houseOk(Hs)) {
       const c = CONT[type];

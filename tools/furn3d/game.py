@@ -232,9 +232,54 @@ def medcab():
     for z in (.72, .86): knob(m, W - .07, D + .02, z, .016, 'chrome')
     return m, (W, D)
 
+
+# ---------- спальня и ванная: кровати с вариантами покрывала, ванна ----------
+BLANKETS = [('#8e3b34', '#6e2c27'), ('#3e5a7e', '#2f4562'), ('#4f6b3e', '#3c532f')]   # красное, синее, зелёное
+for k, (c, c2) in enumerate(BLANKETS): mat('blanket%d' % k, c, 0, .9); mat('blanket%dd' % k, c2, 0, .9)
+mat('linen', '#ebe6da', 0, .9); mat('linen2', '#d9d3c4', 0, .9)
+
+def _bed(W, L, v, pillows):
+    """изголовье у стены (y = 0), всё строго внутри следа W × L"""
+    m = Model(); cx = W / 2; b = 'blanket%d' % (v % 3)
+    m.add(rbox((cx, .045, .52), (W / 2, .045, .52), .025), 'wooddy')                          # изголовье
+    m.add(rbox((cx, .055, .62), (W / 2 - .07, .012, .3), .02), 'woody')                       # филёнка изголовья
+    m.add(rbox((cx, L - .03, .22), (W / 2, .03, .22), .02), 'wooddy')                        # изножье — низкое, не путается с изголовьем
+    m.add(rbox((cx, L / 2, .24), (W / 2 - .01, L / 2 - .07, .1), .02), 'woody')               # царга
+    for x in (.05, W - .05):
+        for y in (.09, L - .09): m.add(rbox((x, y, .07), (.04, .04, .07), .01), 'wooddy')     # ножки
+    m.add(rbox((cx, L / 2, .41), (W / 2 - .05, L / 2 - .1, .085), .05), 'linen2')            # матрас
+    m.add(rbox((cx, L / 2 + .24, .44), (W / 2 - .025, L / 2 - .32, .09), .06), b)             # одеяло, свисает с боков
+    m.add(rbox((cx, L - .11, .38), (W / 2 - .025, .03, .1), .03), b)
+    m.add(rbox((cx, .62, .525), (W / 2 - .035, .09, .022), .02), 'linen')                     # отворот простыни
+    m.add(rbox((cx, L / 2 + .24, .535), (W / 2 - .06, .012, .004), .003), b + 'd')            # полоса на одеяле
+    for k in range(pillows):
+        px = W * (k + .5) / pillows
+        m.add(rbox((px, .29, .55), (W / pillows / 2 - .07, .14, .065), .06), 'linen')        # подушки
+    return m, (W, L)
+
+def bed(v=0): return _bed(1.37, 1.97, v, 2)
+def bed1(v=0): return _bed(.89, 1.96, v, 1)
+
+def bath():
+    """ванна торцом к стене: смеситель у стены, внутри вода, снаружи эмалированный фартук"""
+    m = Model(); W, L, Hh = .76, 1.7, .56; cx = W / 2
+    tub = rbox((cx, L / 2, Hh / 2), (W / 2, L / 2, Hh / 2), .06)
+    hole = rbox((cx, L / 2 + .02, Hh + .1), (W / 2 - .085, L / 2 - .12, .5), .14)
+    m.add(cut(tub, hole), 'enamel')
+    m.add(rbox((cx, L / 2 + .02, .3), (W / 2 - .1, L / 2 - .14, .006), .1), 'water')       # вода
+    m.add(rbox((cx, L / 2, .02), (W / 2 - .03, L / 2 - .03, .02), .01), 'gap')               # тень под ванной
+    m.add(cylz(cx, .035, .028, Hh, Hh + .2, .01), 'chrome')                                  # смеситель
+    m.add(capsule((cx, .035, Hh + .19), (cx, .16, Hh + .17), .016), 'chrome')
+    m.add(capsule((cx, .16, Hh + .17), (cx, .17, Hh + .12), .014), 'chrome')
+    for x in (cx - .1, cx + .1): m.add(sphere((x, .045, Hh + .07), .024), 'chrome')           # вентили
+    m.add(cylz(cx, .23, .025, .16, .2, .005), 'chrome')                                      # перелив
+    return m, (W, L)
+
+VARIANTS = {'bed': 3, 'bed1': 3}
 MODELS = {'tv': tv, 'tv1': tv1, 'toilet': toilet,
           'fridge': fridge, 'stove': stove, 'sink': sink, 'cabinet': cabinet, 'counter2': counter2,
-          'dresser': dresser, 'nightstand': nightstand, 'wardrobe': wardrobe, 'medcab': medcab}
+          'dresser': dresser, 'nightstand': nightstand, 'wardrobe': wardrobe, 'medcab': medcab,
+          'bed': bed, 'bed1': bed1, 'bath': bath}
 NEW = ['fridge', 'stove', 'sink', 'cabinet', 'counter2', 'dresser', 'nightstand', 'wardrobe', 'medcab']
 
 # повороты как в tools/furn/sketch.py (Spr.R): модель вокруг центра следа
@@ -261,8 +306,8 @@ def rotated(m, size, r):
         out.parts.append(((lambda f: lambda p: f(to_model(p)))(f), (lo2, hi2), key))
     return out
 
-def frame(name, r):
-    m, size = MODELS[name]()
+def frame(name, r, v=0):
+    m, size = MODELS[name](v) if name in VARIANTS else MODELS[name]()
     im, (ox, oy) = F.render(rotated(m, size, r), cells=(max(1, int(np.ceil(size[0]))), max(1, int(np.ceil(size[1])))))
     px = F.pixelize(im, 40, outline=True)
     a = np.array(px); a[a[..., 3] < 255] = 0                    # без тени на полу, как у остальной мебели
@@ -299,8 +344,9 @@ def export(names=None):
         frames[k] = (sheet.crop((x, y, x + w, y + h)), (ax, ay))
     for n in names:
         for r in range(4):
-            im, (ax, ay), _ = frame(n, r)
-            frames['f_%s_0_%d' % (n, r)] = (im, (int(round(ax)), int(round(ay))))
+            for v in range(VARIANTS.get(n, 1)):
+                im, (ax, ay), _ = frame(n, r, v)
+                frames['f_%s_%d_%d' % (n, v, r)] = (im, (int(round(ax)), int(round(ay))))
     W = sheet.width; order = sorted(frames, key=lambda k: (-frames[k][0].height, k))
     x = y = rowh = 0; pos = {}
     for k in order:
