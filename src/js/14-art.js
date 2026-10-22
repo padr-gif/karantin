@@ -126,11 +126,11 @@ function blitObj(name, sx, sy) {
 const SHADE8 = [.5, .58, .66, .74, .82, .89, .95, 1];
 const frameCache = new Map(); let recolorsThisFrame = 0;
 // один пиксель кадра персонажа: R — слот палитры, G — ступень тени; у кадров из tools/mh3d (метка G&31 = 8)
-// точная яркость лежит в B (0..255 -> 0..1.6), а тени на коже теплее — как в превью рендера
+// точная яркость лежит в B (0..240 -> .3..1.35, 16 уровней), а тени на коже теплее — как в превью рендера
 function keyPx(a, i, pal) {
   const s = a[i] >> 4, col = pal[s] || [255, 0, 255], flat = s === 0 || s === 7 || s === 8;
   if ((a[i + 1] & 31) === 8) {
-    const m = flat ? 1 : a[i + 2] * (1.6 / 255), k = s === 1 && m < 1 ? Math.min(.6, (1 - m) * .6) : 0;
+    const m = flat ? 1 : .3 + a[i + 2] * (1.05 / 240), k = s === 1 && m < 1 ? Math.min(.6, (1 - m) * .6) : 0;
     a[i] = Math.min(255, col[0] * m); a[i + 1] = Math.min(255, col[1] * m * (1 - k * .45)); a[i + 2] = Math.min(255, col[2] * m * (1 - k * .64));
   } else {
     const m = flat ? 1 : SHADE8[a[i + 1] >> 5];

@@ -320,6 +320,7 @@ TEX = {'skin': 'skin', 'eye': None, 'lip': 'skin', 'hair': 'hair', 'beard': 'hai
        'pack': 'cloth', 'strap': 'cloth', 'blood': 'cloth'}
 SPEC = {'skin': (.04, .55), 'hair': (.1, .4), 'eye': (.3, .2), 'iris': (.4, .2), 'shoe': (.15, .4), 'belt': (.3, .3), 'buckle': (.6, .2), 'glass': (.4, .2)}
 LUM_MAX = 1.6
+LUM_LO, LUM_SPAN = .3, 1.05                             # яркость в B: .3 + B / 240 * 1.05, 16 уровней (как точность старых 8 ступеней)
 
 def scene(o, pose, face):
     """поза -> вершины в мире, грани, части, всё для растеризации"""
@@ -414,9 +415,7 @@ def frame(o, face, pose=None, K=2):
     hv = nrm(LIGHT + VIEW); slot = np.zeros(len(T_), int)
     for nm in np.unique(names):
         sel = names == nm; L = lum[sel] * LUMK.get(nm, 1.0); t = TEX.get(nm)
-        if t == 'skin': L = L * (1 - .05 * np.clip(noise(pr[sel], 9, 1.7), -1, 1))
-        elif t == 'cloth': L = L * (1 - .04 * np.clip(noise(pr[sel], 12, 3.1), -1, 1))
-        elif t == 'hair':
+        if t == 'hair':                                   # мелкий шум кожи/ткани не виден на экране, а листы от него тяжелеют
             st = np.sin(pr[sel, 1] * 160 + np.sin(pr[sel, 2] * 40) * 2) * .5 + np.sin(pr[sel, 2] * 90 + pr[sel, 0] * 50) * .3
             L = L * (1 + .1 * st)
         sp, ro = SPEC.get(nm, (.03, .8))
@@ -444,10 +443,9 @@ def keyed(fr, outline=.45):
     body_ = fr['cov'] >= .45
     h, w = body_.shape
     out = np.zeros((h, w, 4), np.uint8)
-    lum = np.clip(fr['lum'], 0, LUM_MAX)
-    q = np.clip(np.round((np.minimum(lum, 1) - .5) / .5 * 7), 0, 7).astype(int)
-    out[body_, 0] = fr['slot'][body_] * 16 + 8; out[body_, 1] = q[body_] * 32 + 8
-    out[body_, 2] = (np.round(lum[body_] / LUM_MAX * 63) * 4).astype(np.uint8); out[body_, 3] = 255   # 64 уровня: листы легче
+    lum = np.clip(fr['lum'], LUM_LO, LUM_LO + LUM_SPAN)
+    out[body_, 0] = fr['slot'][body_] * 16 + 8; out[body_, 1] = 7 * 32 + 8          # G: метка нового формата, тень — в B
+    out[body_, 2] = (np.round((lum[body_] - LUM_LO) / LUM_SPAN * 15) * 16).astype(np.uint8); out[body_, 3] = 255   # 16 уровней: листы лёгкие
     if outline:
         edge = np.zeros_like(body_)
         edge[:, 1:] |= body_[:, :-1]; edge[:, :-1] |= body_[:, 1:]; edge[1:, :] |= body_[:-1, :]; edge[:-1, :] |= body_[1:, :]
@@ -459,7 +457,7 @@ WARM = np.array([1.0, .55, .36])
 def decode(im, pal):
     """как игра перекрашивает кадр (для превью): pal — {слот: (r, g, b)}"""
     a = np.array(im).astype(float); out = a.copy()
-    m = a[..., 3] > 0; s = (a[..., 0].astype(int) >> 4); lum = a[..., 2] / 255 * LUM_MAX
+    m = a[..., 3] > 0; s = (a[..., 0].astype(int) >> 4); lum = LUM_LO + a[..., 2] / 240 * LUM_SPAN
     flat = (s == 0) | (s == 7) | (s == 8); lum = np.where(flat, 1, lum)
     col = np.array([pal.get(k, (255, 0, 255)) for k in range(16)], float)[s]
     c = col * lum[..., None]
