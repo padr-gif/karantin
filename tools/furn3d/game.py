@@ -11,6 +11,7 @@ from PIL import Image
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(os.path.dirname(HERE))
 sys.path.insert(0, HERE)
 import render as F
+F.WEAR = float(os.environ.get('WEAR', 1.0))         # потёртости: 0 — новая мебель, 1 — сильно ношеная
 from render import Model, rbox, cylz, capsule, cut, mat, MAT, wood_pat
 
 mat('plastic', '#3c3f45', .25, .35); mat('screen', '#557282', .9, .08); mat('bezel', '#2a2c30', .2, .4)
@@ -255,6 +256,7 @@ def rotated(m, size, r):
         if key not in MAT:
             M = dict(MAT[mt]); pat = M['pat']
             if pat is not None: M['pat'] = (lambda pat: lambda p: pat(to_model(p)))(pat)
+            M['xf'] = to_model
             MAT[key] = M
         out.parts.append(((lambda f: lambda p: f(to_model(p)))(f), (lo2, hi2), key))
     return out

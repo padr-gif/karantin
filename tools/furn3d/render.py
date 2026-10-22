@@ -48,7 +48,9 @@ def wood_pat(axis, k=.06):
     return f
 MAT = {}
 def mat(name, col, spec=0.0, rough=.5, pat=None):
-    MAT[name] = dict(col=np.array([int(col[i:i + 2], 16) for i in (1, 3, 5)], float) / 255, spec=spec, rough=rough, pat=pat)
+    MAT[name] = dict(col=np.array([int(col[i:i + 2], 16) for i in (1, 3, 5)], float) / 255, spec=spec, rough=rough, pat=pat,
+                     kind='wood' if name.startswith('wood') else 'paint' if name.startswith(('enamel', 'paint')) else
+                          'top' if name.startswith('top') else 'metal' if name in ('chrome', 'steel', 'metal', 'brass') else '')
 mat('wood', '#8a5f3c', .05, .6, wood_pat(0)); mat('woody', '#8a5f3c', .05, .6, wood_pat(1)); mat('woodv', '#8a5f3c', .05, .6, wood_pat(2))
 mat('woodd', '#5e3d26', .05, .6, wood_pat(0)); mat('wooddy', '#5e3d26', .05, .6, wood_pat(1))
 mat('woodl', '#a8794c', .05, .6, wood_pat(2)); mat('woodlx', '#a8794c', .05, .6, wood_pat(0))
@@ -124,6 +126,7 @@ def render(model, cells=(1, 1)):
         hv = LIGHT + VIEW; hv = hv / np.linalg.norm(hv)
         sp = np.clip(n[sel] @ hv, 0, 1) ** (2 / max(M['rough'], .05) ** 2 * .5 + 2)
         spec[sel] = sp * M['spec']
+    if WEAR: col = wear(col, pts, n, ao, mid, model)
     dif = np.clip(n @ LIGHT, 0, 1) * sh
     sky = .5 + .5 * n[:, 2]
     lum = .30 * ao * (.55 + .45 * sky) + .78 * dif * (.6 + .4 * ao)
@@ -150,6 +153,67 @@ def render(model, cells=(1, 1)):
     res = Image.fromarray(np.clip(sa, 0, 255).astype(np.uint8), 'RGBA')
     # якорь: экранная точка (0,0,0) мира
     return res, (-x0, -y0)
+
+# ---------- потёртости: крупными пятнами и по рёбрам, без пиксельного зерна (оно мешало читать форму) ----------
+WEAR = 0.0                       # 0 — как новая, 1 — обжитый заброшенный дом (game.py включает)
+def _h3(i, s):
+    h = (i[..., 0] * 374761393 + i[..., 1] * 668265263 + i[..., 2] * 1440662683 + s * 2147483647) & 0xffffffff
+    h = ((h ^ (h >> 13)) * 1274126177) & 0xffffffff
+    return ((h ^ (h >> 16)) & 0xffff) / 65535.0
+def vnoise(p, f, s):
+    """гладкий шум значений в 3D, f — частота (1/м)"""
+    q = p * f; i = np.floor(q).astype(np.int64); t = q - i; t = t * t * (3 - 2 * t)
+    acc = 0
+    for dx in (0, 1):
+        for dy in (0, 1):
+            for dz in (0, 1):
+                w = (t[:, 0] if dx else 1 - t[:, 0]) * (t[:, 1] if dy else 1 - t[:, 1]) * (t[:, 2] if dz else 1 - t[:, 2])
+                acc = acc + w * _h3(i + np.array([dx, dy, dz]), s)
+    return acc
+def _sm(x, a, b): t = np.clip((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t)
+def wear(col, pts, n, ao, mid, model):
+    g = WEAR; col = col.copy()
+    kinds = np.array([MAT[m].get('kind', '') for _, _, m in model.parts])[mid]
+    q = pts.copy()                                   # координаты модели: пятна не «переезжают» при повороте
+    for i, (_, _, m) in enumerate(model.parts):
+        xf = MAT[m].get('xf')
+        if xf is not None:
+            sel = mid == i
+            if sel.any(): q[sel] = xf(pts[sel])
+    edge = _sm(1 - np.abs(n).max(1), .04, .2)        # скруглённые рёбра у коробок
+    patch = vnoise(q, 7, 1) * .65 + vnoise(q, 19, 2) * .35        # крупные пятна
+    chip = _sm(patch, .4, .55) * edge                # где край затёрт
+    low = 1 - _sm(q[:, 2], .0, .16)                  # пыль у пола
+    crev = 1 - _sm(ao, .35, .75)                     # грязь в щелях и углах
+    W_ = kinds == 'wood'; P_ = kinds == 'paint'; T_ = kinds == 'top'; M_ = kinds == 'metal'
+    # дерево: светлые затёртые рёбра, тёмные пятна от воды, редкие светлые царапины
+    pale = np.array([.78, .6, .4])
+    col[W_] += (pale - col[W_]) * (chip[W_] * .7 * g)[:, None]
+    fade = _sm(vnoise(q, 5, 9), .6, .85)                                              # выцветшие, затёртые места на фасадах
+    col[W_] += (pale - col[W_]) * (fade[W_] * .09 * g)[:, None]
+    stain = _sm(vnoise(q, 4, 3), .62, .75) * (np.abs(n[:, 2]) > .9)                 # пятна на крышках
+    col[W_] *= (1 - stain[W_] * .15 * g)[:, None]
+    sc = (np.abs(np.sin(q[:, 0] * 61 + q[:, 2] * 23 + vnoise(q, 3, 4) * 6)) > .985) & (vnoise(q, 6, 5) > .6)
+    col[W_ & sc] = col[W_ & sc] * (1 - .25 * g) + pale * .25 * g
+    # белая краска и эмаль: желтизна пятнами, сколы до тёмного металла по рёбрам, ржавые подтёки снизу
+    yel = _sm(vnoise(q, 3, 6), .55, .85) * .4 + low * .6
+    col[P_] *= (1 - np.array([0, .03, .09]) * (yel[P_] * g)[:, None])
+    smudge = _sm(vnoise(q, 8, 10), .66, .76) * (np.abs(n[:, 2]) < .5)                 # серые разводы на дверцах
+    col[P_] *= (1 - smudge[P_] * .06 * g)[:, None]
+    chipP = _sm(patch, .5, .6) * edge
+    col[P_] += (np.array([.32, .3, .28]) - col[P_]) * (chipP[P_] * .8 * g)[:, None]
+    rust = _sm(vnoise(q, 9, 7) * .7 + low * .6, .7, .85) * (q[:, 2] < .35)
+    col[P_] += (np.array([.5, .3, .18]) - col[P_]) * (rust[P_] * .6 * g)[:, None]
+    # столешницы: тёмные круги и пятна, светлые потёртые кромки
+    spot = _sm(vnoise(q, 11, 8), .66, .72) * (n[:, 2] > .9)
+    col[T_] *= (1 - spot[T_] * .16 * g)[:, None]
+    col[T_] += (np.array([.82, .8, .76]) - col[T_]) * (chip[T_] * .35 * g)[:, None]
+    # металл: тусклые пятна
+    col[M_] *= (1 - _sm(patch[M_], .55, .75) * .2 * g)[:, None]
+    # везде: грязь в щелях и у пола
+    dirt = np.clip(crev * .6 + low * .5, 0, 1) * g
+    col += (np.array([.2, .16, .12]) - col) * (dirt * .45)[:, None]
+    return np.clip(col, 0, 1)
 
 def soft_shadow(scene, p, L, k=10):
     res = np.ones(len(p)); t = np.full(len(p), .01)
