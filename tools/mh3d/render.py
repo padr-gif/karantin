@@ -151,15 +151,15 @@ def idle_pose(o, B):
         mid = nrm(B['tails'][BI['finger3-1.' + sd]] - B['heads'][BI['finger3-1.' + sd]])
         for f in range(2, 6):
             fd = nrm(B['tails'][BI['finger%d-1.%s' % (f, sd)]] - B['heads'][BI['finger%d-1.%s' % (f, sd)]])
-            spread = math.atan2(np.cross(fd, mid) @ n, fd @ mid) * .8          # свести к среднему пальцу
-            curl = (.5, .75, .55) if f != 2 else (.4, .6, .45)                    # указательный чуть прямее
+            spread = math.atan2(np.cross(fd, mid) @ n, fd @ mid) * 1.0          # свести к среднему пальцу
+            curl = (.95, 1.15, .8) if f != 2 else (.8, 1.0, .7)                    # указательный чуть прямее
             sgn = 1 if (rot(a, .3) @ fd) @ n > fd @ n else -1                     # сгиб — в сторону ладони
             for k in (1, 2, 3):
                 lst = [(a, sgn * curl[k - 1])]
                 if k == 1: lst.insert(0, (n, spread))
                 p['finger%d-%d.%s' % (f, k, sd)] = lst
         td = nrm(B['tails'][BI['finger1-1.' + sd]] - B['heads'][BI['finger1-1.' + sd]])
-        ax = nrm(np.cross(td, mid)); p['finger1-1.' + sd] = [(ax, .35)]               # большой палец прижат к кисти
+        ax = nrm(np.cross(td, mid)); p['finger1-1.' + sd] = [(ax, .5)]               # большой палец прижат к кисти
         p['finger1-2.' + sd] = [(ax, .25)]; p['finger1-3.' + sd] = [(ax, .2)]
         p['upperleg02.' + sd] = aim((.03, s * .02, -1))
         p['lowerleg01.' + sd] = aim((-.03, s * .012, -1)); p['lowerleg02.' + sd] = aim((-.03, s * .012, -1))
@@ -363,11 +363,12 @@ def render(o, face, pose=None, K=2):
     a, b = gx / HX, gy / HY; fx, fy = (b + a) / 2, (b - a) / 2
     rr = np.hypot(fx, fy) / .3; fl = (~hit) & (rr < 1)
     img[fl, :3] = .05; img[fl, 3] = np.clip((1 - rr[fl]) * 1.6, 0, .42)
-    im = (img * 255).astype(np.uint8)
-    pm = im.astype(float); pm[..., :3] *= pm[..., 3:4] / 255
-    small = Image.fromarray(pm.astype(np.uint8), 'RGBA').resize((W // SS, Hh // SS), Image.BOX)
-    s_ = np.array(small).astype(float); al = s_[..., 3:4] / 255
-    s_[..., :3] = np.where(al > 0, s_[..., :3] / np.maximum(al, 1e-6), 0)
+    # уменьшение в float с премультипликацией: на краях (пальцы, волосы) цвет не «взрывается» в белый
+    pm = img.copy(); pm[..., :3] *= pm[..., 3:4]
+    pm = pm.reshape(Hh // SS, SS, W // SS, SS, 4).mean((1, 3))
+    al = pm[..., 3:4]
+    s_ = np.zeros_like(pm); s_[..., 3:4] = al * 255
+    s_[..., :3] = np.where(al > 1e-4, pm[..., :3] / np.maximum(al, 1e-4), 0) * 255
     return Image.fromarray(np.clip(s_, 0, 255).astype(np.uint8), 'RGBA'), (-x0, -y0)
 
 sys.path.insert(0, os.path.join(HERE, '..', 'char3d'))
