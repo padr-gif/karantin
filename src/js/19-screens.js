@@ -167,6 +167,6 @@ function drawPreview() {
   const dir = Math.floor(animT / 1.2) % 8, nw = AN('p', 'walk'), fi = Math.floor(animT * 12) % nw;
   const name = 'p' + look.g + '_walk_' + dir + '_' + fi;
   const fr = charFrame(name, 'P' + look.g + look.skin + look.hair + look.shirt + look.pants, lookPal(look), true);
-  const PS = 2 / (ART.meta.charScale || 1);   // превью всегда в двойном размере игрового пикселя
+  const PS = 2 / ((fr && fr.s) || ART.meta.charScale || 1);   // превью всегда в двойном размере игрового пикселя
   if (fr) { g.imageSmoothingEnabled = PS < 1; g.drawImage(fr.cv, 96 - fr.ax * PS, 206 - fr.ay * PS, fr.w * PS, fr.h * PS); }
 }

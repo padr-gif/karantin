@@ -143,7 +143,7 @@ function recolor8(f, pal) {
   const d = g.getImageData(0, 0, f[3], f[4]), a = d.data;
   for (let i = 0; i < a.length; i += 4) if (a[i + 3]) keyPx(a, i, pal);
   g.putImageData(d, 0, 0);
-  return {cv:c, ax:f[5], ay:f[6], w:f[3], h:f[4]};
+  return {cv:c, ax:f[5], ay:f[6], w:f[3], h:f[4], s:f[7] || ART.meta.charScale || 1};   // s: пикселей кадра на игровой пиксель
 }
 function charFrame(name, palKey, pal, force) {
   const k = palKey + '|' + name; let c = frameCache.get(k);
@@ -158,9 +158,10 @@ function charFrame(name, palKey, pal, force) {
 function drawChar(ent, name, palKey, pal, wx, wy, zoff, flash, alpha, force) {
   const c = charFrame(name, palKey, pal, force) || ent._lc; if (!c) return;
   ent._lc = c;
-  const CS = ART.meta.charScale || 1;
+  const CS = c.s || 1;
   const dx = rd(SX(wx, wy) - c.ax / CS), dy = rd(SY(wx, wy, zoff || 0) - c.ay / CS);
-  ctx.imageSmoothingEnabled = CS > 1; ctx.imageSmoothingQuality = 'high';   // кадры 1:1 с миром — чёткие пиксели
+  // детальные кадры (×2) в детальном режиме — со сглаживанием, в пиксельном — без: мир там чёткий пиксель
+  ctx.imageSmoothingEnabled = CS > 1 && HDQ > 1; ctx.imageSmoothingQuality = 'high';
   if (alpha != null && alpha < 1) ctx.globalAlpha = alpha;
   ctx.drawImage(c.cv, dx, dy, c.w / CS, c.h / CS);
   if (flash) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .4; ctx.drawImage(c.cv, dx, dy, c.w / CS, c.h / CS); ctx.globalCompositeOperation = 'source-over'; }

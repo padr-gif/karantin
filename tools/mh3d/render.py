@@ -349,6 +349,8 @@ def scene(o, pose, face):
     # стопы на полу: самая низкая точка тела — z = 0
     used = np.unique(np.concatenate([F.ravel() for F, _ in parts]))
     zmin = Pp[used, 2].min(); Pp[:, 2] -= zmin
+    lift = pose.get('_lift', 0) if isinstance(pose, dict) else 0          # фаза полёта в беге: тело над полом
+    if lift: Pp[:, 2] += lift; zmin -= lift
     ca, sa = math.cos(face), math.sin(face)
     Pw = np.stack([Pp[:, 0] * ca - Pp[:, 1] * sa, Pp[:, 0] * sa + Pp[:, 1] * ca, Pp[:, 2]], -1)
     return dict(B=B, parts=parts, Lrest=Lrest, Pw=Pw, clsw=clsw, pose=pose, Rs=Rs, ts=ts, face=face, fall=fall, zmin=zmin)

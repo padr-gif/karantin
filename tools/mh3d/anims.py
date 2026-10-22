@@ -21,7 +21,7 @@ def kf(t, keys):
 def stand(fem=False):
     c = dict(lean=.03, twist=0.0, roll=0.0, hpitch=-.14, hyaw=0.0, hroll=0.0, fall=0.0)
     for sd in 'LR':
-        c['ap' + sd] = -.06; c['aa' + sd] = .2 if not fem else .15; c['el' + sd] = .28; c['wr' + sd] = 0.0
+        c['ap' + sd] = .02; c['aa' + sd] = .08 if not fem else .06; c['el' + sd] = .2; c['wr' + sd] = 0.0
         c['th' + sd] = .03; c['ta' + sd] = .02; c['kn' + sd] = .06; c['ft' + sd] = .46
     return c
 
@@ -70,6 +70,7 @@ def pose_from(c):
             p['lowerleg01.' + sd] = aim(ds); p['lowerleg02.' + sd] = aim(ds)
             ft = c['ft' + sd]; p['foot.' + sd] = aim((math.cos(ft), 0, -math.sin(ft)))
         if c['fall']: p['_fall'] = c['fall']
+        if c.get('lift'): p['_lift'] = c['lift']
         return p
     return build
 
@@ -93,10 +94,23 @@ def p_walk(t, fem):
     c['twist'] = .09 * math.sin(ph); c['hyaw'] = -.06 * math.sin(ph); c['lean'] = .06
     return c
 def p_run(t, fem):
-    c = stand(fem); ph = _gait(c, t, .62, 1.35, .22, .12, .2)
-    for sd, off in (('L', math.pi), ('R', 0)):
-        sn = math.sin(ph + off); c['ap' + sd] = -.15 + .7 * sn; c['el' + sd] = 1.55; c['aa' + sd] = .1; c['eh' + sd] = (1, 0, .15)
-    c['twist'] = .16 * math.sin(ph); c['lean'] = .28; c['hpitch'] = -.32
+    """бег: на цикл два шага; у каждой ноги опора 0–.3 (касание, амортизация, толчок), затем полёт и мах.
+    Колено маховой ноги высоко, руки согнуты под прямым углом и ходят в противофазе ногам, корпус вперёд."""
+    c = stand(fem)
+    TH = [(0, .5), (.14, .18), (.3, -.42), (.42, -.3), (.62, .45), (.82, .78), (1, .5)]       # бедро: + вперёд
+    KN = [(0, .3), (.14, .7), (.3, .28), (.45, 1.55), (.6, 2.05), (.8, 1.05), (.94, .32), (1, .3)]
+    FT = [(0, .4), (.14, .5), (.3, 1.05), (.45, .7), (.7, .4), (1, .4)]                      # стопа: толчок носком
+    th = {}
+    for sd, off in (('L', 0), ('R', .5)):
+        q = (t + off) % 1
+        c['th' + sd] = th[sd] = kf(q, TH); c['kn' + sd] = kf(q, KN); c['ft' + sd] = kf(q, FT); c['ta' + sd] = .03
+    for sd, o in (('L', 'R'), ('R', 'L')):                                                   # рука — как противоположная нога
+        a = th[o]; c['ap' + sd] = .1 + .9 * a; c['el' + sd] = 1.55 + .35 * max(0.0, a) - .15 * max(0.0, -a)
+        c['aa' + sd] = .1; c['eh' + sd] = (1, -.35 if sd == 'L' else .35, .2)                # кисть к середине груди
+    fl = lambda q: math.sin(math.pi * min(1, max(0, (q - .3) / .2))) if .3 < q < .5 else 0
+    c['lift'] = .055 * max(fl(t), fl((t + .5) % 1))                                          # полёт — обе ноги в воздухе
+    c['lean'] = .24 + .04 * math.cos(4 * math.pi * t); c['twist'] = .2 * (th['L'] - th['R']) / 1.2
+    c['hpitch'] = -.26; c['hyaw'] = -.4 * c['twist']; c['roll'] = .03 * math.sin(2 * math.pi * t)
     return c
 def p_sneak(t, fem):
     c = stand(fem); ph = _gait(c, t, .26, .45, .95, .5, .05)

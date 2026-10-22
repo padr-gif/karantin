@@ -76,7 +76,7 @@ function drawDoll() {
   const pal = lookPal(lk), ct = P.cloth && P.cloth.torso, ch = P.cloth && P.cloth.head;
   if (ct) pal[3] = pal[4] = ITEMS[ct.id].col; if (ch) pal[2] = ITEMS[ch.id].col;
   const fr = charFrame('p' + lk.g + '_idle_' + dir + '_' + fi, 'P' + lk.g + lk.skin + lk.hair + lk.shirt + lk.pants + (ct ? ct.id : '') + (ch ? ch.id : ''), pal, true);
-  const PS = 2 / (ART.meta.charScale || 1);
+  const PS = 2 / ((fr && fr.s) || ART.meta.charScale || 1);
   if (fr) { g.imageSmoothingEnabled = PS < 1; g.drawImage(fr.cv, 96 - fr.ax * PS, 206 - fr.ay * PS, fr.w * PS, fr.h * PS); }
 }
 function invDetail(body) {

@@ -17,16 +17,17 @@ KINDS = {'pm': (LK.PM, A.PLAYER, ['pchar_m', 'pchar_mx']), 'pf': (LK.PF, A.PLAYE
 EXTRA = {'pickup', 'eat', 'drink'}                      # во второй лист игрока, как раньше
 PAD, SHEET_W = 1, 2048
 K = 1                                                    # пикселей кадра на игровой пиксель: 1 — как мир, чёткий пиксель-арт
+KK = {'pm': 2, 'pf': 2}                                  # игрок вдвое детальнее (детальный режим рисует его сглаженным); зомби — пока ×1
 
 def job(args):
     kind, an, d, i = args
     look, table, _ = KINDS[kind]; n, fn, mode = table[an]
-    fr = R.frame(look, d * math.pi / 4, A.pose_from(fn(A.frame_t(i, n, mode), look.get('fem', False))), K=K)
+    fr = R.frame(look, d * math.pi / 4, A.pose_from(fn(A.frame_t(i, n, mode), look.get('fem', False))), K=KK.get(kind, K))
     im = R.keyed(fr, outline=.85); bb = im.getbbox()
     im = im.crop(bb); ax, ay = fr['anchor'][0] - bb[0], fr['anchor'][1] - bb[1]
     return '%s_%s_%d_%d' % (kind, an, d, i), np.array(im), ax, ay, fr['wpn'] if kind[0] == 'p' else None
 
-def pack(items):
+def pack(items, SHEET_W=SHEET_W):
     """полки: кадры по высоте, слева направо"""
     items = sorted(items, key=lambda it: -it[1].shape[0])
     x = y = rowh = 0; pos = {}
@@ -55,10 +56,10 @@ if __name__ == '__main__':
             an = r[0].split('_')[1]
             groups[sheets[1] if len(sheets) > 1 and an in EXTRA else sheets[0]].append(r)
         for sname, items in groups.items():
-            sheet, pos = pack(items)
+            sheet, pos = pack(items, 4096 if KK.get(kind, K) > 1 else SHEET_W)
             Image.fromarray(sheet, 'RGBA').save(os.path.join(ROOT, 'assets/sprites', sname + '.png'), optimize=True)
             for name, a, ax, ay, wpn in items:
-                x, y = pos[name]; atlas['frames'][name] = [sname, x, y, a.shape[1], a.shape[0], int(ax), int(ay)]
+                x, y = pos[name]; atlas['frames'][name] = [sname, x, y, a.shape[1], a.shape[0], int(ax), int(ay)] + ([KK[kind]] if KK.get(kind, K) > 1 else [])
                 if wpn is not None: atlas['wpn'][name] = wpn
             print(kind, sname, sheet.shape[1], 'x', sheet.shape[0], len(items), 'кадров', round(time.time() - t0), 'с', flush=True)
     atlas['charScale'] = K
