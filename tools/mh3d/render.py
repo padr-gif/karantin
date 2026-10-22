@@ -116,7 +116,11 @@ def pose_matrices(B, pose):
         spec = pose.get(b)
         if spec is not None:
             h = R @ B['heads'][i] + t
-            Rx = spec(R @ (B['tails'][i] - B['heads'][i])) if callable(spec) else spec
+            if callable(spec): Rx = spec(R @ (B['tails'][i] - B['heads'][i]))
+            elif isinstance(spec, list):                     # [(ось в покое, угол), ...]: сгиб сустава в его собственных осях
+                Rx = np.eye(3)
+                for ax, ang in spec: Rx = rot(R @ ax, ang) @ Rx
+            else: Rx = spec
             R = Rx @ R; t = Rx @ (t - h) + h
         Rs[i], ts[i] = R, t
     return Rs, ts
@@ -127,22 +131,39 @@ def skin(P, Rs, ts):
     for k in range(3): out[:, k] = np.bincount(WV, contrib[:, k] * WW, len(P))
     return out
 
-def idle_pose(o):
-    """стойка: руки вдоль тела, локти чуть согнуты, пальцы собраны, ноги прямо"""
+def hand_rig(B, sd):
+    """оси кисти в покое: поперёк костяшек (ось сгиба) и нормаль ладони (в сторону большого пальца)"""
+    h = lambda b: B['heads'][BI[b + '.' + sd]]; t = lambda b: B['tails'][BI[b + '.' + sd]]
+    W, I, Pk = h('wrist'), h('finger2-1'), h('finger5-1')
+    d = nrm(h('finger3-1') - W); a = nrm(Pk - I); n = nrm(np.cross(d, a))
+    if (t('finger1-3') - (I + Pk) / 2) @ n < 0: n = -n
+    return d, a, n
+def idle_pose(o, B):
+    """стойка: руки вдоль тела, локти чуть согнуты, кисть в расслабленном полукулаке, ноги прямо"""
     fem = o.get('fem')
     p = {}
     for sd, s in (('L', 1), ('R', -1)):
         p['upperarm02.' + sd] = aim((-.06, s * (.2 if not fem else .15), -1))
         fa = (.16, s * .06, -1)
         p['lowerarm01.' + sd] = aim(fa); p['lowerarm02.' + sd] = aim(fa)
-        hand = (.08, s * .02, -1)
-        p['wrist.' + sd] = aim(hand)
-        for f in range(2, 6):                                   # пальцы вдоль кисти, слегка согнуты
-            p['metacarpal%d.%s' % (f - 1, sd)] = aim(hand)
-            for k, c in ((1, .25), (2, .5), (3, .6)):
-                p['finger%d-%d.%s' % (f, k, sd)] = aim((.08 + c, s * (-.05), -1 + c * .3))
+        p['wrist.' + sd] = aim((.08, s * .02, -1))
+        d, a, n = hand_rig(B, sd)
+        mid = nrm(B['tails'][BI['finger3-1.' + sd]] - B['heads'][BI['finger3-1.' + sd]])
+        for f in range(2, 6):
+            fd = nrm(B['tails'][BI['finger%d-1.%s' % (f, sd)]] - B['heads'][BI['finger%d-1.%s' % (f, sd)]])
+            spread = math.atan2(np.cross(fd, mid) @ n, fd @ mid) * .8          # свести к среднему пальцу
+            curl = (.5, .75, .55) if f != 2 else (.4, .6, .45)                    # указательный чуть прямее
+            sgn = 1 if (rot(a, .3) @ fd) @ n > fd @ n else -1                     # сгиб — в сторону ладони
+            for k in (1, 2, 3):
+                lst = [(a, sgn * curl[k - 1])]
+                if k == 1: lst.insert(0, (n, spread))
+                p['finger%d-%d.%s' % (f, k, sd)] = lst
+        td = nrm(B['tails'][BI['finger1-1.' + sd]] - B['heads'][BI['finger1-1.' + sd]])
+        ax = nrm(np.cross(td, mid)); p['finger1-1.' + sd] = [(ax, .35)]               # большой палец прижат к кисти
+        p['finger1-2.' + sd] = [(ax, .25)]; p['finger1-3.' + sd] = [(ax, .2)]
         p['upperleg02.' + sd] = aim((.03, s * .02, -1))
         p['lowerleg01.' + sd] = aim((-.03, s * .012, -1)); p['lowerleg02.' + sd] = aim((-.03, s * .012, -1))
+    p['head'] = [((0, 1, 0), -.14)]                          # подбородок чуть поднят: лицо видно сверху
     return p
 
 # ---------- одежда и волосы: какие грани рисуем ----------
@@ -163,7 +184,7 @@ def outfit(o, B):
     bottom = o.get('bottom', 'shorts')
     waist = B['heads'][BI['root']][2] + .075
     if bottom == 'shorts':
-        F = Ft[(zf > .6) & (zt < waist)]; shell(F, .009); parts.append((F, 'pants'))
+        F = Ft[(zf > .6) & (zt < waist)]; shell(F, lambda z: .009 + .016 * np.clip((.8 - z) / .2, 0, 1)); parts.append((F, 'pants'))
     elif bottom == 'pants':
         F = Ft[(zf > .075) & (zt < waist)]
         shell(F, lambda z: .006 + .014 * np.clip((.62 - z) / .5, 0, 1))   # брюки свободнее книзу
@@ -223,12 +244,18 @@ def paint(o, B, part, cls, p):
         strap = (ay > .3 * ys) & (ay < .6 * ys) & (zz < zs + .12)
         side = (ay >= .6 * ys) & (ay < .76 * ys) & (zz < zs - .07)
         back = (x < -.03) & (ay < .6 * ys) & (zz < zs - .03)
-        sh = body_ & (~hi | strap | side | back)
+        neck_cut = (ay < .3 * ys) & (x > 0) & (zz > zs - (.075 if o.get('fem') else .1))
+        sh = body_ & (~hi | strap | side | back | ((ay <= .3 * ys) & (x > 0) & ~neck_cut))
     else:
         sh = body_ & (zz < zs + .1) & ~((ay < .3 * ys) & (zz > zs - np.where(x > 0, .05, .01)))
         dist = np.linalg.norm(np.stack([p[:, 0] - B['sh'][0], ay - ys, zz - zs], -1), axis=-1)
         sh |= (cls == 3) & (dist < .15)
     out[sh] = 'shirt'
+    bottom = o.get('bottom', 'shorts')                     # тело под шортами/брюками — в цвет ткани (без просветов)
+    if bottom in ('shorts', 'pants'):
+        under = (zz < B['waist']) & ((cls == 0) | (cls == 6) | ((cls == 7) & (bottom == 'pants')))
+        under &= z > (.62 if bottom == 'shorts' else .1)
+        out[under] = 'pants'
     out[cls == 8] = 'shoe'; out[(cls == 8) & (z < .02)] = 'sole'
     out[(cls == 7) & (z < .1)] = 'shoe'
     # лицо: брови, губы, борода (по точкам в покое головы)
@@ -243,7 +270,7 @@ def paint(o, B, part, cls, p):
     else:
         out[lip] = 'lip'
     if o.get('mustache'):
-        out[hd & (x > ey[0] - .01) & (np.abs(y) < .03) & (np.abs(p[:, 2] - (ey[2] - .06)) < .008)] = 'beard'
+        out[hd & (x > ey[0] - .02) & (np.abs(y) < .036) & (np.abs(p[:, 2] - (ey[2] - .058)) < .011)] = 'beard'
     if o.get('glasses'):
         rim = hd & (x > ey[0] - .005) & (np.abs(p[:, 2] - ey[2]) < .02) & (np.abs(np.abs(y) - abs(ey[1])) < .028)
         rim &= ~((np.abs(p[:, 2] - ey[2]) < .012) & (np.abs(np.abs(y) - abs(ey[1])) < .019))
@@ -256,7 +283,7 @@ def render(o, face, pose=None, K=2):
     B = body(o)
     parts, Lrest = outfit(o, B)
     e = DAT['faces_helper-l-eye']; B['eye'] = Lrest[np.unique(e)].mean(0); B['sh'] = B['heads'][BI['upperarm01.L']]; B['waist'] = B['heads'][BI['root']][2] + .075
-    Rs, ts = pose_matrices(B, pose if pose is not None else idle_pose(o))
+    Rs, ts = pose_matrices(B, pose if pose is not None else idle_pose(o, B))
     Pp = skin(Lrest, Rs, ts)
     if o.get('beard'):                                       # борода — небольшой объём на подбородке
         pass
@@ -303,11 +330,16 @@ def render(o, face, pose=None, K=2):
     dif = np.clip(n @ LIGHT, 0, 1) * sh
     sky = .5 + .5 * n[:, 2]
     # «псевдо-AO»: впадины и места касания темнее (по высоте и по углублению к оси тела)
-    lum = .3 * (.55 + .45 * sky) + .82 * dif
-    pal = palette(o); names = np.empty(len(T_), dtype=object)
-    for i, (_, nm) in enumerate(parts):
-        sel = part == i
-        if sel.any(): names[sel] = paint(o, B, nm, cls[sel], pr[sel])
+    fill = np.clip(n @ VIEW, 0, 1)                         # мягкий свет со стороны камеры: лица не тонут в тени
+    lum = .27 * (.55 + .45 * sky) + .8 * dif + .14 * fill
+    pal = palette(o)
+    # материалы красятся по вершинам и смешиваются по треугольнику: ровные края одежды без «лесенки»
+    MATS = list(pal); MV = np.zeros(NV, int)
+    for F, nm in parts:
+        u = np.unique(F); MV[u] = [MATS.index(m) for m in paint(o, B, nm, VCLS[u], Lrest[u])]
+    mv = MV[tv]
+    score = np.stack([(bary * (mv == mv[:, [j]])).sum(1) for j in range(3)], 1)
+    names = np.array(MATS, dtype=object)[mv[np.arange(len(mv)), score.argmax(1)]]
     rgb = np.zeros((len(T_), 3)); hv = nrm(LIGHT + VIEW)
     for nm, (col, spec, rough, tex) in pal.items():
         sel = names == nm
