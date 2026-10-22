@@ -160,7 +160,7 @@ function drawChar(ent, name, palKey, pal, wx, wy, zoff, flash, alpha, force) {
   ent._lc = c;
   const CS = ART.meta.charScale || 1;
   const dx = rd(SX(wx, wy) - c.ax / CS), dy = rd(SY(wx, wy, zoff || 0) - c.ay / CS);
-  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  ctx.imageSmoothingEnabled = CS > 1; ctx.imageSmoothingQuality = 'high';   // кадры 1:1 с миром — чёткие пиксели
   if (alpha != null && alpha < 1) ctx.globalAlpha = alpha;
   ctx.drawImage(c.cv, dx, dy, c.w / CS, c.h / CS);
   if (flash) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .4; ctx.drawImage(c.cv, dx, dy, c.w / CS, c.h / CS); ctx.globalCompositeOperation = 'source-over'; }

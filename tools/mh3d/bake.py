@@ -15,13 +15,14 @@ import render as R, anims as A, looks as LK
 KINDS = {'pm': (LK.PM, A.PLAYER, ['pchar_m', 'pchar_mx']), 'pf': (LK.PF, A.PLAYER, ['pchar_f', 'pchar_fx']),
          'zm': (LK.ZM, A.ZOMBIE, ['zchar_m']), 'zf': (LK.ZF, A.ZOMBIE, ['zchar_f']), 'zh': (LK.ZH, A.ZOMBIE, ['zchar_h'])}
 EXTRA = {'pickup', 'eat', 'drink'}                      # во второй лист игрока, как раньше
-PAD, SHEET_W = 2, 2048
+PAD, SHEET_W = 1, 2048
+K = 1                                                    # пикселей кадра на игровой пиксель: 1 — как мир, чёткий пиксель-арт
 
 def job(args):
     kind, an, d, i = args
     look, table, _ = KINDS[kind]; n, fn, mode = table[an]
-    fr = R.frame(look, d * math.pi / 4, A.pose_from(fn(A.frame_t(i, n, mode), look.get('fem', False))))
-    im = R.keyed(fr); bb = im.getbbox()
+    fr = R.frame(look, d * math.pi / 4, A.pose_from(fn(A.frame_t(i, n, mode), look.get('fem', False))), K=K)
+    im = R.keyed(fr, outline=.85); bb = im.getbbox()
     im = im.crop(bb); ax, ay = fr['anchor'][0] - bb[0], fr['anchor'][1] - bb[1]
     return '%s_%s_%d_%d' % (kind, an, d, i), np.array(im), ax, ay, fr['wpn'] if kind[0] == 'p' else None
 
@@ -60,5 +61,6 @@ if __name__ == '__main__':
                 x, y = pos[name]; atlas['frames'][name] = [sname, x, y, a.shape[1], a.shape[0], int(ax), int(ay)]
                 if wpn is not None: atlas['wpn'][name] = wpn
             print(kind, sname, sheet.shape[1], 'x', sheet.shape[0], len(items), 'кадров', round(time.time() - t0), 'с', flush=True)
+    atlas['charScale'] = K
     json.dump(atlas, open(os.path.join(ROOT, 'assets/atlas.json'), 'w'), separators=(',', ':'))
     print('готово', round(time.time() - t0), 'с')

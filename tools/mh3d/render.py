@@ -236,7 +236,7 @@ def paint(o, B, part, cls, p):
         ey = B['eye']; d = np.hypot(np.abs(y) - abs(ey[1]), p[:, 2] - ey[2])
         out[:] = 'eye'; out[(x > ey[0] + .004) & (d < .0065)] = 'iris'
         return out
-    if part in ('hair', 'pants'):
+    if part in ('hair', 'pants', 'pack'):
         out[:] = part
         if part == 'pants' and o.get('belt'):
             top = B['heads'][BI['root']][2] + .075; zz = p[:, 2]
