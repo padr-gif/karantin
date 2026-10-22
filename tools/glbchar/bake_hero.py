@@ -17,6 +17,7 @@ CLIPS = {'idle': ('Idle_Loop', 'loop'), 'walk': ('Walk_Loop', 'loop'), 'run': ('
          'work': ('Fixing_Kneeling', 'loop'), 'death': ('Death01', 'end'), 'pickup': ('PickUp_Table', 'once'), 'eat': ('Interact', 'once'), 'drink': ('Interact', 'once')}
 COUNTS = {'idle': 6, 'walk': 16, 'run': 12, 'sneak': 16, 'attack': 8, 'punch': 6, 'hit': 4, 'search': 6, 'work': 6, 'death': 8, 'pickup': 6, 'eat': 6, 'drink': 6}
 EXTRA = {'pickup', 'eat', 'drink'}
+CALM = {'idle': .45}
 H = None
 def init():
     global H; H = ubc.Hero()
@@ -34,8 +35,8 @@ def grip(Gs, face, hips):
 def job(a):
     an, d, i = a
     clip, mode = CLIPS[an]; n = COUNTS[an]
-    Gs = H.pose(clip, t_of(i, n, mode)); face = d * math.pi / 4
-    im, (ax, ay) = H.render(Gs, face, K)
+    Gs = H.pose(clip, t_of(i, n, mode), calm=CALM.get(an, 0)); face = d * math.pi / 4
+    im, (ax, ay), rm = H.render(Gs, face, K, rmap=True)
     # точка персонажа — под тазом; высота — по самой низкой точке тела (как в render)
     ch = H.parts[0]; geo = ch.skinned(Gs[0]); zmin = min(P[:, 2].min() for P, _ in geo)
     hk = 'pelvis'; hips = Gs[0][ch.name[hk]][:3, 3] @ C.AX.T
@@ -47,8 +48,8 @@ def job(a):
     al = im.getchannel('A'); grow = al.filter(ImageFilter.MaxFilter(3))
     edge = Image.new('RGBA', im.size, (20, 16, 14, 0)); edge.putalpha(grow.point(lambda v: int(v * .8)))
     edge.alpha_composite(im); im = edge
-    bb = im.getbbox(); im = im.crop(bb)
-    return 'pm_%s_%d_%d' % (an, d, i), np.array(im), ax - bb[0], ay - bb[1], [round(float(hp[0]), 2), round(float(hp[1]), 2), round(float(dv[0]), 3), round(float(dv[1]), 3), front]
+    bb = im.getbbox(); im = im.crop(bb); rm = rm.crop(bb)
+    return 'pm_%s_%d_%d' % (an, d, i), np.array(im), np.array(rm), ax - bb[0], ay - bb[1], [round(float(hp[0]), 2), round(float(hp[1]), 2), round(float(dv[0]), 3), round(float(dv[1]), 3), front]
 
 if __name__ == '__main__':
     import bake as BK                                                        # упаковка листов — как у старого запекания
@@ -66,9 +67,12 @@ if __name__ == '__main__':
     groups = {'pchar_m': [], 'pchar_mx': []}
     for r in res: groups['pchar_mx' if r[0].split('_')[1] in EXTRA else 'pchar_m'].append(r)
     for sname, items in groups.items():
-        sheet, pos = BK.pack(items, 4096)
+        sheet, pos = BK.pack([(n, a, ax, ay, w) for n, a, r, ax, ay, w in items], 4096)
         Image.fromarray(sheet, 'RGBA').save(os.path.join(ROOT, 'assets/sprites', sname + '.png'), optimize=True)
-        for name, a, ax, ay, wpn in items:
+        rs = np.zeros_like(sheet)                                              # карта областей тела — тот же раскрой, лист <имя>r
+        for name, a, r, ax, ay, wpn in items: x, y = pos[name]; rs[y:y + r.shape[0], x:x + r.shape[1]] = r
+        Image.fromarray(rs, 'RGBA').save(os.path.join(ROOT, 'assets/sprites', sname + 'r.png'), optimize=True)
+        for name, a, r, ax, ay, wpn in items:
             x, y = pos[name]; atlas['frames'][name] = [sname, x, y, a.shape[1], a.shape[0], int(ax), int(ay), K, 1]
             atlas['wpn'][name] = wpn
         print(sname, sheet.shape[1], 'x', sheet.shape[0], len(items), 'кадров', round(time.time() - t0), 'с')

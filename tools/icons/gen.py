@@ -642,6 +642,100 @@ def _(i):
     i.rect(10, 22, 21, 27, (120, 180, 220, 255)); i.rect(11, 22, 12, 27, (170, 210, 236, 255))
     for x in (12, 15, 18): i.p(x, 21, (120, 180, 220, 255))
 
+# ---- v34: wardrobe — shirts, trousers, footwear, caps ----
+def tee(i, c, long=False, collar=None, pat=None, hood=None, neck=True):
+    c = col(c); d = sh(c, .82)
+    if long:
+        i.poly([(5, 9), (11, 6), (20, 6), (26, 9), (29, 26), (25, 27), (23, 15), (23, 28), (8, 28), (8, 15), (6, 27), (2, 26)], c)
+        i.poly([(26, 9), (29, 26), (25, 27), (23, 15)], d); i.poly([(5, 9), (2, 26), (6, 27), (8, 15)], sh(c, .92))
+        i.rect(2, 25, 6, 27, sh(c, .7)); i.rect(25, 25, 29, 27, sh(c, .62))
+    else:
+        i.poly([(4, 10), (11, 6), (20, 6), (27, 10), (29, 15), (24, 17), (23, 14), (23, 28), (8, 28), (8, 14), (7, 17), (2, 15)], c)
+        i.poly([(27, 10), (29, 15), (24, 17), (23, 14)], d); i.poly([(4, 10), (2, 15), (7, 17), (8, 14)], sh(c, .92))
+    i.rect(17, 8, 23, 27, sh(c, .9)); i.rect(8, 27, 23, 28, sh(c, .66))
+    if pat: pat(i)
+    if hood: i.poly([(10, 7), (16, 2), (21, 7), (19, 10), (12, 10)], hood); i.line([(14, 10), (14, 15)], (230, 230, 226, 255)); i.line([(17, 10), (17, 15)], (230, 230, 226, 255))
+    elif neck: i.ell(12, 5, 19, 9, collar or sh(c, .6)); i.ell(13, 5, 18, 7, sh(c, .45))
+def trousers(i, c, short=False, pockets=False, pat=None):
+    c = col(c); y1 = 18 if short else 29
+    i.poly([(8, 3), (23, 3), (25, y1), (17, y1), (16, 11), (14, 11), (13, y1), (6, y1)], c)
+    i.poly([(16, 3), (23, 3), (25, y1), (17, y1), (16, 11)], sh(c, .86)); i.rect(8, 3, 23, 5, sh(c, .7)); i.rect(15, 5, 15, 10, sh(c, .6))
+    i.rect(6, y1, 13, y1, sh(c, .62)); i.rect(17, y1, 25, y1, sh(c, .55))
+    if pockets: i.box(5, 13, 9, 18, sh(c, .82)); i.box(22, 13, 26, 18, sh(c, .72))
+    if pat: pat(i)
+def shoe(i, c, sole=(46, 40, 38, 255), high=0, lace=None, toe=None):
+    c = col(c)
+    for dx, k in ((0, 1), (11, .86)):
+        i.poly([(3 + dx, 17 - high), (9 + dx, 17 - high), (10 + dx, 21), (16 + dx, 23), (16 + dx, 27), (3 + dx, 27)], sh(c, k))
+        i.rect(3 + dx, 27, 16 + dx, 28, sole)
+        if toe: i.rect(12 + dx, 24, 16 + dx, 27, toe)
+        if lace:
+            for y in range(19 - high, 23, 2): i.line([(5 + dx, y), (8 + dx, y)], lace)
+def plaid(c1, c2):
+    def f(i):
+        for x in range(4, 29, 5): i.line([(x, 6), (x, 28)], c1)
+        for y in range(9, 28, 5): i.line([(3, y), (28, y)], c2)
+    return f
+def camo(i, cols=('#4a5630', '#6e5a3a', '#2e3424')):
+    import random; r = random.Random(7)
+    for _ in range(26):
+        x, y = r.randint(3, 27), r.randint(5, 27); i.ell(x, y, x + r.randint(2, 4), y + r.randint(1, 3), cols[r.randint(0, 2)])
+def keep_inside(fn, base):
+    """узор поверх уже нарисованной вещи: красим только там, где вещь"""
+    def f(i):
+        snap = i.im.copy(); fn(i); px = i.im.load(); sp = snap.load()
+        for y in range(32):
+            for x in range(32):
+                if not sp[x, y][3]: px[x, y] = (0, 0, 0, 0)
+    return f
+@icon('tshirt')
+def _(i): tee(i, '#c9bc9e')
+@icon('tank')
+def _(i):
+    c = (226, 226, 220, 255); i.poly([(9, 4), (12, 4), (14, 9), (17, 9), (19, 4), (22, 4), (23, 12), (23, 28), (8, 28), (8, 12)], c); i.rect(17, 9, 23, 27, sh(c, .88)); i.rect(8, 27, 23, 28, sh(c, .7))
+@icon('longsl')
+def _(i): tee(i, '#3d5f86', long=True)
+@icon('flannel')
+def _(i): tee(i, '#a8342e', long=True, collar='#5a1a16', pat=keep_inside(plaid('#5a1a16', '#d8a070'), None)); i.rect(15, 9, 15, 27, '#5a1a16'); [i.p(16, y, (230, 220, 200, 255)) for y in (12, 17, 22)]
+@icon('hoodie')
+def _(i): tee(i, '#7a7e86', long=True, hood='#686c74'); i.box(10, 19, 21, 24, sh('#7a7e86', .85))
+@icon('thermal')
+def _(i): tee(i, '#d8cfc0', long=True); [i.line([(9, y), (22, y)], (196, 186, 170, 255)) for y in range(11, 27, 3)]
+@icon('denimJ')
+def _(i): torso(i, '#4a6a9a', collar='#2e4a74', zip='#c8a040'); i.box(9, 12, 13, 15, '#3e5e8e'); i.box(18, 12, 22, 15, '#36557f'); [i.p(15, y, '#c8a040') for y in (12, 16, 20, 24)]
+@icon('workvest')
+def _(i):
+    c = '#d07a1e'; i.poly([(8, 5), (12, 5), (16, 10), (19, 5), (23, 5), (25, 28), (6, 28)], c); i.rect(16, 10, 25, 27, sh(c, .85))
+    i.rect(6, 17, 25, 18, (220, 224, 210, 255)); i.rect(6, 22, 25, 23, (220, 224, 210, 255)); i.box(8, 11, 13, 15, sh(c, .8)); i.box(18, 11, 23, 15, sh(c, .72))
+@icon('milJ')
+def _(i): torso(i, '#5a6a3a', collar='#3a4626'); keep_inside(camo, None)(i); i.rect(15, 9, 15, 27, '#2a3020'); i.box(9, 12, 13, 15, '#4a5830'); i.box(18, 12, 22, 15, '#4a5830')
+@icon('jeans')
+def _(i): trousers(i, '#3e5a86'); i.line([(9, 6), (11, 9)], '#c8a040'); i.line([(22, 6), (20, 9)], '#c8a040')
+@icon('shorts')
+def _(i): trousers(i, '#8a7a5a', short=True, pockets=False)
+@icon('sweatp')
+def _(i): trousers(i, '#3a3c44'); i.line([(7, 6), (6, 28)], (220, 220, 220, 255)); i.line([(24, 6), (24, 28)], (190, 190, 190, 255))
+@icon('cargo')
+def _(i): trousers(i, '#7a7258', pockets=True)
+@icon('milP')
+def _(i): trousers(i, '#5a6a3a', pockets=True, pat=keep_inside(camo, None))
+@icon('motoP')
+def _(i): trousers(i, '#2a2a2e'); i.box(7, 15, 12, 20, '#4a4a52'); i.box(18, 15, 23, 20, '#3e3e46')
+@icon('sneakers')
+def _(i): shoe(i, (230, 230, 226, 255), sole=(200, 60, 50, 255), lace=(90, 90, 96, 255))
+@icon('boots')
+def _(i): shoe(i, '#8a5a32', high=6, lace=(60, 40, 24, 255), sole=(40, 34, 30, 255))
+@icon('milB')
+def _(i): shoe(i, '#2a2a2c', high=8, lace=(90, 90, 96, 255), sole=(20, 20, 20, 255))
+@icon('slippers')
+def _(i): shoe(i, '#7a5a8a', sole=(200, 190, 180, 255)); i.ball(5, 18, 9, 22, (236, 232, 222, 255), hl=False)
+@icon('rubberB')
+def _(i): shoe(i, '#3a6a3a', high=10, sole=(30, 40, 30, 255)); i.rect(3, 7, 9, 8, sh('#3a6a3a', 1.25)); i.rect(14, 7, 20, 8, sh('#3a6a3a', 1.1))
+@icon('cap')
+def _(i): i.ball(6, 8, 25, 26, '#b03a30'); i.rect(5, 19, 26, 27, (0, 0, 0, 0)); i.poly([(14, 18), (29, 18), (30, 22), (14, 22)], sh('#b03a30', .75)); i.ball(14, 7, 17, 10, sh('#b03a30', .7), hl=False)
+@icon('balacl')
+def _(i): i.ball(6, 3, 25, 29, '#26262a'); i.box(10, 12, 21, 17, (200, 160, 130, 255)); i.rect(12, 14, 13, 15, '#26262a'); i.rect(18, 14, 19, 15, '#26262a')
+
 def build(out_png, out_json, preview=None):
     names = list(ICONS)
     cols, S = 8, 96

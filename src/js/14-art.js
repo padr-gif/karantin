@@ -140,7 +140,7 @@ function keyPx(a, i, pal) {
 function recolor8(f, pal) {
   const c = mkCanvas(f[3], f[4]), g = c.getContext('2d');
   g.drawImage(ART.imgs[f[0]], f[1], f[2], f[3], f[4], 0, 0, f[3], f[4]);
-  if (f[8] === 1) return {cv:c, ax:f[5], ay:f[6], w:f[3], h:f[4], s:f[7] || 1};   // цветной кадр (готовая модель): не перекрашиваем
+  if (f[8] === 1) return pal && pal.outfit ? dressFrame(f, c, pal.outfit) : {cv:c, ax:f[5], ay:f[6], w:f[3], h:f[4], s:f[7] || 1};   // цветной кадр (готовая модель): не перекрашиваем
   const d = g.getImageData(0, 0, f[3], f[4]), a = d.data;
   for (let i = 0; i < a.length; i += 4) if (a[i + 3]) keyPx(a, i, pal);
   g.putImageData(d, 0, 0);
@@ -197,15 +197,13 @@ function drawWeapon(name, wid, wx, wy, zoff) {
 function drawPlayer(an, fi, zoff) {
   const lk = P.look || look, w = P.weapon && P.weapon.id;
   const name = 'p' + lk.g + '_' + an + '_' + dirOf(P.fd != null ? P.fd : P.face) + '_' + fi;
-  const key = 'P' + lk.g + lk.skin + lk.hair + lk.shirt + lk.pants;
   const wm = ART.meta.wpn && ART.meta.wpn[name];
   const front = !wm || wm[4];
   const busy = an === 'eat' || an === 'drink' || an === 'pickup' || an === 'work';
   const showW = w && an !== 'death' && an !== 'search' && !busy;
   if (showW && !front) drawWeapon(name, w, P.x, P.y, zoff);
-  const pal = lookPal(lk), ct = P.cloth && P.cloth.torso, ch = P.cloth && P.cloth.head;
-  if (ct) pal[3] = pal[4] = ITEMS[ct.id].col; if (ch) pal[2] = ITEMS[ch.id].col;
-  drawChar(P, name, key + (ct ? ct.id : '') + (ch ? ch.id : ''), pal, P.x, P.y, zoff, P.hurt > .3);
+  const pp = playerLookPal(lk);
+  drawChar(P, name, pp.key, pp.pal, P.x, P.y, zoff, P.hurt > .3);
   if (showW && front) drawWeapon(name, w, P.x, P.y, zoff);
   if ((an === 'eat' || an === 'drink') && P.act && P.act.kind === 'use' && P.act.it && wm) drawIcon(P.act.it.id, SX(P.x, P.y) + wm[0], SY(P.x, P.y, zoff || 0) + wm[1] - 1, 7);
 }
@@ -213,6 +211,12 @@ function drawZombie(z, an, fi, alpha, force) {
   const pal = z.pal;
   drawChar(z, 'z' + (pal.b || 'm') + '_' + an + '_' + dirOf(z.face) + '_' + fi, 'z' + pal.pi, ZPALS[pal.pi], z.x, z.y, 0, !force && z.stun > .3, alpha, force);
 }
+// палитра героя для кадра: старая схема (перекраска слотов); 43j заменяет её на одежду по областям тела
+let playerLookPal = function (lk) {
+  const pal = lookPal(lk), ct = P.cloth && P.cloth.torso, ch = P.cloth && P.cloth.head;
+  if (ct) pal[3] = pal[4] = ITEMS[ct.id].col; if (ch) pal[2] = ITEMS[ch.id].col;
+  return {pal, key:'P' + lk.g + lk.skin + lk.hair + lk.shirt + lk.pants + (ct ? ct.id : '') + (ch ? ch.id : '')};
+};
 const dirOf = a => ((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8;
 function AN(k, a) { return (ART.meta.anims && ART.meta.anims[k] && ART.meta.anims[k][a]) || 1; }
 // object sprite with fog darkening (fogged variants cached)

@@ -171,9 +171,8 @@ drawDoll = function () {
   const cv2 = document.getElementById('dollCv'); if (!cv2 || !P) return;
   const g = cv2.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv2.width, cv2.height);
   const lk = P.look, dir = (Math.floor(animT / 1.6) + 1) % 8, nw = AN('p', 'idle'), fi = Math.floor(animT * 2.6) % nw;
-  const pal = lookPal(lk), ct = P.cloth && P.cloth.torso, ch = P.cloth && P.cloth.head;
-  if (ct) pal[3] = pal[4] = ITEMS[ct.id].col; if (ch) pal[2] = ITEMS[ch.id].col;
-  const fr = charFrame('p' + lk.g + '_idle_' + dir + '_' + fi, 'P' + lk.g + lk.skin + lk.hair + lk.shirt + lk.pants + (ct ? ct.id : '') + (ch ? ch.id : ''), pal, true);
+  const pp = playerLookPal(lk);
+  const fr = charFrame('p' + lk.g + '_idle_' + dir + '_' + fi, pp.key, pp.pal, true);
   const W = cv2.width, H = cv2.height, foot = H - 18;
   g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(W / 2, foot, W * .2, 11, 0, 0, 6.283); g.fill();
   if (!fr) return;

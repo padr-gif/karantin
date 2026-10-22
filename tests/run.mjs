@@ -133,6 +133,17 @@ check('спрайты новой мебели есть', await D("furns.every(f 
 check('большая мебель переживает сохранение', await D("(() => { const sig = () => furns.filter(f => f.big).map(f => f.tiles.join(',')).join('|'); const a = sig(); applySave(JSON.parse(JSON.stringify(serialize()))); return a === sig(); })()"));
 check('у большой мебели есть действие', await D("(() => { const f = furns.find(f => f.big && (f.type === 'bed' || f.type === 'sofa' || f.type === 'wardrobe')); if (!f) return true; const cx = (f.r[0] + f.r[2]) / 2, cy = (f.r[1] + f.r[3]) / 2; for (const [x, y] of [[f.r[0] - .35, cy], [f.r[2] + .35, cy], [cx, f.r[1] - .35], [cx, f.r[3] + .35]]) { P.x = x; P.y = y; if (getAction()) return true; } return false; })()"));
 
+console.log('Одежда');
+await fresh();
+check('стартовая одежда надета', await D("!!(P.cloth.shirt && P.cloth.legs && P.cloth.feet && P.cloth.shirt.id === 'tshirt')"));
+check('одежду можно снять до белья', await D("(() => { for (const s of ['shirt', 'legs', 'feet']) takeOffCloth(s); return !P.cloth.shirt && !P.cloth.legs && !P.cloth.feet && P.inv.some(i => i.id === 'jeans'); })()"));
+check('голым холоднее', await D("insulation() < 3"));
+check('карго дают карманы', await D("(() => { const c0 = P.cap; P.inv.push(mkItem('cargo')); wearCloth(P.inv.findIndex(i => i.id === 'cargo')); return P.cap === c0 + 3 && P.cloth.legs.id === 'cargo'; })()"));
+check('кадр героя в одежде собирается', await D("(() => { P.inv.push(mkItem('milJ')); wearCloth(P.inv.findIndex(i => i.id === 'milJ')); const pp = playerLookPal(P.look); const f = charFrame('pm_idle_1_0', pp.key, pp.pal, true); return !!(f && f.cv && f.w > 10); })()"));
+check('сохранение хранит одежду', await D("(() => { const d = JSON.parse(JSON.stringify(serialize())); return d.p.cloth.legs.id === 'cargo' && d.p.cloth.v === 34; })()"));
+check('старое сохранение получает стартовую одежду', await D("(() => { const d = JSON.parse(JSON.stringify(serialize())); d.p.cloth = {}; applySave(d); return P.cloth.shirt && P.cloth.shirt.id === 'tshirt'; })()"));
+{ const miss = await D("Object.keys(ITEMS).filter(k => ITEMS[k].kind === 'cloth' && !ART.meta.icons[k] && !ART.meta.icons[ICONA[k]])"); check('у всей одежды есть иконки', miss.length === 0, miss); }
+
 console.log('Детальная графика');
 await fresh();
 await D("settings.smooth = true; applySettings();"); await sleep(1500);

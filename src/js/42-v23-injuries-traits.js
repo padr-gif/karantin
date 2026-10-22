@@ -180,7 +180,7 @@ function startTreat(id, w) { const part = panel && panel.part; job(TREAT_DUR[id]
 // ---- getting hurt: body parts, clothes take the bite, brutes break bones, crawlers grab ankles ----
 const cdur = it => it.cd == null ? 100 : it.cd;
 const slotOf = part => part === 'head' || part === 'neck' ? 'head' : part === 'torso' || part === 'arm' ? 'torso' : null;
-const clothAt = part => { const s = slotOf(part); return s && P.cloth ? P.cloth[s] : null; };
+let clothAt = part => { const s = slotOf(part); return s && P.cloth ? P.cloth[s] : null; };
 function partProt(part) { const c = clothAt(part); let p = c && ITEMS[c.id].prot ? ITEMS[c.id].prot * cdur(c) / 100 : 0; if (part === 'neck') p *= .4; return Math.min(.6, p); }
 function tearCloth(c, k) {
   if (!c || ITEMS[c.id].slot === 'wrist') return;
@@ -300,8 +300,8 @@ function tickMind(dt, gm) {
 }
 function missChance() { let m = Math.max(0, ((P.panic || 0) - 30) / 200); if ((P.pain || 0) > 40) m += (P.pain - 40) / 300; if (fracAt('arm')) m += .1; if (P.en < 10) m += .05; return Math.min(.45, m); }
 function dmgK() { let k = 1; if (hasTr('strong')) k *= 1.2; if (hasTr('weak')) k *= .8; const af = fracAt('arm'); if (af) k *= af.spl ? .75 : .5; if ((P.unh || 0) > 80) k *= .85; if ((P.pain || 0) > 50) k *= .9; return k; }
-const stepNoiseK = () => (hasTr('quiet') ? .5 : 1) * (hasTr('clumsy') ? 1.5 : 1);
-const enDrainK = () => (1 - .05 * skillLv('fit')) * (hasTr('wakeful') ? .7 : 1) * (hasTr('sleepy') ? 1.3 : 1) * ((P.unh || 0) > 50 ? 1.2 : 1);
+let stepNoiseK = () => (hasTr('quiet') ? .5 : 1) * (hasTr('clumsy') ? 1.5 : 1);
+let enDrainK = () => (1 - .05 * skillLv('fit')) * (hasTr('wakeful') ? .7 : 1) * (hasTr('sleepy') ? 1.3 : 1) * ((P.unh || 0) > 50 ? 1.2 : 1);
 const addXp23 = addXp;
 addXp = function (k, n) { let m = 1; if (hasTr('fastlearn')) m *= 1.3; if (hasTr('slowlearn')) m *= .7; if ((P.unh || 0) > 50) m *= .75; addXp23(k, n * m); };
 const updateClimate23 = updateClimate;

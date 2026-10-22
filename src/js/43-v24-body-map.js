@@ -108,8 +108,7 @@ function buildBodyTab(host) {
   const W = wounds(), list = sel ? W.filter(w => (WHERE2REG[w.where] || 'chest') === sel) : W;
   const head = mk('div', 'binfoh'); head.appendChild(mk('b', '', sel ? REG[sel].name : 'Все раны'));
   if (sel) {
-    const c = REG[sel].slot && P.cloth && P.cloth[REG[sel].slot];
-    head.appendChild(mk('small', '', c ? 'Защищает: ' + ITEMS[c.id].name.toLowerCase() + ' · целость ' + Math.round(cdur(c)) + '%' + (ITEMS[c.id].prot ? ' · держит укусы' : '') : REG[sel].slot ? 'Ничем не прикрыто' : 'Ноги ничем не защищены'));
+    head.appendChild(mk('small', '', regClothText(sel)));
     head.appendChild(btn('Показать все', () => { panel.part = null; renderPanel(); }, 'ghost'));
   }
   info.appendChild(head);

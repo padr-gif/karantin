@@ -97,7 +97,8 @@ class Char:
 # ---- рендер в проекции игры ----
 def interp_one(A, tv, bary): return np.einsum('nk,nkj->nj', bary, A[tv])
 SS = 3
-def render(ch, Gm, face, K=2, root_xy=True):
+def render(ch, Gm, face, K=2, root_xy=True, rmap=False):
+    """rmap=True — ещё и карта областей тела (у примитивов p['rid'] — номер области вершины): R=номер·16, G=светотень, B=покрытие"""
     HX, HY, ZP = 32 * K, 16 * K, 31 * K
     geo = ch.skinned(Gm)
     allP = np.concatenate([P for P, _ in geo])
@@ -166,7 +167,22 @@ def render(ch, Gm, face, K=2, root_xy=True):
     a = small[..., 3:4]; small[..., :3] = np.where(a > 0, small[..., :3] / np.maximum(a, 1e-6), 0)
     small[..., 3] = np.clip((small[..., 3] - .2) / .6, 0, 1)                # чёткий край силуэта
     out = Image.fromarray((np.clip(small, 0, 1) * 255).astype(np.uint8), 'RGBA')
-    return out, (-x0, -y0)
+    if not rmap: return out, (-x0, -y0)
+    # область пикселя — по ближайшей вершине треугольника; светотень — только свет (без текстуры кожи)
+    rid = np.zeros(len(T_), int)
+    for pi, p in enumerate(ch.prims):
+        sel = pr == pi
+        if not sel.any() or p.get('rid') is None: continue
+        vt = tri[T_[sel]] - p['_off']; rid[sel] = p['rid'][vt[np.arange(len(vt)), bary[sel].argmax(1)]]
+    NR = 16; RF = np.zeros(H * W, int); RF[hit.ravel()] = rid; LF = np.zeros(H * W); LF[hit.ravel()] = lum
+    oh = (RF[:, None] == np.arange(1, NR)[None, :]) & hit.ravel()[:, None]
+    cnt = oh.reshape(H // SS, SS, W // SS, SS, NR - 1).sum((1, 3))
+    ls = (oh * LF[:, None]).reshape(H // SS, SS, W // SS, SS, NR - 1).sum((1, 3))
+    mj = cnt.argmax(-1); c = np.take_along_axis(cnt, mj[..., None], -1)[..., 0]; l = np.take_along_axis(ls, mj[..., None], -1)[..., 0] / np.maximum(c, 1)
+    rm = np.zeros(c.shape + (4,), np.uint8)
+    rm[..., 0] = (mj + 1) * 16; rm[..., 1] = np.clip(l ** (1 / 1.08) / 1.5 * 255, 0, 255); rm[..., 2] = np.clip(c / (SS * SS) * 255, 0, 255); rm[..., 3] = np.where(c > 0, 255, 0)
+    rm[c == 0] = 0
+    return out, (-x0, -y0), Image.fromarray(rm, 'RGBA')
 
 if __name__ == '__main__':
     path = sys.argv[1]; out = sys.argv[2]
