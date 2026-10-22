@@ -61,7 +61,7 @@ const rustle35 = SFX.rustle;
 SFX.rustle = function () { if (!SFX.ok('rustle35', 120)) return; if (!smp(Math.random() < .6 ? 'handle' : 'cloth', .3)) rustle35(); };
 SFX.pickup = function () { if (!smp('handle', .32)) rustle35(); };
 const equip35 = SFX.equip;
-SFX.equip = function () { if (!smp('cloth', .35)) equip35(); smp('click', .12, 1.2, .08); };
+SFX.equip = function () { if (!smp('cloth', .35)) equip35(); };
 
 // ---- мебель: открыть и закрыть по материалу ----
 const CMAT = {
@@ -74,22 +74,14 @@ const CMAT = {
   soft:['bed', 'sofa', 'armchair', 'laundry', 'bin', 'kbin', 'pile', 'bath', 'toilet', 'plant', 'chair', 'floorlamp', 'mirror'],
 };
 const MAT_OF = {}; for (const m in CMAT) for (const t of CMAT[m]) MAT_OF[t] = m;
-function drawerSlide(v, delay) {                                                  // деревянный ящик едет по направляющим
-  const ac = SFX.ac; if (!ac) return;
-  const t = ac.currentTime + (delay || 0), s = ac.createBufferSource(), len = .22;
-  const buf = ac.createBuffer(1, Math.floor(ac.sampleRate * len), ac.sampleRate), d = buf.getChannelData(0);
-  for (let i = 0; i < d.length; i++) { const k = i / d.length; d[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * k) * (.6 + .4 * Math.sin(i / 37)); }
-  s.buffer = buf; const f = ac.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = 1.6;
-  const g = ac.createGain(); g.gain.value = v * SFX.vol(); s.connect(f); f.connect(g); g.connect(SFX.out); s.start(t);
-}
 SFX.contOpen = function (type) {
   const m = MAT_OF[type] || 'soft';
   if (m === 'cab') smp('door_open', .32, 1.3);                                   // дверца шкафа — та же дверь, только меньше
   else if (m === 'chest') smp('chest_open', .45);
-  else if (m === 'drawer') { drawerSlide(.3); smp('wood', .22, 1.3, .2); }
+  else if (m === 'drawer') smp('door_close', .22, 1.6);                        // ящик: короткий деревянный стук, без «жужжания»
   else if (m === 'locker') smp('mdoor_open', .32, 1.35);
   else if (m === 'safe') smp('safe_open', .45);
-  else if (m === 'fridge') { smp('soft', .3, 1.4); smp('latch', .15, .8, .03); }
+  else if (m === 'fridge') smp('soft', .3, 1.4);
   else if (m === 'car') smp('trunk_open', .45);
   else smp('cloth', .3);
 };
@@ -97,8 +89,8 @@ SFX.contClose = function (type) {
   const m = MAT_OF[type] || 'soft';
   if (m === 'cab') smp('door_close', .35, 1.3);
   else if (m === 'chest') smp('chest_close', .45);
-  else if (m === 'drawer') { drawerSlide(.26); smp('wood', .3, 1.15, .18); }
-  else if (m === 'locker') { smp('metal', .3, 1.05); smp('latch', .2, 1, .08); }
+  else if (m === 'drawer') smp('door_close', .3, 1.45);
+  else if (m === 'locker') smp('safe_close', .3, 1.3);
   else if (m === 'safe') smp('safe_close', .45);
   else if (m === 'fridge') smp('soft', .45, .9);
   else if (m === 'car') smp('trunk_close', .5);
@@ -107,7 +99,7 @@ SFX.contClose = function (type) {
 // обыск: пока шарит — шорох вещей, бумага, звяк
 SFX.rummage = function (type) {
   const m = MAT_OF[type] || 'soft';
-  smp('cloth', .3, 1, .05); smp(m === 'locker' || m === 'safe' || m === 'car' ? 'metal' : 'handle', .22, 1.1, .3);
+  smp('cloth', .3, 1, .05); smp('handle', .2, 1, .3);
   if (Math.random() < .35) smp('paper', .18, 1.1, .2);
 };
 

@@ -62,9 +62,6 @@
 | chest_close_0.mp3 | sofar (Minetest), из записей Sevin7, Percy Duke, kingsamas, bulbastre, Yoyodaman234 | CC BY 3.0 | https://github.com/minetest/minetest_game |
 | window_open_0.mp3 | xdrav | CC0 | https://freesound.org/people/xdrav/ |
 | window_close_0.mp3 | cabled_mess | CC0 | https://freesound.org/people/cabled_mess/ |
-| knockw_0.mp3 | magnuswaker | CC0 | https://freesound.org/people/magnuswaker/ |
-| knockw_1.mp3 | magnuswaker | CC0 | https://freesound.org/people/magnuswaker/ |
-| knockw_2.mp3 | magnuswaker | CC0 | https://freesound.org/people/magnuswaker/ |
 | cloth_0.mp3 | Kenney | CC0 | https://kenney.nl/assets/rpg-audio |
 | cloth_1.mp3 | Kenney | CC0 | https://kenney.nl/assets/rpg-audio |
 | cloth_2.mp3 | Kenney | CC0 | https://kenney.nl/assets/rpg-audio |
@@ -72,16 +69,8 @@
 | handle_0.mp3 | Kenney | CC0 | https://kenney.nl/assets/rpg-audio |
 | handle_1.mp3 | Kenney | CC0 | https://kenney.nl/assets/rpg-audio |
 | drop_0.mp3 | Kenney | CC0 | https://kenney.nl/assets/rpg-audio |
-| latch_0.mp3 | Kenney | CC0 | https://kenney.nl/assets/rpg-audio |
-| click_0.mp3 | Kenney | CC0 | https://kenney.nl/assets/rpg-audio |
 | paper_0.mp3 | Kenney | CC0 | https://kenney.nl/assets/rpg-audio |
 | paper_1.mp3 | Kenney | CC0 | https://kenney.nl/assets/rpg-audio |
-| wood_0.mp3 | Kenney | CC0 | https://kenney.nl/assets/impact-sounds |
-| wood_1.mp3 | Kenney | CC0 | https://kenney.nl/assets/impact-sounds |
-| wood_2.mp3 | Kenney | CC0 | https://kenney.nl/assets/impact-sounds |
-| metal_0.mp3 | Kenney | CC0 | https://kenney.nl/assets/impact-sounds |
-| metal_1.mp3 | Kenney | CC0 | https://kenney.nl/assets/impact-sounds |
-| metal_2.mp3 | Kenney | CC0 | https://kenney.nl/assets/impact-sounds |
 | soft_0.mp3 | Kenney | CC0 | https://kenney.nl/assets/impact-sounds |
 | soft_1.mp3 | Kenney | CC0 | https://kenney.nl/assets/impact-sounds |
 | soft_2.mp3 | Kenney | CC0 | https://kenney.nl/assets/impact-sounds |

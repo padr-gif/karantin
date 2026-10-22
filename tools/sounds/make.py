@@ -37,16 +37,11 @@ SET = {
   'chest_close': [(M, 'mods/default/sounds/default_chest_close.ogg', 'sofar (Minetest), из записей Sevin7, Percy Duke, kingsamas, bulbastre, Yoyodaman234', 'CC BY 3.0', 'https://github.com/minetest/minetest_game')],
   'window_open': [(C, 'sound/CC-Sounds/open_door/window/open_window.ogg', 'xdrav', 'CC0', FS + 'people/xdrav/')],
   'window_close': [(C, 'sound/CC-Sounds/close_door/window/close_window.ogg', 'cabled_mess', 'CC0', FS + 'people/cabled_mess/')],
-  'knockw': [(C, 'sound/CC-Sounds/smash_fail/wood_furn/smash_fail_wood{}.ogg'.format(s), 'magnuswaker', 'CC0', FS + 'people/magnuswaker/') for s in ('_1', '_2', '_3')],
   # Kenney (CC0): мелкие звуки вещей
   'cloth': many(K, 'kenney_rpg-audio/cloth{}.ogg', 4, 'Kenney', 'CC0', 'https://kenney.nl/assets/rpg-audio'),
   'handle': [(K, 'kenney_rpg-audio/handleSmallLeather.ogg', 'Kenney', 'CC0', 'https://kenney.nl/assets/rpg-audio'), (K, 'kenney_rpg-audio/handleSmallLeather2.ogg', 'Kenney', 'CC0', 'https://kenney.nl/assets/rpg-audio')],
   'drop': [(K, 'kenney_rpg-audio/dropLeather.ogg', 'Kenney', 'CC0', 'https://kenney.nl/assets/rpg-audio')],
-  'latch': [(K, 'kenney_rpg-audio/metalLatch.ogg', 'Kenney', 'CC0', 'https://kenney.nl/assets/rpg-audio')],
-  'click': [(K, 'kenney_rpg-audio/metalClick.ogg', 'Kenney', 'CC0', 'https://kenney.nl/assets/rpg-audio')],
   'paper': [(K, 'kenney_rpg-audio/bookOpen.ogg', 'Kenney', 'CC0', 'https://kenney.nl/assets/rpg-audio'), (K, 'kenney_rpg-audio/bookFlip1.ogg', 'Kenney', 'CC0', 'https://kenney.nl/assets/rpg-audio')],
-  'wood': many(K, 'kenney_impact-sounds/impactWood_light_00{}.ogg', 3, 'Kenney', 'CC0', 'https://kenney.nl/assets/impact-sounds', 0),
-  'metal': many(K, 'kenney_impact-sounds/impactMetal_light_00{}.ogg', 3, 'Kenney', 'CC0', 'https://kenney.nl/assets/impact-sounds', 0),
   'soft': many(K, 'kenney_impact-sounds/impactSoft_medium_00{}.ogg', 3, 'Kenney', 'CC0', 'https://kenney.nl/assets/impact-sounds', 0),
 }
 def peak(f):
@@ -63,8 +58,13 @@ if __name__ == '__main__':
         for n, (src, rel, author, lic, link) in enumerate(items):
             f = os.path.join(S[src], rel); name = '%s_%d' % (g, n)
             gain = -1 - peak(f)
+            af = 'silenceremove=start_periods=1:start_threshold=-50dB,volume=%.1fdB' % gain
+            if g.startswith('step_'):                                            # шаг: один удар, без шипящего хвоста и фона
+                af += ',highpass=f=70,agate=threshold=0.03:ratio=6:attack=1:release=60,atrim=0:0.34,afade=t=out:st=0.2:d=0.14'
+            else:
+                af += ',agate=threshold=0.01:ratio=3:attack=2:release=120'
             subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', f, '-ac', '1', '-ar', '44100', '-b:a', '64k',
-                            '-af', 'silenceremove=start_periods=1:start_threshold=-50dB,volume=%.1fdB' % gain, os.path.join(OUT, name + '.mp3')], check=True)
+                            '-af', af, os.path.join(OUT, name + '.mp3')], check=True)
             credits.append('| %s.mp3 | %s | %s | %s |' % (name, author, lic, link))
     open(os.path.join(OUT, 'CREDITS.md'), 'w').write('\n'.join(credits) + '\n')
     for f in glob.glob(os.path.join(OUT, 'LICENSE.txt')): os.remove(f)
