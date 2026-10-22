@@ -368,6 +368,40 @@ def hanger():
     m.add(cylz(cx, cy + .02, .1, 1.6, 1.62, .008), 'hat'); m.add(cylz(cx, cy + .02, .06, 1.61, 1.68, .02), 'hat')
     return m, (.34, .3)
 
+# ---------- компактные версии (одна клетка) — когда большая вещь нигде в комнате не помещается ----------
+def armchair(v=0):
+    m = Model(); W, D = .92, .72; a, b = 'sofa%d' % (v % 3), 'sofa%dd' % (v % 3)
+    m.add(rbox((W / 2, D / 2, .22), (W / 2 - .02, D / 2 - .02, .16), .06), b)
+    m.add(rbox((W / 2, .12, .56), (W / 2 - .02, .11, .27), .09), b)
+    for x in (.11, W - .11): m.add(rbox((x, D / 2 + .01, .44), (.1, D / 2 - .03, .2), .09), a)
+    m.add(rbox((W / 2, .44, .44), (W / 2 - .22, .25, .08), .07), a)
+    m.add(rbox((W / 2, .27, .66), (W / 2 - .23, .07, .18), .08), a)
+    for x in (.07, W - .07):
+        for y in (.08, D - .07): m.add(cylz(x, y, .022, 0, .07, .01), 'woodd')
+    return m, (W, D)
+def sitbath():
+    m = Model(); W, L, Hh = .9, .9, .6; cx = W / 2
+    tub = rbox((cx, L / 2, Hh / 2), (W / 2, L / 2, Hh / 2), .07)
+    m.add(cut(tub, rbox((cx, L / 2 + .02, Hh + .1), (W / 2 - .08, L / 2 - .1, .5), .14)), 'enamel')
+    m.add(rbox((cx, L / 2 + .02, .32), (W / 2 - .09, L / 2 - .11, .006), .1), 'water')
+    m.add(rbox((cx, .17, .4), (W / 2 - .1, .07, .03), .03), 'enamel')                            # ступенька-сиденье
+    m.add(cylz(cx, .03, .025, Hh, Hh + .18, .01), 'chrome'); m.add(capsule((cx, .03, Hh + .17), (cx, .14, Hh + .15), .014), 'chrome')
+    return m, (W, L)
+def tvc():
+    m, _ = tv1(); return m, (.8, .5)
+def counterc():
+    m = Model(); W, D, Hh = .88, .6, .95
+    m.add(rbox((W / 2, D / 2 - .01, Hh / 2 + .05), (W / 2 - .02, D / 2 - .03, Hh / 2 - .05), .01), 'paint_w2')
+    m.add(rbox((W / 2, D / 2 - .03, .05), (W / 2 - .03, D / 2 - .05, .05), .005), 'gap')
+    m.add(rbox((W / 2, D / 2, Hh + .02), (W / 2, D / 2, .025), .012), 'top_d')
+    front(m, .05, W - .05, .14, Hh - .04, D - .04, 'paint_w')
+    m.add(rbox((W / 2, D - .01, .62), (W / 2 - .03, .008, .035), .006), 'stripe')
+    m.add(rbox((.6, D / 2 - .06, Hh + .1), (.13, .11, .065), .02), 'top_d')
+    m.add(rbox((.6, D / 2 - .1, Hh + .19), (.1, .02, .045), .01), 'glass_d')
+    return m, (W, D)
+COMPACT = {'bed': lambda v=0: _bed(.86, .86, v, 1), 'bath': sitbath, 'sofa': armchair,
+           'table': lambda: _table(.78, .78), 'tv': tvc, 'counter2': counterc}
+
 VARIANTS = {'bed': 3, 'bed1': 3, 'sofa': 3, 'shelf': 2, 'bookshelf': 2}
 MODELS = {'tv': tv, 'tv1': tv1, 'toilet': toilet,
           'fridge': fridge, 'stove': stove, 'sink': sink, 'cabinet': cabinet, 'counter2': counter2,
@@ -480,16 +514,17 @@ def soft_outline(im, k=HD_K):
     edge.alpha_composite(im); return edge
 def frame_hd(args):
     name, r, v = args
-    m, size = MODELS[name](v) if name in VARIANTS else MODELS[name]()
+    comp = name.startswith('c:'); n = name[2:] if comp else name; src = COMPACT if comp else MODELS
+    m, size = src[n](v) if n in VARIANTS else src[n]()
     im, (ox, oy) = F.render(rotated(m, size, r), cells=(max(1, int(np.ceil(size[0]))), max(1, int(np.ceil(size[1])))))
     im = soft_outline(im); bb = im.getbbox()
     ax = ox + (size[0] / 2 - size[1] / 2) * F.HX; ay = oy + (size[0] / 2 + size[1] / 2) * F.HY
-    return 'hd_f_%s_%d_%d' % (name, v, r), im.crop(bb), (int(round(ax - bb[0])), int(round(ay - bb[1])))
+    return ('hd_old_f_%s_%d_%d' if comp else 'hd_f_%s_%d_%d') % (n, v, r), im.crop(bb), (int(round(ax - bb[0])), int(round(ay - bb[1])))
 def export_hd(names=None, procs=2):
     """все модели ×HD_K в отдельный лист furn3 (кадры hd_f_…, восьмое поле — масштаб)"""
     import multiprocessing as mp
     names = names or list(MODELS); hd_setup()
-    jobs = [(n, r, v) for n in names for v in range(VARIANTS.get(n, 1)) for r in range(4)]
+    jobs = [(n, r, v) for n in names for v in range(VARIANTS.get(n[2:] if n.startswith('c:') else n, 1)) for r in range(4)]
     ap = os.path.join(ROOT, 'assets/atlas.json'); sp = os.path.join(ROOT, 'assets/sprites/furn3.png')
     meta = json.load(open(ap)); fr = meta['frames']
     frames = {}

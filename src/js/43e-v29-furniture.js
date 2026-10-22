@@ -64,6 +64,27 @@ function rectFits(f, R, wd, opt) {
 // Try the full-size piece against each wall of its tile and in both directions, then smaller stand-ins,
 // and only if nothing fits keep the old one-tile size with the old compact sprite.
 function wallsAround(x, y, wd) { const out = [wd]; for (const d of WDS) if (isWallT9(get(x + d[0], y + d[1])) && !(d[0] === wd[0] && d[1] === wd[1])) out.push(d); return out; }
+// Большая вещь (кровать, ванна, диван) не влезла на своё место — чаще всего соседнюю клетку уже заняла тумбочка.
+// Ищем у стен той же комнаты ближайшее место, где она встаёт целиком. Без rng: тот же мир даёт ту же расстановку.
+function relocateBig(f, Hs, arts) {
+  const room = Hs.rooms && Hs.rooms.find(r => f.x >= r.x0 && f.x <= r.x1 && f.y >= r.y0 && f.y <= r.y1); if (!room) return false;
+  const cand = [];
+  for (let y = room.y0; y <= room.y1; y++) for (let x = room.x0; x <= room.x1; x++) {
+    if (get(x, y) !== FLOOR || furn[y * MW + x] || propAt[y * MW + x]) continue;
+    if (D4.some(([ox, oy]) => get(x + ox, y + oy) === DOOR)) continue;
+    const wds = WDS.filter(d => isWallT9(get(x + d[0], y + d[1]))); if (wds.length) cand.push([x, y, wds, Math.hypot(x - f.x, y - f.y)]);
+  }
+  cand.sort((a, b) => a[3] - b[3] || a[1] - b[1] || a[0] - b[0]);
+  const keep = {x:f.x, y:f.y, cx:f.cx, cy:f.cy, sx:f.sx, sy:f.sy, r:f.r.slice(), wd:f.wd};
+  for (const art of arts) for (const [x, y, wds] of cand) for (const wd of wds) for (const d of [1, -1]) {
+    const R = rectFor(art, x, y, wd, d, false); if (!R) continue;
+    if (!rectFits(f, R, wd, {gen:true, free:false, x, y})) continue;
+    Object.assign(f, {x, y, cx:R.cx, cy:R.cy, sx:R.sx, sy:R.sy, r:R.r, wd, art:art === fartType(f.type) ? null : art}); regFurn(f);
+    if (houseOk(Hs)) return true;
+    unregFurn(f); Object.assign(f, keep);
+  }
+  return false;
+}
 function growFurniture() {
   for (const f of furns) {
     if (f.gone || !fsizeOf(f.type) || !f.wd) continue;
@@ -87,6 +108,7 @@ function growFurniture() {
       }
       if (done) break;
     }
+    if (!done && Hs && Math.max(...fsizeOf(f.type)) > 1.06) done = relocateBig(f, Hs, arts);   // в другое место той же комнаты
     if (!done) {   // nothing fits: old footprint, old compact sprite
       Object.assign(f, old, {art:null, compact:true}); regFurn(f); f.big = false; f.dt = null;
       const R = rectFor(fartType(f.type), f.x, f.y, f.wd, 1, free, true);
