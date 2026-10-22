@@ -64,6 +64,9 @@ def bone_class(name):
     return 'torso'
 CLS_NAMES = ['torso', 'neck', 'head', 'uarm', 'farm', 'hand', 'thigh', 'shin', 'foot']
 VCLS = np.array([CLS_NAMES.index(bone_class(BONES[b])) for b in DOM])
+BCLS = np.array([CLS_NAMES.index(bone_class(b)) for b in BONES])
+CLSW = np.zeros((NV, len(CLS_NAMES)))                  # доля каждой части тела в вершине: границы одежды плавные
+np.add.at(CLSW, (WV, BCLS[WB]), WW)
 def T(k): return DAT['t_ix_' + k], DAT['t_d_' + k].astype(float).reshape(-1, 3)
 
 def to_local(p):
@@ -221,7 +224,7 @@ def noise(p, f=14.0, s=0):
 def palette(o):
     skin = hexc(o.get('skin', '#e8b07a')); hc = hexc(o.get('hairc', '#6a3a1e'))
     return {'skin': (skin, .04, .55, 'skin'), 'hair': (hc, .1, .4, 'hair'), 'beard': (hc * .85, .03, .7, 'hair'),
-            'brow': (hc * .6, 0, .8, None), 'eye': (hexc('#2a1c16'), .3, .2, None), 'lip': (skin * np.array([.85, .6, .55]), 0, .8, None),
+            'brow': (hc * .6, 0, .8, None), 'eye': (hexc('#d8cdc2') * .85, .3, .2, None), 'iris': (hexc('#2e2018'), .4, .2, None), 'lip': (skin * np.array([.85, .6, .55]), 0, .8, None),
             'shirt': (hexc(o.get('shirt', '#8fa6c6')), .03, .8, 'cloth'), 'pants': (hexc(o.get('pants', '#55575c')), .03, .8, 'cloth'),
             'shoe': (hexc('#2a2a2c'), .15, .4, None), 'sole': (hexc('#161616'), 0, .8, None),
             'belt': (hexc('#1e1e20'), .3, .3, None), 'glass': (hexc('#141414'), .4, .2, None), 'buckle': (hexc('#b8b8b0'), .6, .2, None)}
@@ -229,7 +232,11 @@ def paint(o, B, part, cls, p):
     """имя материала для пикселей: part — оболочка, cls — часть тела по кости, p — точка в покое (метры)"""
     H = B['H']; z = p[:, 2] / H * 1.78; x, y = p[:, 0], p[:, 1]
     out = np.full(len(p), 'skin', dtype=object)
-    if part in ('hair', 'eye', 'pants'):
+    if part == 'eye':
+        ey = B['eye']; d = np.hypot(np.abs(y) - abs(ey[1]), p[:, 2] - ey[2])
+        out[:] = 'eye'; out[(x > ey[0] + .004) & (d < .0065)] = 'iris'
+        return out
+    if part in ('hair', 'pants'):
         out[:] = part
         if part == 'pants' and o.get('belt'):
             top = B['heads'][BI['root']][2] + .075; zz = p[:, 2]
@@ -237,19 +244,18 @@ def paint(o, B, part, cls, p):
         return out
     top = o.get('top', 'tank')
     zs, ys = B['sh'][2], B['sh'][1]                 # плечевой сустав в покое
-    ay = np.abs(y); zz = p[:, 2]
-    body_ = (cls <= 1) & (zz > B['waist'] - .04)
+    ay = np.abs(y); zz = p[:, 2]; front = x > 0
+    ell = lambda cy, cz, ry, rz: ((ay - cy) / ry) ** 2 + ((zz - cz) / rz) ** 2 < 1
+    body_ = (cls <= 1) & (zz > B['waist'] - .04) & (zz < zs + .14)
     if top == 'tank':
-        hi = zz > zs - .12
-        strap = (ay > .3 * ys) & (ay < .6 * ys) & (zz < zs + .12)
-        side = (ay >= .6 * ys) & (ay < .76 * ys) & (zz < zs - .07)
-        back = (x < -.03) & (ay < .6 * ys) & (zz < zs - .03)
-        neck_cut = (ay < .3 * ys) & (x > 0) & (zz > zs - (.075 if o.get('fem') else .1))
-        sh = body_ & (~hi | strap | side | back | ((ay <= .3 * ys) & (x > 0) & ~neck_cut))
+        deep = .15 if o.get('fem') else .17
+        sh = body_ & ~ell(ys, zs + .02, .46 * ys, .15)                      # пройма вокруг плеча
+        sh &= ~(front & ell(0, zs + .06, .3 * ys, deep))                     # круглый вырез спереди
+        sh &= ~(~front & ell(0, zs + .08, .3 * ys, .1))                      # вырез на спине
     else:
-        sh = body_ & (zz < zs + .1) & ~((ay < .3 * ys) & (zz > zs - np.where(x > 0, .05, .01)))
+        sh = body_ & ~(front & ell(0, zs + .075, .27 * ys, .062)) & ~(~front & ell(0, zs + .08, .27 * ys, .06))
         dist = np.linalg.norm(np.stack([p[:, 0] - B['sh'][0], ay - ys, zz - zs], -1), axis=-1)
-        sh |= (cls == 3) & (dist < .15)
+        sh |= (cls == 3) & (dist < .15)                                      # короткий рукав
     out[sh] = 'shirt'
     bottom = o.get('bottom', 'shorts')                     # тело под шортами/брюками — в цвет ткани (без просветов)
     if bottom in ('shorts', 'pants'):
@@ -258,23 +264,21 @@ def paint(o, B, part, cls, p):
         out[under] = 'pants'
     out[cls == 8] = 'shoe'; out[(cls == 8) & (z < .02)] = 'sole'
     out[(cls == 7) & (z < .1)] = 'shoe'
-    # лицо: брови, губы, борода (по точкам в покое головы)
-    hd = cls == 2
-    ey = B['eye']
-    brow = hd & (x > ey[0] - .012) & (np.abs(np.abs(y) - abs(ey[1])) < .022) & (np.abs(p[:, 2] - (ey[2] + .024)) < .006)
+    # лицо: брови, губы, борода, очки (по точкам в покое головы)
+    hd = cls == 2; ey = B['eye']; ex, eyy, ez = ey[0], abs(ey[1]), ey[2]
+    face = hd & (x > ex - .03)
+    brow = face & (np.abs(ay - eyy - .002) < .016) & (np.abs(zz - (ez + .021 - (ay - eyy) ** 2 * 8)) < .0038)
     out[brow] = 'brow'
-    lip = hd & (x > ey[0] - .008) & (np.abs(y) < .021) & (np.abs(p[:, 2] - (ey[2] - .072)) < .005)
     if o.get('beard'):
-        bd = hd & (x > ey[0] - .07) & (p[:, 2] < ey[2] - .045) & (np.abs(y) < .065)
-        out[bd] = 'beard'
+        out[hd & (x > ex - .075) & (zz < ez - .042) & (ay < .066)] = 'beard'
     else:
-        out[lip] = 'lip'
+        out[face & (ay < .02) & (np.abs(zz - (ez - .072)) < .0045)] = 'lip'
     if o.get('mustache'):
-        out[hd & (x > ey[0] - .02) & (np.abs(y) < .036) & (np.abs(p[:, 2] - (ey[2] - .058)) < .011)] = 'beard'
-    if o.get('glasses'):
-        rim = hd & (x > ey[0] - .005) & (np.abs(p[:, 2] - ey[2]) < .02) & (np.abs(np.abs(y) - abs(ey[1])) < .028)
-        rim &= ~((np.abs(p[:, 2] - ey[2]) < .012) & (np.abs(np.abs(y) - abs(ey[1])) < .019))
-        out[rim] = 'glass'
+        out[face & (ay < .034) & (np.abs(zz - (ez - .057)) < .009)] = 'beard'
+    if o.get('glasses'):                                                      # тонкая оправа и перемычка
+        r = np.sqrt(((ay - eyy) / .021) ** 2 + ((zz - ez) / .015) ** 2)
+        out[face & (r > .78) & (r < 1.0)] = 'glass'
+        out[face & (ay < .012) & (np.abs(zz - ez - .004) < .0028)] = 'glass'
     return out
 
 # ---------- рендер кадра ----------
@@ -334,12 +338,12 @@ def render(o, face, pose=None, K=2):
     lum = .27 * (.55 + .45 * sky) + .8 * dif + .14 * fill
     pal = palette(o)
     # материалы красятся по вершинам и смешиваются по треугольнику: ровные края одежды без «лесенки»
-    MATS = list(pal); MV = np.zeros(NV, int)
-    for F, nm in parts:
-        u = np.unique(F); MV[u] = [MATS.index(m) for m in paint(o, B, nm, VCLS[u], Lrest[u])]
-    mv = MV[tv]
-    score = np.stack([(bary * (mv == mv[:, [j]])).sum(1) for j in range(3)], 1)
-    names = np.array(MATS, dtype=object)[mv[np.arange(len(mv)), score.argmax(1)]]
+    # раскраска по пикселю: точка тела в покое + плавные доли частей тела -> ровные края одежды
+    cls = interp(CLSW).argmax(1)
+    names = np.empty(len(T_), dtype=object)
+    for i, (_, nm) in enumerate(parts):
+        sel = part == i
+        if sel.any(): names[sel] = paint(o, B, nm, cls[sel], pr[sel])
     rgb = np.zeros((len(T_), 3)); hv = nrm(LIGHT + VIEW)
     for nm, (col, spec, rough, tex) in pal.items():
         sel = names == nm
