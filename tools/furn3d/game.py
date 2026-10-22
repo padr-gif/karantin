@@ -2,6 +2,7 @@
 """Новая мебель для игры на 3D-основе tools/furn3d/render.py: модели в метрах, 4 поворота как WDI в игре,
 чистый пиксель с тёмной кромкой (как у персонажей), без тени на полу. Кадры дописываются в лист furn2 и атлас.
    python3 tools/furn3d/game.py preview out.png [имена]  # превью: старые и новые кадры рядом
+   python3 tools/furn3d/game.py hd [имена]              # детальные кадры ×3 в assets/sprites/furn3.png (стиль PZ)
    python3 tools/furn3d/game.py export [имена]          # перерисовать и переупаковать assets/sprites/furn2.png + atlas.json
 Координаты модели: x — вдоль стены, y — от стены (0) к лицевой стороне, z — вверх. Лицом модель смотрит в +y.
 """
@@ -275,11 +276,104 @@ def bath():
     m.add(cylz(cx, .23, .025, .16, .2, .005), 'chrome')                                      # перелив
     return m, (W, L)
 
-VARIANTS = {'bed': 3, 'bed1': 3}
+
+# ---------- гостиная, кладовая, прихожая ----------
+SOFAS = [('#8a4a3a', '#6e3a2e'), ('#3f5878', '#30455f'), ('#56703f', '#435832')]
+for k, (c, c2) in enumerate(SOFAS): mat('sofa%d' % k, c, .02, .85); mat('sofa%dd' % k, c2, .02, .85)
+mat('cardboard', '#a8835a', 0, .85); mat('cardboard2', '#8e6c48', 0, .85); mat('tin', '#9aa2a8', .5, .25)
+mat('jar', '#c9b06a', .4, .2); mat('coat_r', '#8e2f2a', 0, .9); mat('coat_b', '#2f4a72', 0, .9); mat('hat', '#26262a', .05, .7)
+BOOKC = ['#8a2e2a', '#2e4a7a', '#b08a3a', '#3a6a40', '#5a3a6a', '#c8b89a', '#2a2a2e', '#a8502a']
+for k, c in enumerate(BOOKC): mat('bk%d' % k, c, .05, .7)
+
+def sofa(v=0):
+    m = Model(); W, D = 1.96, .86; a, b = 'sofa%d' % (v % 3), 'sofa%dd' % (v % 3)
+    m.add(rbox((W / 2, D / 2, .22), (W / 2 - .02, D / 2 - .02, .16), .06), b)                  # основание
+    m.add(rbox((W / 2, .13, .56), (W / 2 - .02, .12, .27), .09), b)                            # спинка
+    for x in (.12, W - .12): m.add(rbox((x, D / 2 + .01, .44), (.11, D / 2 - .03, .2), .09), a)   # подлокотники
+    for k in range(3):
+        cx = .23 + (k + .5) * (W - .46) / 3
+        m.add(rbox((cx, .51, .44), ((W - .46) / 6 - .012, .32, .08), .07), a)                   # сиденья
+        m.add(rbox((cx, .3, .66), ((W - .46) / 6 - .016, .08, .19), .08), a)                    # подушки спинки
+    for x in (.08, W - .08):
+        for y in (.1, D - .08): m.add(cylz(x, y, .025, 0, .07, .01), 'woodd')
+    return m, (W, D)
+
+def _table(W, D):
+    m = Model()
+    m.add(rbox((W / 2, D / 2, .75), (W / 2, D / 2, .025), .015), 'woodn')                       # столешница
+    m.add(rbox((W / 2, D / 2, .69), (W / 2 - .06, D / 2 - .06, .04), .008), 'woodnd')           # царга
+    for x in (.06, W - .06):
+        for y in (.06, D - .06): m.add(rbox((x, y, .36), (.028, .028, .36), .01), 'woodnd')    # ножки
+    return m, (W, D)
+def table(): return _table(1.2, .8)
+def table1(): return _table(.84, .84)
+
+def shelf(v=0):
+    """металлический стеллаж; v=1 — с припасами на полках"""
+    m = Model(); W, D, Hh = .9, .4, 1.6
+    for x in (.02, W - .02):
+        for y in (.02, D - .02): m.add(rbox((x, y, Hh / 2), (.018, .018, Hh / 2), .004), 'metal')
+    zs = (.08, .58, 1.06, 1.54)
+    for z in zs: m.add(rbox((W / 2, D / 2, z), (W / 2 - .01, D / 2 - .01, .012), .004), 'steel')
+    if v:
+        r = np.random.default_rng(3)
+        for z in zs[:3]:
+            x = .06
+            while x < W - .14:
+                kind = r.integers(0, 4); top = z + .012
+                if kind == 0:   m.add(rbox((x + .1, D / 2, top + .1), (.1, .14, .1), .01), 'cardboard'); x += .22
+                elif kind == 1:
+                    for k in range(3): m.add(cylz(x + .04 + k * .07, D / 2 + .05, .03, top, top + .1, .006), 'tin')
+                    x += .22
+                elif kind == 2: m.add(cylz(x + .05, D / 2, .045, top, top + .14, .01), 'jar'); x += .12
+                else:           m.add(rbox((x + .08, D / 2, top + .06), (.08, .12, .06), .01), 'cardboard2'); x += .18
+    return m, (W, D)
+
+def bookshelf(v=0):
+    m = Model(); W, D, Hh = .8, .3, 1.8
+    m.add(rbox((W / 2, .01, Hh / 2), (W / 2, .01, Hh / 2), .004), 'woodnd')                    # задняя стенка
+    for x in (.015, W - .015): m.add(rbox((x, D / 2, Hh / 2), (.015, D / 2, Hh / 2), .006), 'woodn')
+    zs = (.06, .5, .92, 1.34, Hh - .015)
+    for z in zs: m.add(rbox((W / 2, D / 2, z), (W / 2 - .02, D / 2, .015), .005), 'woodn')
+    m.add(rbox((W / 2, D - .01, .03), (W / 2 - .02, .01, .03), .004), 'woodnd')                # цоколь
+    r = np.random.default_rng(11 + v)
+    for z in zs[:4]:
+        x = .04; z0 = z + .015
+        while x < W - .06:
+            if r.random() < .08 + .1 * v: x += .05; continue                                     # пробел на полке
+            t = r.uniform(.025, .05); h = r.uniform(.24, .34); d = r.uniform(.17, .22)
+            m.add(rbox((x + t / 2, .03 + d / 2, z0 + h / 2), (t / 2 - .002, d / 2, h / 2), .004), 'bk%d' % r.integers(0, len(BOOKC)))
+            x += t
+    return m, (W, D)
+
+def crate():
+    m = Model(); W, D, Hh = .62, .62, .52
+    m.add(rbox((W / 2, D / 2, Hh / 2), (W / 2 - .03, D / 2 - .03, Hh / 2 - .01), .005), 'woodnd')
+    for k in range(4):                                                                           # доски по бокам
+        z = .04 + k * .12
+        m.add(rbox((W / 2, D / 2, z + .05), (W / 2 - .01, D / 2 - .01, .052), .008), 'woodl' if k % 2 else 'woodlx')
+    for x in (.03, W - .03):
+        for y in (.03, D - .03): m.add(rbox((x, y, Hh / 2), (.03, .03, Hh / 2), .006), 'woodd')  # стойки
+    m.add(rbox((W / 2, D / 2, Hh), (W / 2, D / 2, .02), .008), 'woodl')                        # крышка
+    for x in (.12, W / 2, W - .12): m.add(rbox((x, D / 2, Hh + .022), (.04, D / 2 - .02, .006), .004), 'woodd')
+    return m, (W, D)
+
+def hanger():
+    m = Model(); cx, cy = .17, .15
+    m.add(cylz(cx, cy, .13, 0, .03, .012), 'woodd')                                            # основание
+    m.add(cylz(cx, cy, .018, .02, 1.72, .008), 'woodn')                                        # стойка
+    m.add(sphere((cx, cy, 1.74), .03), 'woodn')
+    m.add(rbox((cx + .05, cy + .02, 1.18), (.07, .07, .3), .06), 'coat_r')                      # пальто
+    m.add(rbox((cx - .04, cy + .06, 1.24), (.08, .06, .26), .06), 'coat_b')                     # куртка
+    m.add(cylz(cx, cy + .02, .1, 1.6, 1.62, .008), 'hat'); m.add(cylz(cx, cy + .02, .06, 1.61, 1.68, .02), 'hat')
+    return m, (.34, .3)
+
+VARIANTS = {'bed': 3, 'bed1': 3, 'sofa': 3, 'shelf': 2, 'bookshelf': 2}
 MODELS = {'tv': tv, 'tv1': tv1, 'toilet': toilet,
           'fridge': fridge, 'stove': stove, 'sink': sink, 'cabinet': cabinet, 'counter2': counter2,
           'dresser': dresser, 'nightstand': nightstand, 'wardrobe': wardrobe, 'medcab': medcab,
-          'bed': bed, 'bed1': bed1, 'bath': bath}
+          'bed': bed, 'bed1': bed1, 'bath': bath, 'sofa': sofa, 'table': table, 'table1': table1,
+          'shelf': shelf, 'bookshelf': bookshelf, 'crate': crate, 'hanger': hanger}
 NEW = ['fridge', 'stove', 'sink', 'cabinet', 'counter2', 'dresser', 'nightstand', 'wardrobe', 'medcab']
 
 # повороты как в tools/furn/sketch.py (Spr.R): модель вокруг центра следа
@@ -360,6 +454,69 @@ def export(names=None):
     out.save(sp, optimize=True); json.dump(meta, open(ap, 'w'), separators=(',', ':'))
     print('кадров на листе', len(frames), 'лист', out.size, 'было', sheet.size)
 
+
+# ---------- детальные кадры (×K) для стиля «как в Project Zomboid»: без палитры, мягкие края, текстуры ткани ----------
+HD_K = 3
+def _plaid(scale=9):
+    def f(p):
+        u, v = p[..., 0] * scale, p[..., 1] * scale
+        s = (np.sin(u * np.pi * 2) > .45).astype(float) + (np.sin(v * np.pi * 2) > .45)
+        return 1 - .13 * s + .05 * (np.sin(u * np.pi * 8) > .9)
+    return f
+def _weave(p):
+    a = p[..., 0] + p[..., 2] * .7; b = p[..., 1] - p[..., 2] * .7
+    return 1 + .035 * np.sin(a * 420) * np.sin(b * 420) + .03 * np.sin((a + b) * 37)
+def hd_setup():
+    F.HX, F.HY, F.ZP = 32 * HD_K, 16 * HD_K, 31 * HD_K
+    F.SS = 2; F.FLOOR_SHADOW = False
+    for k in range(3):
+        MAT['blanket%d' % k]['pat'] = _plaid(); MAT['sofa%d' % k]['pat'] = _weave; MAT['sofa%dd' % k]['pat'] = _weave
+    for nm in ('linen', 'linen2', 'pillow', 'coat_r', 'coat_b'): MAT[nm]['pat'] = _weave
+def soft_outline(im, k=HD_K):
+    """тонкий мягкий тёмный контур — как кромка у спрайтов PZ, держит форму на любом зуме"""
+    from PIL import ImageFilter
+    a = im.getchannel('A'); grow = a.filter(ImageFilter.MaxFilter(3)).filter(ImageFilter.GaussianBlur(.6))
+    edge = Image.new('RGBA', im.size, (22, 18, 16, 0)); edge.putalpha(grow.point(lambda v: int(v * .75)))
+    edge.alpha_composite(im); return edge
+def frame_hd(args):
+    name, r, v = args
+    m, size = MODELS[name](v) if name in VARIANTS else MODELS[name]()
+    im, (ox, oy) = F.render(rotated(m, size, r), cells=(max(1, int(np.ceil(size[0]))), max(1, int(np.ceil(size[1])))))
+    im = soft_outline(im); bb = im.getbbox()
+    ax = ox + (size[0] / 2 - size[1] / 2) * F.HX; ay = oy + (size[0] / 2 + size[1] / 2) * F.HY
+    return 'hd_f_%s_%d_%d' % (name, v, r), im.crop(bb), (int(round(ax - bb[0])), int(round(ay - bb[1])))
+def export_hd(names=None, procs=2):
+    """все модели ×HD_K в отдельный лист furn3 (кадры hd_f_…, восьмое поле — масштаб)"""
+    import multiprocessing as mp
+    names = names or list(MODELS); hd_setup()
+    jobs = [(n, r, v) for n in names for v in range(VARIANTS.get(n, 1)) for r in range(4)]
+    ap = os.path.join(ROOT, 'assets/atlas.json'); sp = os.path.join(ROOT, 'assets/sprites/furn3.png')
+    meta = json.load(open(ap)); fr = meta['frames']
+    frames = {}
+    if os.path.exists(sp):                                          # уже готовые кадры других моделей сохраняем
+        old = Image.open(sp).convert('RGBA')
+        for k, f in fr.items():
+            if f[0] == 'furn3': frames[k] = (old.crop((f[1], f[2], f[1] + f[3], f[2] + f[4])), (f[5], f[6]))
+    with mp.get_context('fork').Pool(procs) as pool:
+        for i, (k, im, a) in enumerate(pool.imap_unordered(frame_hd, jobs)):
+            frames[k] = (im, a); print('\r%d/%d %s' % (i + 1, len(jobs), k), end='', flush=True)
+    print()
+    W = 4096; order = sorted(frames, key=lambda k: (-frames[k][0].height, k))
+    x = y = rowh = 0; pos = {}
+    for k in order:
+        im = frames[k][0]
+        if x + im.width > W: x = 0; y += rowh + 2; rowh = 0
+        pos[k] = (x, y); x += im.width + 2; rowh = max(rowh, im.height)
+    out = Image.new('RGBA', (W, y + rowh), (0, 0, 0, 0))
+    for k in order:
+        im, (ax, ay) = frames[k]; px, py = pos[k]; out.paste(im, (px, py))
+        fr[k] = ['furn3', px, py, im.width, im.height, ax, ay, HD_K]
+    out.save(sp, optimize=True); json.dump(meta, open(ap, 'w'), separators=(',', ':'))
+    sh = os.path.join(ROOT, 'assets/sheets.json'); so = json.load(open(sh))
+    if 'furn3' not in so['order']: so['order'].insert(so['order'].index('furn2') + 1, 'furn3'); json.dump(so, open(sh, 'w'))
+    print('детальных кадров', len(frames), 'лист', out.size, '≈ %.0f МБ в памяти' % (out.width * out.height * 4 / 1e6))
+
 if __name__ == '__main__':
     if sys.argv[1] == 'preview': preview(sys.argv[2], sys.argv[3:] or None)
+    elif sys.argv[1] == 'hd': export_hd(sys.argv[2:] or None)
     else: export(sys.argv[2:] or None)

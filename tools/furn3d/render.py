@@ -9,6 +9,7 @@ from PIL import Image, ImageFilter
 
 HX, HY, ZP = 32, 16, 31          # px на метр: полклетки по x, по y, высота
 SS = 3                           # суперсэмплинг
+FLOOR_SHADOW = True              # мягкая тень мебели на полу (в игре не нужна — у каждого предмета своя)
 
 def nrm(v): v = np.asarray(v, float); return v / np.linalg.norm(v)
 LIGHT = nrm((.25, .6, 1.0))      # к свету: сверху, чуть с «южной» стороны, как раньше (+y грань светлее +x)
@@ -83,9 +84,19 @@ def render(model, cells=(1, 1)):
     d = np.array([1, 1, 32 / 31]); d = d / np.linalg.norm(d)
     T0 = (his[2] + .3) / d[2] + 2.0
     o = base + d * T0; rd = -d
+    boxes = [(np.asarray(lo, float), np.asarray(hi, float)) for _, (lo, hi), _ in model.parts]
     def scene(p):
-        ds = np.stack([f(p) for f, _, _ in model.parts], 0)
-        return ds.min(0), ds.argmin(0)
+        # отсечение по габаритам: точная форма считается только там, где её коробка ближе текущего минимума
+        # (форма лежит внутри своей коробки, значит расстояние до неё не меньше расстояния до коробки)
+        best = np.full(len(p), np.inf); arg = np.zeros(len(p), int)
+        for i in range(len(boxes)):
+            lo, hi = boxes[i]; f = model.parts[i][0]
+            q = np.maximum(np.maximum(lo - p, p - hi), 0); db = np.sqrt((q * q).sum(-1))
+            need = np.nonzero(db < best)[0]
+            if not len(need): continue
+            d = f(p[need]); better = d < best[need]
+            best[need[better]] = d[better]; arg[need[better]] = i
+        return best, arg
     P = o.reshape(-1, 3); R = np.broadcast_to(rd, P.shape)
     t = np.zeros(len(P)); hit = np.zeros(len(P), bool); alive = np.ones(len(P), bool)
     tmax = T0 + 0.05
@@ -134,7 +145,7 @@ def render(model, cells=(1, 1)):
     rgb = rgb ** (1 / 1.12)                    # чуть мягче контраст
     img[hi, :3] = np.clip(rgb, 0, 1); img[hi, 3] = 1
     # тень на полу
-    mi = np.nonzero(~hit)[0]; fp = base.reshape(-1, 3)[mi]
+    mi = np.nonzero(~hit)[0] if FLOOR_SHADOW else np.zeros(0, int); fp = base.reshape(-1, 3)[mi]
     inside = (fp[:, 0] > los[0] - 1.2) & (fp[:, 0] < his[0] + .3) & (fp[:, 1] > los[1] - 1.2) & (fp[:, 1] < his[1] + .3)
     mi, fp = mi[inside], fp[inside]
     if len(fp):

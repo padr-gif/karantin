@@ -1,0 +1,91 @@
+// ================= v30: детальная графика в духе Project Zomboid + счётчик FPS =================
+// Мебель рендерится из 3D-моделей втрое крупнее (лист furn3, кадры hd_<имя>, восьмое поле кадра — масштаб).
+// В детальном режиме такой кадр рисуется уменьшенным со сглаживанием: на телефоне, где мир растянут ~3×,
+// это один пиксель картинки на пиксель экрана — видны волокна дерева, ткань, скругления. В пиксельном режиме
+// всё как раньше. Детальный режим — это прежний «гладкий» (стены и полы тоньше) плюс эти кадры.
+
+// ---- кадры повышенной детализации ----
+const hdFrame = name => HDQ > 1 && ART.meta.frames['hd_' + name];
+const HDFOG = new Map();                       // затемнённые туманом копии: кадр в полном разрешении, LRU
+function hdFogged(fr, f, tint) {
+  const fq = Math.round(f * 20) / 20, k = fr[1] + ',' + fr[2] + '|' + fq + '|' + (tint || '');
+  let c = HDFOG.get(k);
+  if (c) { HDFOG.delete(k); HDFOG.set(k, c); return c; }
+  c = mkCanvas(fr[3], fr[4]); const g = c.getContext('2d');
+  g.drawImage(ART.imgs[fr[0]], fr[1], fr[2], fr[3], fr[4], 0, 0, fr[3], fr[4]);
+  g.globalCompositeOperation = 'source-atop';
+  if (tint) { g.fillStyle = tint; g.fillRect(0, 0, fr[3], fr[4]); }
+  g.fillStyle = `rgba(6,8,14,${(1 - fq) * .95})`; g.fillRect(0, 0, fr[3], fr[4]);
+  HDFOG.set(k, c);
+  if (HDFOG.size > 140) { let n = 30; for (const key of HDFOG.keys()) { HDFOG.delete(key); if (--n <= 0) break; } }
+  return c;
+}
+const objAt29 = objAt;
+objAt = function (id, name, wx, wy, f, alpha, offX, tint) {
+  const fr = hdFrame(name);
+  if (!fr) return objAt29(id, name, wx, wy, f, alpha, offX, tint);
+  const s = fr[7] || 1, src = f >= .99 && !tint ? null : hdFogged(fr, f, tint);
+  // к пикселю экрана, а не мира: иначе при движении кадр дрожит на долю мирового пикселя
+  const q = DPR || 1, x = Math.round((SX(wx, wy) - fr[5] / s + (offX || 0)) * q) / q, y = Math.round((SY(wx, wy, 0) - fr[6] / s) * q) / q;
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  if (alpha != null && alpha < 1) ctx.globalAlpha = alpha;
+  if (src) ctx.drawImage(src, x, y, fr[3] / s, fr[4] / s);
+  else ctx.drawImage(ART.imgs[fr[0]], fr[1], fr[2], fr[3], fr[4], x, y, fr[3] / s, fr[4] / s);
+  ctx.globalAlpha = 1; ctx.imageSmoothingEnabled = false;
+};
+const hdReset30 = hdReset;
+hdReset = function () { hdReset30(); HDFOG.clear(); };
+
+// ---- настройка: «Пиксели» или «Детальная»; детальная теперь по умолчанию ----
+SETTINGS_DEF.smooth = true;
+if (settings.gfxv !== 30) { settings.smooth = true; settings.gfxv = 30; try { localStorage.setItem('karantin-settings', JSON.stringify(settings)); } catch (e) {} }
+{ const n = $('sSmooth') && $('sSmooth').closest('.set');
+  if (n) { n.querySelector('small').textContent = 'Детальная — объёмная мебель и текстуры. Пиксели — как раньше, легче для слабых телефонов'; } }
+SETTINGS_DEF.fps = false;
+{ const row = $('sSmooth') && $('sSmooth').closest('.set'); if (row) { const n = row.cloneNode(true);
+  n.querySelector('b').textContent = 'Счётчик FPS'; n.querySelector('small').textContent = 'Кадры в секунду и память — для проверки скорости'; n.querySelector('.seg').id = 'sFps'; row.after(n); } }
+const openSettings29 = openSettings;
+openSettings = function (from) {
+  openSettings29(from);
+  seg($('sSmooth'), [[false, 'Пиксели'], [true, 'Детальная']], () => !!settings.smooth, v => { settings.smooth = v; saveSettings(); });
+  seg($('sFps'), [[false, 'Нет'], [true, 'Да']], () => !!settings.fps, v => { settings.fps = v; saveSettings(); });
+};
+
+// ---- счётчик FPS и памяти: включается в настройках или адресом ?fps ----
+const FPS = {el:null, frames:0, t0:0, worst:0, last:0, rt:0, ut:0, txt:''};
+const fpsOn = () => settings.fps || /[?&]fps\b/.test(location.search);
+function fpsEl() {
+  if (FPS.el) return FPS.el;
+  const d = document.createElement('div'); d.id = 'fpsBox';
+  d.style.cssText = 'position:fixed;left:50%;top:max(4px,env(safe-area-inset-top));transform:translateX(-50%);z-index:60;pointer-events:none;' +
+    'font:600 11px/1.35 "PT Mono",monospace;color:#e8e4d8;background:rgba(10,12,14,.72);padding:3px 8px;border-radius:6px;white-space:pre;text-align:center';
+  document.body.appendChild(d); return FPS.el = d;
+}
+const mbOf = c => c ? c.width * c.height * 4 / 1048576 : 0;
+function fpsMem() {
+  let spr = 0, cache = 0;
+  for (const n in ART.imgs) { const im = ART.imgs[n]; spr += (im.naturalWidth || im.width) * (im.naturalHeight || im.height) * 4 / 1048576; }
+  for (const ch of CHUNKS.values()) cache += mbOf(ch.c);
+  for (const s of SPR.values()) cache += mbOf(s.c);
+  for (const c of frameCache.values()) cache += mbOf(c.cv);
+  for (const c of HDFOG.values()) cache += mbOf(c);
+  const js = performance.memory ? performance.memory.usedJSHeapSize / 1048576 : 0;
+  return {spr, cache, js};
+}
+{ const timed = (fn, key) => function () { const t = performance.now(); try { return fn.apply(this, arguments); } finally { FPS[key] += performance.now() - t; } };
+  render = timed(render, 'rt'); update = timed(update, 'ut'); }
+function fpsTick() {
+  requestAnimationFrame(fpsTick);
+  if (!fpsOn()) { if (FPS.el) FPS.el.hidden = true; return; }
+  const t = performance.now(), el = fpsEl(); el.hidden = false;
+  if (FPS.last) FPS.worst = Math.max(FPS.worst, t - FPS.last);
+  FPS.last = t; FPS.frames++;
+  if (!FPS.t0) { FPS.t0 = t; FPS.rt = FPS.ut = 0; return; }
+  if (t - FPS.t0 >= 1000) {
+    const fps = FPS.frames * 1000 / (t - FPS.t0), m = fpsMem(), n = FPS.frames;
+    el.textContent = `FPS ${fps.toFixed(0)}  мин ${(1000 / Math.max(FPS.worst, 1)).toFixed(0)}  отрисовка ${(FPS.rt / n).toFixed(1)} мс  логика ${(FPS.ut / n).toFixed(1)} мс\n` +
+      `спрайты ${m.spr.toFixed(0)} МБ  кэш ${m.cache.toFixed(0)} МБ` + (m.js ? `  JS ${m.js.toFixed(0)} МБ` : '') + `  ${settings.smooth ? 'детальная ×' + HDQ : 'пиксели'}  разр. ${(resQ * 100).toFixed(0)}%`;
+    FPS.t0 = t; FPS.frames = 0; FPS.worst = 0; FPS.rt = FPS.ut = 0;
+  }
+}
+requestAnimationFrame(fpsTick);

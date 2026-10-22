@@ -133,11 +133,15 @@ check('спрайты новой мебели есть', await D("furns.every(f 
 check('большая мебель переживает сохранение', await D("(() => { const sig = () => furns.filter(f => f.big).map(f => f.tiles.join(',')).join('|'); const a = sig(); applySave(JSON.parse(JSON.stringify(serialize()))); return a === sig(); })()"));
 check('у большой мебели есть действие', await D("(() => { const f = furns.find(f => f.big && (f.type === 'bed' || f.type === 'sofa' || f.type === 'wardrobe')); if (!f) return true; const t = f.tiles[0]; P.x = f.r[0] - .35; P.y = (f.r[1] + f.r[3]) / 2; const a = getAction(); return !!a; })()"));
 
-console.log('Гладкая графика (проба)');
+console.log('Детальная графика');
 await fresh();
 await D("settings.smooth = true; applySettings();"); await sleep(1500);
-check('гладкий режим рисует мир без ошибок', await D("HDQ > 1 && CHUNKS.size > 0 && [...CHUNKS.values()].every(c => c.q === HDQ)"), await D("[HDQ, CHUNKS.size]"));
-check('мебель рисуется фигурами', await D("[...SPR.keys()].some(k => /^F\\d+v$/.test(k))"));
+check('детальный режим рисует мир без ошибок', await D("HDQ > 1 && CHUNKS.size > 0 && [...CHUNKS.values()].every(c => c.q === HDQ)"), await D("[HDQ, CHUNKS.size]"));
+check('у мебели в доме есть детальные кадры', await D("furns.filter(f => !f.gone && !f.compact).every(f => ART.meta.frames['hd_' + furnName(f)])"), await D("furns.filter(f => !f.gone && !f.compact && !ART.meta.frames['hd_' + furnName(f)]).map(f => furnName(f)).slice(0, 5)"));
+check('лист детальной мебели загружен', await D("!!ART.imgs.furn3 && ART.imgs.furn3.naturalWidth === 4096"));
+await D("settings.fps = true"); await sleep(1300);
+check('счётчик FPS показывает кадры и память', await D("/FPS \\d+[\\s\\S]*спрайты \\d+ МБ/.test(document.getElementById('fpsBox').textContent)"), await D("document.getElementById('fpsBox').textContent"));
+await D("settings.fps = false");
 await D("settings.smooth = false; applySettings();"); await sleep(500);
 check('и возвращается к пикселям', await D("HDQ === 1 && [...CHUNKS.values()].every(c => c.q === 1)"));
 
