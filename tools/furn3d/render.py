@@ -143,6 +143,10 @@ def render(model, cells=(1, 1)):
     lum = .30 * ao * (.55 + .45 * sky) + .78 * dif * (.6 + .4 * ao)
     rgb = col * lum[:, None] + spec[:, None] * sh[:, None] * .8
     rgb = rgb ** (1 / 1.12)                    # чуть мягче контраст
+    for i, (_, _, m) in enumerate(model.parts):  # светящиеся материалы (лампа фонаря, фары) — без теней
+        if MAT[m].get('emit'):
+            sel = mid == i
+            if sel.any(): rgb[sel] = col[sel] * (.85 + .15 * np.clip(n[sel] @ VIEW, 0, 1))[:, None]
     img[hi, :3] = np.clip(rgb, 0, 1); img[hi, 3] = 1
     # тень на полу
     mi = np.nonzero(~hit)[0] if FLOOR_SHADOW else np.zeros(0, int); fp = base.reshape(-1, 3)[mi]
