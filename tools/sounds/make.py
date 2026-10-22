@@ -42,6 +42,13 @@ SET = {
   'zdeath': [(C, 'sound/CC-Sounds/mon_death/zombie_death/zombie_death_%d.ogg' % n, au, lic, FS + 'people/' + au + '/') for n, au, lic in
              [(1, 'missozzy', 'CC BY'), (2, 'LittleRobotSoundFactory', 'CC BY'), (3, 'bananplyte', 'CC0'), (4, 'tonsil5', 'CC0')]],
   'bite': many(C, 'sound/CC-Sounds/mon_bite/bite_hit/bite_hit_{}.ogg', 5, 'MrPokephile', 'CC0', FS + 'people/MrPokephile/'),
+  'glass': [(C, 'sound/CC-Sounds/smash_success/' + f, au, lic, FS + 'people/' + au + '/') for f, au, lic in
+            [('glass/smash_success_glass.ogg', 'InspectorJ', 'CC BY 4.0'), ('glass/smash_success_glass_1.ogg', 'chewiesmissus', 'CC0'),
+             ('glass/smash_success_glass_2.ogg', 'pfranzen', 'CC BY 4.0'), ('window/window_smash_success.ogg', 'cmusounddesign', 'CC BY')]],
+  'knock': [(C, 'sound/CC-Sounds/smash_fail/door_wood/door_smash_fail_%d.ogg' % n, au, 'CC0', FS + 'people/' + au + '/') for n, au in
+            [(1, 'FlatHill'), (2, 'eardeer'), (3, 'eardeer'), (4, 'eardeer'), (5, 'eardeer')]],
+  'woodbreak': [(C, 'sound/CC-Sounds/smash_success/door_wood/door_smash_success.ogg', 'qubodup', 'CC0', 'https://opengameart.org/users/qubodup'),
+                (C, 'sound/CC-Sounds/smash_success/window/wood_smash_success.ogg', 'egomassive', 'CC0', FS + 'people/egomassive/')],
   # Kenney (CC0): мелкие звуки вещей
   'cloth': many(K, 'kenney_rpg-audio/cloth{}.ogg', 4, 'Kenney', 'CC0', 'https://kenney.nl/assets/rpg-audio'),
   'handle': [(K, 'kenney_rpg-audio/handleSmallLeather.ogg', 'Kenney', 'CC0', 'https://kenney.nl/assets/rpg-audio'), (K, 'kenney_rpg-audio/handleSmallLeather2.ogg', 'Kenney', 'CC0', 'https://kenney.nl/assets/rpg-audio')],

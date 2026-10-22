@@ -151,6 +151,25 @@ await D("SFX.init()"); await sleep(1500);
 check('звуки шагов, дверей и мебели играют без ошибок', await D("(() => { SFX.step(true, false); SFX.step(false, true); SFX.door(true); SFX.door(false); SFX.rustle(); SFX.pickup(); SFX.equip(); for (const t of ['wardrobe', 'dresser', 'locker', 'fridge', 'car', 'bin']) { SFX.contOpen(t); SFX.contClose(t); SFX.rummage(t); } return true; })()"));
 check('поверхность под ногами определяется', await D("['wood', 'carpet', 'tile', 'bare', 'concrete', 'grass', 'snow'].includes(surfaceAt(P.x, P.y))"));
 
+console.log('Перелезть через мебель');
+await fresh();
+{ const r = await D(`(() => {
+  const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  for (const f of furns) { if (f.gone || !f.r || !LOW_FURN.has(f.type)) continue;
+    for (const [dx, dy] of dirs) { const cx = (f.r[0] + f.r[2]) / 2, cy = (f.r[1] + f.r[3]) / 2;
+      const sx = dx ? (dx > 0 ? f.r[0] - P.r - .05 : f.r[2] + P.r + .05) : cx, sy = dy ? (dy > 0 ? f.r[1] - P.r - .05 : f.r[3] + P.r + .05) : cy;
+      if (blocked(sx, sy, P.r)) continue; P.x = sx; P.y = sy; P.act = null; const pl = climbPlan(dx, dy); if (!pl || !pl.f) continue;
+      startClimb(pl); for (let k = 0; k < 120 && P.act; k++) update(1 / 60);
+      return {type:f.type, ok:!P.act && Math.hypot(P.x - pl.tx, P.y - pl.ty) < .05 && !blocked(P.x, P.y, P.r * .9)}; } }
+  return {none:true}; })()`);
+  check('через низкую мебель перелезаешь', r.ok, r); }
+{ const r = await D(`(() => { for (const f of furns) { if (f.gone || !f.r || f.type !== 'wardrobe') continue;
+    const cx = (f.r[0] + f.r[2]) / 2, cy = (f.r[1] + f.r[3]) / 2;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const sx = dx ? (dx > 0 ? f.r[0] - P.r - .05 : f.r[2] + P.r + .05) : cx, sy = dy ? (dy > 0 ? f.r[1] - P.r - .05 : f.r[3] + P.r + .05) : cy;
+      if (blocked(sx, sy, P.r)) continue; P.x = sx; P.y = sy; const pl = climbPlan(dx, dy); if (pl) return !pl.f; } }
+  return true; })()`);
+  check('через шкаф не перелезть', r); }
+
 console.log('Детальная графика');
 await fresh();
 await D("settings.smooth = true; applySettings();"); await sleep(1500);

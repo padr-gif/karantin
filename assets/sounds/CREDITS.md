@@ -76,6 +76,17 @@
 | bite_2.mp3 | MrPokephile | CC0 | https://freesound.org/people/MrPokephile/ |
 | bite_3.mp3 | MrPokephile | CC0 | https://freesound.org/people/MrPokephile/ |
 | bite_4.mp3 | MrPokephile | CC0 | https://freesound.org/people/MrPokephile/ |
+| glass_0.mp3 | InspectorJ | CC BY 4.0 | https://freesound.org/people/InspectorJ/ |
+| glass_1.mp3 | chewiesmissus | CC0 | https://freesound.org/people/chewiesmissus/ |
+| glass_2.mp3 | pfranzen | CC BY 4.0 | https://freesound.org/people/pfranzen/ |
+| glass_3.mp3 | cmusounddesign | CC BY | https://freesound.org/people/cmusounddesign/ |
+| knock_0.mp3 | FlatHill | CC0 | https://freesound.org/people/FlatHill/ |
+| knock_1.mp3 | eardeer | CC0 | https://freesound.org/people/eardeer/ |
+| knock_2.mp3 | eardeer | CC0 | https://freesound.org/people/eardeer/ |
+| knock_3.mp3 | eardeer | CC0 | https://freesound.org/people/eardeer/ |
+| knock_4.mp3 | eardeer | CC0 | https://freesound.org/people/eardeer/ |
+| woodbreak_0.mp3 | qubodup | CC0 | https://opengameart.org/users/qubodup |
+| woodbreak_1.mp3 | egomassive | CC0 | https://freesound.org/people/egomassive/ |
 | cloth_0.mp3 | Kenney | CC0 | https://kenney.nl/assets/rpg-audio |
 | cloth_1.mp3 | Kenney | CC0 | https://kenney.nl/assets/rpg-audio |
 | cloth_2.mp3 | Kenney | CC0 | https://kenney.nl/assets/rpg-audio |

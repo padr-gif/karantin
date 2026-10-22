@@ -167,3 +167,9 @@ SFX.caw = function () {};
 SFX.dog = function () {};
 const scream35 = SFX.scream;
 SFX.scream = function () { if (!smp('groan', .25, 1.45, 0, 1400)) scream35(); };
+
+// ---- стекло, стук в дверь, ломающееся дерево — записи вместо синтеза («звенело, как опыт») ----
+const glass35 = SFX.glass, knock35 = SFX.knock, wood35 = SFX.wood;
+SFX.glass = function (x, y) { const v = zNear(x, y); if (v < .03) return; if (!smp('glass', .6 * v, 1, 0, zLp(v) + 800)) glass35(x, y); };
+SFX.knock = function (x, y) { if (!SFX.ok('knock35', 160)) return; const v = zNear(x, y); if (v < .03) return; if (!smp('knock', .5 * v, .95, 0, zLp(v))) knock35(x, y); };
+SFX.wood = function (x, y) { const v = zNear(x, y); if (v < .03) return; if (!smp('woodbreak', .55 * v, 1, 0, zLp(v) + 600)) wood35(x, y); };
