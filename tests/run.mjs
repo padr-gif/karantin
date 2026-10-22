@@ -84,7 +84,7 @@ if (W) {
   await D(`${setup} P.x = ${W.inn[0]}; P.y = ${W.inn[1]}; P.cloth.hands = mkItem('gloves'); P.inv = P.inv.filter(i => i.id !== 'glass');
     winAction({kind:'clearglass', o:{i:${W.i}, x:${W.x}, y:${W.y}}}); const a = P.act; P.act = null; finishAct(a);`);
   check('осколки убраны и лежат в рюкзаке', await D(`obs[${W.i}].cleared && countItem('glass') >= 1`));
-  check('в перчатках стекло не режет', await D(`P.cloth.hands = mkItem('gloves'); for (let k = 0; k < 10; k++) glassCut(1); wounds().length === 0`), await D('wounds().length'));
+  check('в перчатках стекло не режет', await D(`P.cloth.hands = mkItem('gloves'); delete P.cloth.hands.cd; for (let k = 0; k < 10; k++) glassCut(1); wounds().length === 0`), await D('wounds().length'));
   check('без перчаток режет', await D(`P.cloth.hands = null; for (let k = 0; k < 5; k++) glassCut(1); wounds().length > 0`));
   check('через очищенную раму лезешь без порезов', await D(`P.wounds = []; for (let k = 0; k < 30; k++) finishVault({br:true, o:{i:${W.i}}, tx:${W.out[0]}, ty:${W.out[1]}}); wounds().length === 0`));
   check('очищенная рама и перчатки переживают сохранение', await D(`P.cloth.hands = mkItem('gloves'); applySave(JSON.parse(JSON.stringify(serialize()))); obs[${W.i}].cleared === true && P.cloth.hands && P.cloth.hands.id === 'gloves'`));
