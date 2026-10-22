@@ -28,6 +28,31 @@ def cone(a, b, ra, rb):
         pa = p - a; t = np.clip((pa @ ba) / L2, 0, 1)
         return np.linalg.norm(pa - t[:, None] * ba, axis=-1) - (ra + (rb - ra) * t)
     r = max(ra, rb); return f, (np.minimum(a, b) - r, np.maximum(a, b) + r)
+def profile(knots, smooth=4):
+    """профиль толщины вдоль конечности: [(u, r), ...], u от 0 до 1; сглажен, чтобы не было изломов в свете"""
+    u = np.linspace(0, 1, 401); r = np.interp(u, *zip(*knots))
+    if smooth:
+        k = np.exp(-np.linspace(-2, 2, 4 * smooth + 1) ** 2); k /= k.sum()
+        rp = np.pad(r, 2 * smooth, mode='edge'); r = np.convolve(rp, k, 'valid')
+    return lambda t: np.interp(t, u, r)
+def tube(points, R, k=.015):
+    """гладкая конечность по ломаной (бедро-колено-щиколотка) с толщиной R(u): без шаров на суставах"""
+    pts = np.array(points, float)
+    for _ in range(3):                                 # Чайкин: изгиб в колене/локте плавный, без светлой полосы на сгибе
+        q = [pts[0]]
+        for i in range(len(pts) - 1): q += [.75 * pts[i] + .25 * pts[i + 1], .25 * pts[i] + .75 * pts[i + 1]]
+        pts = np.array(q + [pts[-1]])
+    seg = pts[1:] - pts[:-1]; ln = np.linalg.norm(seg, axis=-1)
+    cum = np.concatenate([[0], np.cumsum(ln)]); tot = cum[-1]
+    def f(p):
+        d = None
+        for i in range(len(seg)):
+            pa = p - pts[i]; t = np.clip((pa @ seg[i]) / (ln[i] ** 2), 0, 1)
+            di = np.linalg.norm(pa - t[:, None] * seg[i], axis=-1) - R((cum[i] + t * ln[i]) / tot)
+            d = di if d is None else np.minimum(d, di)   # кривая гладкая, толщина на стыках совпадает: мягкое слияние не нужно
+        return d
+    rm = R(np.linspace(0, 1, 50)).max()
+    return f, (pts.min(0) - rm, pts.max(0) + rm)
 def rbox(c, h, r=0.0):
     c, h = np.array(c, float), np.array(h, float)
     def f(p):
@@ -67,30 +92,37 @@ def human(o):
     def P(x, y, z): return (x * S, y * S, z * S)
     sh = .19 if fem else .215                       # полуширина плеч
     hip = .085 if fem else .09
-    # ноги
+    # ноги: одна гладкая трубка от таза до щиколотки, колени чуть согнуты
+    fk = 1.06 if fem else 1.0
+    LEG = profile([(0, .1 * fk), (.1, .094 * fk), (.28, .08), (.43, .062), (.5, .055), (.56, .057), (.64, .061),
+                   (.74, .055), (.88, .04), (1, .035)])
+    if o.get('bottom', 'shorts') == 'pants':            # брюки: ткань висит свободно, не повторяет колено и икру
+        LEG = profile([(0, .102 * fk), (.15, .093 * fk), (.4, .074), (.6, .064), (.85, .058), (.97, .054), (1, .05)], 12)
     for sd in (1, -1):
-        hx, hy = 0, sd * hip
-        knee, ank = P(.015, sd * (hip + .01), .50), P(-.01, sd * (hip + .02), .085)
-        m.add(cone(P(hx, hy, .9), knee, (.088 if not fem else .094) * S, .058 * S), 'legs', .03)
-        m.add(ell(P(.0, sd * (hip + .005), .72), (.076 * S, .07 * S, .15 * S)), 'legs', .03)        # бедро
-        m.add(cone(knee, ank, .058 * S, .036 * S), 'shin', .06)
-        m.add(ell(P(-.025, sd * (hip + .018), .37), (.05 * S, .046 * S, .11 * S)), 'shin', .03)   # икра
-        m.add(rbox(P(.045, sd * (hip + .02), .045), (.105 * S, .048 * S, .045 * S), .03 * S), 'shoe', .03)
+        hipj, knee, ank = P(0, sd * hip, .93), P(.022, sd * (hip + .006), .5), P(-.012, sd * (hip + .016), .085)
+        m.add(tube([hipj, knee, ank], lambda u, R=LEG: R(u) * S), 'legs', .03)
+        if o.get('bottom', 'shorts') == 'shorts':        # штанина шорт: ткань чуть шире ноги, видна кромка
+            t = (.93 - .6) / (.93 - .5); hem = tuple(np.array(hipj) + (np.array(knee) - np.array(hipj)) * t)
+            m.add(tube([hipj, hem], lambda u, R=LEG: (R(u * t * .5) + .009) * S), 'shorts', .004)
+        m.add(rbox(P(.045, sd * (hip + .022), .045), (.105 * S, .047 * S, .045 * S), .03 * S), 'shoe', .025)
     # таз и торс
-    m.add(ell(P(0, 0, .93), (.115 * S, (.175 if fem else .16) * S, .12 * S)), 'pelvis')
-    m.add(ell(P(.005, 0, 1.11), (.11 * S, (.145 if fem else .165) * S, .17 * S)), 'belly', .05)
-    m.add(ell(P(.0, 0, 1.31), (.125 * S, (.17 if fem else .2) * S, .16 * S)), 'chest', .05)
+    m.add(ell(P(0, 0, .93), (.115 * S, (.175 if fem else .16) * S, .12 * S)), 'pelvis', .05)
+    m.add(ell(P(.005, 0, 1.11), (.11 * S, (.145 if fem else .165) * S, .17 * S)), 'belly', .08)
+    m.add(ell(P(.0, 0, 1.31), (.125 * S, (.17 if fem else .2) * S, .16 * S)), 'chest', .09)
     if fem:
         for sd in (1, -1): m.add(ell(P(.085, sd * .068, 1.29), (.06 * S, .06 * S, .06 * S)), 'chest', .03)
-    for sd in (1, -1): m.add(ell(P(-.01, sd * (sh - .02), 1.40), (.062 * S, .066 * S, .06 * S)), 'delt', .035)
-    # руки (висят вдоль тела, чуть в стороны)
+    # трапеция: покатые плечи от шеи к плечу
+    for sd in (1, -1): m.add(cone(P(-.03, sd * .03, 1.49), P(-.015, sd * (sh - .045), 1.415), .05 * S, .046 * S), 'trap', .05)
+    # руки: одна трубка плечо-локоть-запястье, локоть чуть согнут, кисть слита с предплечьем
+    fa = .88 if fem else 1.0
+    ARM = profile([(0, .064), (.12, .059), (.3, .051), (.44, .044), (.52, .041), (.6, .044), (.7, .042),
+                   (.9, .03), (1, .027)], 8)
     for sd in (1, -1):
-        s0, el, wr = P(-.01, sd * sh, 1.40), P(-.03, sd * (sh + .035), 1.115), P(.0, sd * (sh + .045), .855)
-        m.add(cone(s0, el, (.054 if not fem else .048) * S, .041 * S), 'uarm', .03)
-        m.add(ell(P(.0, sd * (sh + .02), 1.25), (.046 * S, .042 * S, .09 * S)), 'uarm', .03)          # бицепс
-        m.add(cone(el, wr, (.043 if not fem else .038) * S, .029 * S), 'farm', .045)
-        m.add(ell(P(-.01, sd * (sh + .04), 1.04), (.038 * S, .035 * S, .085 * S)), 'farm', .025)
-        m.add(ell(P(.015, sd * (sh + .048), .79), (.032 * S, .022 * S, .062 * S)), 'hand', .015)
+        s0, el, wr = P(-.012, sd * (sh - .012), 1.40), P(-.038, sd * (sh + .03), 1.125), P(.012, sd * (sh + .04), .87)
+        m.add(tube([s0, el, wr], lambda u, R=ARM: R(u) * fa * S), 'arm', .05)
+        hand = ell(P(.02, sd * (sh + .043), .8), (.034 * S, .024 * S, .066 * S))
+        m.add(hand, 'hand', .03)
+        m.add(ell(P(.045, sd * (sh + .028), .83), (.014 * S, .014 * S, .03 * S)), 'hand', .015)   # большой палец
     # шея и голова
     m.add(cone(P(-.005, 0, 1.43), P(.0, 0, 1.56), .052 * S, .047 * S), 'neck', .03)
     hz = 1.665
@@ -134,7 +166,7 @@ def human(o):
         piv = np.array([0, 0, 1.56 * S])
         m.parts[i] = ((lambda f: lambda p: f((p - piv) / HS + piv) * HS)(f), bb, nm, k * HS)
     if o.get('belt'):
-        m.add(minus(ell(P(.0, 0, .985), (.125 * S, (.18 if fem else .165) * S, .028 * S)), ell(P(0, 0, .985), (.06, .06, .06))), 'belt', .0)
+        m.add(minus(ell(P(.004, 0, .99), (.11 * S, (.163 if fem else .152) * S, .02 * S)), ell(P(0, 0, .99), (.06, .06, .06))), 'belt', .006)
     return m
 
 # ---------- материалы: какая часть тела в какой цвет при данной одежде ----------
@@ -145,18 +177,16 @@ def materials(o, part, p, S):
         piv = np.array([0, 0, 1.56 * S]); p = (p - piv) / 1.1 + piv     # голова отмасштабирована в human()
     z, x, y = p[:, 2] / S, p[:, 0] / S, p[:, 1] / S
     n = len(p); out = np.full(n, 'skin', dtype=object)
-    if part in ('legs',):
-        out[:] = 'pants' if bottom == 'pants' or z.mean() > 0 else 'skin'
-        if bottom == 'shorts': out[z > .62] = 'pants'; out[z <= .62] = 'skin'
-        if bottom == 'pants': out[:] = 'pants'
-    elif part == 'shin':
-        out[:] = 'pants' if bottom == 'pants' else 'skin'
-        if bottom == 'pants': out[z < .1] = 'skin'
+    if part == 'legs':
+        if bottom == 'shorts': out[z > .6] = 'pants'
+        if bottom == 'pants': out[:] = 'pants'; out[z < .1] = 'skin'
+    elif part == 'shorts':
+        out[:] = 'pants'
     elif part == 'shoe':
         out[:] = 'shoe'; out[z < .018] = 'sole'
     elif part == 'pelvis':
         out[:] = 'pants'
-    elif part in ('belly', 'chest'):
+    elif part in ('belly', 'chest', 'trap'):
         out[:] = 'shirt'
         if top == 'tank':
             neck = (z > 1.40) & (x > -.02) & (np.abs(y) < .085 + (z - 1.4) * .4)
@@ -166,7 +196,7 @@ def materials(o, part, p, S):
             out[(z > 1.425) & (np.abs(y) < .07) & (x > 0)] = 'skin'
     elif part == 'delt':
         out[:] = 'skin' if top == 'tank' else 'shirt'
-    elif part == 'uarm':
+    elif part == 'arm':
         if top == 'tee': out[z > 1.24] = 'shirt'
     elif part in ('hair', 'beard', 'glass', 'belt', 'nose'):
         out[:] = {'nose': 'skin'}.get(part, part)
@@ -259,14 +289,14 @@ def render(o, face, K=2):
         if not sel.any(): continue
         c = np.broadcast_to(col, (sel.sum(), 3)).copy(); L = lum[sel]
         if tex == 'skin':
-            nz = noise(ql[sel] / S, 16, 1.7)
-            c *= (1 - .1 * np.clip(nz, -1, 1))[:, None]
+            nz = noise(ql[sel] / S, 9, 1.7)
+            c *= (1 - .05 * np.clip(nz, -1, 1))[:, None]
             # тени тёплые, рыжевато-красные, как у Zomboid
             warm = np.clip(1 - L, 0, 1)[:, None]
             c = c * (1 - warm * .6) + c * np.array([1.0, .55, .36]) * warm * .6
         elif tex == 'cloth':
-            nz = noise(ql[sel] / S, 22, 3.1)
-            c *= (1 - .06 * np.clip(nz, -1, 1))[:, None]
+            nz = noise(ql[sel] / S, 12, 3.1)
+            c *= (1 - .035 * np.clip(nz, -1, 1))[:, None]
         elif tex == 'hair':
             q = ql[sel] / S
             st = np.sin(q[:, 1] * 160 + np.sin(q[:, 2] * 40) * 2) * .5 + np.sin(q[:, 2] * 90 + q[:, 0] * 50) * .3
