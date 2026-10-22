@@ -151,3 +151,19 @@ closePanel = function () {
   closePanel35();
   if (src && src.type && src.type !== 'pile') SFX.contClose(src.type);
 };
+
+// ---- мертвецы: настоящие стоны вместо синтеза (синтез «голоса» жужжал, как комар) ----
+const zNear = (x, y) => !P ? 1 : Math.max(0, 1 - Math.hypot(x - P.x, y - P.y) / 16) ** 1.4;
+const zRate = z => (z.pal && z.pal.b === 'f' ? 1.15 : z.pal && z.pal.b === 'h' ? .82 : 1) * (.92 + ((z.seed || 0) * 7 % 1) * .16);
+const zLp = v => 900 + 2600 * v;                                                 // дальний стон глуше
+const moan35 = SFX.moan, growl35 = SFX.growl, shriek35 = SFX.shriek, bite35 = SFX.bite, splat35 = SFX.splat;
+SFX.moan = function (z) { const v = zNear(z.x, z.y); if (v < .05 || !SFX.ok('moan35', 900)) return; if (!smp('groan', .42 * v, zRate(z) * .9, 0, zLp(v))) moan35(z); };
+SFX.growl = function (z) { const v = zNear(z.x, z.y); if (!SFX.ok('growl35', 350)) return; if (!smp('groan', .55 * Math.max(.3, v), zRate(z) * 1.08, 0, zLp(v))) growl35(z); };
+SFX.shriek = function (z) { const v = zNear(z.x, z.y); if (!SFX.ok('shriek35', 900)) return; if (!smp('groan', .6 * Math.max(.3, v), zRate(z) * 1.3, 0, zLp(v))) shriek35(z); };
+SFX.bite = function () { if (!smp('bite', .5)) return bite35(); smp('groan', .4, 1.1, .03); };
+SFX.splat = function (x, y) { splat35(x, y); const v = zNear(x, y); if (v > .05) smp('zdeath', .35 * v, .95, .05, zLp(v)); };
+// синтетические «голоса» на фоне (вороны, собаки) звучали как насекомые — без записей лучше тишина
+SFX.caw = function () {};
+SFX.dog = function () {};
+const scream35 = SFX.scream;
+SFX.scream = function () { if (!smp('groan', .25, 1.45, 0, 1400)) scream35(); };

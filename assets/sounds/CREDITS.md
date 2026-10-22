@@ -62,6 +62,20 @@
 | chest_close_0.mp3 | sofar (Minetest), из записей Sevin7, Percy Duke, kingsamas, bulbastre, Yoyodaman234 | CC BY 3.0 | https://github.com/minetest/minetest_game |
 | window_open_0.mp3 | xdrav | CC0 | https://freesound.org/people/xdrav/ |
 | window_close_0.mp3 | cabled_mess | CC0 | https://freesound.org/people/cabled_mess/ |
+| groan_0.mp3 | FuzzyTuesday | CC0 | https://freesound.org/people/FuzzyTuesday/ |
+| groan_1.mp3 | FuzzyTuesday | CC0 | https://freesound.org/people/FuzzyTuesday/ |
+| groan_2.mp3 | -sihiL | CC BY 3.0 | https://freesound.org/people/-sihiL/ |
+| groan_3.mp3 | -sihiL | CC BY 3.0 | https://freesound.org/people/-sihiL/ |
+| groan_4.mp3 | mazlyn | CC0 | https://freesound.org/people/mazlyn/ |
+| zdeath_0.mp3 | missozzy | CC BY | https://freesound.org/people/missozzy/ |
+| zdeath_1.mp3 | LittleRobotSoundFactory | CC BY | https://freesound.org/people/LittleRobotSoundFactory/ |
+| zdeath_2.mp3 | bananplyte | CC0 | https://freesound.org/people/bananplyte/ |
+| zdeath_3.mp3 | tonsil5 | CC0 | https://freesound.org/people/tonsil5/ |
+| bite_0.mp3 | MrPokephile | CC0 | https://freesound.org/people/MrPokephile/ |
+| bite_1.mp3 | MrPokephile | CC0 | https://freesound.org/people/MrPokephile/ |
+| bite_2.mp3 | MrPokephile | CC0 | https://freesound.org/people/MrPokephile/ |
+| bite_3.mp3 | MrPokephile | CC0 | https://freesound.org/people/MrPokephile/ |
+| bite_4.mp3 | MrPokephile | CC0 | https://freesound.org/people/MrPokephile/ |
 | cloth_0.mp3 | Kenney | CC0 | https://kenney.nl/assets/rpg-audio |
 | cloth_1.mp3 | Kenney | CC0 | https://kenney.nl/assets/rpg-audio |
 | cloth_2.mp3 | Kenney | CC0 | https://kenney.nl/assets/rpg-audio |

@@ -37,6 +37,11 @@ SET = {
   'chest_close': [(M, 'mods/default/sounds/default_chest_close.ogg', 'sofar (Minetest), из записей Sevin7, Percy Duke, kingsamas, bulbastre, Yoyodaman234', 'CC BY 3.0', 'https://github.com/minetest/minetest_game')],
   'window_open': [(C, 'sound/CC-Sounds/open_door/window/open_window.ogg', 'xdrav', 'CC0', FS + 'people/xdrav/')],
   'window_close': [(C, 'sound/CC-Sounds/close_door/window/close_window.ogg', 'cabled_mess', 'CC0', FS + 'people/cabled_mess/')],
+  'groan': [(C, 'sound/CC-Sounds/speech/zombie/speech_zombie_groan%s.ogg' % sfx, au, lic, FS + 'people/' + au + '/') for sfx, au, lic in
+            [('', 'FuzzyTuesday', 'CC0'), ('_1', 'FuzzyTuesday', 'CC0'), ('_2', '-sihiL', 'CC BY 3.0'), ('_3', '-sihiL', 'CC BY 3.0'), ('_4', 'mazlyn', 'CC0')]],
+  'zdeath': [(C, 'sound/CC-Sounds/mon_death/zombie_death/zombie_death_%d.ogg' % n, au, lic, FS + 'people/' + au + '/') for n, au, lic in
+             [(1, 'missozzy', 'CC BY'), (2, 'LittleRobotSoundFactory', 'CC BY'), (3, 'bananplyte', 'CC0'), (4, 'tonsil5', 'CC0')]],
+  'bite': many(C, 'sound/CC-Sounds/mon_bite/bite_hit/bite_hit_{}.ogg', 5, 'MrPokephile', 'CC0', FS + 'people/MrPokephile/'),
   # Kenney (CC0): мелкие звуки вещей
   'cloth': many(K, 'kenney_rpg-audio/cloth{}.ogg', 4, 'Kenney', 'CC0', 'https://kenney.nl/assets/rpg-audio'),
   'handle': [(K, 'kenney_rpg-audio/handleSmallLeather.ogg', 'Kenney', 'CC0', 'https://kenney.nl/assets/rpg-audio'), (K, 'kenney_rpg-audio/handleSmallLeather2.ogg', 'Kenney', 'CC0', 'https://kenney.nl/assets/rpg-audio')],
