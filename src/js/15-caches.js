@@ -105,6 +105,7 @@ function drawGroundRange(gx0, gy0, gx1, gy1) {
     }
     groundT(0);
     for (const r of Hs.rugs) {
+      if (HDQ > 1) { ctx.imageSmoothingEnabled = true; ctx.drawImage(rugTex(r[4]), r[0], r[1], r[2] - r[0], r[3] - r[1]); continue; }   // детальный режим: ковёр с каймой
       ctx.fillStyle = C(r[4], 1); ctx.fillRect(r[0], r[1], r[2] - r[0], r[3] - r[1]);
       ctx.fillStyle = C(r[4], .78); ctx.fillRect(r[0] + .12, r[1] + .12, r[2] - r[0] - .24, r[3] - r[1] - .24);
       ctx.fillStyle = C(r[4], 1.08); ctx.fillRect(r[0] + .2, r[1] + .2, r[2] - r[0] - .4, r[3] - r[1] - .4);

@@ -9,7 +9,7 @@ from PIL import Image
 
 import os
 # детальные листы (рендер, а не пиксель-арт) жмём с небольшими потерями: на глаз не отличить, а файл в разы легче
-LOSSY = {'furn3'}
+LOSSY = {'furn3', 'tiles3'}
 args = sys.argv[1:]
 for src, dst in zip(args[::2], args[1::2]):
     im = Image.open(src).convert('RGBA')
