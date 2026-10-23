@@ -50,6 +50,13 @@ SET = {
   'woodbreak': [(C, 'sound/CC-Sounds/smash_success/door_wood/door_smash_success.ogg', 'qubodup', 'CC0', 'https://opengameart.org/users/qubodup'),
                 (C, 'sound/CC-Sounds/smash_success/window/wood_smash_success.ogg', 'egomassive', 'CC0', FS + 'people/egomassive/')],
   'caralarm': [(C, 'sound/CC-Sounds/vehicle/car_alarm/car_alarm.ogg', 'InspectorJ', 'CC BY 4.0', FS + 'people/InspectorJ/sounds/422051/')],
+  'swing': many(C, 'sound/CC-Sounds/melee_swing/small_bash/small_bash_swing_{}.ogg', 7, 'Danjocross', 'CC0', FS + 'people/Danjocross/'),
+  'swingb': [(C, 'sound/CC-Sounds/melee_swing/big_bash/big_bash_swing_1.ogg', 'orangesheepdog', 'CC0', FS + 'people/orangesheepdog/')],
+  'swingu': many(C, 'sound/CC-Sounds/melee_swing/default/unarmed_swing_{}.ogg', 5, 'kwahmah_02', 'CC BY 3.0', FS + 'people/kwahmah_02/'),
+  'hitw': many(C, 'sound/CC-Sounds/melee_hit_flesh/small_bash/small_bash_flesh_{}.ogg', 4, 'mateusboga', 'CC0', FS + 'people/mateusboga/'),
+  'hitu': many(C, 'sound/CC-Sounds/melee_hit_flesh/default/unarmed_hit_flesh_{}.ogg', 5, 'deleted_user_7146007', 'CC0', 'https://freesound.org/'),
+  'breathl': [(C, PL + 'fatigue/fatigue_low.ogg', 'klankbeeld', 'CC BY 4.0', FS + 'people/klankbeeld/')],
+  'breathh': [(C, PL + 'fatigue/fatigue_high.ogg', 'klankbeeld', 'CC BY 4.0', FS + 'people/klankbeeld/')],
   # Kenney (CC0): мелкие звуки вещей
   'cloth': many(K, 'kenney_rpg-audio/cloth{}.ogg', 4, 'Kenney', 'CC0', 'https://kenney.nl/assets/rpg-audio'),
   'handle': [(K, 'kenney_rpg-audio/handleSmallLeather.ogg', 'Kenney', 'CC0', 'https://kenney.nl/assets/rpg-audio'), (K, 'kenney_rpg-audio/handleSmallLeather2.ogg', 'Kenney', 'CC0', 'https://kenney.nl/assets/rpg-audio')],

@@ -88,6 +88,30 @@
 | woodbreak_0.mp3 | qubodup | CC0 | https://opengameart.org/users/qubodup |
 | woodbreak_1.mp3 | egomassive | CC0 | https://freesound.org/people/egomassive/ |
 | caralarm_0.mp3 | InspectorJ | CC BY 4.0 | https://freesound.org/people/InspectorJ/sounds/422051/ |
+| swing_0.mp3 | Danjocross | CC0 | https://freesound.org/people/Danjocross/ |
+| swing_1.mp3 | Danjocross | CC0 | https://freesound.org/people/Danjocross/ |
+| swing_2.mp3 | Danjocross | CC0 | https://freesound.org/people/Danjocross/ |
+| swing_3.mp3 | Danjocross | CC0 | https://freesound.org/people/Danjocross/ |
+| swing_4.mp3 | Danjocross | CC0 | https://freesound.org/people/Danjocross/ |
+| swing_5.mp3 | Danjocross | CC0 | https://freesound.org/people/Danjocross/ |
+| swing_6.mp3 | Danjocross | CC0 | https://freesound.org/people/Danjocross/ |
+| swingb_0.mp3 | orangesheepdog | CC0 | https://freesound.org/people/orangesheepdog/ |
+| swingu_0.mp3 | kwahmah_02 | CC BY 3.0 | https://freesound.org/people/kwahmah_02/ |
+| swingu_1.mp3 | kwahmah_02 | CC BY 3.0 | https://freesound.org/people/kwahmah_02/ |
+| swingu_2.mp3 | kwahmah_02 | CC BY 3.0 | https://freesound.org/people/kwahmah_02/ |
+| swingu_3.mp3 | kwahmah_02 | CC BY 3.0 | https://freesound.org/people/kwahmah_02/ |
+| swingu_4.mp3 | kwahmah_02 | CC BY 3.0 | https://freesound.org/people/kwahmah_02/ |
+| hitw_0.mp3 | mateusboga | CC0 | https://freesound.org/people/mateusboga/ |
+| hitw_1.mp3 | mateusboga | CC0 | https://freesound.org/people/mateusboga/ |
+| hitw_2.mp3 | mateusboga | CC0 | https://freesound.org/people/mateusboga/ |
+| hitw_3.mp3 | mateusboga | CC0 | https://freesound.org/people/mateusboga/ |
+| hitu_0.mp3 | deleted_user_7146007 | CC0 | https://freesound.org/ |
+| hitu_1.mp3 | deleted_user_7146007 | CC0 | https://freesound.org/ |
+| hitu_2.mp3 | deleted_user_7146007 | CC0 | https://freesound.org/ |
+| hitu_3.mp3 | deleted_user_7146007 | CC0 | https://freesound.org/ |
+| hitu_4.mp3 | deleted_user_7146007 | CC0 | https://freesound.org/ |
+| breathl_0.mp3 | klankbeeld | CC BY 4.0 | https://freesound.org/people/klankbeeld/ |
+| breathh_0.mp3 | klankbeeld | CC BY 4.0 | https://freesound.org/people/klankbeeld/ |
 | cloth_0.mp3 | Kenney | CC0 | https://kenney.nl/assets/rpg-audio |
 | cloth_1.mp3 | Kenney | CC0 | https://kenney.nl/assets/rpg-audio |
 | cloth_2.mp3 | Kenney | CC0 | https://kenney.nl/assets/rpg-audio |

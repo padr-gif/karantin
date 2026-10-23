@@ -184,7 +184,7 @@ function playerAnim(pAtk) {
   if (act === 'bar' || act === 'unbar' || act === 'furn' || act === 'dismantle' || act === 'job' || act === 'reload') return ['work', Math.floor(animT * 6) % AN('p', 'work')];
   if (act === 'vault') return vaultAnim();
   const an = P.running ? 'run' : P.sneak ? 'sneak' : 'walk', n = AN('p', an);
-  const k = P.running ? .72 : 1;
+  const k = P.running ? .62 : 1;
   const wf = ((Math.floor(P.walk * k / (Math.PI * 2) * n) % n) + n) % n;
   if (P.moving) return [an, wf];
   if (P.sneak) return ['sneak', 0];

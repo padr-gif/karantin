@@ -67,3 +67,21 @@ objAt = function (id, name, wx, wy, f, alpha, offX, tint) {
   }
   try { return objAt37(id, name, wx, wy, f, alpha, offX, tint); } finally { ctx.restore(); }
 };
+
+// ---- глубина мебели: мебель, задвинутая к стене, стоит своей частью в клетке этой стены. Стена такой клетки
+// рисуется по её номеру клетки (x + y + 1), а мебель — по своему центру (меньше), и стена ложилась поверх стола.
+// Теперь мебель всегда рисуется после стен, которые стоят у неё за спиной.
+function furnDepth(f) {
+  const R = f.r, key = R ? R.join() : '';
+  if (f._dk === key) return f._dd;
+  let d = f.cx + f.cy;
+  if (R) for (let y = Math.floor(R[1]) - 1; y <= Math.floor(R[3] - 1e-3); y++) for (let x = Math.floor(R[0]) - 1; x <= Math.floor(R[2] - 1e-3); x++) {
+    if (x < 0 || y < 0 || x >= MW || y >= MH) continue;
+    for (const s of occPieces(x, y)) {
+      const behind = s[3] <= R[1] + .03 || s[2] <= R[0] + .03;
+      const touches = s[0] < R[2] + .05 && s[2] > R[0] - .05 && s[1] < R[3] + .05 && s[3] > R[1] - .05;
+      if (behind && touches) d = Math.max(d, x + y + 1.01);
+    }
+  }
+  f._dk = key; f._dd = d; return d;
+}
