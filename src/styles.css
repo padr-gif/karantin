@@ -1013,3 +1013,17 @@ body.ctledit #stick{z-index:61}
 .dswitch button.on{background:#e8dcc0;color:#1a1408;border-color:#e8dcc0}
 .diary.snote{height:auto;align-self:flex-start;min-height:0;margin-top:16px}
 #pnBody>.diary{align-self:flex-start}
+/* v48: особые находки */
+.cell.uniq{border-color:#c99a2e;box-shadow:inset 0 0 0 1px rgba(231,197,49,.35),inset 0 -2px 4px rgba(0,0,0,.4)}
+.detail.uniq .cat{color:#e7c531}
+.coll{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;padding:4px 4px 12px}
+.coll .ci{position:relative;display:grid;justify-items:center;align-content:start;gap:6px;padding:12px 8px 10px;border-radius:12px;background:rgba(0,0,0,.25);border:1px solid var(--edge);text-align:center}
+.coll .ci.got{border-color:#a8842e;background:radial-gradient(circle at 50% 30%,rgba(201,154,46,.18),rgba(0,0,0,.25) 70%)}
+.coll .ci b{font:600 12px/1.2 var(--f-body);color:var(--paper)}.coll .ci small{font-size:10.5px;line-height:1.25;color:var(--muted)}
+.coll .ci.no .ico{filter:brightness(0) opacity(.35)}.coll .ci.no b{color:#7d776c}.coll .ci .where{font-size:10px;color:#c99a2e}
+.chead{display:flex;align-items:baseline;gap:12px;margin:2px 4px 10px;flex-wrap:wrap}.chead b{font:600 16px var(--f-display);letter-spacing:.05em;text-transform:uppercase;color:#e7c531}.chead span{color:var(--muted);font-size:13px}
+@media (max-width:760px){.coll{grid-template-columns:repeat(4,1fr)}}
+.invsec .secrow{flex-wrap:wrap;row-gap:4px}
+.invsec .secrow .sect{overflow:visible;white-space:normal}
+.invsec .mvall{white-space:nowrap}
+#pnBody.scrolly{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}

@@ -64,7 +64,7 @@ SPRA.counter = 'counter2';
 // container capacity
 const CAPS = {fridge:12, cabinet:8, sink:4, stove:4, wardrobe:10, shelf:8, crate:14, locker:8, desk:6, medshelf:10, toolrack:10, counter:8, armybox:12, airdrop:12, car:12, pile:40};
 function capOf(c) { return (CONT[c.type] && CONT[c.type].cap) || CAPS[c.type] || 10; }
-const wcap = it => it.id === 'jug' ? 5 : 3;
+const wcap = it => it.u === 'flask' ? 6 : it.id === 'jug' ? 5 : 3;   // it.u — особая «Фляга ветерана» (43y)
 RECIPES.push({name:'Бинт из тряпок', icon:'bandage', parts:() => [{id:'rag', ok:countItem('rag') >= 2, badge:'2'}], need:'2 тряпки', can:() => countItem('rag') >= 2, make:() => { removeItem('rag'); removeItem('rag'); P.inv.push(mkItem('bandage')); toast('Бинт готов'); }});
 // ---- traps ----
 let traps = [], flares = [];

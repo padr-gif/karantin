@@ -97,7 +97,7 @@ function invPlace() {
     const groups = [];
     list.forEach((it, k) => {
       const d = ITEMS[it.id];
-      const key = ((d.kind === 'weapon' || d.kind === 'light' || d.uses) ? 'u' + k : it.id + (isRotten(it) ? '!' : '')) + (it.bp ? '@b' : '');
+      const key = ((d.kind === 'weapon' || d.kind === 'light' || d.uses) ? 'u' + k : it.id + (isRotten(it) ? '!' : '')) + (it.bp ? '@b' : '') + (it.u ? '#' + it.u : '');   // особые находки — отдельной ячейкой
       let g = groups.find(g => g.key === key); if (!g) groups.push(g = {key, idx:k, n:0, it}); g.n++;
     });
     return groups;
