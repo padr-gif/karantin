@@ -213,7 +213,7 @@ function drawMapCanvas(c) {
   }
   g.globalAlpha = 1;
   // quarantine fence
-  g.strokeStyle = '#e7c531'; g.lineWidth = .35; g.setLineDash([.9, .6]); g.strokeRect(FEN + .5, FEN + .5, MW - 2 * FEN - 1, MH - 2 * FEN - 1); g.setLineDash([]);
+  if (!world.nofence) g.strokeStyle = '#e7c531', g.lineWidth = .35, g.setLineDash([.9, .6]), g.strokeRect(FEN + .5, FEN + .5, MW - 2 * FEN - 1, MH - 2 * FEN - 1); g.setLineDash([]);
   const dot = (x, y, r, col) => { g.setTransform(dpr, 0, 0, dpr, 0, 0); const px = cw / 2 + (x - y) * s, py = (x + y - 2 * m0) * s / 2; g.fillStyle = col; g.beginPath(); g.arc(px, py, r, 0, 6.283); g.fill(); return [px, py]; };
   for (const f of fires) if (!f.out) dot(f.x, f.y, 3, '#ff9a3c');
   for (const b of barrels) dot(b.cx, b.cy, 2.6, '#5aa8e0');

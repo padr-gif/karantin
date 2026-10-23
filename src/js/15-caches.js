@@ -88,7 +88,8 @@ function drawGroundRange(gx0, gy0, gx1, gy1) {
       for (let y = Hs.y; y < Hs.y + Hs.h; y++) for (let x = Hs.x; x < Hs.x + Hs.w; x++) blitObj(typeof name === 'function' ? name(x, y) : name, SX(x, y), SY(x, y, 0));
       ctx.restore();
     };
-    if (COMM.has(Hs.kind)) floorTiles('g_store', Hs.ix0, Hs.iy0, Hs.ix1, Hs.iy1);
+    if (Hs.concrete) floorTiles('g_concrete', Hs.ix0, Hs.iy0, Hs.ix1, Hs.iy1);
+    else if (COMM.has(Hs.kind)) floorTiles('g_store', Hs.ix0, Hs.iy0, Hs.ix1, Hs.iy1);
     else if (Hs.kind === 'shed') floorTiles('g_concrete', Hs.ix0, Hs.iy0, Hs.ix1, Hs.iy1);
     else if (Hs.rooms) {
       for (const r of Hs.rooms) {

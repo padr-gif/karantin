@@ -3,7 +3,8 @@ function faceTex(Hs, px, py) {
   if (!Hs) return [TX.siding([150,140,120]), false];
   const inside = px > Hs.ix0 && px < Hs.ix1 && py > Hs.iy0 && py < Hs.iy1;
   if (inside) return [TX.paper(Hs.paper, Hs.pstyle), true];
-  if (Hs.kind === 'store' || Hs.kind === 'hardware') return [TX.brick(), false];
+  if (Hs.kind === 'store' || Hs.kind === 'hardware' || Hs.brick) return [TX.brick(), false];
+  if (Hs.planks) return [TX.planksV(Hs.wallC), false];
   if (COMM.has(Hs.kind)) return [TX.siding(Hs.wallC), false];
   if (Hs.kind === 'shed') return [TX.planksV(Hs.wallC), false];
   return [TX.siding(Hs.wallC), false];

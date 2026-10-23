@@ -59,13 +59,14 @@ const packDist = o => ({z:lzPack(JSON.stringify(o)), left:o.left});
 const unpackDist = s => s && s.z != null ? JSON.parse(lzUnpack(s.z)) : s;
 
 // ---- новая игра и сохранение ----
-{ const sn = startNew; startNew = function () { sn(); distInit(world.seed); }; }
+{ const sn = startNew; startNew = function () { world.dx = world.dy = 0; sn(); distInit(world.seed); }; }
 { const ser = serialize;
   serialize = function () { const d = ser(); d.x50 = {root:world.root >>> 0, dx:world.dx || 0, dy:world.dy || 0, dist:world.dist || {}, vis:world.visited || 1}; return d; };
   const as = applySave;
   applySave = function (d) {
-    as(d);
     const x = d && d.x50;
+    if (x) { world.root = x.root >>> 0; world.dx = x.dx || 0; world.dy = x.dy || 0; } else world.dx = world.dy = 0;   // до постройки: тип района зависит от координат
+    as(d);
     if (x) { world.root = x.root >>> 0; world.dx = x.dx || 0; world.dy = x.dy || 0; world.dist = x.dist || {}; world.visited = x.vis || 1; }
     else distInit(d.seed);                                         // старое сохранение: его город и есть родной район
   };
@@ -135,10 +136,12 @@ function askTravel(side) {
   const box = travelAsk = mk('div', 'travelask');
   const card = mk('div', 'tcard');
   card.appendChild(mk('small', '', 'Граница района'));
+  const T = DTYPES[distType(nx, ny)];
   card.appendChild(mk('b', '', (known ? 'Вернуться: «' : 'Дальше ' + SIDE_NAME[side] + ': «') + distName(nx, ny) + '»'));
+  card.appendChild(mk('div', 'ttype', T.label));
   card.appendChild(mk('p', '', known
     ? 'Ты здесь уже был. Всё осталось там, где ты бросил, но за это время мертвецов могло прибавиться.'
-    : 'Чужой район: целые дома и нетронутые припасы, но и мертвецов больше' + (ring >= 2 ? ', а чем дальше от дома, тем их гуще' : '') + '. Этот район останется как есть — сюда можно вернуться.'));
+    : T.desc + (ring >= 2 ? ' Чем дальше от дома, тем мертвецов гуще.' : '') + ' Сюда можно будет вернуться.'));
   const row = mk('div', 'trow');
   const go = mk('button', 'mbtn go', 'Идти'); go.type = 'button';
   const stay = mk('button', 'mbtn', 'Остаться'); stay.type = 'button';
@@ -204,11 +207,13 @@ function doTravel(side, nx, ny) {
   let stored = unpackDist(world.dist[toKey]), fresh = !stored;
   const seed = distSeed(nx, ny), root = world.root, dist = world.dist;
   if (fresh) {                                                              // новый район: строим и заселяем
+    world.dx = nx; world.dy = ny;                                           // до постройки: генератор берёт тип района по координатам
     newGame({seed, diff:cur.diff, look:cur.look});
-    stripFromFresh();
+    stripFromFresh(); postGen(world.dtype);
     const day = Math.floor((cur.gm - cur.sm) / 1440), extra = Math.min(1.6, .22 * distRing(nx, ny) + .03 * day);
-    const n = Math.round(125 * DIFF[cur.diff || 'normal'].z * extra);
-    for (let i = 0; i < n; i++) spawnZombie(11, true);
+    const target = Math.min(280, Math.round(125 * DIFF[cur.diff || 'normal'].z * DTYPES[world.dtype].zk * (1 + extra)));   // больше — тяжело для телефона
+    if (zs.length > target) { shuffle(zs); zs.length = target; }
+    for (let i = zs.length; i < target; i++) spawnZombie(11, true);
     stored = pickDist(JSON.parse(JSON.stringify(serialize())));
   }
   delete dist[toKey];
@@ -229,7 +234,7 @@ function doTravel(side, nx, ny) {
   } else if (fresh) { const day = Math.floor((gameMin - startMin) / 1440); for (let k = 0; k < Math.min(6, Math.floor(day / 3)); k++) decayDay(); }
   camX = P.x; camY = P.y; computeVis(); buildFlow(); fogDirty = true; clearCaches();
   const nm = distName(nx, ny);
-  eventBanner(nm, fresh ? 'Новый район. Перелезь через блоки на блокпосту, чтобы попасть в город.' : 'Ты вернулся. Всё там, где ты оставил.', '', 'i-map');
+  eventBanner(nm + ' · ' + DTYPES[world.dtype].label, fresh ? (DTYPES[world.dtype].fence ? 'Новый район за карантинным забором. Перелезь через блоки на блокпосту.' : DTYPES[world.dtype].desc) : 'Ты вернулся. Всё там, где ты оставил.', '', 'i-map');
   logEv((fresh ? 'Пришёл в район «' : 'Вернулся в район «') + nm + '»');
   if ((world.visited || 1) >= 5) ach('nomad');
   if (distRing(nx, ny) >= 3) ach('farland');
@@ -243,7 +248,8 @@ ACH.push(['nomad', 'Кочевник', 'Побывать в 5 районах'], 
 .travelask{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(6,8,10,.55);padding:16px}
 .travelask .tcard{max-width:420px;width:100%;background:#151a1e;border:1px solid #2c343a;border-radius:10px;padding:16px 18px;color:#d9d4c7;font-family:"PT Sans",sans-serif;box-shadow:0 10px 40px rgba(0,0,0,.6)}
 .travelask small{display:block;font:600 11px "PT Mono",monospace;letter-spacing:.12em;text-transform:uppercase;color:#8d9a93;margin-bottom:4px}
-.travelask b{display:block;font:600 21px Oswald,sans-serif;color:#efe7d2;margin-bottom:8px}
+.travelask b{display:block;font:600 21px Oswald,sans-serif;color:#efe7d2;margin-bottom:4px}
+.travelask .ttype{display:inline-block;font:600 12px \"PT Sans\",sans-serif;color:#1b1f22;background:#d8b46a;border-radius:4px;padding:2px 8px;margin-bottom:10px}
 .travelask p{margin:0 0 14px;font-size:14px;line-height:1.4;color:#b9b4a7}
 .travelask .trow{display:flex;gap:10px;justify-content:flex-end}
 .travelask .trow .mbtn{min-width:120px}

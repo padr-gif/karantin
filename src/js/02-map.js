@@ -342,7 +342,9 @@ function addProp(p, tiles) {
   for (const [x, y] of tiles) { if (x < 0 || y < 0 || x >= MW || y >= MH) return false; const i = y * MW + x; if (propAt[i] || map[i] === TREE) return false; }
   props.push(p); for (const [x, y] of tiles) propAt[y * MW + x] = props.length; return true;
 }
+let GCFG = {};                                            // настройки генератора для типа района (v51): роли кварталов, плотность, машины
 function generate() {
+  const G = Object.assign({roles:['police', 'pharmacy', 'hardware', 'gas', 'store', 'store', 'park', 'park'], per:4, gap:2, cars:90, lamp:8, cabins:4, greens:900}, GCFG);
   map.fill(GRASS); furn.fill(0); hAt.fill(0); propAt.fill(0); seen.fill(0); vis.fill(0);
   obs = new Array(NT).fill(null); houses = []; furns = []; props = []; SPECIAL = []; CHECKPOINTS = [];
   const RL = ROADS[ROADS.length - 1] + RW - 1;
@@ -359,8 +361,8 @@ function generate() {
     blocks.push({x0:ROADS[bi] + RW + 2, x1:ROADS[bi + 1] - 2, y0:ROADS[bj] + RW + 2, y1:ROADS[bj + 1] - 2});
   const order = shuffle(blocks.map((_, i) => i));
   const role = {};
-  ['police', 'pharmacy', 'hardware', 'gas', 'store', 'store', 'park', 'park'].forEach((k, n) => role[order[n]] = k);
-  const SIZE = {police:[12, 9], pharmacy:[9, 7], hardware:[11, 8], store:[13, 9], gas:[8, 6]};
+  G.roles.forEach((k, n) => role[order[n]] = k);
+  const SIZE = {police:[12, 9], pharmacy:[9, 7], hardware:[11, 8], store:[13, 9], gas:[8, 6], clinic:[14, 10], cafe:[9, 7], office:[12, 9]};
   blocks.forEach((b, i) => {
     const k = role[i];
     if (k === 'park') { b.park = true; return; }
@@ -377,12 +379,13 @@ function generate() {
         const mid = [b.x0 + 1 + w / 2, b.y1 - h / 2];
         if (k === 'police') SPECIAL.push({x:mid[0], y:mid[1], pi:10, n:4}), b.police = true;
         if (k === 'pharmacy') SPECIAL.push({x:mid[0], y:mid[1], pi:11, n:3});
+        if (k === 'clinic') SPECIAL.push({x:mid[0], y:mid[1], pi:11, n:5});
       }
     }
-    for (let t = 0; t < 200 && rects.length < (k ? 3 : 4); t++) {
+    for (let t = 0; t < 200 && rects.length < (k ? G.per - 1 : G.per); t++) {
       const big = t < 30 && rects.filter(r => r.kind === 'house' && r.h >= 12).length < 1, w = big ? ri(10, 12) : ri(9, 10), h = big ? ri(12, 13) : ri(8, 10);
       const hx = ri(b.x0, b.x1 - w + 1), hy = ri(b.y0, b.y1 - h + 1);
-      if (rects.some(r => hx < r.x + r.w + 2 && hx + w + 2 > r.x && hy < r.y + r.h + 2 && hy + h + 2 > r.y)) continue;
+      if (rects.some(r => hx < r.x + r.w + G.gap && hx + w + G.gap > r.x && hy < r.y + r.h + G.gap && hy + h + G.gap > r.y)) continue;
       if (k === 'gas' && hy < b.y0 + 13) continue;
       rects.push({x:hx, y:hy, w, h, kind:'house'});
     }
@@ -395,7 +398,7 @@ function generate() {
     for (const r of rects) buildHouse(r.x, r.y, r.w, r.h, r.kind, COMM.has(r.kind) ? {sides:[1, 3, 0, 2]} : null);
   });
   // cabins in the woods between the town and the fence
-  for (let n = 0, t = 0; n < 4 && t < 300; t++) {
+  for (let n = 0, t = 0; n < G.cabins && t < 300; t++) {
     const x = ri(FEN + 3, MW - FEN - 8), y = ri(FEN + 3, MH - FEN - 8);
     if (inCityBox(x - 2, y - 2) || inCityBox(x + 6, y + 6) || inCityBox(x - 2, y + 6) || inCityBox(x + 6, y - 2)) continue;
     let ok = true; for (let yy = y - 2; yy < y + 7 && ok; yy++) for (let xx = x - 2; xx < x + 7; xx++) if (get(xx, yy) !== GRASS) { ok = false; break; }
@@ -411,7 +414,7 @@ function generate() {
   const nearFence = (x, y, d) => Math.min(Math.abs(x - FEN), Math.abs(x - (MW - 1 - FEN)), Math.abs(y - FEN), Math.abs(y - (MH - 1 - FEN))) <= d;
   const nearRoad = (x, y, d) => { for (let yy = y - d; yy <= y + d; yy++) for (let xx = x - d; xx <= x + d; xx++) { const t = get(xx, yy); if (t === ROAD || t === WALK) return true; } return false; };
   // city greenery
-  for (let i = 0; i < 900; i++) { const x = ri(CITY0, CITY1), y = ri(CITY0, CITY1); plantTree(x, y); }
+  for (let i = 0; i < G.greens; i++) { const x = ri(CITY0, CITY1), y = ri(CITY0, CITY1); plantTree(x, y); }
   for (const b of blocks) if (b.park) makePond(b);
   for (const b of blocks) if (b.park) for (let i = 0; i < 70; i++) plantTree(ri(b.x0, b.x1), ri(b.y0, b.y1));
   // forests: thin wood inside the fence, dense wood beyond it
@@ -433,7 +436,7 @@ function generate() {
     for (const y of [FEN, F2]) if (get(v, y) !== ROAD && !propAt[y * MW + v]) { if (get(v, y) === TREE) set(v, y, GRASS); addProp({type:'fence', proc:true, ax:'x', cx:v + .5, cy:y + .5, solid:true, r:[v, y + .42, v + 1, y + .58], sign:(v % 9) === 4}, [[v, y]]); }
   }
   // parked cars in town
-  for (let t = 0; t < 90; t++) {
+  for (let t = 0; t < G.cars; t++) {
     const r = pick(ROADS), lane = r + pick([0, RW - 1]);
     if (rng() < .5) {
       const x = ri(CITY0, CITY1 - 2); if (inRoadCol(x) || inRoadCol(x + 1) || get(x, lane) !== ROAD || get(x + 1, lane) !== ROAD) continue;
@@ -454,7 +457,7 @@ function generate() {
     }
   }
   // street lamps
-  for (const r of ROADS) for (let k = CITY0 + 2; k < CITY1; k += 8) {
+  for (const r of ROADS) for (let k = CITY0 + 2; k < CITY1; k += G.lamp) {
     if (!inRoadCol(k) && get(k, r - 1) === WALK) addProp({type:'lamp', flick:rng() < .15, cx:k + .5, cy:r - .5 + .3, hx:0, hy:1, solid:true, r:[k + .4, r - 1 + .7, k + .6, r - 1 + .9]}, [[k, r - 1]]);
     if (!inRoadCol(k) && get(r - 1, k) === WALK) addProp({type:'lamp', flick:rng() < .15, cx:r - .5 + .3, cy:k + .5, hx:1, hy:0, solid:true, r:[r - 1 + .7, k + .4, r - 1 + .9, k + .6]}, [[r - 1, k]]);
   }

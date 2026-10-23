@@ -229,6 +229,20 @@ check('старое сохранение без районов грузится 
 
 check('сжатие районов без потерь', await D("(() => { const a = JSON.stringify(serialize()) + 'Мертвецы 😀 \\u0000 \"' + 'абв'.repeat(9000); let r = ''; for (let i = 0; i < 30000; i++) r += String.fromCharCode(Math.floor(Math.random() * 65536)); return [a, r, '', 'a', 'aaaaaaaaaaaaaaaaaaa'].every(s => lzUnpack(JSON.parse(JSON.stringify(lzPack(s)))) === s); })()"));
 
+const types = await D(`(() => {
+  const out = {};
+  for (const t of ['village', 'forest', 'industrial', 'downtown']) {
+    let c = null; for (let dx = -4; dx <= 4 && !c; dx++) for (let dy = -4; dy <= 4 && !c; dy++) if ((dx || dy) && distType(dx, dy) === t) c = [dx, dy];
+    if (!c) { out[t] = 'нет'; continue; }
+    P.x = .5; P.y = EXIT_R + .5; doTravel('w', c[0], c[1]);
+    const sig = () => houses.length + ':' + furns.length + ':' + map.reduce((a, v, i) => (a * 31 + v * (i % 97)) >>> 0, 0), s1 = sig();
+    applySave(JSON.parse(JSON.stringify(serialize())));
+    out[t] = world.dtype === t && s1 === sig() && houses.some(H => H.kind === 'house' && H.rooms) && !blocked(P.x, P.y, P.r) ? 'ok' : [world.dtype, s1, sig()];
+  }
+  return out;
+})()`);
+check('четыре новых типа районов строятся и после сохранения те же', Object.values(types).every(v => v === 'ok'), types);
+
 console.log('Живая игра 15 секунд');
 await fresh("['coward']");
 await D("P.weapon = mkItem('shotgun'); P.weapon.mag = 2; P.inv.push(mkItem('shells')); gameMin += 14 * 60; for (let i = 0; i < 25; i++) spawnZombie(4, false);");
