@@ -1003,3 +1003,13 @@ body.ctledit #stick{z-index:61}
 .diary .ditem.done .dt{text-decoration:line-through;text-decoration-color:rgba(154,47,36,.8);text-decoration-thickness:2px;color:#56607a}
 .diary .dnote{color:#9a2f24}
 .diary .dprog{color:#7a6a58;font-size:14px}
+/* v47: записки */
+.dswitch{display:flex;gap:8px;justify-content:center;margin:0 auto 10px;max-width:640px}
+.dswitch button{padding:6px 14px;font-size:13px;border-radius:9px}
+.diary .dmiss{color:#a89a84;font-size:14px}
+.diary .sn{margin-bottom:6px}.diary .sn b{font-style:normal;color:#6a4f36}
+.diary.snote{max-width:560px;font-size:18px;line-height:28px}
+.dswitch button{background:rgba(255,255,255,.06);color:var(--paper);border:1px solid var(--edge);box-shadow:none}
+.dswitch button.on{background:#e8dcc0;color:#1a1408;border-color:#e8dcc0}
+.diary.snote{height:auto;align-self:flex-start;min-height:0;margin-top:16px}
+#pnBody>.diary{align-self:flex-start}
