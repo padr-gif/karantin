@@ -317,3 +317,16 @@ function extraDl(dl) { if (dog && mode !== 'menu') dl.push({d:dog.x + dog.y + .0
 { const ser = serialize; serialize = function () { const d = ser(); d.x45 = {dog, tasks:P.tasks || null}; return d; }; }
 { const as = applySave; applySave = function (d) { as(d); dog = (d && d.x45 && d.x45.dog) || null; if (d && d.x45 && d.x45.tasks) P.tasks = d.x45.tasks; taskChip(); }; }
 { const sn = startNew; startNew = function () { sn(); dog = null; if (P) P.tasks = null; tasksToday(); taskChip(); }; }
+// пёс иногда приносит находку: обнюхивает дворы, пока ты занят своим
+{ let tF = 0;
+  const up = update;
+  update = function (dt) {
+    up(dt);
+    if (mode !== 'play' || !dog || dog.st !== 'friend' || paused || P.sleep) return;
+    tF += dt; if (tF < 20) return; tF = 0;
+    if (gameMin - (dog.fetchAt || -1e9) < 240 || rng() > .35) return;
+    dog.fetchAt = gameMin;
+    const it = mkItem(pick(['rag', 'bandage', 'canned', 'crackers', 'battery', 'matches', 'bottle', 'cigs', 'candy', 'nails', 'sticks']));
+    giveItem(it); SFX.rustle(); toast(dog.name + ' принёс в зубах: ' + ITEMS[it.id].name.toLowerCase());
+  };
+}
