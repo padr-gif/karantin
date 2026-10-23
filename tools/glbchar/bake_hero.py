@@ -15,10 +15,10 @@ C.SS = 4                                                                   # п�
 # наша анимация: клип UAL, режим (loop — цикл, once — от начала до конца, end — до последнего кадра включительно),
 # кадров, отрезок клипа и «смягчения»: calm — ноги к стойке, arms — руки ближе к телу, blend — подмешать спокойную стойку
 SPEC = {
-  'idle':   dict(clip='Idle_Loop', mode='loop', n=10, calm=.45, arms=.3),
+  'idle':   dict(clip='Idle_Loop', mode='loop', n=10, calm=.45, arms=-.03),   # руки свободно, не прижаты
   'walk':   dict(clip='Walk_Formal_Loop', mode='loop', n=24, arms=-.04, swing=.32),   # руки чуть от тела — не проходят сквозь бёдра
   'run':    dict(clip='Jog_Fwd_Loop', mode='loop', n=16, arms=.18, blend=('Walk_Formal_Loop', .35)),
-  'sneak':  dict(clip='Crouch_Fwd_Loop', mode='loop', n=16, arms=.15),
+  'sneak':  dict(clip='Crouch_Fwd_Loop', mode='loop', n=16, arms=0, upright=.9),
   'attack': dict(clip='Sword_Attack', mode='once', n=10, seg=(.12, .72), blend=('Idle_Loop', .62, 0), arms=.15, calm=.5),
   'punch':  dict(clip='Punch_Cross', mode='once', n=8, arms=.1, blend=('Idle_Loop', .2, 0), calm=.4),
   'hit':    dict(clip='Hit_Chest', mode='once', n=4, calm=.3),
@@ -30,7 +30,7 @@ SPEC = {
   'drink':  dict(clip='Interact', mode='once', n=6, calm=.4),
   'read':   dict(clip='Idle_Talking_Loop', mode='loop', n=12, calm=.45, arms=.15),
   'jacks':  dict(jacks=True, mode='loop', n=8),
-  'searchlow': dict(clip='Interact', mode='loop', n=12, lower=('Crouch_Idle_Loop', 0, .2), arms=.1),
+  'searchlow': dict(clip='Interact', mode='loop', n=12, lower=('Crouch_Idle_Loop', 0, .2), arms=.05, upright=.85),
   'shower': dict(clip='Idle_Talking_Loop', mode='loop', n=12, calm=.6, arms=-.02),   # трёт плечи и грудь — спокойное живое движение
 }
 COUNTS = {k: v['n'] for k, v in SPEC.items()}
@@ -95,7 +95,7 @@ def job(a):
     if sp.get('jacks'): Gs, hop = jacks_pose(t)
     elif sp.get('shower'): Gs = shower_pose(t)
     elif sp.get('swing'): Gs = H.pose(sp['clip'], t, calm=sp.get('calm', 0), extra=swing_extra(sp['clip'], t, sp['swing'], sp.get('arms', 0)))
-    else: Gs = H.pose(sp['clip'], t, calm=sp.get('calm', 0), arms=sp.get('arms', 0), blend=sp.get('blend'), lower=sp.get('lower'))
+    else: Gs = H.pose(sp['clip'], t, calm=sp.get('calm', 0), arms=sp.get('arms', 0), blend=sp.get('blend'), lower=sp.get('lower'), upright=sp.get('upright', 0))
     face = d * math.pi / 4
     im, (ax, ay), rm = H.render(Gs, face, K, rmap=True, pixel=True)
     # точка персонажа — под тазом; высота — по самой низкой точке тела (как в render)

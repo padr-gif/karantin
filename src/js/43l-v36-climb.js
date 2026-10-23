@@ -46,6 +46,10 @@ update = function (dt) {
   P._pushT = 0;
   const pl = climbPlan(Math.cos(P.face), Math.sin(P.face));
   if (pl && pl.f) startClimb(pl);
+  else if (!pl) {                                                                 // упёрся в открытое/разбитое окно — перелезть через него
+    const tx = Math.floor(P.x + Math.cos(P.face) * .6), ty = Math.floor(P.y + Math.sin(P.face) * .6), i = ty * MW + tx;
+    if (map[i] === WIN && !openingBlocks(i)) { winAction({kind:'vault', o:{i, x:tx, y:ty}}); return; }
+  }
   else if (pl && pl.no && !LOW_FURN.has(pl.no.type) && (P._noClimbT || 0) < gameMin) { P._noClimbT = gameMin + 30; toast('Слишком высоко — не перелезть'); }
 };
 // в списке действий: «Перелезть» через то, к чему стоишь лицом

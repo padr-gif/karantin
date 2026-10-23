@@ -30,6 +30,7 @@ function pieces(x, y, h) {
   if (wallishAt(x, y + 1)) r.push([a, b, b, 1]);
   return r;
 }
+let winSolid = false;                                     // true, пока двигается игрок: в окно не входят шагом
 function openingBlocks(i) {
   const t = map[i], o = obs[i];
   if (t === DOOR) return !o.open || o.bhp > 0;
@@ -49,7 +50,7 @@ function tileRects(x, y, cb) {
   if (x < 0 || y < 0 || x >= MW || y >= MH) return cb(x, y, x + 1, y + 1);
   const i = y * MW + x, t = map[i];
   if (t === WALL) { for (const r of wpC[i]) if (cb(x + r[0], y + r[1], x + r[2], y + r[3])) return true; }
-  else if ((t === DOOR || t === WIN) && openingBlocks(i)) {
+  else if ((t === DOOR || t === WIN) && (openingBlocks(i) || (t === WIN && winSolid))) {   // открытое окно — не проход: через него перелезают
     if (alongX(x, y)) { if (cb(x, y + .5 - HWC, x + 1, y + .5 + HWC)) return true; }
     else if (cb(x + .5 - HWC, y, x + .5 + HWC, y + 1)) return true;
   }

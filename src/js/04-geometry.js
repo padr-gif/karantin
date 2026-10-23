@@ -8,6 +8,10 @@ function blocked(x, y, r) {
   return false;
 }
 function move(e, dx, dy) {
+  winSolid = e === P;
+  try { move0(e, dx, dy); } finally { winSolid = false; }
+}
+function move0(e, dx, dy) {
   if (dx) {
     if (!blocked(e.x + dx, e.y, e.r)) e.x += dx;
     else if (Math.abs(dy) < 1e-4) { for (const n of [.04, -.04]) if (!blocked(e.x + dx, e.y + n, e.r)) { e.y += n; break; } }

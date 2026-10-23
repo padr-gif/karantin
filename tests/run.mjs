@@ -176,6 +176,12 @@ check('у душа свои кадры', await D("!!(ART.meta.frames['f_shower_0
 check('компактная ванна рисуется душем', await D("(() => { const f = furns.find(f => f.type === 'bath'); if (!f) return true; const c = f.compact; f.compact = true; const n = furnName(f); f.compact = c; return n.startsWith('f_shower'); })()"));
 check('помыться: снимает стресс, ты мокрый', await D("(() => { const f = furns.find(f => f.type === 'bath' && !f.gone); if (!f) return true; P.x = (f.r[0] + f.r[2]) / 2; P.y = f.r[3] + .35; if (blocked(P.x, P.y, P.r)) P.y = f.r[1] - .35; zs.length = 0; P.stress = 50; P.wet = 0; P.washT = 0; const a = getActions().find(a => a.kind === 'wash'); if (!a) return 'нет действия'; doAction(a); const A = P.act; if (!A) return 'не началось'; P.act = null; finishAct(A); return P.stress < 50 && P.wet > 50; })()"));
 
+console.log('Открытое окно');
+await fresh();
+check('в открытое окно не войти шагом', await D(`(() => { const i = obs.findIndex((o, k) => o && map[k] === WIN && !o.bhp); if (i < 0) return true; const o = obs[i], x = i % MW, y = (i / MW) | 0; o.open = true;
+  const ax = alongX(x, y); P.act = null; P.x = ax ? x + .5 : x + .5 - 1.2; P.y = ax ? y + .5 - 1.2 : y + .5; const d = ax ? [0, 1] : [1, 0];
+  for (let k = 0; k < 120; k++) move(P, d[0] * .03, d[1] * .03); const passed = ax ? P.y > y + .5 : P.x > x + .5; o.open = false; return !passed; })()`));
+
 console.log('Детальная графика');
 await fresh();
 await D("settings.smooth = true; applySettings();"); await sleep(1500);

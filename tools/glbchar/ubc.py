@@ -107,7 +107,7 @@ class Hero:
             for node, (t, r, sc) in s.anim.sample(clip, t01).items():
                 nm = s.anim.nodes[node].get('name'); named[nm] = (t if nm in ('pelvis', 'root') else None, r, None)
         return named
-    def pose(s, clip=None, t01=0.0, extra=None, calm=0.0, arms=0.0, blend=None, legs=0.0, lower=None):
+    def pose(s, clip=None, t01=0.0, extra=None, calm=0.0, arms=0.0, blend=None, legs=0.0, lower=None, upright=0.0):
         """глобальные матрицы для каждой части: анимация по именам костей
         calm — ноги к стойке покоя (уже стойка); arms — руки ближе к телу (рад); blend=(клип, доля, время) — смешать с другим клипом
         (так удар становится мягче); legs — развести ноги в стороны (рад); extra — {кость: кватернион} поверх всего"""
@@ -128,6 +128,13 @@ class Hero:
                 elif nm in ('pelvis', 'root') or any(k in nm for k in ('thigh', 'calf', 'foot', 'ball')): named[nm] = (v[0] if nm in ('pelvis', 'root') else None, v[1], None)
                 elif nm.startswith('spine') and nm in named and v[1] is not None and named[nm][1] is not None:
                     named[nm] = (named[nm][0], C.slerp(np.asarray(named[nm][1], float), np.asarray(v[1], float), lower[2] if len(lower) > 2 else .6), None)
+        if upright:                                                          # спина прямее: позвоночник и шея к спокойной стойке
+            st = s.sample('Idle_Loop', 0)
+            for nm in ('spine_01', 'spine_02', 'spine_03', 'neck_01', 'Head'):
+                if nm in named and named[nm][1] is not None and nm in st and st[nm][1] is not None:
+                    named[nm] = (named[nm][0], C.slerp(np.asarray(named[nm][1], float), np.asarray(st[nm][1], float), upright), None)
+            if 'pelvis' in named and named['pelvis'][1] is not None:
+                named['pelvis'] = (named['pelvis'][0], C.slerp(np.asarray(named['pelvis'][1], float), np.asarray(st['pelvis'][1], float), upright * .6), None)
         if calm:                                                             # ноги ближе к стойке покоя: стойка уже, без «супергеройской» раскоряки
             for nm, (t, r, sc) in list(named.items()):
                 if r is not None and nm in body.name and any(k in nm for k in ('thigh', 'calf', 'foot', 'ball')):
