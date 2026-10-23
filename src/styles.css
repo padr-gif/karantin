@@ -985,22 +985,21 @@ body.ctledit #stick{z-index:61}
 .invsec .secrow .sect{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .invsec .secrow .capbar{flex:1 1 30px;min-width:20px}
 #create #cPrev{width:min(205px,26vw)}
-/* v45: задания дня, убежище */
+/* v45: дневник героя */
 #taskChip{pointer-events:auto;display:flex;align-items:center;gap:6px;margin-top:6px;padding:5px 10px 5px 8px;border-radius:999px;border:1px solid var(--edge);background:rgba(14,17,20,.78);color:var(--paper);font:600 12px var(--f-body,system-ui);width:max-content}
-#taskChip .ic{width:14px;height:14px;color:#e7c531}
-#taskChip small{color:var(--muted);font-weight:500}
-#taskChip.ready{border-color:#e7c531;background:rgba(80,62,16,.9);animation:tpulse 1.6s ease-in-out infinite}
-#taskChip.all{opacity:.75}
-@keyframes tpulse{50%{box-shadow:0 0 0 4px rgba(231,197,49,.18)}}
-#pnTabs .ttab.dot{position:relative}#pnTabs .ttab.dot::after{content:"";position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:#e7c531}
-.tasks{display:grid;gap:10px;max-width:680px;margin:0 auto;padding:4px 2px 12px;overflow:auto;max-height:100%}
-.tasks .thead{display:flex;flex-direction:column;gap:2px}.tasks .thead b{font:600 16px var(--f-display);letter-spacing:.04em;text-transform:uppercase;color:#e7c531}.tasks .thead span{color:var(--muted);font-size:13px}
-.task{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:rgba(0,0,0,.25);border:1px solid var(--edge)}
-.task .tt{flex:1;min-width:0;display:grid;gap:4px}.task .tt b{font-size:15px;font-weight:600}.task .tt small{color:var(--muted);font-size:12px}
-.task .tbar{height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden}.task .tbar i{display:block;height:100%;background:#c99a2e}
-.task.ok{border-color:#c99a2e}.task.got{opacity:.6}.task.got .tbar i{background:#6c9a4a}
-.task .tnum{font:600 13px var(--f-mono);color:var(--muted);white-space:nowrap}.task .tdone{color:#8fbf6a;font-size:13px;white-space:nowrap}
-.task button{flex:none}
-.tasks .tfoot{color:var(--muted);font-size:12px;margin:2px 0 0}
-.shelter{margin-top:10px}.shelter .stars{display:block;font-size:20px;letter-spacing:2px;color:#e7c531;margin:4px 0}.shelter p{font-size:13px;color:var(--muted);margin:0}
-.task button{background:#c99a2e;color:#1a1408;border-color:#c99a2e;font-weight:700}
+#taskChip .ic{width:14px;height:14px;color:#d8c8a0}
+#taskChip.all{opacity:.7}
+.diary{max-width:640px;margin:0 auto 12px;padding:22px 26px 26px 54px;border-radius:6px;position:relative;color:#2b2622;
+  background:repeating-linear-gradient(#efe6d2 0 27px,#c9d3dd 27px 28px),#efe6d2;box-shadow:0 8px 24px rgba(0,0,0,.45),inset 0 0 40px rgba(120,90,50,.18);
+  font:italic 400 17px/28px var(--f-body);overflow:auto;max-height:100%}
+.diary::before{content:"";position:absolute;left:38px;top:0;bottom:0;width:2px;background:rgba(190,70,60,.55)}
+.diary .dhead{font:700 15px/28px var(--f-body);font-style:normal;letter-spacing:.06em;text-transform:uppercase;color:#6a4f36}
+.diary .dline{margin:0;color:#3a332c}
+.diary .dsub{color:#6a4f36;margin-top:2px}
+.diary .dev{font-size:14px;color:#5a5046}
+.diary .ditem{display:flex;gap:10px;align-items:flex-start;color:#1f2a44}
+.diary .dbox{flex:none;width:16px;height:16px;margin-top:6px;border:2px solid #1f2a44;border-radius:3px;display:grid;place-items:center;font:700 15px/1 var(--f-body);font-style:normal;color:#9a2f24}
+.diary .dtx{display:flex;flex-wrap:wrap;column-gap:10px}
+.diary .ditem.done .dt{text-decoration:line-through;text-decoration-color:rgba(154,47,36,.8);text-decoration-thickness:2px;color:#56607a}
+.diary .dnote{color:#9a2f24}
+.diary .dprog{color:#7a6a58;font-size:14px}
