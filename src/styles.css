@@ -985,3 +985,22 @@ body.ctledit #stick{z-index:61}
 .invsec .secrow .sect{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .invsec .secrow .capbar{flex:1 1 30px;min-width:20px}
 #create #cPrev{width:min(205px,26vw)}
+/* v45: задания дня, убежище */
+#taskChip{pointer-events:auto;display:flex;align-items:center;gap:6px;margin-top:6px;padding:5px 10px 5px 8px;border-radius:999px;border:1px solid var(--edge);background:rgba(14,17,20,.78);color:var(--paper);font:600 12px var(--f-body,system-ui);width:max-content}
+#taskChip .ic{width:14px;height:14px;color:#e7c531}
+#taskChip small{color:var(--muted);font-weight:500}
+#taskChip.ready{border-color:#e7c531;background:rgba(80,62,16,.9);animation:tpulse 1.6s ease-in-out infinite}
+#taskChip.all{opacity:.75}
+@keyframes tpulse{50%{box-shadow:0 0 0 4px rgba(231,197,49,.18)}}
+#pnTabs .ttab.dot{position:relative}#pnTabs .ttab.dot::after{content:"";position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:#e7c531}
+.tasks{display:grid;gap:10px;max-width:680px;margin:0 auto;padding:4px 2px 12px;overflow:auto;max-height:100%}
+.tasks .thead{display:flex;flex-direction:column;gap:2px}.tasks .thead b{font:600 16px var(--f-display);letter-spacing:.04em;text-transform:uppercase;color:#e7c531}.tasks .thead span{color:var(--muted);font-size:13px}
+.task{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:rgba(0,0,0,.25);border:1px solid var(--edge)}
+.task .tt{flex:1;min-width:0;display:grid;gap:4px}.task .tt b{font-size:15px;font-weight:600}.task .tt small{color:var(--muted);font-size:12px}
+.task .tbar{height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden}.task .tbar i{display:block;height:100%;background:#c99a2e}
+.task.ok{border-color:#c99a2e}.task.got{opacity:.6}.task.got .tbar i{background:#6c9a4a}
+.task .tnum{font:600 13px var(--f-mono);color:var(--muted);white-space:nowrap}.task .tdone{color:#8fbf6a;font-size:13px;white-space:nowrap}
+.task button{flex:none}
+.tasks .tfoot{color:var(--muted);font-size:12px;margin:2px 0 0}
+.shelter{margin-top:10px}.shelter .stars{display:block;font-size:20px;letter-spacing:2px;color:#e7c531;margin:4px 0}.shelter p{font-size:13px;color:var(--muted);margin:0}
+.task button{background:#c99a2e;color:#1a1408;border-color:#c99a2e;font-weight:700}

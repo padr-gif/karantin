@@ -85,12 +85,14 @@ function render(dt) {
   for (const f of flares) dl.push({d:f.x + f.y, k:17, f});
   for (const p of dynCars) { const i = Math.floor(p.cy) * MW + Math.floor(p.cx); if (inView(Math.floor(p.cx), Math.floor(p.cy)) && (vis[i] || seen[i])) dl.push({d:p.cx + p.cy + .35, k:16, p, i}); }
   for (const a of airdrops) { if (a.landed && !vis[Math.floor(a.y) * MW + Math.floor(a.x)]) continue; dl.push({d:a.landed ? a.x + a.y - .2 : a.x + a.y + 2, k:14, a}); }
+  if (typeof extraDl === 'function') extraDl(dl);                         // свои объекты (собака) — в общей сортировке по глубине
   if (mode !== 'menu') dl.push({d:pD + .02, k:6});
   dl.sort((a, b) => a.d - b.d);
 
   const tgtF = curAct && curAct.f, leafTint = seasonTint();
   const pAtk = P.atkT != null && P.atkT < P.atkDur ? P.atkT / P.atkDur : -1;
   for (const e of dl) {
+    if (e.k === 99) { e.fn(); continue; }
     if (e.k === 1) {
       const cut = mode !== 'menu' && ((inside && hAt[e.i] === inside && e.d > pD - .3) ||
         (e.d > pD + .2 && Math.hypot(e.x + .5 - P.x, e.y + .5 - P.y) < 2.4) || occludes(e.x, e.y, WH));
