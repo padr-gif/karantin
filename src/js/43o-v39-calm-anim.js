@@ -11,7 +11,9 @@ playerAnim = function (pAtk) {
   if (!heroMale() || mode === 'dead') return r;
   const A = P.act, act = A && A.kind;
   if (A && act === 'job' && A.an === 'jacks' && AN('p', 'jacks') > 1) return pmLoop('jacks');
-  if (A && act === 'job' && A.shower) return pmLoop('idle', .8);
+  if (A && act === 'job' && A.shower) return P._inShower && AN('p', 'shower') > 1 ? pmLoop('shower') : pmLoop('idle', .8);
+  // обыск низкой мебели и вещей на полу — присев
+  if (r[0] === 'search' && A && A.f && AN('p', 'searchlow') > 1 && (LOW_FURN.has(A.f.type) || A.f.type === 'pile' || !A.f.type)) return pmLoop('searchlow');
   if (A && act === 'use' && A.an === 'read' && AN('p', 'read') > 1) return pmLoop('read');
   if (r[0] === 'idle' || r[0] === 'search' || r[0] === 'work') return pmLoop(r[0]);
   return r;
@@ -73,3 +75,7 @@ doAction = function (a0) {
     if (Math.random() < .5) emit('glass', P.x + (Math.random() - .5) * .3, P.y + (Math.random() - .5) * .3, .3, 1, null, 0, .6);
   };
 }
+// в душе — без одежды (в белье): одежда «висит» снаружи
+{ const regs = outfitRegs, key = outfitKey;
+  outfitRegs = function () { return P && P._inShower ? new Array(16).fill(null) : regs(); };
+  outfitKey = function () { return P && P._inShower ? 'shower' : key(); }; }

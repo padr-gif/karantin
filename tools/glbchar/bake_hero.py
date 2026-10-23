@@ -16,7 +16,7 @@ C.SS = 4                                                                   # п�
 # кадров, отрезок клипа и «смягчения»: calm — ноги к стойке, arms — руки ближе к телу, blend — подмешать спокойную стойку
 SPEC = {
   'idle':   dict(clip='Idle_Loop', mode='loop', n=10, calm=.45, arms=.3),
-  'walk':   dict(clip='Walk_Formal_Loop', mode='loop', n=24, arms=.22),
+  'walk':   dict(clip='Walk_Formal_Loop', mode='loop', n=24, arms=.22, swing=.42),
   'run':    dict(clip='Jog_Fwd_Loop', mode='loop', n=16, arms=.18, blend=('Walk_Formal_Loop', .35)),
   'sneak':  dict(clip='Crouch_Fwd_Loop', mode='loop', n=16, arms=.15),
   'attack': dict(clip='Sword_Attack', mode='once', n=10, seg=(.12, .72), blend=('Idle_Loop', .62, 0), arms=.15, calm=.5),
@@ -30,14 +30,43 @@ SPEC = {
   'drink':  dict(clip='Interact', mode='once', n=6, calm=.4),
   'read':   dict(clip='Idle_Talking_Loop', mode='loop', n=12, calm=.45, arms=.15),
   'jacks':  dict(jacks=True, mode='loop', n=8),
+  'searchlow': dict(clip='Interact', mode='loop', n=12, lower=('Crouch_Idle_Loop', 0, .2), arms=.1),
+  'shower': dict(shower=True, mode='loop', n=10),
 }
 COUNTS = {k: v['n'] for k, v in SPEC.items()}
-EXTRA = {'pickup', 'eat', 'drink', 'read', 'jacks'}
+EXTRA = {'pickup', 'eat', 'drink', 'read', 'jacks', 'searchlow', 'shower'}
 H = None
 def init():
     global H; H = ubc.Hero()
 def t_of(i, n, mode):
     return i / n if mode == 'loop' else (i / (n - 1) if mode == 'end' else (i + .5) / n)
+SHOWER = None
+def shower_pose(t):
+    """моет голову: руки на макушке ↔ на затылке, плавно по кругу (позы подобраны ik.py один раз на процесс)"""
+    global SHOWER
+    import ik
+    body = H.parts[0]
+    if SHOWER is None:
+        def tgt(side, up, fwd, lat):
+            return lambda G: G[body.name['Head']][:3, 3] + np.array([lat if side == 'l' else -lat, up, fwd])
+        SHOWER = []
+        for up, fwd, lat in ((.1, .02, .09), (.05, -.02, .1)):
+            ex = {}
+            for side in 'lr': ex, _, _ = ik.reach(H, 'Idle_Loop', 0, side, tgt(side, up, fwd, lat), base_extra=ex)
+            SHOWER.append(ex)
+    s_ = (1 - math.cos(2 * math.pi * t)) / 2; A, B = SHOWER
+    ex = {nm: C.slerp(np.asarray(A[nm], float), np.asarray(B[nm], float), s_) for nm in A}
+    return H.pose('Idle_Loop', t, calm=.6, extra=ex)
+def swing_extra(clip, t, amp, arms):
+    """руки в противофазе ногам: левая нога вперёд — правая рука вперёд"""
+    body = H.parts[0]; G = H.pose(clip, t)[0]
+    zl, zr = G[body.name['foot_l']][2, 3], G[body.name['foot_r']][2, 3]
+    s_ = max(-1, min(1, (zl - zr) / .6)); named = H.sample(clip, t); ex = {}
+    for side, sg in (('l', -1), ('r', 1)):
+        r = np.asarray(named['upperarm_' + side][1], float)
+        r = ubc.qmul(r, ubc.qaxis((0, 0, 1), (-arms if side == 'l' else arms)))
+        ex['upperarm_' + side] = ubc.qmul(r, ubc.qaxis((1, 0, 0), sg * amp * s_))
+    return ex
 def jacks_pose(t):
     """прыжки «ноги врозь, руки в стороны»: s=0 — стоит, руки вдоль тела; s=1 — ноги врозь, руки в стороны"""
     s_ = (1 - math.cos(2 * math.pi * t)) / 2
@@ -64,7 +93,9 @@ def job(a):
     sp = SPEC[an]; n = sp['n']; t = t_of(i, n, sp['mode']); hop = 0
     if 'seg' in sp: t = sp['seg'][0] + (sp['seg'][1] - sp['seg'][0]) * t
     if sp.get('jacks'): Gs, hop = jacks_pose(t)
-    else: Gs = H.pose(sp['clip'], t, calm=sp.get('calm', 0), arms=sp.get('arms', 0), blend=sp.get('blend'))
+    elif sp.get('shower'): Gs = shower_pose(t)
+    elif sp.get('swing'): Gs = H.pose(sp['clip'], t, calm=sp.get('calm', 0), extra=swing_extra(sp['clip'], t, sp['swing'], sp.get('arms', 0)))
+    else: Gs = H.pose(sp['clip'], t, calm=sp.get('calm', 0), arms=sp.get('arms', 0), blend=sp.get('blend'), lower=sp.get('lower'))
     face = d * math.pi / 4
     im, (ax, ay), rm = H.render(Gs, face, K, rmap=True, pixel=True)
     # точка персонажа — под тазом; высота — по самой низкой точке тела (как в render)
@@ -107,5 +138,5 @@ if __name__ == '__main__':
             atlas['wpn'][name] = wpn
         print(sname, sheet.shape[1], 'x', sheet.shape[0], len(items), 'кадров', round(time.time() - t0), 'с')
     init(); atlas['anims']['pm'] = COUNTS                                              # у героя свои числа кадров (у героини — старые, 'p')
-    atlas['anims']['pmdur'] = {k: round(H.anim_dur(v['clip']) * ((v['seg'][1] - v['seg'][0]) if 'seg' in v else 1), 3) if 'clip' in v else 1.0 for k, v in SPEC.items()}
+    atlas['anims']['pmdur'] = {k: round(H.anim_dur(v['clip']) * ((v['seg'][1] - v['seg'][0]) if 'seg' in v else 1), 3) if 'clip' in v else (1.6 if v.get('shower') else 1.0) for k, v in SPEC.items()}
     json.dump(atlas, open(os.path.join(ROOT, 'assets/atlas.json'), 'w'), separators=(',', ':'))
