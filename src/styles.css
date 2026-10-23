@@ -1027,3 +1027,9 @@ body.ctledit #stick{z-index:61}
 .invsec .secrow .sect{overflow:visible;white-space:normal}
 .invsec .mvall{white-space:nowrap}
 #pnBody.scrolly{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+/* v49: значки на карте, шрамы */
+.markpick{position:fixed;z-index:80;display:grid;grid-template-columns:repeat(2,1fr);gap:4px;width:232px;padding:6px;border-radius:12px;background:rgba(14,17,20,.96);border:1px solid var(--edge);box-shadow:0 8px 22px rgba(0,0,0,.5)}
+.markpick button{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px;border:1px solid transparent;background:rgba(255,255,255,.05);color:var(--paper);font:600 12px var(--f-body);text-align:left}
+.markpick button i{display:grid;place-items:center;width:18px;height:18px;border-radius:50%;color:#0c1012;font:700 11px/1 var(--f-body);font-style:normal}
+.markpick .del{grid-column:1/-1;justify-content:center;color:#e0866f}
+.scarlist{margin-top:10px}.scarlist p{margin:2px 0;font-size:12.5px;color:var(--muted)}

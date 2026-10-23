@@ -267,7 +267,7 @@ function renderPanel() {
     $('pnTitle').textContent = 'Карта'; $('pnSub').textContent = P.mapRead ? 'район изучен по бумажной карте' : 'отмечено только то, что ты видел своими глазами';
     const zr = mk('div', 'secrow'), zs2 = mk('div', 'seg mapz');
     for (const [z, t] of [[1, 'Весь город'], [2, '×2'], [3, '×3']]) zs2.appendChild(btn(t, () => { world.mapZ = z; renderPanel(); }, (world.mapZ || 2) === z ? 'on' : ''));
-    zr.appendChild(zs2); zr.appendChild(mk('span', 'empty', 'Тап по карте: поставить или убрать метку')); body.appendChild(zr);
+    zr.appendChild(zs2); zr.appendChild(mk('span', 'empty', 'Тап по карте: поставить значок — обыскано, опасно, вода, база…')); body.appendChild(zr);
     const mw = mk('div', 'mapwrap'), c = mk('canvas', 'mapc'); mw.appendChild(c); body.appendChild(mw);
     const lg = mk('div', 'legend');
     for (const [col, t] of [['#e8473a', 'ты'], ['#ff9a3c', 'костёр'], ['#5aa8e0', 'бочка'], ['#f2ead8', 'вещи'], ['#e7c531', 'ограждение'], ['#c4312a', 'блокпост'], ['#e3c13a', 'генератор'], ['#7bc46a', 'грядка'], ['#7fd0ff', 'метки'], ['#3f8a4a', 'обысканный дом'], ['#6fdc5f', 'эвакуация'], ['#c9a46a', 'ящики'], ['#ff7ab0', 'приманки']]) { const e = mk('span'); const dt = mk('i'); dt.style.background = col; e.appendChild(dt); e.appendChild(document.createTextNode(t)); lg.appendChild(e); }

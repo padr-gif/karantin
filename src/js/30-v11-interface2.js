@@ -142,7 +142,7 @@ function drawMinimap(dt) {
   g.globalAlpha = 1;
   const dot = (x, y, r, col) => { const dx = x - px, dy = y - py, sx = cx + (dx - dy) * s, sy = cy + (dx + dy) * s / 2; g.fillStyle = col; g.beginPath(); g.arc(sx, sy, r, 0, 6.283); g.fill(); };
   for (const f of fires) if (!f.out) dot(f.x, f.y, 2.5, '#ff9a3c');
-  for (const m of world.marks || []) dot(m.x, m.y, 3, '#7fd0ff');
+  for (const m of world.marks || []) dot(m.x, m.y, 3, (MARKT[m.t] || MARKT.pin).c);
   for (const a of airdrops) if (a.landed && !(a.f && a.f.searched)) dot(a.x, a.y, 3, '#f2ead8');
   for (const z of zs) { const i = Math.floor(z.y) * MW + Math.floor(z.x); if (vis[i] && Math.abs(z.x - px) < R && Math.abs(z.y - py) < R && (zAlpha(z) || 1) >= .5) dot(z.x, z.y, 1.8, '#e8473a'); }
   for (const s of stashes) if (!s.gone) dot(s.cx, s.cy, 2, '#c9a46a');
