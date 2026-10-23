@@ -176,7 +176,4 @@ SFX.wood = function (x, y) { const v = zNear(x, y); if (v < .03) return; if (!sm
 // ---- автосигнализация: запись вместо пищащего синтеза; играет целиком, раз в ~2 секунды ----
 const carAlarm35 = SFX.carAlarm;
 SFX.carAlarm = function (x, y) { const v = Math.max(.12, zNear(x, y)); if (!SFX.ok('carAlarm35', 2150)) return; if (!smp('caralarm', .4 * v, 1, 0, zLp(v) + 1500)) carAlarm35(x, y); };
-// ---- удары: замах и попадание — записи (синтетический «вжух» звучал как писк) ----
-const swing35 = SFX.swing, hit35 = SFX.hit;
-SFX.swing = function (heavy) { const u = !(P && P.weapon); if (!smp(u ? 'swingu' : heavy ? 'swingb' : 'swing', u ? .3 : .38, .95 + (heavy ? -.1 : 0))) swing35(heavy); };
-SFX.hit = function (heavy, x, y) { const v = zNear(x, y); if (v < .03) return; if (!smp(P && P.weapon ? 'hitw' : 'hitu', .5 * v, heavy ? .85 : 1, 0, zLp(v) + 1000)) hit35(heavy, x, y); };
+// ---- удары: прежние звуки замаха и попадания (записи убраны по просьбе) ----

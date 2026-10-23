@@ -12,6 +12,7 @@ import char as C
 
 UBC = os.environ.get('UBC', os.path.join(ROOT, 'assets-src/ubc'))
 UAL = os.environ.get('UAL', os.path.join(ROOT, 'assets-src/ual'))
+UAL2 = os.environ.get('UAL2', os.path.join(ROOT, 'assets-src/ual2/Universal Animation Library 2 [Standard]/Unreal-Godot/UAL2_Standard.glb'))   # второй набор Quaternius (CC0): удары, рубка, еда
 BODY = 'Base Characters/Godot - UE/Superhero_Male_FullBody.gltf'
 HAIR = 'Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/'
 
@@ -99,13 +100,17 @@ class Hero:
         for p in body.prims:                                                 # встроенные ресницы/брови тела — тоже с альфой
             if len(p['P']) < 2000: p['alpha'] = True
         s.anim = C.Char(os.path.join(UAL, 'UAL1_Standard.glb'))
+        s.anim2 = C.Char(UAL2) if os.path.exists(UAL2) else None
+    def src(s, clip):
+        return s.anim2 if s.anim2 is not None and clip in s.anim2.anims and clip not in s.anim.anims else s.anim
     def anim_dur(s, clip):
-        a = s.anim.anims[clip]; return float(max(s.anim.g.acc(sm['input']).max() for sm in a['samplers']))
+        A = s.src(clip); a = A.anims[clip]; return float(max(A.g.acc(sm['input']).max() for sm in a['samplers']))
     def sample(s, clip, t01):
         named = {}
         if clip:
-            for node, (t, r, sc) in s.anim.sample(clip, t01).items():
-                nm = s.anim.nodes[node].get('name'); named[nm] = (t if nm in ('pelvis', 'root') else None, r, None)
+            A = s.src(clip)
+            for node, (t, r, sc) in A.sample(clip, t01).items():
+                nm = A.nodes[node].get('name'); named[nm] = (t if nm in ('pelvis', 'root') else None, r, None)
         return named
     def pose(s, clip=None, t01=0.0, extra=None, calm=0.0, arms=0.0, blend=None, legs=0.0, lower=None, upright=0.0):
         """глобальные матрицы для каждой части: анимация по именам костей

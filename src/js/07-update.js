@@ -52,7 +52,7 @@ function update(dt) {
     if ((world.snow || 0) > .4 && !insideHouse(P.x, P.y)) sp *= .88;
     const px = P.x, py = P.y;
     move(P, wx * sp * dt, wy * sp * dt);
-    { const w0 = P.walk; P.walk += Math.hypot(P.x - px, P.y - py) * 5.2; if (Math.floor(w0 / Math.PI) !== Math.floor(P.walk / Math.PI)) SFX.step(insideHouse(P.x, P.y), P.running); }
+    { const w0 = P.walk; P.walk += Math.hypot(P.x - px, P.y - py) * 5.2; const sk = P.running ? .62 : 1; if (Math.floor(w0 * sk / Math.PI) !== Math.floor(P.walk * sk / Math.PI)) SFX.step(insideHouse(P.x, P.y), P.running); }   // шаг — в такт анимации (бег — тот же множитель .62, что в playerAnim)
     if (!mouseAim) P.face = Math.atan2(wy, wx);
   }
   {

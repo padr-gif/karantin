@@ -124,3 +124,6 @@
 | soft_0.mp3 | Kenney | CC0 | https://kenney.nl/assets/impact-sounds |
 | soft_1.mp3 | Kenney | CC0 | https://kenney.nl/assets/impact-sounds |
 | soft_2.mp3 | Kenney | CC0 | https://kenney.nl/assets/impact-sounds |
+
+## Анимации
+- Quaternius — Universal Animation Library 2 (CC0): удар одной рукой (Sword_Regular_B), удар двумя руками (TreeChopping_Loop). https://quaternius.itch.io/universal-animation-library-2

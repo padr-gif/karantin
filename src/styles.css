@@ -974,3 +974,14 @@ body.ctledit #stick{z-index:61}
 .capbar.over i{background:#d0623a}
 .nobag{font-size:12px;color:var(--muted);padding:8px 0}
 #invCap{font-size:10px;letter-spacing:-.02em}
+/* v44: рюкзак с прокруткой и по 4 в ряд, крупный герой в редакторе */
+.lay3.inv .pcol{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.lay3.inv .pcol>*{flex:none}
+.invsec .secrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.invsec .mvall{margin-left:auto;padding:4px 10px;font-size:11px;min-height:26px;border-radius:8px}
+#create #cPrev{width:min(230px,30vw);aspect-ratio:240/300;max-height:calc(var(--vh,100vh) - 150px)}
+#cPrev{width:240px;height:300px}
+.invsec .secrow{flex-wrap:nowrap}
+.invsec .secrow .sect{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.invsec .secrow .capbar{flex:1 1 30px;min-width:20px}
+#create #cPrev{width:min(205px,26vw)}
