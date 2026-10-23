@@ -487,25 +487,26 @@ function generate() {
   if (pool.length) { const c = pick(pool); c.items.push(mkItem('plank'), mkItem('plank')); }
 }
 // exit checkpoint: concrete blocks across the road at the fence, sandbags, a booth, an army truck, a jam of cars
-function checkpoint(side) {
+function checkpoint(side, R0) {
+  if (R0 == null) R0 = EXIT_R;                                   // где дорога пересекает забор (поперечная координата)
   // a = distance from the map edge along the exit, c = cross coordinate
   const XY = (a, c) => side === 'w' ? [a, c] : side === 'e' ? [MW - 1 - a, c] : side === 'n' ? [c, a] : [c, MH - 1 - a];
   const along = (side === 'w' || side === 'e') ? 'x' : 'y', cross = along === 'x' ? 'y' : 'x';
   const sgn = (side === 'w' || side === 'n') ? 1 : -1;
   const clear = (a, c) => { const [x, y] = XY(a, c); if (get(x, y) === TREE) set(x, y, GRASS); };
-  for (let a = FEN - 6; a <= FEN + 8; a++) for (let c = EXIT_R - 5; c <= EXIT_R + 8; c++) clear(a, c);
+  for (let a = FEN - 6; a <= FEN + 8; a++) for (let c = R0 - 5; c <= R0 + 8; c++) clear(a, c);
   const put = (a, c, p) => { const [x, y] = XY(a, c); p.cx = x + .5; p.cy = y + .5; if (!p.r) p.r = [x + .1, y + .1, x + .9, y + .9]; return addProp(p, [[x, y]]); };
   const thin = (a, c, th) => { const [x, y] = XY(a, c); return cross === 'y' ? [x + .5 - th, y + .02, x + .5 + th, y + .98] : [x + .02, y + .5 - th, x + .98, y + .5 + th]; };
   // concrete blocks on the fence line and a second staggered row outside
-  for (let c = EXIT_R - 1; c <= EXIT_R + RW; c++) put(FEN, c, {type:'jersey', proc:true, ax:cross, solid:true, r:thin(FEN, c, .2)});
-  for (const c of [EXIT_R, EXIT_R + 3]) put(FEN - 3, c, {type:'jersey', proc:true, ax:cross, solid:true, r:thin(FEN - 3, c, .2)});
+  for (let c = R0 - 1; c <= R0 + RW; c++) put(FEN, c, {type:'jersey', proc:true, ax:cross, solid:true, r:thin(FEN, c, .2)});
+  for (const c of [R0, R0 + 3]) put(FEN - 3, c, {type:'jersey', proc:true, ax:cross, solid:true, r:thin(FEN - 3, c, .2)});
   // warning sign in the middle of the road just inside
-  put(FEN + 2, EXIT_R + 1, {type:'qsign', proc:true, ax:cross, solid:true, r:thin(FEN + 2, EXIT_R + 1, .12)});
-  put(FEN + 2, EXIT_R + 2, {type:'jersey', proc:true, ax:cross, solid:true, r:thin(FEN + 2, EXIT_R + 2, .2)});
+  put(FEN + 2, R0 + 1, {type:'qsign', proc:true, ax:cross, solid:true, r:thin(FEN + 2, R0 + 1, .12)});
+  put(FEN + 2, R0 + 2, {type:'jersey', proc:true, ax:cross, solid:true, r:thin(FEN + 2, R0 + 2, .2)});
   // sandbag nests either side
-  for (const c of [EXIT_R - 2, EXIT_R - 3, EXIT_R + 5, EXIT_R + 6]) put(FEN + 1, c, {type:'sandbag', proc:true, solid:true});
-  for (const c of [EXIT_R - 3, EXIT_R + 6]) put(FEN + 2, c, {type:'sandbag', proc:true, solid:true});
-  put(FEN + 3, EXIT_R + 6, {type:'booth', proc:true, solid:true});
+  for (const c of [R0 - 2, R0 - 3, R0 + 5, R0 + 6]) put(FEN + 1, c, {type:'sandbag', proc:true, solid:true});
+  for (const c of [R0 - 3, R0 + 6]) put(FEN + 2, c, {type:'sandbag', proc:true, solid:true});
+  put(FEN + 3, R0 + 6, {type:'booth', proc:true, solid:true});
   // army trucks: one inside, one outside
   const truck = (a, c) => {
     const [x0, y0] = XY(a, c), [x1, y1] = XY(a + 1, c), x = Math.min(x0, x1), y = Math.min(y0, y1);
@@ -513,9 +514,9 @@ function checkpoint(side) {
     Object.assign(p, {ci:5, army:true, solid:true, flip:sgn < 0});
     addProp(p, along === 'x' ? [[x, y], [x + 1, y]] : [[x, y], [x, y + 1]]);
   };
-  truck(FEN + 5, EXIT_R + 3); truck(FEN - 6, EXIT_R);
+  truck(FEN + 5, R0 + 3); truck(FEN - 6, R0);
   // ammo/supply crates by the booth
-  for (const c of [EXIT_R - 2, EXIT_R + 7]) {
+  for (const c of [R0 - 2, R0 + 7]) {
     const [x, y] = XY(FEN + 4, c); const i = y * MW + x;
     if (furn[i] || propAt[i] || map[i] !== GRASS) continue;
     const wd = along === 'x' ? [sgn * -1, 0] : [0, sgn * -1], sx = .62, sy = .62, cx = x + .5, cy = y + .5;
@@ -525,7 +526,7 @@ function checkpoint(side) {
   }
   // abandoned cars jammed on the way out
   for (let a = FEN + 8; a < CITY0 - 2; a += 2 + ri(0, 2)) {
-    const lane = EXIT_R + (rng() < .5 ? 0 : RW - 1);
+    const lane = R0 + (rng() < .5 ? 0 : RW - 1);
     if (rng() < .45) continue;
     const [x0, y0] = XY(a, lane), [x1, y1] = XY(a + 1, lane), x = Math.min(x0, x1), y = Math.min(y0, y1);
     const pol = rng() < .12;
@@ -534,7 +535,7 @@ function checkpoint(side) {
     Object.assign(p, {ci:pol ? 2 : ri(0, 5), police:pol, solid:true, flip:sgn > 0 ? rng() < .85 : rng() < .15});
     addProp(p, along === 'x' ? [[x, y], [x + 1, y]] : [[x, y], [x, y + 1]]);
   }
-  const [sx, sy] = XY(FEN + 3, EXIT_R + 1);
+  const [sx, sy] = XY(FEN + 3, R0 + 1);
   CHECKPOINTS.push({x:sx + .5, y:sy + .5, side});
   SPECIAL.push({x:sx + .5 + (along === 'x' ? sgn * 2 : 0), y:sy + .5 + (along === 'y' ? sgn * 2 : 0), pi:13, n:3});
 }
