@@ -16,7 +16,7 @@ C.SS = 4                                                                   # п�
 # кадров, отрезок клипа и «смягчения»: calm — ноги к стойке, arms — руки ближе к телу, blend — подмешать спокойную стойку
 SPEC = {
   'idle':   dict(clip='Idle_Loop', mode='loop', n=10, calm=.45, arms=.3),
-  'walk':   dict(clip='Walk_Formal_Loop', mode='loop', n=24, arms=.22, swing=.42),
+  'walk':   dict(clip='Walk_Formal_Loop', mode='loop', n=24, arms=-.04, swing=.32),   # руки чуть от тела — не проходят сквозь бёдра
   'run':    dict(clip='Jog_Fwd_Loop', mode='loop', n=16, arms=.18, blend=('Walk_Formal_Loop', .35)),
   'sneak':  dict(clip='Crouch_Fwd_Loop', mode='loop', n=16, arms=.15),
   'attack': dict(clip='Sword_Attack', mode='once', n=10, seg=(.12, .72), blend=('Idle_Loop', .62, 0), arms=.15, calm=.5),
@@ -31,7 +31,7 @@ SPEC = {
   'read':   dict(clip='Idle_Talking_Loop', mode='loop', n=12, calm=.45, arms=.15),
   'jacks':  dict(jacks=True, mode='loop', n=8),
   'searchlow': dict(clip='Interact', mode='loop', n=12, lower=('Crouch_Idle_Loop', 0, .2), arms=.1),
-  'shower': dict(shower=True, mode='loop', n=10),
+  'shower': dict(clip='Idle_Talking_Loop', mode='loop', n=12, calm=.6, arms=-.02),   # трёт плечи и грудь — спокойное живое движение
 }
 COUNTS = {k: v['n'] for k, v in SPEC.items()}
 EXTRA = {'pickup', 'eat', 'drink', 'read', 'jacks', 'searchlow', 'shower'}

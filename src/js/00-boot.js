@@ -12,11 +12,28 @@ $('keysHelp').textContent = isTouch
 const low = document.createElement('canvas'), lowCtx = low.getContext('2d');
 let W = 0, H = 0, DPR = 1, DEV = 1, SCALE = 3, kBase = 3, zoomOff = 0, resQ = 1, slowT = 0, fastT = 0;
 let gfxCap = 2;
+// iOS в режиме «На экран Домой» иногда «застревает» с укороченной высотой окна (после поворота, сворачивания):
+// снизу остаётся чёрная полоса. Ожидаемая высота — короткая или длинная сторона экрана; если окно меньше,
+// один раз заставляем WebKit перемерить окно (скрыть и показать body), а если не помогло — растягиваем холст сами.
+const standalone = () => navigator.standalone === true || (window.matchMedia && (matchMedia('(display-mode: fullscreen)').matches || matchMedia('(display-mode: standalone)').matches));
+let vpTried = '', vpStretch = false;
+function expectedH() { const a = Math.min(screen.width, screen.height), b = Math.max(screen.width, screen.height); return innerWidth > innerHeight ? a : b; }
+function viewH() {
+  const h = innerHeight;
+  if (!standalone() || !/iP(hone|ad|od)|Macintosh/.test(navigator.userAgent) || !('ontouchend' in document)) return h;
+  const exp = expectedH(), key = (innerWidth > innerHeight ? 'L' : 'P') + exp;
+  if (exp - h <= 4 || exp - h > 140) { vpStretch = false; return h; }
+  if (vpTried !== key) {                                           // перемерить один раз на ориентацию
+    vpTried = key; const b = document.body; b.style.display = 'none'; void b.offsetHeight; b.style.display = '';
+    if (exp - innerHeight <= 4) return innerHeight;
+  }
+  vpStretch = true; return exp;
+}
 function resize() {
   DEV = Math.max(1, Math.min(gfxCap, window.devicePixelRatio || 1) * resQ);
-  const cw = innerWidth, chh = innerHeight;
+  const cw = innerWidth, chh = viewH();
   cv.width = Math.round(cw * DEV); cv.height = Math.round(chh * DEV);
-  cv.style.width = cw + 'px'; cv.style.height = chh + 'px';
+  cv.style.width = cw + 'px'; cv.style.height = chh + 'px'; cv.style.bottom = vpStretch ? 'auto' : '';
   // 100vh on phones can include the strip under the system buttons; panels size themselves to what is really visible
   document.documentElement.style.setProperty('--vh', chh + 'px');
   const D0 = Math.min(gfxCap, window.devicePixelRatio || 1);
@@ -33,7 +50,9 @@ addEventListener('resize', resize); resize();
   const watch = () => { if (innerWidth !== lw || innerHeight !== lh) { lw = innerWidth; lh = innerHeight; dispatchEvent(new Event('resize')); } requestAnimationFrame(watch); };
   requestAnimationFrame(watch);
   if (window.visualViewport) visualViewport.addEventListener('resize', () => requestAnimationFrame(() => dispatchEvent(new Event('resize'))));
-  addEventListener('pageshow', () => dispatchEvent(new Event('resize'))); }
+  addEventListener('pageshow', () => dispatchEvent(new Event('resize')));
+  addEventListener('orientationchange', () => { vpTried = ''; setTimeout(() => dispatchEvent(new Event('resize')), 300); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { vpTried = ''; setTimeout(() => dispatchEvent(new Event('resize')), 300); } }); }
 
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 let rng = mulberry32((Date.now() ^ 0x5bd1e995) >>> 0);

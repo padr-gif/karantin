@@ -79,3 +79,6 @@ doAction = function (a0) {
 { const regs = outfitRegs, key = outfitKey;
   outfitRegs = function () { return P && P._inShower ? new Array(16).fill(null) : regs(); };
   outfitKey = function () { return P && P._inShower ? 'shower' : key(); }; }
+
+// в кабине «застрять» — нормально: не выталкивать героя наружу (иначе дёргался каждый кадр)
+{ const un = unstick; unstick = function () { if (P && P.act && P.act.shower) { P._stuckT = 0; return; } un(); }; }
