@@ -72,6 +72,12 @@ def dress(ch, look):
         v = np.zeros((len(P), 4)); v[rid == 6, :3] = hexc(look['under']); v[rid == 6, 3] = 1
         p['vcol'] = v; p['_mean'] = .5
 
+def qaxis(ax, a):
+    sn = math.sin(a / 2); return np.array([ax[0] * sn, ax[1] * sn, ax[2] * sn, math.cos(a / 2)])
+def qmul(a, b):
+    x1, y1, z1, w1 = a; x2, y2, z2, w2 = b
+    return np.array([w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2, w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2, w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2, w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2])
+
 class Hero:
     def __init__(s, parts=('Hair_Buzzed', 'Eyebrows_Regular'), look=LOOK):
         s.parts = [C.Char(os.path.join(UBC, BODY))] + [C.Char(os.path.join(UBC, HAIR + p + '.gltf')) for p in parts]
@@ -93,17 +99,35 @@ class Hero:
         for p in body.prims:                                                 # встроенные ресницы/брови тела — тоже с альфой
             if len(p['P']) < 2000: p['alpha'] = True
         s.anim = C.Char(os.path.join(UAL, 'UAL1_Standard.glb'))
-    def pose(s, clip=None, t01=0.0, extra=None, calm=0.0):
-        """глобальные матрицы для каждой части: анимация по именам костей (+ ручные правки extra: {кость: кватернион})"""
+    def anim_dur(s, clip):
+        a = s.anim.anims[clip]; return float(max(s.anim.g.acc(sm['input']).max() for sm in a['samplers']))
+    def sample(s, clip, t01):
         named = {}
         if clip:
             for node, (t, r, sc) in s.anim.sample(clip, t01).items():
                 nm = s.anim.nodes[node].get('name'); named[nm] = (t if nm in ('pelvis', 'root') else None, r, None)
+        return named
+    def pose(s, clip=None, t01=0.0, extra=None, calm=0.0, arms=0.0, blend=None, legs=0.0):
+        """глобальные матрицы для каждой части: анимация по именам костей
+        calm — ноги к стойке покоя (уже стойка); arms — руки ближе к телу (рад); blend=(клип, доля, время) — смешать с другим клипом
+        (так удар становится мягче); legs — развести ноги в стороны (рад); extra — {кость: кватернион} поверх всего"""
+        named = s.sample(clip, t01); body = s.parts[0]
+        rest = lambda nm: body.rest[body.name[nm]][1]
+        if blend:
+            other = s.sample(blend[0], blend[2] if len(blend) > 2 else t01)
+            for nm, (t, r, sc) in list(named.items()):
+                o = other.get(nm)
+                if r is not None and o is not None and o[1] is not None:
+                    tt = t if t is None or o[0] is None else np.asarray(t) * (1 - blend[1]) + np.asarray(o[0]) * blend[1]
+                    named[nm] = (tt, C.slerp(np.asarray(r, float), np.asarray(o[1], float), blend[1]), sc)
         if calm:                                                             # ноги ближе к стойке покоя: стойка уже, без «супергеройской» раскоряки
-            body = s.parts[0]
             for nm, (t, r, sc) in list(named.items()):
                 if r is not None and nm in body.name and any(k in nm for k in ('thigh', 'calf', 'foot', 'ball')):
-                    named[nm] = (t, C.slerp(np.asarray(r, float), body.rest[body.name[nm]][1], calm), sc)
+                    named[nm] = (t, C.slerp(np.asarray(r, float), rest(nm), calm), sc)
+        for nm, sg, amt in (('upperarm_l', -1, arms), ('upperarm_r', 1, arms), ('thigh_l', -1, legs), ('thigh_r', 1, legs)):
+            if not amt: continue
+            t, r, sc = named.get(nm, (None, rest(nm), None))
+            named[nm] = (t, qmul(np.asarray(r if r is not None else rest(nm), float), qaxis((0, 0, 1), sg * amt)), sc)
         if extra:
             for nm, q in extra.items(): named[nm] = (named.get(nm, (None,))[0], q, None)
         out = []

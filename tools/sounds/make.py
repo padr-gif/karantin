@@ -49,6 +49,7 @@ SET = {
             [(1, 'FlatHill'), (2, 'eardeer'), (3, 'eardeer'), (4, 'eardeer'), (5, 'eardeer')]],
   'woodbreak': [(C, 'sound/CC-Sounds/smash_success/door_wood/door_smash_success.ogg', 'qubodup', 'CC0', 'https://opengameart.org/users/qubodup'),
                 (C, 'sound/CC-Sounds/smash_success/window/wood_smash_success.ogg', 'egomassive', 'CC0', FS + 'people/egomassive/')],
+  'caralarm': [(C, 'sound/CC-Sounds/vehicle/car_alarm/car_alarm.ogg', 'InspectorJ', 'CC BY 4.0', FS + 'people/InspectorJ/sounds/422051/')],
   # Kenney (CC0): мелкие звуки вещей
   'cloth': many(K, 'kenney_rpg-audio/cloth{}.ogg', 4, 'Kenney', 'CC0', 'https://kenney.nl/assets/rpg-audio'),
   'handle': [(K, 'kenney_rpg-audio/handleSmallLeather.ogg', 'Kenney', 'CC0', 'https://kenney.nl/assets/rpg-audio'), (K, 'kenney_rpg-audio/handleSmallLeather2.ogg', 'Kenney', 'CC0', 'https://kenney.nl/assets/rpg-audio')],

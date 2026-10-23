@@ -108,8 +108,9 @@ function renderHotbar() {
   HOT.forEach((h, i) => {
     const p = picks[i], b = mk('button', 'hslot' + (p ? '' : ' empty') + (p && p[0].on ? ' on' : '')); b.type = 'button';
     b.title = h.label + (p ? ': ' + ITEMS[p[0].id].name : '');
-    if (p) { b.appendChild(iconEl(p[0].id, 30)); const n = countItem(p[0].id); if (n > 1) b.appendChild(mk('span', 'cnt', n)); }
+    if (p) { b.appendChild(iconEl(p[0].id, 28)); const n = countItem(p[0].id); if (n > 1) b.appendChild(mk('span', 'cnt', n)); }
     else b.appendChild(svgIc(HOTIC[h.id]));
+    b.appendChild(mk('span', 'hl', h.label));
     b.appendChild(mk('span', 'hk', String(i + 1)));
     b.addEventListener('pointerdown', e => { e.preventDefault(); useHot(i); });
     bar.appendChild(b);

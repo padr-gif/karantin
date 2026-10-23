@@ -930,3 +930,14 @@ body.incar #pad #bInv{right:192px!important;bottom:17px!important}
 #create .create{grid-template-rows:minmax(0,1fr);overflow:hidden}
 #create .opts .rec:empty{display:none}
 #create .opt{align-items:start}#create .olbl{padding-top:7px}
+
+/* v39: читаемые кнопки снизу — подпись под каждой, иконки ярче и крупнее */
+#dock .hslot{grid-template-rows:1fr auto;padding:3px 0 2px;place-items:center}
+.hslot .hl{font:600 9px/1 var(--f-ui, system-ui);letter-spacing:.02em;color:rgba(236,230,214,.82);text-shadow:0 1px 2px #000;white-space:nowrap}
+.hslot .ic{width:22px;height:22px;color:rgba(236,230,214,.9)}
+.hslot.empty .ic{width:22px;height:22px;color:rgba(221,214,198,.5)}
+.hslot.empty .hl{color:rgba(221,214,198,.5)}
+.hslot .ico{width:28px!important;height:28px!important}
+.hslot .cnt{top:2px;right:4px;bottom:auto}
+#dock .hslot{width:52px}
+@media (max-width:700px){#dock .hslot{width:46px}.hslot .hl{font-size:8.5px}}
