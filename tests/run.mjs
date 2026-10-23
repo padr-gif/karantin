@@ -243,6 +243,22 @@ const types = await D(`(() => {
 })()`);
 check('четыре новых типа районов строятся и после сохранения те же', Object.values(types).every(v => v === 'ok'), types);
 
+console.log('Разные города и дворы');
+await fresh();
+const city = await D(`(() => {
+  const g = s => { newGame({seed:s}); return {rx:ROADSX.join(), ry:ROADSY.join(), flats:houses.filter(h => h.kind === 'flats').length, homes:houses.filter(h => h.kind === 'house').length, pf:props.filter(p => p.type === 'pfence').length, veg:props.filter(p => p.type === 'veg').length}; };
+  const a = g(101), b = g(202), c = g(303);
+  return {diff:new Set([a.rx + a.ry, b.rx + b.ry, c.rx + c.ry]).size, a, b, c};
+})()`);
+check('у разных городов разная сетка улиц', city.diff >= 2, city);
+check('в городе многоэтажки, жилые дома, заборы и огороды', [city.a, city.b, city.c].every(v => v.flats >= 1 && v.homes >= 20 && v.pf > 100 && v.veg > 10), city);
+check('огород копается, и это переживает сохранение', await D(`(() => {
+  const p = props.find(p => p.type === 'veg'); P.x = p.cx + .9; P.y = p.cy; zs.length = 0;
+  const a = getActions().find(a => a.kind === 'veg'); if (!a) return 'нет действия'; doAction(a); const k = props.indexOf(p);
+  applySave(JSON.parse(JSON.stringify(serialize()))); return props[k].dug === true && props[k].type === 'veg';
+})()`));
+check('старое сохранение строит город старым генератором', await D(`(() => { const d = JSON.parse(JSON.stringify(serialize())); delete d.x53; delete d.x53v; applySave(d); return world.gen === 1 && ROADSX === null && !houses.some(h => h.kind === 'flats'); })()`));
+
 console.log('Живая игра 15 секунд');
 await fresh("['coward']");
 await D("P.weapon = mkItem('shotgun'); P.weapon.mag = 2; P.inv.push(mkItem('shells')); gameMin += 14 * 60; for (let i = 0; i < 25; i++) spawnZombie(4, false);");

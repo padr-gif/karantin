@@ -13,6 +13,7 @@ let houses = [], furns = [], props = [];
 const D4 = [[1,0],[-1,0],[0,1],[0,-1]];
 const D8 = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 const ROADS = [30, 60, 90, 120, 150];
+let ROADSX = null, ROADSY = null;                       // v53: у города своя сетка по каждой оси (null — общая ROADS)
 const HWV = .065, HWC = .1; // wall half-thickness: visual / collision
 const get = (x, y) => (x < 0 || y < 0 || x >= MW || y >= MH) ? WALL : map[y * MW + x];
 const set = (x, y, t) => { if (x >= 0 && y >= 0 && x < MW && y < MH) map[y * MW + x] = t; };

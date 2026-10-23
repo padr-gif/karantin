@@ -108,7 +108,7 @@ function blockClimbPlan(dx, dy) {
 { const ga = getActions;
   getActions = function () {
     const out = ga(), pl = blockClimbPlan(Math.cos(P.face), Math.sin(P.face));
-    if (pl) out.push({kind:'climbj', label:'Перелезть через блок', pl});
+    if (pl) out.push({kind:'climbj', label:'Перелезть через блок', pl, f:pl.p});
     return out;
   };
   const da = doAction;

@@ -65,11 +65,13 @@ function drawGroundRange(gx0, gy0, gx1, gy1) {
     if (t === ROAD) {
       blitObj('g_asph_' + (hv < .1 ? 2 : hv < .55 ? 0 : 1), sx, sy);
       let hR = false, vR = false;
-      for (const r of ROADS) { if (y === r + 1) hR = true; if (x === r + 1) vR = true; }
-      if ((hR && !inRoadCol(x) && x % 2 === 0) || (vR && !inRoadCol(y) && y % 2 === 0)) {
+      const RXs = ROADSX || ROADS, RYs = ROADSY || ROADS, inX = v => RXs.some(r => v >= r - 1 && v <= r + RW), inY = v => RYs.some(r => v >= r - 1 && v <= r + RW);
+      for (const r of RYs) if (y === r + 1) hR = true;
+      for (const r of RXs) if (x === r + 1) vR = true;
+      if ((hR && !inX(x) && x % 2 === 0) || (vR && !inY(y) && y % 2 === 0)) {
         groundT(0); ctx.fillStyle = '#c8ac56';
-        if (hR && !inRoadCol(x) && x % 2 === 0) ctx.fillRect(x + .15, y + .95, .7, .1);
-        if (vR && !inRoadCol(y) && y % 2 === 0) ctx.fillRect(x + .95, y + .15, .1, .7);
+        if (hR && !inX(x) && x % 2 === 0) ctx.fillRect(x + .15, y + .95, .7, .1);
+        if (vR && !inY(y) && y % 2 === 0) ctx.fillRect(x + .95, y + .15, .1, .7);
         resetT();
       }
     } else if (t === WALK) {
