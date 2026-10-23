@@ -133,7 +133,7 @@ function wallKey(x, y, i, cut) {
   if (t !== WALL) {
     const o = obs[i];
     k += '|' + (o.open ? 1 : 0) + (o.dead ? 1 : 0) + (o.broken ? (o.cleared ? 2 : 1) : 0) + (o.bhp > 0 ? Math.ceil(o.bhp / 45) : 0) + '|' + Math.round((o.ang == null ? (o.open ? 1 : 0) : o.ang) * 12) + (o.mhp > 0 ? 'm' + Math.ceil(o.mhp / 55) : '');
-    if (t === WIN) k += ((lightLevel() < .5 && poweredAt(x, y)) ? 'n' : 'd') + (o.cc ? 'c' : '') + (o.cur ? 'u' : '');
+    if (t === WIN) k += ((lightLevel() < .5 && poweredAt(x, y) && winLit(x, y)) ? 'n' : 'd') + (o.cc ? 'c' : '') + (o.cur ? 'u' : '');
   }
   return k;
 }

@@ -45,7 +45,7 @@ function drawWallTile(x, y, i, cut) {
     for (const u of [.12, .88]) for (const zz of [z0 + 3, z1 - 3]) { const px = ax ? x + u : x + .5 + k, py = ax ? y + .5 + k : y + u; ctx.fillRect(SX(px, py) - 1, SY(px, py, zz) - 1, 2, 2); }
     if (o.mhp < 110) { ctx.strokeStyle = dk; ctx.lineWidth = 1; ctx.beginPath(); const px = ax ? x + .35 : x + .5 + k, py = ax ? y + .5 + k : y + .35, zm = (z0 + z1) / 2; line3(px, py, zm, ax ? px + .25 : px, ax ? py : py + .25, zm + U * .18); if (o.mhp < 55) line3(ax ? px + .3 : px, ax ? py : py + .3, zm - U * .2, ax ? px + .45 : px, ax ? py : py + .45, zm); ctx.stroke(); }
   };
-  const night = lightLevel() < .5 && poweredAt(x, y);
+  const night = lightLevel() < .5 && poweredAt(x, y) && winLit(x, y);
   if (t === WIN) {
     const sill = WH * .36, lint = WH * .8;
     band(0, Math.min(top, sill));

@@ -18,7 +18,7 @@ SPEC = {
   'idle':   dict(clip='Idle_Loop', mode='loop', n=10, calm=.45, arms=-.03),   # руки свободно, не прижаты
   'walk':   dict(clip='Walk_Formal_Loop', mode='loop', n=24, arms=-.04, swing=.32),   # руки чуть от тела — не проходят сквозь бёдра
   'run':    dict(clip='Jog_Fwd_Loop', mode='loop', n=16, arms=.18, blend=('Walk_Formal_Loop', .35)),
-  'sneak':  dict(clip='Crouch_Fwd_Loop', mode='loop', n=16, arms=0, blend=('Walk_Formal_Loop', .5), upright=.6),   # полуприсед, спина чуть наклонена
+  'sneak':  dict(clip='Crouch_Fwd_Loop', mode='loop', n=16, arms=.06, blend=('Walk_Formal_Loop', .5), upright=.6, swing=.26, armclip='Walk_Formal_Loop'),   # руки ходят в такт шагам   # полуприсед, спина чуть наклонена
   'attack': dict(clip='Sword_Attack', mode='once', n=10, seg=(.12, .72), blend=('Idle_Loop', .62, 0), arms=.15, calm=.5),
   'punch':  dict(clip='Punch_Cross', mode='once', n=8, arms=.1, blend=('Idle_Loop', .2, 0), calm=.4),
   'punch2': dict(clip='Punch_Jab', mode='once', n=8, arms=.1, blend=('Idle_Loop', .2, 0), calm=.4),   # другой рукой — чередуются
@@ -159,11 +159,11 @@ def two_pose(t, i, n, run):
     ex, dr = TWO[min(n - 1, int(t * n))]
     pk = dict(lower=('Jog_Fwd_Loop', i / n, 0)) if run else {}
     return H.pose('Idle_Loop', 0, calm=.5, extra=ex, **pk), dr
-def swing_extra(clip, t, amp, arms):
+def swing_extra(clip, t, amp, arms, pk=None, armclip=None):
     """руки в противофазе ногам: левая нога вперёд — правая рука вперёд"""
-    body = H.parts[0]; G = H.pose(clip, t)[0]
+    body = H.parts[0]; G = H.pose(clip, t, **(pk or {}))[0]
     zl, zr = G[body.name['foot_l']][2, 3], G[body.name['foot_r']][2, 3]
-    s_ = max(-1, min(1, (zl - zr) / .6)); named = H.sample(clip, t); ex = {}
+    s_ = max(-1, min(1, (zl - zr) / (.6 if not pk else .35))); named = H.sample(armclip or clip, t); ex = {}
     for side, sg in (('l', -1), ('r', 1)):
         r = np.asarray(named['upperarm_' + side][1], float)
         r = ubc.qmul(r, ubc.qaxis((0, 0, 1), (-arms if side == 'l' else arms)))
@@ -203,7 +203,9 @@ def job(a):
     elif sp.get('mouth'): Gs = mouth_pose(sp['mouth'], t)
     elif sp.get('look'): Gs = H.pose(sp['clip'], t, calm=sp.get('calm', 0), arms=sp.get('arms', 0), extra=look_extra())
     elif sp.get('runlegs'): Gs = H.pose(sp['clip'], t, calm=0, arms=sp.get('arms', 0), blend=sp.get('blend'), lower=('Jog_Fwd_Loop', i / n, 0))   # ноги бегут, руки бьют
-    elif sp.get('swing'): Gs = H.pose(sp['clip'], t, calm=sp.get('calm', 0), extra=swing_extra(sp['clip'], t, sp['swing'], sp.get('arms', 0)))
+    elif sp.get('swing'):
+        pk = dict(blend=sp['blend'], upright=sp.get('upright', 0)) if sp.get('blend') else {}
+        Gs = H.pose(sp['clip'], t, calm=sp.get('calm', 0), extra=swing_extra(sp['clip'], t, sp['swing'], sp.get('arms', 0), pk or None, sp.get('armclip')), **pk)
     else: Gs = H.pose(sp['clip'], t, calm=sp.get('calm', 0), arms=sp.get('arms', 0), blend=sp.get('blend'), lower=sp.get('lower'), upright=sp.get('upright', 0))
     face = d * math.pi / 4
     im, (ax, ay), rm = H.render(Gs, face, K, rmap=True, pixel=True, inflate=VARS[var])

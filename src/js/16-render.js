@@ -192,7 +192,7 @@ function render(dt) {
     lx.fillStyle = `rgba(6,10,22,${Math.min(.92, alpha)})`; lx.fillRect(0, 0, lc.width, lc.height);
     lx.globalCompositeOperation = 'destination-out';
     const hole = (cx, cy, r, s2) => { const g = lx.createRadialGradient(cx, cy, r * .2, cx, cy, r); g.addColorStop(0, `rgba(0,0,0,${s2})`); g.addColorStop(1, 'rgba(0,0,0,0)'); lx.fillStyle = g; lx.beginPath(); lx.arc(cx, cy, r, 0, 6.283); lx.fill(); };
-    hole(SX(P.x, P.y) / 2, SY(P.x, P.y, U * .9) / 2, vr, 1);
+    { const dk = mode === 'play' && L < .75 && inside && !roomLitAt(P.x, P.y); hole(SX(P.x, P.y) / 2, SY(P.x, P.y, U * .9) / 2, dk ? vr * .55 : vr, dk ? .55 : 1); }   // свет выключен — темно
     const fireGlow = [];
     for (const fi of fires) if (!fi.out) { const sx = SX(fi.x, fi.y), sy = SY(fi.x, fi.y, 6); if (sx > -200 && sx < W + 200 && sy > -200 && sy < H + 200) { const fl2 = 1 + Math.sin(animT * 11 + fi.seed * 7) * .06; hole(sx / 2, sy / 2, U * 2.6 * fl2, .95); fireGlow.push([sx, sy, fl2]); } }
     for (const p of dynCars) if (p.engine) for (let q = 1; q <= 3; q++) { const bx = p.cx + Math.cos(p.ang) * (q * 1.4 + .6), by = p.cy + Math.sin(p.ang) * (q * 1.4 + .6); hole(SX(bx, by) / 2, SY(bx, by, 0) / 2, U * (.8 + q * .5), .9); }

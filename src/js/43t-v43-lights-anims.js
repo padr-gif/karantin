@@ -164,3 +164,36 @@ setInterval(() => {
   };
 }
 $('kills').title = 'Убито мертвецов'; $('kills').setAttribute('aria-label', 'Убито мертвецов');
+
+// ---- выключенный свет — правда темно: окна не светятся, вокруг героя видно меньше (16-render) ----
+function winLit(x, y) {
+  let any = false;
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const r = roomAtXY(x + dx + .5, y + dy + .5); if (r) { any = true; if (!r.off) return true; } }
+  return !any;
+}
+// ---- свет в окнах ночью видно с улицы: мертвецы подтягиваются к горящим окнам (шторы спасают) ----
+{ let tW = 0, told = false;
+  const up = update;
+  update = function (dt) {
+    up(dt);
+    if (mode !== 'play' || !P || paused) return;
+    tW += dt; if (tW < 5) return; tW = 0;
+    if (lightLevel() >= .5) return;
+    let lure = false;
+    for (const Hs of houses) {
+      if (!Hs.rooms || Math.hypot((Hs.ix0 + Hs.ix1) / 2 - P.x, (Hs.iy0 + Hs.iy1) / 2 - P.y) > 30) continue;
+      for (const r of Hs.rooms) {
+        if (r.off || !poweredAt((r.x0 + r.x1) / 2, (r.y0 + r.y1) / 2)) continue;
+        for (let x = r.x0 - 1; x <= r.x1 + 1; x++) for (let y = r.y0 - 1; y <= r.y1 + 1; y++) {
+          if (x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1) continue;
+          const i = y * MW + x; if (map[i] !== WIN) continue;
+          const o = obs[i]; if (o && (o.cc || o.bhp > 0)) continue;           // задёрнуто или заколочено — не видно
+          if (rng() < .3) { noise(x + .5, y + .5, 9); lure = true; }
+        }
+      }
+    }
+    if (lure && !told && zs.some(z => z.state === 'investigate' && Math.hypot(z.x - P.x, z.y - P.y) < 16)) {
+      told = true; toast('Свет в окнах видно с улицы — мертвецы идут на него. Выключи свет или задёрни шторы');
+    }
+  };
+}
