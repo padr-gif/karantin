@@ -31,13 +31,18 @@ heroVar = function (lk) {
 // (стили — в styles.css: #settings .setlist)
 
 // ---- свои места для кнопок управления ----
-const CTL_IDS = ['bAct', 'bAtk', 'bSneak', 'bRun', 'bInv', 'dock', 'mini'];
-const CTL_NAME = {bAct:'Действие', bAtk:'Удар', bSneak:'Красться', bRun:'Бег', bInv:'Рюкзак', dock:'Нижняя панель', mini:'Мини-карта'};
+const CTL_IDS = ['bAct', 'bAtk', 'bSneak', 'bRun', 'bInv', 'dock', 'mini', 'bPause', 'vitals', 'moodles', 'clockBox', 'zoomBox', 'stick'];
+const CTL_NAME = {bAct:'Действие', bAtk:'Удар', bSneak:'Красться', bRun:'Бег', bInv:'Рюкзак', dock:'Нижняя панель', mini:'Мини-карта',
+  bPause:'Меню', vitals:'Здоровье, еда, вода, бодрость', moodles:'Состояния', clockBox:'Время и погода', zoomBox:'Масштаб', stick:'Джойстик'};
+const CTL_FOLLOW = {bAct:['bMore', 'actAlt', 'bBar']};                    // ходят вместе с кнопкой действия
 function ctlApply() {
   const B = settings.btn || {};
   for (const id of CTL_IDS) {
     const el = $(id); if (!el) continue; const b = B[id];
-    el.style.translate = b ? b.x + 'px ' + b.y + 'px' : ''; el.style.scale = b && b.s && b.s !== 1 ? String(b.s) : '';
+    if (id === 'stick') { el.style.scale = b && b.s && b.s !== 1 ? String(b.s) : ''; continue; }   // место джойстика — в 43t (joyHome)
+    for (const e of [el].concat((CTL_FOLLOW[id] || []).map(k => $(k)).filter(Boolean))) {
+      e.style.translate = b ? b.x + 'px ' + b.y + 'px' : ''; if (e === el) e.style.scale = b && b.s && b.s !== 1 ? String(b.s) : '';
+    }
   }
 }
 let CTLE = null;
@@ -45,20 +50,21 @@ function ctlEditOpen() {
   const back = !$('settings').hidden ? 'settings' : null;
   for (const s of document.querySelectorAll('.screen')) s.hidden = true;
   const ctrlWasHidden = $('ctrl').hidden; $('ctrl').hidden = false;
+  const hudWasHidden = $('hud').hidden; $('hud').hidden = false; if ($('mini')) $('mini').hidden = false;
   const ov = document.createElement('div'); ov.id = 'ctlEdit';
   ov.innerHTML = '<div class="ceBar"><b>Перетащи кнопку пальцем</b><span id="ceSel">Выбери кнопку</span>' +
     '<button type="button" id="ceMinus" aria-label="Меньше">−</button><button type="button" id="cePlus" aria-label="Больше">+</button>' +
     '<button type="button" id="ceReset">Сбросить</button><button type="button" class="go" id="ceDone">Готово</button></div>';
   document.body.appendChild(ov); document.body.classList.add('ctledit');
   settings.btn = settings.btn || {};
-  CTLE = {sel:null, drag:null, back, ctrlWasHidden};
+  CTLE = {sel:null, drag:null, back, ctrlWasHidden, hudWasHidden};
   const sel = id => { CTLE.sel = id; for (const k of CTL_IDS) { const e = $(k); if (e) e.classList.toggle('ceSel', k === id); } $('ceSel').textContent = id ? CTL_NAME[id] : 'Выбери кнопку'; };
   const size = d => { const id = CTLE.sel; if (!id) return; const b = settings.btn[id] = settings.btn[id] || {x:0, y:0, s:1}; b.s = Math.max(.6, Math.min(1.8, Math.round(((b.s || 1) + d) * 10) / 10)); ctlApply(); };
   $('ceMinus').onclick = () => size(-.1); $('cePlus').onclick = () => size(.1);
   $('ceReset').onclick = () => { settings.btn = {}; ctlApply(); sel(null); };
   $('ceDone').onclick = () => {
     saveSettings(); for (const k of CTL_IDS) { const e = $(k); if (e) e.classList.remove('ceSel'); }
-    ov.remove(); document.body.classList.remove('ctledit'); $('ctrl').hidden = CTLE.ctrlWasHidden;
+    ov.remove(); document.body.classList.remove('ctledit'); $('ctrl').hidden = CTLE.ctrlWasHidden; $('hud').hidden = CTLE.hudWasHidden;
     const b = CTLE.back; CTLE = null; if (b) openSettings(settingsFrom || 'menu');
   };
   CTLE.down = e => {

@@ -37,9 +37,12 @@ SPEC = {
   'jacks':  dict(jacks=True, mode='loop', n=8),
   'searchlow': dict(rummage=True, mode='loop', n=12),   # чуть присел, наклонился и перебирает руками
   'shower': dict(clip='Idle_Talking_Loop', mode='loop', n=12, calm=.6, arms=-.02),   # трёт плечи и грудь — спокойное живое движение
+  'vault':  dict(clip='Crouch_Fwd_Loop', mode='loop', n=16, arms=.15),   # перелезает через окно — прежний глубокий присед
+  'attack2h':    dict(two=True, mode='once', n=12),                 # бита, труба, топор — обеими руками: замах из-за плеча и удар
+  'attack2hrun': dict(two=True, mode='once', n=12, runlegs=True),
 }
 COUNTS = {k: v['n'] for k, v in SPEC.items()}
-EXTRA = {'pickup', 'eat', 'drink', 'read', 'jacks', 'searchlow', 'shower', 'attackrun', 'punchrun', 'punchrun2', 'punch2', 'sneakidle'}
+EXTRA = {'vault', 'attack2h', 'attack2hrun', 'pickup', 'eat', 'drink', 'read', 'jacks', 'searchlow', 'shower', 'attackrun', 'punchrun', 'punchrun2', 'punch2', 'sneakidle'}
 # одежда «не в облипку»: тело под одеждой чуть раздуто (метры по нормали) — t: верх, f: верх и ноги
 VARS = {'': {}, 't': {1: .03, 2: .026, 3: .022, 4: .02, 13: .008},
         'f': {1: .03, 2: .026, 3: .022, 4: .02, 13: .008, 6: .03, 7: .03, 8: .026, 9: .022, 10: .018}}
@@ -128,6 +131,34 @@ def rummage_pose(t):
             RUMMAGE.append(ex)
     k = int(round(t * n)) % n
     return H.pose('Idle_Loop', 0, calm=1, extra=RUMMAGE[k], **RUM_PK)
+# удар двумя руками: (t, кисти относительно spine_03 [влево, вверх, вперёд], куда смотрит рукоять, поворот корпуса)
+TWO_KEYS = [(0, (-.13, -.2, .3), (-.25, .55, .8), 0), (.34, (-.2, .14, .02), (-.35, .85, -.45), -.45), (.56, (-.02, -.06, .44), (.25, .1, 1), .05),
+            (.8, (.2, -.18, .26), (.9, -.25, .25), .4), (1, (-.13, -.2, .3), (-.25, .55, .8), 0)]
+TWO = None
+def two_key(t):
+    for a, b in zip(TWO_KEYS, TWO_KEYS[1:]):
+        if a[0] <= t <= b[0]:
+            u = (t - a[0]) / (b[0] - a[0]); u = u * u * (3 - 2 * u)
+            return tuple(np.asarray(a[k], float) * (1 - u) + np.asarray(b[k], float) * u for k in (1, 2)) + (a[3] * (1 - u) + b[3] * u,)
+    return np.asarray(TWO_KEYS[0][1], float), np.asarray(TWO_KEYS[0][2], float), 0.
+def two_pose(t, i, n, run):
+    """обе кисти на рукояти (правая выше, левая у конца), корпус поворачивается за ударом"""
+    global TWO
+    import ik
+    body = H.parts[0]; idle = H.sample('Idle_Loop', 0)
+    if TWO is None:
+        TWO = []; prev = {'l': None, 'r': None}
+        for k in range(n):
+            tk = (k + .5) / n; pos, dr, tw = two_key(tk); dr = dr / np.linalg.norm(dr)
+            ex = {nm: ubc.qmul(np.asarray(idle[nm][1], float), ubc.qaxis((0, 1, 0), tw * f)) for nm, f in (('spine_01', .3), ('spine_02', .4), ('spine_03', .3))}
+            for side in 'rl':
+                p = pos if side == 'r' else pos - dr * .085
+                tgt = (lambda p: lambda G: G[body.name['spine_03']][:3, 3] + p)(p)
+                ex, _, x = ik.reach(H, 'Idle_Loop', 0, side, tgt, x0=prev[side], calm=.5, base_extra=ex); prev[side] = x
+            TWO.append((ex, dr))
+    ex, dr = TWO[min(n - 1, int(t * n))]
+    pk = dict(lower=('Jog_Fwd_Loop', i / n, 0)) if run else {}
+    return H.pose('Idle_Loop', 0, calm=.5, extra=ex, **pk), dr
 def swing_extra(clip, t, amp, arms):
     """руки в противофазе ногам: левая нога вперёд — правая рука вперёд"""
     body = H.parts[0]; G = H.pose(clip, t)[0]
@@ -164,7 +195,9 @@ def job(a):
     an, d, i, var = a
     sp = SPEC[an]; n = sp['n']; t = t_of(i, n, sp['mode']); hop = 0
     if 'seg' in sp: t = sp['seg'][0] + (sp['seg'][1] - sp['seg'][0]) * t
-    if sp.get('jacks'): Gs, hop = jacks_pose(t)
+    tdir = None
+    if sp.get('two'): Gs, tdir = two_pose(t, i, n, sp.get('runlegs'))
+    elif sp.get('jacks'): Gs, hop = jacks_pose(t)
     elif sp.get('shower'): Gs = shower_pose(t)
     elif sp.get('rummage'): Gs = rummage_pose(t)
     elif sp.get('mouth'): Gs = mouth_pose(sp['mouth'], t)
@@ -178,6 +211,9 @@ def job(a):
     ch = H.parts[0]; geo = ch.skinned(Gs[0]); zmin = min(P[:, 2].min() for P, _ in geo)
     hk = 'pelvis'; hips = Gs[0][ch.name[hk]][:3, 3] @ C.AX.T
     g = grip(Gs, face, hips); g[:, 2] -= zmin
+    if tdir is not None:                                                     # рукоять — по заданному направлению удара
+        c_, s_ = math.cos(face), math.sin(face); R = np.array([[c_, -s_, 0], [s_, c_, 0], [0, 0, 1]])
+        g[1] = g[0] + nrm((tdir @ C.AX.T) @ R.T)
     proj = lambda p: np.array([(p[0] - p[1]) * 32, (p[0] + p[1]) * 16 - p[2] * 31])
     hp = proj(g[0]); dv = (proj(g[1]) - hp) * .08
     front = int(((g[0] - g[2])[:2] @ nrm(VIEW[:2])) > 0); lp = proj(g[3])
@@ -217,5 +253,5 @@ if __name__ == '__main__':
             atlas['wpn'][name] = wpn
         print(sname, sheet.shape[1], 'x', sheet.shape[0], len(items), 'кадров', round(time.time() - t0), 'с')
     init(); atlas['anims']['pm'] = COUNTS                                              # у героя свои числа кадров (у героини — старые, 'p')
-    atlas['anims']['pmdur'] = {k: round(H.anim_dur(v['clip']) * ((v['seg'][1] - v['seg'][0]) if 'seg' in v else 1), 3) if 'clip' in v else (1.6 if v.get('shower') else 1.4 if v.get('rummage') else 3.2 if v.get('readbook') else 1.0) for k, v in SPEC.items()}
+    atlas['anims']['pmdur'] = {k: round(H.anim_dur(v['clip']) * ((v['seg'][1] - v['seg'][0]) if 'seg' in v else 1), 3) if 'clip' in v else (1.6 if v.get('shower') else .62 if v.get('two') else 1.4 if v.get('rummage') else 3.2 if v.get('readbook') else 1.0) for k, v in SPEC.items()}
     json.dump(atlas, open(os.path.join(ROOT, 'assets/atlas.json'), 'w'), separators=(',', ':'))

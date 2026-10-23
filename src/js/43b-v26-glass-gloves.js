@@ -73,7 +73,7 @@ winAction = function (a) {
       emit('glass', a.o.x + .5, a.o.y + .5, .5, 6, null, 0, 1);
       glassCut(.45, 'Порезал руку об осколок');
       const n = 1 + (rng() < .5 ? 1 : 0);
-      for (let k = 0; k < n; k++) { const s = mkItem('glass'); if (P.inv.length < P.cap) P.inv.push(s); else addToPile(P.x, P.y, s); }
+      for (let k = 0; k < n; k++) { const s = mkItem('glass'); if (!invFull()) P.inv.push(s); else addToPile(P.x, P.y, s); }
       toast('Осколки убраны: через окно можно лезть без порезов'); renderInv();
     }, {an:'pickup'});
     return true;

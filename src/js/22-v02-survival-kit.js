@@ -115,7 +115,7 @@ function dropItemGround(k) {
 }
 function pickFromPile(f) {
   if (f.items.length === 1) {
-    if (P.inv.length >= P.cap && !(ITEMS[f.items[0].id].kind === 'weapon' && !P.weapon)) { toast('Рюкзак полон'); return; }
+    if (invFull() && !(ITEMS[f.items[0].id].kind === 'weapon' && !P.weapon)) { toast('Слишком тяжело — не унести'); return; }
     const it = f.items.pop();
     if (ITEMS[it.id].kind === 'weapon' && !P.weapon) P.weapon = it; else P.inv.push(it);
     toast('Подобрано: ' + ITEMS[it.id].name); SFX.rustle();

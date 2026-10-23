@@ -83,7 +83,7 @@ function invDetail(body) {
   const sel = panel.sel, groups = groupItems(P.inv);
   let dc = null, it = null;
   if (sel && sel.startsWith('cl_') && P.cloth && P.cloth[sel.slice(3)]) { const sl = sel.slice(3); it = P.cloth[sl]; dc = detailCard(it, 1, [btn('Снять', () => { takeOffCloth(sl); panel.sel = null; renderPanel(); updateHud(); }, 'ghost')]); }
-  else if (sel === 'armor' && P.armor) { it = P.armor; dc = detailCard(it, 1, [btn('Снять', () => { if (P.inv.length >= P.cap) { toast('Рюкзак полон'); return; } P.inv.push(P.armor); P.armor = null; panel.sel = null; renderPanel(); }, 'ghost')]); }
+  else if (sel === 'armor' && P.armor) { it = P.armor; dc = detailCard(it, 1, [btn('Снять', () => { if (invFull()) { toast('Слишком тяжело — не унести'); return; } P.inv.push(P.armor); P.armor = null; panel.sel = null; renderPanel(); }, 'ghost')]); }
   else if (sel === 'hand' && P.weapon) { it = P.weapon; dc = detailCard(it, 1, [btn('Убрать в рюкзак', () => { unequip(); panel.sel = null; renderPanel(); }, 'ghost')], true); }
   else if (sel) {
     const g = groups.find(g => g.key === sel);

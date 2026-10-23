@@ -955,3 +955,22 @@ body.incar #pad #bInv{right:192px!important;bottom:17px!important}
 body.ctledit #ctrl,body.ctledit #mini{z-index:61}
 body.ctledit #bAct,body.ctledit #bAtk,body.ctledit #bSneak,body.ctledit #bRun,body.ctledit #bInv,body.ctledit #dock,body.ctledit #mini{outline:1px dashed rgba(231,197,49,.55);outline-offset:3px;touch-action:none}
 .ceSel{outline:2px solid #e7c531!important;outline-offset:3px}
+/* v42: настройка всех кнопок, закреплённый джойстик, вес, крестик, счётчик убийств */
+#ctlEdit .ceBar{top:50%;transform:translate(-50%,-50%)}
+body.ctledit #hud{z-index:61;pointer-events:auto}
+body.ctledit #hud *,body.ctledit #stick{pointer-events:auto}
+body.ctledit #bPause,body.ctledit #vitals,body.ctledit #moodles,body.ctledit #clockBox,body.ctledit #zoomBox,body.ctledit #stick{outline:1px dashed rgba(231,197,49,.55);outline-offset:3px;touch-action:none}
+body.ctledit #moodles{min-width:90px;min-height:22px}
+body.ctledit #stick{z-index:61}
+#stick.fixed{opacity:.85}
+.sheet-head .close{position:relative}
+.sheet-head .close::before{position:absolute;left:50%;top:50%;margin:-8px 0 0 -8px}
+#kills::before,.cside #kills::before{content:"";display:inline-block;width:13px;height:13px;margin-right:4px;vertical-align:-2px;opacity:1;image-rendering:pixelated;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 11 11' shape-rendering='crispEdges'%3E%3Crect x='2' y='0' width='7' height='1' fill='%232d3a22'/%3E%3Crect x='1' y='1' width='9' height='8' fill='%237f9e5a'/%3E%3Crect x='7' y='1' width='3' height='8' fill='%23637f45'/%3E%3Crect x='2' y='9' width='7' height='2' fill='%237f9e5a'/%3E%3Crect x='2' y='3' width='2' height='2' fill='%23161412'/%3E%3Crect x='6' y='3' width='2' height='2' fill='%23161412'/%3E%3Crect x='3' y='4' width='1' height='1' fill='%23e04a3a'/%3E%3Crect x='7' y='4' width='1' height='1' fill='%23e04a3a'/%3E%3Crect x='3' y='6' width='5' height='3' fill='%23161412'/%3E%3Crect x='4' y='6' width='1' height='1' fill='%23efe8d6'/%3E%3Crect x='6' y='6' width='1' height='1' fill='%23efe8d6'/%3E%3Crect x='8' y='7' width='1' height='3' fill='%23a82a22'/%3E%3C/svg%3E") center/contain no-repeat}
+.kgline{display:flex;align-items:baseline;gap:8px;margin:0 0 8px;font-size:13px;color:var(--muted)}
+.kgline b{color:var(--paper);font-weight:600}
+.kgline.over b,.kgline.over span{color:#e0864a}
+.invsec{margin-bottom:10px}
+.capbar.over i{background:#d0623a}
+.nobag{font-size:12px;color:var(--muted);padding:8px 0}
+#invCap{font-size:10px;letter-spacing:-.02em}

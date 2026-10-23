@@ -208,7 +208,7 @@ function doAction(a0) {
   if (winAction(a)) return;
   if (a.kind === 'forage') { doForage(a); return; }
   if (a.kind === 'alarm' && a.o) { const ob = obs[a.o.i]; removeItem('cansalarm'); ob.alarm = true; SFX.rustle(); toast('Банки висят на двери. Если её начнут ломать, услышишь'); renderInv(); return; }
-  if (a.kind === 'unalarm' && a.o) { const ob = obs[a.o.i]; ob.alarm = false; if (P.inv.length < P.cap) P.inv.push(mkItem('cansalarm')); else addToPile(P.x, P.y, mkItem('cansalarm')); SFX.rustle(); toast('Банки сняты'); renderInv(); return; }
+  if (a.kind === 'unalarm' && a.o) { const ob = obs[a.o.i]; ob.alarm = false; if (!invFull()) P.inv.push(mkItem('cansalarm')); else addToPile(P.x, P.y, mkItem('cansalarm')); SFX.rustle(); toast('Банки сняты'); renderInv(); return; }
   if (a.kind === 'search') { if (!a.f.items && CONT[a.f.type]) { a.f.items = []; const c = CONT[a.f.type]; for (let n = ri(c.n[0], c.n[1]); n > 0; n--) a.f.items.push(mkItem(pick(c.loot))); } P.act = {kind:'search', t:0, dur:a.f.type === 'car' ? .8 : .5, f:a.f}; SFX.rustle(); }
   else if (a.kind === 'cook') openPanel('cook', {src:a.f});
   else if (a.kind === 'open') openPanel('loot', {src:a.f});
@@ -231,7 +231,7 @@ function doAction(a0) {
   else if (a.kind === 'pond') { let used = 0; while (P.hyd < 90) { P.hyd = Math.min(100, P.hyd + 30); used++; } if (used && rng() < .35) { P.pois = Math.max(P.pois, 100); toast('Вода из пруда. Живот крутит'); } let n = 0; for (const it of P.inv) if (it.id === 'bottle') { it.id = 'waterD'; n++; } SFX.drink(); toast((used ? 'Попил прудовой воды' : 'Пить не хочется') + (n ? `, набрал ${n} бут.` : '')); }
   else if (a.kind === 'toilet') { const t = a.f; if (t.w < 1) { toast('Бачок пуст'); return; } let used = 0; while (P.hyd < 90 && t.w >= 1) { P.hyd = Math.min(100, P.hyd + 25); t.w -= 1; used++; } for (const it of P.inv) { if (t.w < 1) break; if (it.id === 'bottle') { it.id = 'water'; t.w -= 1; } else if (ITEMS[it.id].kind === 'canteen') while ((it.w || 0) < wcap(it) && t.w >= 1) { it.w = (it.w || 0) + 1; t.w -= 1; } } SFX.drink(); toast(used ? 'Попил из бачка. Вода чистая' : 'Набрал воды из бачка'); renderInv(); }
   else if (a.kind === 'tv') { if (!poweredAt(a.f.cx, a.f.cy)) { toast('Без электричества телевизор не включить'); return; } SFX.radio(); P.bored = Math.max(0, (P.bored || 0) - 25); openPanel('radio', {it:{ch:100}, tv:true, news:radioNews()}); }
-  else if (a.kind === 'trapget') { if (P.inv.length >= P.cap) { toast('Рюкзак полон'); return; } const t = a.f, i = props.indexOf(t) + 1; for (let q = 0; q < NT; q++) if (propAt[q] === i) propAt[q] = 0; t.dead = true; traps = traps.filter(x => x !== t); P.inv.push(mkItem('trap')); toast('Капкан в рюкзаке'); }
+  else if (a.kind === 'trapget') { if (invFull()) { toast('Слишком тяжело — не унести'); return; } const t = a.f, i = props.indexOf(t) + 1; for (let q = 0; q < NT; q++) if (propAt[q] === i) propAt[q] = 0; t.dead = true; traps = traps.filter(x => x !== t); P.inv.push(mkItem('trap')); toast('Капкан в рюкзаке'); }
   else if (a.kind === 'drive') enterCar(a.f);
   else if (a.kind === 'carfuel') { const c = a.f; for (const j of fuelCans()) { const m = Math.min(j.fuel, 100 - c.fuel); j.fuel -= m; c.fuel += m; if (c.fuel >= 100) break; } SFX.drink(); toast('Бак машины: ' + Math.round(c.fuel) + '%'); }
   else if (a.kind === 'hotwire') { if (!hasTool('knife') && !hasTool('crowbar')) { toast('Ключей нет. Чтобы завести без ключа, нужен нож или лом'); return; } P.act = {kind:'hotwire', t:0, dur:5, f:a.f}; }
@@ -240,7 +240,7 @@ function doAction(a0) {
   else if (a.kind === 'pumpfill') { if (!powerOn()) { toast('Колонка не работает без электричества'); return; } let n = 0; for (const c of P.inv) if (c.id === 'jerrycan' && c.fuel < 100) { c.fuel = 100; n++; } SFX.drink(); noise(P.x, P.y, 3); toast(n ? `Наполнено канистр: ${n}` : 'Канистры уже полные'); }
   else if (a.kind === 'plant') { const sd = P.inv.find(i => i.id === 'seeds'); if (!sd) { toast('Нужны семена'); return; } sd.uses--; if (sd.uses <= 0) P.inv.splice(P.inv.indexOf(sd), 1); const b = a.f; b.crop = pick(['carrot', 'potato', 'cabbage']); b.g = 0; b.dry = 0; SFX.rustle(); toast('Посажено: ' + ITEMS[b.crop].name.toLowerCase() + '. Не забывай поливать'); }
   else if (a.kind === 'waterbed') { const w = waterSource(); if (w.id === 'water') w.id = 'bottle'; else w.w--; a.f.w = 1; SFX.drink(); toast('Грядка полита'); }
-  else if (a.kind === 'harvest') { const b = a.f, n = ri(2, 3) + Math.floor(skillLv('farm') / 2); let got = 0; for (let k = 0; k < n; k++) { const it = mkItem(b.crop); it.rot = gameMin + 2880; if (P.inv.length < P.cap) { P.inv.push(it); got++; } else addToPile(b.cx, b.cy, it); } toast(`Урожай: ${ITEMS[b.crop].name.toLowerCase()} ×${n}` + (got < n ? ' (часть на земле)' : '')); b.crop = null; b.g = 0; addXp('farm', 3); ach('harvest'); SFX.rustle(); }
+  else if (a.kind === 'harvest') { const b = a.f, n = ri(2, 3) + Math.floor(skillLv('farm') / 2); let got = 0; for (let k = 0; k < n; k++) { const it = mkItem(b.crop); it.rot = gameMin + 2880; if (!invFull()) { P.inv.push(it); got++; } else addToPile(b.cx, b.cy, it); } toast(`Урожай: ${ITEMS[b.crop].name.toLowerCase()} ×${n}` + (got < n ? ' (часть на земле)' : '')); b.crop = null; b.g = 0; addXp('farm', 3); ach('harvest'); SFX.rustle(); }
   else if (a.kind === 'take') takeItems(a.f);
   else if (a.kind === 'pile') P.act = {kind:'pickup', t:0, dur:.75, f:a.f};
   else if (a.kind === 'sleep') startSleep(a.f);
@@ -302,7 +302,7 @@ function finishAct(a) {
   if (a.kind === 'dismantle') { finishDismantle(a); return; }
   if (a.kind === 'cookx') { a.fn(); return; }
   if (a.kind === 'furn') { finishFurn(a); return; }
-  if (a.kind === 'fish') { if (rng() < .5 + .05 * skillLv('farm')) { if (P.inv.length < P.cap) P.inv.push(mkItem('fish')); else addToPile(P.x, P.y, mkItem('fish')); stat('fish'); ach('fish'); toast('Клюёт! Поймал карася'); addXp('farm', 1); } else toast('Сорвалась. Попробуй ещё'); SFX.rustle(); return; }
+  if (a.kind === 'fish') { if (rng() < .5 + .05 * skillLv('farm')) { if (!invFull()) P.inv.push(mkItem('fish')); else addToPile(P.x, P.y, mkItem('fish')); stat('fish'); ach('fish'); toast('Клюёт! Поймал карася'); addXp('farm', 1); } else toast('Сорвалась. Попробуй ещё'); SFX.rustle(); return; }
   if (a.kind === 'pry') { const ob = obs[a.o.i]; ob.locked = false; ob.open = true; ob.ang = 1; noise(P.x, P.y, 9); SFX.wood(a.o.x, a.o.y); toast('Дверь взломана'); addXp('carp', 1); return; }
   if (a.kind === 'hotwire') { if (rng() < .45 + .1 * skillLv('carp')) { a.f.key = true; toast('Провода соединены: машина заведётся'); addXp('carp', 2); } else { noise(P.x, P.y, 6); toast('Не вышло. Попробуй ещё раз'); } return; }
   if (a.kind === 'use') { finishUse(a); return; }
@@ -321,14 +321,14 @@ function finishAct(a) {
   else if (a.kind === 'unbar') {
     const ob = obs[a.o.i];
     ob.bhp = Math.max(0, ob.bhp - 45); noise(P.x, P.y, 6); SFX.wood(a.o.x, a.o.y); emit('wood', a.o.x + .5, a.o.y + .5, 1, 6, null, 0, 1.6);
-    if (rng() < .7 && P.inv.length < P.cap) { P.inv.push(mkItem('plank')); toast('Доска оторвана и цела'); }
+    if (rng() < .7 && !invFull()) { P.inv.push(mkItem('plank')); toast('Доска оторвана и цела'); }
     else toast('Доска раскололась');
     renderInv();
   }
 }
 function takeItems(c) {
   const got = [];
-  while (c.items.length && P.inv.length < P.cap) {
+  while (c.items.length && !invFull()) {
     const it = c.items.shift();
     if (ITEMS[it.id].rot && it.rot == null) it.rot = powerOn() ? gameMin + 2160 : powerOffAt + 900;
     if (ITEMS[it.id].kind === 'weapon' && !P.weapon) { P.weapon = it; got.push(ITEMS[it.id].name + ' (в руках)'); }
@@ -336,7 +336,7 @@ function takeItems(c) {
   }
   if (got.length) toast('Найдено: ' + got.join(', '));
   else if (!c.items.length) toast(CONT[c.type].name + ': пусто');
-  if (c.items.length) toast('Рюкзак полон');
+  if (c.items.length) toast('Слишком тяжело — не унести');
   renderInv();
 }
 function startSleep(bed) {
@@ -421,7 +421,7 @@ function useItem(id, idx) {
 function dropItem(k) { const it = P.inv[k]; if (!it) return; P.inv.splice(k, 1); toast('Выброшено: ' + ITEMS[it.id].name); renderInv(); }
 function unequip() {
   if (!P.weapon) return;
-  if (P.inv.length >= P.cap) { toast('Рюкзак полон'); return; }
+  if (invFull()) { toast('Слишком тяжело — не унести'); return; }
   P.inv.push(P.weapon); P.weapon = null; renderInv(); updateHud();
 }
 function itemInfo(it) {

@@ -185,7 +185,7 @@ function render(dt) {
   if (!(mode === 'play' && L >= .999 && !P.sleep)) {
     const alpha = mode === 'menu' ? .5 : (P.sleep ? .25 : .1) + .74 * (1 - L) + .08 * wet;
     let rTiles = mode === 'menu' ? 9 : 3.4 + 9 * L + (hasTr('eagle') ? 1.2 : 0) - (hasTr('short') ? 1 : 0);
-    if (inside && poweredAt(P.x, P.y) && L < .6 && mode === 'play') rTiles = Math.max(rTiles, 7);
+    if (inside && poweredAt(P.x, P.y) && roomLitAt(P.x, P.y) && L < .6 && mode === 'play') rTiles = Math.max(rTiles, 7);
     const vr = rTiles * U * .55;
     lx.globalCompositeOperation = 'source-over';
     lx.clearRect(0, 0, lc.width, lc.height);
@@ -206,9 +206,7 @@ function render(dt) {
         if (Hs.kind === 'shed') continue;
         if (!powerOn() && !poweredAt((Hs.ix0 + Hs.ix1) / 2, (Hs.iy0 + Hs.iy1) / 2)) continue;
         const sx = SX((Hs.ix0 + Hs.ix1) / 2, (Hs.iy0 + Hs.iy1) / 2); if (sx < -300 || sx > W + 300) continue;
-        lx.fillStyle = 'rgba(0,0,0,.5)'; lx.beginPath();
-        lx.moveTo(SX(Hs.ix0, Hs.iy0) / 2, SY(Hs.ix0, Hs.iy0, 0) / 2); lx.lineTo(SX(Hs.ix1, Hs.iy0) / 2, SY(Hs.ix1, Hs.iy0, 0) / 2);
-        lx.lineTo(SX(Hs.ix1, Hs.iy1) / 2, SY(Hs.ix1, Hs.iy1, 0) / 2); lx.lineTo(SX(Hs.ix0, Hs.iy1) / 2, SY(Hs.ix0, Hs.iy1, 0) / 2); lx.closePath(); lx.fill();
+        litHousePoly(Hs);
       }
     }
     if (fl && fl.id === 'candle' && L < .9) hole(SX(P.x, P.y) / 2, SY(P.x, P.y, U * .9) / 2, U * 3.4, .8);

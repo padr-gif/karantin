@@ -63,7 +63,7 @@ function forageAction(excl) {
 }
 function doForage(a) { P.act = {kind:'forage', t:0, dur:a.what === 'mushroom' ? 2.6 : 1.6, a}; SFX.rustle(); }
 function finishForage(act) {
-  const a = act.a, give = (id, n) => { let got = 0; for (let q = 0; q < n; q++) { const it = mkItem(id); if (ITEMS[id].rot) it.rot = gameMin + 2160; if (P.inv.length < P.cap) { P.inv.push(it); got++; } else addToPile(P.x, P.y, it); } return got; };
+  const a = act.a, give = (id, n) => { let got = 0; for (let q = 0; q < n; q++) { const it = mkItem(id); if (ITEMS[id].rot) it.rot = gameMin + 2160; if (!invFull()) { P.inv.push(it); got++; } else addToPile(P.x, P.y, it); } return got; };
   if (a.what === 'berries') { const n = 2 + ri(0, 2) + Math.floor(skillLv('farm') / 2); give('berries', n); world.bcd[a.key] = gameMin + 4 * 1440; toast('Собрано ягод: ' + n); addXp('farm', 1); ach('forage'); }
   else if (a.what === 'mushroom') { world.tcd[a.key] = gameMin + 2 * 1440; if (rng() < .55 + .08 * skillLv('farm')) { const n = 1 + ri(0, 1); give('mushroom', n); toast('Нашёл грибы: ' + n); addXp('farm', 1); ach('forage'); } else toast('Грибов под этим деревом нет'); }
   else { world.tcd[a.key] = gameMin + 1440; const n = hasTool('axe') || hasTool('hatchet') ? 4 : 2; give('sticks', n); toast('Наломал хвороста: ' + n); }

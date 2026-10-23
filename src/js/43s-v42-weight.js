@@ -1,0 +1,235 @@
+// ================= v42: вес вещей, карманы и рюкзак, виды рюкзаков, перегруз =================
+// Вместимость — в килограммах. На тебе: карманы (одежда с карманами — больше) и рюкзак (у каждого своя вместимость).
+// Больше, чем помещается, нести можно — но это перегруз: идёшь медленнее и быстрее устаёшь. Совсем неподъёмное не взять.
+
+// ---- вес вещей (кг), примерно как в жизни ----
+const KG_KIND = {food:.3, drink:.5, heal:.1, weapon:1, misc:.3, light:.3, battery:.05, book:.2, cloth:.5, fun:.2, ammo:.2, smoke:.05, note:.01,
+  bag:.8, canteen:.3, map:.05, radio:.6, burner:.8, sleepbag:1.5, tape:.1, armor:3.5, generator:25, fuel:1, seeds:.05, bino:.6, trap:2};
+const KG = {
+  canned:.4, chips:.15, bread:.4, sausage:.4, milk:1, water:.5, soda:.5, coffee:.25, bottle:.05, bandage:.05, pills:.05, opener:.1, plank:2.5,
+  flashlight:.3, hammer:.7, bat:1, knife:.2, pipe:1.5, axe:2, pan:1.2, crowbar:2, meat:.5, steak:.4, pasta:.5, pastaC:.4, rice:1, riceC:.4, pot:1,
+  matches:.02, lighter:.03, vitamins:.1, medkit:.6, antibio:.05, apple:.2, choco:.1, stew:.4, mre:.6, energy:.3, alarm:.3, baton:.6, vest:3.5,
+  carrot:.1, potato:.2, potatoC:.2, cabbage:1, spear:1.5, molotov:.6, machete:.7, sledge:5, shovel:2, golf:.5, honey:.5, crackers:.2, tuna:.2,
+  juice:1, whiskey:.8, rag:.1, flare:.2, cereal:.4, pbutter:.4, jacket:1.2, sweater:.6, raincoat:.4, hat:.1, waterD:.5, novel:.3, cards:.1,
+  cigs:.05, rod:.5, fish:.4, fishC:.3, watchQ:.05, watchD:.05, curtain:.8, cleaver:.5, nailbat:1.2, nails:.3, painkill:.05, antisep:.1,
+  candle:.1, beans:.4, noodles:.1, soupC:.5, ragout:.5, nuts:.2, candy:.1, newspaper:.1, leather:1.5, helmet:1.2, cansalarm:.4, berries:.2,
+  mushroom:.2, mushroomC:.2, sticks:.8, parka:1.5, ushanka:.3, jar:.4, pickles:1, jerky:.2, hatchet:.8, wrench:.6, thermos:.6, hotpack:.1,
+  umbrella:.4, oatmeal:.5, porridge:.4, condmilk:.4, sprats:.2, salo:.3, pelmeni:.5, pelmeniC:.5, vodka:.7, handheld:.3, splint:.3, sewkit:.2,
+  scrap:1, pistol:.8, shotgun:3.2, ammo9:.2, shells:.4, lure:.1, jam:.5, stewH:.5, fishJ:.5, kraut:.8, mushD:.1, gloves:.1, glovesR:.1,
+  mittens:.15, glass:.2, shiv:.2, filter:.1, tshirt:.2, tank:.15, longsl:.25, flannel:.4, hoodie:.6, thermal:.3, denimJ:1, workvest:.3, milJ:1,
+  jeans:.8, shorts:.3, sweatp:.5, cargo:.8, milP:.8, motoP:1.5, sneakers:.8, boots:1.4, milB:1.6, slippers:.3, rubberB:1.6, cap:.1, balacl:.1,
+  bag_school:.5, sportbag:.8, bag:1.2, milbag:1.6, jug:.3, jerrycan:1,
+};
+function itemKg(it) {
+  if (!it || !ITEMS[it.id]) return 0;
+  const d = ITEMS[it.id];
+  let k = KG[it.id] != null ? KG[it.id] : KG_KIND[d.kind] != null ? KG_KIND[d.kind] : .3;
+  if (d.kind === 'canteen') k += (it.w || 0) * .35;                      // вода во фляге
+  if (it.id === 'jerrycan') k += (it.fuel || 0) / 100 * 8;               // бензин в канистре
+  return k;
+}
+function fmtKg(k) { k = Math.max(0, k); return (k < 10 ? (Math.round(k * 10) / 10).toFixed(1) : String(Math.round(k))).replace('.', ','); }
+
+// ---- рюкзаки: чем вместительнее, тем реже попадается ----
+Object.assign(ITEMS, {
+  bag_school:{name:'Школьный рюкзак', sh:'Рюкзак', kind:'bag', bcap:6, verb:'Надеть'},
+  sportbag:{name:'Спортивная сумка', sh:'Сумка', kind:'bag', bcap:10, verb:'Надеть'},
+});
+Object.assign(ITEMS.bag, {name:'Туристический рюкзак', sh:'Турист.', bcap:15, info:''});
+Object.assign(ITEMS.milbag, {name:'Военный рюкзак', sh:'Военный', bcap:22}); delete ITEMS.milbag.cap;
+Object.assign(DESC, {
+  bag_school:'Маленький школьный рюкзак. Влезет немного: 6 кг.',
+  sportbag:'Спортивная сумка через плечо. Вместительнее школьного рюкзака: 10 кг.',
+  bag:'Большой туристический рюкзак с поясным ремнём. 15 кг.',
+  milbag:'Армейский рюкзак. Самый вместительный: 22 кг. Попадается редко.',
+});
+const BAG_ROLL = [['bag_school', 6], ['sportbag', 10], ['bag', 15], ['milbag', 22]];
+function rollBag() {                                                      // вес шанса ~ 1/вместимость²
+  const w = BAG_ROLL.map(([, c]) => 1 / (c * c)), s = w.reduce((a, b) => a + b, 0); let r = rng() * s;
+  for (let k = 0; k < w.length; k++) { r -= w[k]; if (r <= 0) return BAG_ROLL[k][0]; }
+  return 'bag_school';
+}
+// в добыче «рюкзак» — случайный вид по редкости (exactBag — когда нужен именно этот)
+let exactBag = false;
+{ for (const k of ['hanger', 'wardrobe', 'car', 'locker', 'desk']) { const L = CONT[k] && CONT[k].loot; if (L) L.push('bag'); }
+  const mk42 = mkItem; mkItem = function (id) { return mk42(id === 'bag' && !exactBag ? rollBag() : id); };
+}
+const mkBag = id => { exactBag = true; try { return mkItem(id); } finally { exactBag = false; } };
+
+// ---- вместимость ----
+const POCKET_KG = 2;
+function pocketKg() {
+  let k = POCKET_KG;
+  for (const s in (P.cloth || {})) { const c = P.cloth[s]; if (c && c.id && ITEMS[c.id] && ITEMS[c.id].cap) k += ITEMS[c.id].cap * .7; }
+  if (hasTr('organized')) k += 1.5;
+  return k;
+}
+const bagCapKg = () => (P.bag && ITEMS[P.bag.id] && ITEMS[P.bag.id].bcap) || 0;
+const strK = () => (hasTr('strong') ? 1.2 : 1) * (hasTr('weak') ? .8 : 1);
+function invCapKg() { return (pocketKg() + bagCapKg()) * strK(); }
+function invKg() {
+  let k = 0; for (const it of P.inv) k += itemKg(it);
+  return k + itemKg(P.weapon) + itemKg(P.armor) + itemKg(P.bag);
+}
+function invHardKg() { return invCapKg() * 1.75 + 2; }                     // дальше уже не поднять
+function invRoomKg() { return invHardKg() - invKg(); }
+function invFull() { return invKg() >= invHardKg() - .05; }
+function invOver() { const c = invCapKg(); return Math.max(0, invKg() / c - 1); }   // 0 — нормально, .5 — на 50% больше
+function invCapTxt() { return fmtKg(invKg()) + ' из ' + fmtKg(invCapKg()) + ' кг' + (invOver() > 0 ? ' · перегруз' : ''); }
+const bagKgUsed = () => P.inv.reduce((s, it) => s + (it.bp ? itemKg(it) : 0), 0);
+const pocketKgUsed = () => P.inv.reduce((s, it) => s + (it.bp ? 0 : itemKg(it)), 0);
+
+// куда легла вещь: в рюкзак, пока помещается, иначе — в карманы
+function invPlace() {
+  if (!P || !P.inv) return;
+  if (!P.bag) { for (const it of P.inv) if (it.bp) it.bp = 0; return; }
+  const cap = bagCapKg(); let used = 0;
+  for (const it of P.inv) if (it.bp) used += itemKg(it);
+  for (let k = P.inv.length - 1; k >= 0 && used > cap + 1e-6; k--) { const it = P.inv[k]; if (it.bp) { it.bp = 0; used -= itemKg(it); } }   // рюкзак стал меньше
+  for (const it of P.inv) if (it.bp == null) { const w = itemKg(it); if (used + w <= cap + 1e-6) { it.bp = 1; used += w; } else it.bp = 0; }
+}
+// вещь, ушедшая из инвентаря (в ящик, на землю), забывает, где лежала
+{ const ap = addToPile; addToPile = function (x, y, it) { if (it) delete it.bp; return ap(x, y, it); }; }
+// в группах инвентаря вещи из карманов и из рюкзака — отдельно
+{ const gi = groupItems;
+  groupItems = function (list) {
+    if (list !== P.inv) { for (const it of list) if (it && it.bp != null && !P.inv.includes(it)) delete it.bp; return gi(list); }
+    const groups = [];
+    list.forEach((it, k) => {
+      const d = ITEMS[it.id];
+      const key = ((d.kind === 'weapon' || d.kind === 'light' || d.uses) ? 'u' + k : it.id + (isRotten(it) ? '!' : '')) + (it.bp ? '@b' : '');
+      let g = groups.find(g => g.key === key); if (!g) groups.push(g = {key, idx:k, n:0, it}); g.n++;
+    });
+    return groups;
+  };
+}
+
+// ---- надеть / снять рюкзак ----
+function wearBag(k) {
+  const it = P.inv[k]; if (!it) return;
+  const old = P.bag; P.inv.splice(k, 1); P.bag = it; delete it.bp;
+  if (old) { old.bp = 0; P.inv.push(old); }
+  for (const x of P.inv) if (!x.bp) x.bp = null;                          // из карманов — в новый рюкзак, сколько влезет
+  invPlace(); SFX.equip();
+  toast('Надел: ' + ITEMS[it.id].name.toLowerCase() + ' — ' + ITEMS[it.id].bcap + ' кг');
+  renderInv(); updateHud();
+}
+function takeOffBag() {
+  if (!P.bag) return;
+  const b = P.bag; P.bag = null; for (const x of P.inv) x.bp = 0; b.bp = 0; P.inv.push(b);
+  SFX.rustle(); toast('Рюкзак снят. Вещи из него — в руках и карманах'); renderInv(); updateHud();
+}
+{ const ui = useItem;
+  useItem = function (id, idx) {
+    const k = idx != null ? idx : P.inv.findIndex(i => i.id === id), it = P.inv[k];
+    if (it && ITEMS[it.id] && ITEMS[it.id].kind === 'bag') { wearBag(k); return; }
+    return ui(id, idx);
+  };
+}
+// одежда: карманы больше не «места» — просто надеть/снять
+wearCloth = function (k) {
+  const it = P.inv[k], d = ITEMS[it.id]; P.cloth = P.cloth || {};
+  const old = P.cloth[d.slot];
+  P.inv.splice(k, 1); if (old) { delete old.bp; P.inv.push(old); } P.cloth[d.slot] = it; delete it.bp;
+  SFX.equip(); toast((d.slot === 'feet' ? 'Обул: ' : 'Надел: ') + d.name.toLowerCase()); invPlace(); renderInv(); updateHud();
+};
+takeOffCloth = function (slot) {
+  const it = P.cloth && P.cloth[slot]; if (!it) return;
+  P.inv.push(it); P.cloth[slot] = null; SFX.rustle(); invPlace(); renderInv(); updateHud();
+};
+{ const ii = itemInfo;
+  itemInfo = function (it) {
+    const d = ITEMS[it.id], s = ii(it) || '';
+    const kg = fmtKg(itemKg(it)) + ' кг';
+    if (d && d.kind === 'bag') return 'вместимость ' + d.bcap + ' кг · весит ' + kg;
+    return (s ? s.replace(/ · карманы \+(\d+)/, (m, n) => ' · карманы +' + fmtKg(n * .7) + ' кг') + ' · ' : '') + kg;
+  };
+}
+
+// ---- перегруз: медленнее и тяжелее ----
+{ const mk = moveK; moveK = function () { const o = invOver(); return mk() * (o > 0 ? Math.max(.5, 1 - o * .55) : 1); }; }
+{ const ed = enDrainK; enDrainK = function () { return ed() * (1 + invOver() * 1.4); }; }
+{ const wm = woundMoodles;
+  woundMoodles = function () { const m = wm(), o = invOver(); if (o > .45) m.push(['Сильный перегруз', 'crit']); else if (o > 0) m.push(['Перегруз', 'warn']); return m; };
+}
+{ let t42 = 0, was = false;
+  const up = update;
+  update = function (dt) {
+    up(dt);
+    if (mode !== 'play' || !P) return;
+    t42 += dt; if (t42 < .3) return; t42 = 0;
+    invPlace();
+    const o = invOver() > 0;
+    if (o && !was) toast('Перегруз: вещей больше, чем помещается. Идёшь медленнее и быстрее устаёшь');
+    was = o;
+  };
+}
+
+// ---- старт: базовый школьный рюкзак; старые сохранения — по прежнему числу мест ----
+{ const sn = startNew; startNew = function () { sn(); if (P) { P.bag = mkBag('bag_school'); invPlace(); } }; }
+{ const ser = serialize; serialize = function () { const d = ser(); if (d && d.p) d.p.bag = P.bag || null; return d; }; }
+{ const as = applySave;
+  applySave = function (d) {
+    as(d);
+    if (!P) return;
+    if (d && d.p && 'bag' in d.p) P.bag = d.p.bag;
+    else { const c = (d && d.p && d.p.cap) || 18, b = c >= 34 ? 'milbag' : c >= 28 ? 'bag' : 'bag_school'; P.bag = mkBag(b); }
+    for (const it of P.inv) if (it.bp == null) it.bp = null;
+    invPlace();
+  };
+}
+
+// ---- рюкзак в интерфейсе: карманы и рюкзак — два отдельных списка ----
+function invSection(title, sub, frac, list, onlyBag) {
+  const box = mk('div', 'invsec' + (onlyBag ? ' bagsec' : ''));
+  const hd = mk('div', 'secrow'), t = mk('div', 'sect', title); t.appendChild(mk('small', '', sub)); hd.appendChild(t);
+  const cap = mk('div', 'capbar' + (frac > 1 ? ' over' : '')), ci = mk('i'); ci.style.width = Math.min(100, Math.round(frac * 100)) + '%'; cap.appendChild(ci); hd.appendChild(cap);
+  box.appendChild(hd);
+  const groups = groupItems(P.inv).filter(g => !!g.it.bp === onlyBag).sort((a, b) => CATS.indexOf(catOf(a.it.id)) - CATS.indexOf(catOf(b.it.id)));
+  box.appendChild(gridOf(groups, g => { panel.sel = panel.sel === g.key ? null : g.key; renderPanel(); }, Math.max(4, groups.length + (4 - groups.length % 4) % 4), panel.sel));
+  return box;
+}
+{ const bd = buildInvDoll;
+  buildInvDoll = function (body) {
+    invPlace();
+    bd(body);
+    const R = body.querySelector('.pcol'); if (!R) return;
+    R.textContent = '';
+    const tot = mk('div', 'kgline' + (invOver() > 0 ? ' over' : ''));
+    tot.appendChild(mk('b', '', 'Несёшь ' + fmtKg(invKg()) + ' кг')); tot.appendChild(mk('span', '', 'из ' + fmtKg(invCapKg()) + (invOver() > 0 ? ' · перегруз' : '')));
+    R.appendChild(tot);
+    const pk = pocketKgUsed(), pc = pocketKg() * strK();
+    R.appendChild(invSection('Карманы', fmtKg(pk) + ' / ' + fmtKg(pc) + ' кг', pk / pc, P.inv, false));
+    if (P.bag) { const bk = bagKgUsed(), bc = bagCapKg(); R.appendChild(invSection(ITEMS[P.bag.id].name, fmtKg(bk) + ' / ' + fmtKg(bc) + ' кг', bk / bc, P.inv, true)); }
+    else R.appendChild(mk('div', 'nobag', 'Рюкзака нет. Найди его в шкафах, машинах и на вешалках'));
+    // слот рюкзака на кукле
+    const colR = body.querySelectorAll('.dollside .dcol')[1];
+    if (colR) {
+      const c = cell(P.bag, 1, P.bag ? () => { panel.sel = panel.sel === 'bagslot' ? null : 'bagslot'; renderPanel(); } : null, {sel:panel.sel === 'bagslot', label:'Рюкзак', size:30});
+      c.classList.add('dslot'); const w = mk('div', 'dwrap'); w.appendChild(c); if (P.bag) w.appendChild(mk('span', 'dlab', 'Рюкзак'));
+      colR.insertBefore(w, colR.children[2] || null);
+    }
+    const Dd = body.querySelector('.pdet');
+    if (Dd && panel.sel === 'bagslot' && P.bag) { Dd.textContent = ''; const dc = detailCard(P.bag, 1, [btn('Снять', () => { takeOffBag(); panel.sel = null; renderPanel(); }, 'ghost')]); dc.classList.add('lootdet'); dc.replaceChild(iconEl(P.bag.id, 40), dc.firstChild); Dd.appendChild(dc); }
+  };
+}
+// переложить: из карманов в рюкзак и обратно
+{ const idt = invDetail;
+  invDetail = function (body) {
+    idt(body);
+    const sel = panel && panel.sel; if (!sel || sel === 'bagslot' || sel.startsWith('cl_') || sel === 'hand' || sel === 'armor') return;
+    const g = groupItems(P.inv).find(g => g.key === sel); if (!g) return;
+    const dets = body.querySelectorAll('.detail'), acts = dets.length && dets[dets.length - 1].querySelector('.acts'); if (!acts) return;
+    if (!P.bag) return;
+    const it = g.it, toBag = !it.bp;
+    acts.appendChild(btn(toBag ? 'В рюкзак' : 'В карманы', () => {
+      const w = itemKg(it);
+      if (toBag && bagKgUsed() + w > bagCapKg() + 1e-6) { toast('В рюкзак не влезет: свободно ' + fmtKg(bagCapKg() - bagKgUsed()) + ' кг'); return; }
+      it.bp = toBag ? 1 : 0; SFX.rustle(); panel.sel = null; renderPanel(); updateHud();
+    }, 'ghost'));
+  };
+}
+// подзаголовок окна рюкзака — вес
+{ const rp = renderPanel;
+  renderPanel = function () { rp(); if (panel && panel.kind === 'inv' && $('pnSub')) $('pnSub').textContent = invCapTxt(); };
+}

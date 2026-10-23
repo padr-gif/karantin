@@ -78,7 +78,7 @@
 
 <div id="hud" hidden>
   <div class="left">
-    <div class="vitals">
+    <div class="vitals" id="vitals">
       <button type="button" id="bPause" class="ibtn" aria-label="Меню"><svg class="ic"><use href="#i-menu"/></svg></button>
       <button type="button" class="gauge stat" data-k="hp" title="Здоровье" aria-label="Здоровье"><svg class="ring" viewBox="0 0 40 40"><circle class="tr" cx="20" cy="20" r="17"/><circle class="fg" cx="20" cy="20" r="17"/></svg><svg class="ic"><use href="#i-heart"/></svg></button>
       <button type="button" class="gauge stat" data-k="sat" title="Сытость" aria-label="Сытость"><svg class="ring" viewBox="0 0 40 40"><circle class="tr" cx="20" cy="20" r="17"/><circle class="fg" cx="20" cy="20" r="17"/></svg><svg class="ic"><use href="#i-food"/></svg></button>
@@ -89,12 +89,12 @@
     <div class="saved" id="saveInd"></div>
   </div>
   <div class="right">
-    <div class="clock">
+    <div class="clock" id="clockBox">
       <svg class="ic wx" id="wxIc"><use href="#i-sun"/></svg>
       <div class="ct"><div class="time" id="time">09:00</div><div class="pod" id="pod" hidden>Утро</div><div class="day" id="day">День 1</div></div>
       <div class="cside"><span id="temp">14°</span><span id="kills">0</span></div>
     </div>
-    <div class="zoom"><button type="button" id="zOut" class="ibtn sm" aria-label="Отдалить"><svg class="ic"><use href="#i-minus"/></svg></button><button type="button" id="zIn" class="ibtn sm" aria-label="Приблизить"><svg class="ic"><use href="#i-plus"/></svg></button></div>
+    <div class="zoom" id="zoomBox"><button type="button" id="zOut" class="ibtn sm" aria-label="Отдалить"><svg class="ic"><use href="#i-minus"/></svg></button><button type="button" id="zIn" class="ibtn sm" aria-label="Приблизить"><svg class="ic"><use href="#i-plus"/></svg></button></div>
   </div>
 </div>
 <div id="toasts"></div>

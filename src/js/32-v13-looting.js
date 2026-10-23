@@ -10,12 +10,13 @@ function xferDur(it) {
   return t;
 }
 function queueXfer(c, items, dir) {
-  let room = dir === 'take' ? P.cap - P.inv.length - xferQ.filter(q => q.dir === 'take').length : capOf(c) - c.items.length - xferQ.filter(q => q.dir === 'put').length;
+  let room = dir === 'take' ? invRoomKg() - xferQ.filter(q => q.dir === 'take').reduce((s, q) => s + itemKg(q.it), 0) : capOf(c) - c.items.length - xferQ.filter(q => q.dir === 'put').length;
   let added = 0;
   for (const it of items) {
     if (xferQ.some(q => q.it === it)) continue;
-    if (room <= 0) { toast(dir === 'take' ? 'Рюкзак полон' : 'Сюда больше не влезет: ' + capOf(c) + ' мест'); break; }
-    xferQ.push({c, it, dir, t:0, dur:xferDur(it)}); room--; added++;
+    const need = dir === 'take' ? itemKg(it) : 1;
+    if (room < need - 1e-6) { toast(dir === 'take' ? 'Слишком тяжело — не унести' : 'Сюда больше не влезет: ' + capOf(c) + ' мест'); break; }
+    xferQ.push({c, it, dir, t:0, dur:xferDur(it)}); room -= need; added++;
   }
   if (added) { SFX.rustle(); panel.sel = null; renderPanel(); }
 }
@@ -58,7 +59,7 @@ finishUse = function (a) {
     const c = a.from, k = c.items.indexOf(a.it); if (k < 0) return;
     c.items.splice(k, 1); P.inv.push(a.it); const n0 = P.inv.length;
     useItem(null, P.inv.length - 1);
-    if (P.inv.length > P.cap) { const left = P.inv.pop(); if (c.items.length < capOf(c)) c.items.push(left); else addToPile(P.x, P.y, left); }
+    if (invKg() > invHardKg()) { const left = P.inv.pop(); if (c.items.length < capOf(c)) c.items.push(left); else addToPile(P.x, P.y, left); }
     if (!P.act && !paused && mode === 'play' && Math.hypot(P.x - (c.cx != null ? c.cx : c.x), P.y - (c.cy != null ? c.cy : c.y)) < 2.2) openPanel('loot', {src:c});
     return;
   }

@@ -34,7 +34,7 @@ windowActions = function (o) {
 const winAction0 = winAction;
 winAction = function (a) {
   if (a.o && a.kind === 'takecur') {
-    const ob = obs[a.o.i]; if (P.inv.length >= P.cap) { toast('Рюкзак полон'); return true; }
+    const ob = obs[a.o.i]; if (invFull()) { toast('Слишком тяжело — не унести'); return true; }
     P.inv.push({id:'curtain', col:ob.cur}); ob.cur = null; ob.cc = false; SFX.rustle(); fogDirty = true; toast('Шторы сняты и сложены в рюкзак'); renderInv(); return true;
   }
   if (a.o && a.kind === 'hangcur') {

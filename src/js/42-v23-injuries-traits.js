@@ -1,6 +1,6 @@
 // ================= v23: injuries & first aid, traits, panic & gloom, tailoring, mechanics, stealth, firearms, special zombies, base defence, storage & canning =================
 function hasTr(k) { return !!(P && P.traits && P.traits.indexOf(k) >= 0); }
-const giveItem = (it, x, y) => { if (P.inv.length < P.cap) { P.inv.push(it); return true; } addToPile(x == null ? P.x : x, y == null ? P.y : y, it); return false; };
+const giveItem = (it, x, y) => { if (!invFull()) { P.inv.push(it); return true; } addToPile(x == null ? P.x : x, y == null ? P.y : y, it); return false; };
 // ---- new skills, their journal series, professions ----
 Object.assign(SKILLS, {
   med:{name:'Первая помощь', per:'раны заживают быстрее, повязки дольше чистые'},
@@ -631,7 +631,7 @@ const XACT = {
   },
   lurewind(a) { job(2, () => { a.f.ch = 3; SFX.alarm(a.f.cx, a.f.cy); toast('Приманка заведена: 3 раза'); }); },
   lureget(a) {
-    if (P.inv.length >= P.cap) { toast('Рюкзак полон'); return; }
+    if (invFull()) { toast('Слишком тяжело — не унести'); return; }
     const p = a.f, i = props.indexOf(p) + 1; for (let q = 0; q < NT; q++) if (propAt[q] === i) propAt[q] = 0;
     p.dead = true; lures = lures.filter(x => x !== p); const it = mkItem('lure'); it.ch = p.ch; P.inv.push(it); SFX.rustle(); toast('Приманка в рюкзаке');
   },

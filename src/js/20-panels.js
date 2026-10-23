@@ -51,13 +51,13 @@ function itemRow_unused(it, n, buttons, eq) {
   r.appendChild(nm); r.appendChild(a); return r;
 }
 function takeOne(c, k) {
-  if (P.inv.length >= P.cap) { toast('Рюкзак полон'); return; }
+  if (invFull()) { toast('Слишком тяжело — не унести'); return; }
   const it = c.items.splice(k, 1)[0]; if (!it) return; SFX.rustle();
   if (ITEMS[it.id].rot && it.rot == null) it.rot = powerOn() ? gameMin + 2160 : powerOffAt + 900;
   if (ITEMS[it.id].kind === 'weapon' && !P.weapon) P.weapon = it; else P.inv.push(it);
   renderPanel(); updateHud();
 }
-function takeAll(c) { while (c.items.length && P.inv.length < P.cap) takeOne(c, 0); if (c.items.length) toast('Рюкзак полон'); renderPanel(); }
+function takeAll(c) { while (c.items.length && !invFull()) takeOne(c, 0); if (c.items.length) toast('Слишком тяжело — не унести'); renderPanel(); }
 function putOne(c, k) { if (c.items.length >= capOf(c)) { toast('Сюда больше не влезет: ' + capOf(c) + ' мест'); return; } const it = P.inv.splice(k, 1)[0]; if (it) c.items.push(it); renderPanel(); }
 function heatOk(src) { return src.type === 'fire' ? src.t > 0 && !src.out : src.type === 'burner' ? src.it.uses > 0 && P.inv.includes(src.it) : poweredAt(src.cx, src.cy); }
 function waterOk() { return nearTap() || countItem('water') > 0; }
@@ -162,7 +162,7 @@ function renderPanel() {
   const sec = t => body.appendChild(mk('div', 'sect', t));
   const empty = t => body.appendChild(mk('p', 'empty', t));
   if (panel.kind === 'inv') {
-    $('pnTitle').textContent = 'Рюкзак'; $('pnSub').textContent = `${P.inv.length}/${P.cap} мест`;
+    $('pnTitle').textContent = 'Рюкзак'; $('pnSub').textContent = invCapTxt();
     for (const [k, label] of [['items', 'Вещи'], ['craft', 'Создать'], ['self', 'Состояние']]) tabs.appendChild(btn(label, () => { panel.tab = k; renderPanel(); }, panel.tab === k ? 'on' : ''));
     if (panel.tab === 'items') {
       const top = mk('div', 'hands');
@@ -186,7 +186,7 @@ function renderPanel() {
       body.appendChild(gridOf(groups, g => { panel.sel = panel.sel === g.key ? null : g.key; renderPanel(); }, P.cap, panel.sel));
       if (!P.inv.length) empty('Пусто. Обыщи дома и машины поблизости.');
       if (panel.sel && panel.sel.startsWith('cl_') && P.cloth && P.cloth[panel.sel.slice(3)]) { const sl = panel.sel.slice(3); body.appendChild(detailCard(P.cloth[sl], 1, [btn('Снять', () => { takeOffCloth(sl); panel.sel = null; renderPanel(); }, 'ghost')])); }
-      else if (panel.sel === 'armor' && P.armor) body.appendChild(detailCard(P.armor, 1, [btn('Снять', () => { if (P.inv.length >= P.cap) { toast('Рюкзак полон'); return; } P.inv.push(P.armor); P.armor = null; panel.sel = null; renderPanel(); }, 'ghost')]));
+      else if (panel.sel === 'armor' && P.armor) body.appendChild(detailCard(P.armor, 1, [btn('Снять', () => { if (invFull()) { toast('Слишком тяжело — не унести'); return; } P.inv.push(P.armor); P.armor = null; panel.sel = null; renderPanel(); }, 'ghost')]));
       else if (panel.sel === 'hand' && P.weapon) body.appendChild(detailCard(P.weapon, 1, [btn('Убрать в рюкзак', () => { unequip(); panel.sel = null; renderPanel(); }, 'ghost')], true));
       else if (panel.sel) {
         const g = groups.find(g => g.key === panel.sel);
@@ -233,9 +233,9 @@ function renderPanel() {
     if (c.items.length) { const bx = mk('div', 'row-btns'); bx.appendChild(btn('Взять всё', () => queueXfer(c, c.items.slice(), 'take'))); hA.appendChild(bx); }
     A.appendChild(hA);
     A.appendChild(markQueued(gridOf(gA, g => lootTap(c, 'c', g), Math.max(capOf(c), 1), (panel.sel || '').startsWith('c:') ? panel.sel.slice(2) : null), gA, c));
-    const hB = mk('div', 'secrow'), tB = mk('div', 'sect', 'Рюкзак'); tB.appendChild(mk('small', '', P.inv.length + '/' + P.cap)); hB.appendChild(tB);
+    const hB = mk('div', 'secrow'), tB = mk('div', 'sect', 'Рюкзак'); tB.appendChild(mk('small', '', invCapTxt())); hB.appendChild(tB);
     B.appendChild(hB);
-    B.appendChild(markQueued(gridOf(gB, g => lootTap(c, 'b', g), P.cap, (panel.sel || '').startsWith('b:') ? panel.sel.slice(2) : null), gB, P));
+    B.appendChild(markQueued(gridOf(gB, g => lootTap(c, 'b', g), gB.length + 2, (panel.sel || '').startsWith('b:') ? panel.sel.slice(2) : null), gB, P));
     const side = (panel.sel || '').slice(0, 1), key = (panel.sel || '').slice(2);
     const gr = side === 'c' ? gA.find(g => g.key === key) : side === 'b' ? gB.find(g => g.key === key) : null;
     if (panel.sel && !gr) panel.sel = null;

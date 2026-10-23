@@ -45,7 +45,7 @@ function wearCloth(k) {
   P.inv.splice(k, 1); if (P.cloth[d.slot]) P.inv.push(P.cloth[d.slot]); P.cloth[d.slot] = it;
   SFX.rustle(); toast('Надето: ' + d.name.toLowerCase()); renderInv(); updateHud();
 }
-function takeOffCloth(slot) { if (!P.cloth || !P.cloth[slot]) return; if (P.inv.length >= P.cap) { toast('Рюкзак полон'); return; } P.inv.push(P.cloth[slot]); P.cloth[slot] = null; SFX.rustle(); renderInv(); }
+function takeOffCloth(slot) { if (!P.cloth || !P.cloth[slot]) return; if (invFull()) { toast('Слишком тяжело — не унести'); return; } P.inv.push(P.cloth[slot]); P.cloth[slot] = null; SFX.rustle(); renderInv(); }
 // ---- thunderstorms ----
 let flash = 0;
 function updateStorm(dt) {

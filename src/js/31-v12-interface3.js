@@ -30,7 +30,7 @@ function updateHud3() {
   const w = $('wxIc'); setUse(w, wi); w.setAttribute('class', 'ic wx ' + ({'i-snow':'snow', 'i-rain':'rain', 'i-moon':'night'}[wi] || ''));
   $('temp').textContent = Math.round(outsideTemp()) + '°';
   // backpack fill
-  const cp = $('invCap'), cf = P.inv.length >= P.cap; cp.textContent = P.inv.length + '/' + P.cap; cp.classList.toggle('full', cf);
+  const cp = $('invCap'), cf = invFull(); cp.textContent = fmtKg(invKg()) + '/' + fmtKg(invCapKg()); cp.classList.toggle('full', cf || invKg() > invCapKg());
   // weapon slot
   const ws = $('weapon'), key = P.car ? 'car' + Math.round(P.car.fuel) : P.weapon ? P.weapon.id + '|' + P.weapon.dur + '|' + (P.weapon.mag || 0) : 'fist';
   if (key !== hud3Key) {
