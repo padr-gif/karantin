@@ -18,7 +18,7 @@ SPEC = {
   'idle':   dict(clip='Idle_Loop', mode='loop', n=10, calm=.45, arms=-.03),   # руки свободно, не прижаты
   'walk':   dict(clip='Walk_Formal_Loop', mode='loop', n=24, arms=-.04, swing=.32),   # руки чуть от тела — не проходят сквозь бёдра
   'run':    dict(clip='Jog_Fwd_Loop', mode='loop', n=16, arms=.18, blend=('Walk_Formal_Loop', .35)),
-  'sneak':  dict(clip='Crouch_Fwd_Loop', mode='loop', n=16, arms=0, upright=.9),
+  'sneak':  dict(clip='Crouch_Fwd_Loop', mode='loop', n=16, arms=0, blend=('Walk_Formal_Loop', .5), upright=.6),   # полуприсед, спина чуть наклонена
   'attack': dict(clip='Sword_Attack', mode='once', n=10, seg=(.12, .72), blend=('Idle_Loop', .62, 0), arms=.15, calm=.5),
   'punch':  dict(clip='Punch_Cross', mode='once', n=8, arms=.1, blend=('Idle_Loop', .2, 0), calm=.4),
   'hit':    dict(clip='Hit_Chest', mode='once', n=4, calm=.3),
@@ -30,7 +30,7 @@ SPEC = {
   'drink':  dict(clip='Interact', mode='once', n=6, calm=.4),
   'read':   dict(clip='Idle_Talking_Loop', mode='loop', n=12, calm=.45, arms=.15),
   'jacks':  dict(jacks=True, mode='loop', n=8),
-  'searchlow': dict(clip='Interact', mode='loop', n=12, lower=('Crouch_Idle_Loop', 0, .2), arms=.05, upright=.85),
+  'searchlow': dict(rummage=True, mode='loop', n=12),   # чуть присел, наклонился и перебирает руками
   'shower': dict(clip='Idle_Talking_Loop', mode='loop', n=12, calm=.6, arms=-.02),   # трёт плечи и грудь — спокойное живое движение
 }
 COUNTS = {k: v['n'] for k, v in SPEC.items()}
@@ -57,6 +57,26 @@ def shower_pose(t):
     s_ = (1 - math.cos(2 * math.pi * t)) / 2; A, B = SHOWER
     ex = {nm: C.slerp(np.asarray(A[nm], float), np.asarray(B[nm], float), s_) for nm in A}
     return H.pose('Idle_Loop', t, calm=.6, extra=ex)
+RUMMAGE = None
+RUM_PK = dict(lower=('Crouch_Idle_Loop', 0, 0, .35))
+def rummage_pose(t):
+    """копается в вещах: колени чуть согнуты, спина немного наклонена, кисти по очереди перебирают вещи перед собой"""
+    global RUMMAGE
+    import ik
+    body = H.parts[0]; n = SPEC['searchlow']['n']
+    idle = H.sample('Idle_Loop', 0)
+    bend = {nm: ubc.qmul(np.asarray(idle[nm][1], float), ubc.qaxis((1, 0, 0), a)) for nm, a in (('spine_01', .16), ('spine_02', .2), ('spine_03', .1))}
+    if RUMMAGE is None:
+        RUMMAGE = []; prev = {'l': None, 'r': None}
+        for k in range(n):
+            tk = k / n; ex = dict(bend)
+            for side, ph in (('l', 0), ('r', math.pi)):
+                w = 2 * math.pi * tk + ph; lat = .13 if side == 'l' else -.13
+                tgt = (lambda lat, w: lambda G: G[body.name['pelvis']][:3, 3] + np.array([lat + .02 * math.sin(w * 2), .02 + .07 * math.sin(w), .36 + .05 * math.cos(w)]))(lat, w)
+                ex, _, x = ik.reach(H, 'Idle_Loop', 0, side, tgt, x0=prev[side], calm=1, base_extra=ex, **RUM_PK); prev[side] = x
+            RUMMAGE.append(ex)
+    k = int(round(t * n)) % n
+    return H.pose('Idle_Loop', 0, calm=1, extra=RUMMAGE[k], **RUM_PK)
 def swing_extra(clip, t, amp, arms):
     """руки в противофазе ногам: левая нога вперёд — правая рука вперёд"""
     body = H.parts[0]; G = H.pose(clip, t)[0]
@@ -94,6 +114,7 @@ def job(a):
     if 'seg' in sp: t = sp['seg'][0] + (sp['seg'][1] - sp['seg'][0]) * t
     if sp.get('jacks'): Gs, hop = jacks_pose(t)
     elif sp.get('shower'): Gs = shower_pose(t)
+    elif sp.get('rummage'): Gs = rummage_pose(t)
     elif sp.get('swing'): Gs = H.pose(sp['clip'], t, calm=sp.get('calm', 0), extra=swing_extra(sp['clip'], t, sp['swing'], sp.get('arms', 0)))
     else: Gs = H.pose(sp['clip'], t, calm=sp.get('calm', 0), arms=sp.get('arms', 0), blend=sp.get('blend'), lower=sp.get('lower'), upright=sp.get('upright', 0))
     face = d * math.pi / 4
@@ -138,5 +159,5 @@ if __name__ == '__main__':
             atlas['wpn'][name] = wpn
         print(sname, sheet.shape[1], 'x', sheet.shape[0], len(items), 'кадров', round(time.time() - t0), 'с')
     init(); atlas['anims']['pm'] = COUNTS                                              # у героя свои числа кадров (у героини — старые, 'p')
-    atlas['anims']['pmdur'] = {k: round(H.anim_dur(v['clip']) * ((v['seg'][1] - v['seg'][0]) if 'seg' in v else 1), 3) if 'clip' in v else (1.6 if v.get('shower') else 1.0) for k, v in SPEC.items()}
+    atlas['anims']['pmdur'] = {k: round(H.anim_dur(v['clip']) * ((v['seg'][1] - v['seg'][0]) if 'seg' in v else 1), 3) if 'clip' in v else (1.6 if v.get('shower') else 1.4 if v.get('rummage') else 1.0) for k, v in SPEC.items()}
     json.dump(atlas, open(os.path.join(ROOT, 'assets/atlas.json'), 'w'), separators=(',', ':'))

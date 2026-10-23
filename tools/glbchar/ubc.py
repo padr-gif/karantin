@@ -121,7 +121,12 @@ class Hero:
                     tt = t if t is None or o[0] is None else np.asarray(t) * (1 - blend[1]) + np.asarray(o[0]) * blend[1]
                     named[nm] = (tt, C.slerp(np.asarray(r, float), np.asarray(o[1], float), blend[1]), sc)
         if lower:                                                            # низ тела из другого клипа (присел), спина — наполовину
-            lo = s.sample(lower[0], lower[1] if len(lower) > 1 else t01)
+            lo = s.sample(lower[0], lower[1] if len(lower) > 1 else t01); lk = lower[3] if len(lower) > 3 else 1.0
+            if lk < 1:                                                       # присесть не до конца: ноги и таз — между стойкой и приседом
+                for nm, v in list(lo.items()):
+                    if nm in named and v[1] is not None and named[nm][1] is not None and (nm in ('pelvis', 'root') or any(k in nm for k in ('thigh', 'calf', 'foot', 'ball'))):
+                        tt = v[0] if v[0] is None or named[nm][0] is None else np.asarray(named[nm][0]) * (1 - lk) + np.asarray(v[0]) * lk
+                        lo[nm] = (tt, C.slerp(np.asarray(named[nm][1], float), np.asarray(v[1], float), lk), None)
             for nm, v in lo.items():
                 if nm == 'pelvis' and nm in named and v[1] is not None and named[nm][1] is not None:   # таз: высота присяда, наклон — наполовину (спина прямее)
                     named[nm] = (v[0], C.slerp(np.asarray(v[1], float), np.asarray(named[nm][1], float), .5), None)
