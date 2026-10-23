@@ -196,7 +196,7 @@ function drawWeapon(name, wid, wx, wy, zoff) {
 }
 function drawPlayer(an, fi, zoff) {
   const lk = P.look || look, w = P.weapon && P.weapon.id;
-  const name = 'p' + lk.g + '_' + an + '_' + dirOf(P.fd != null ? P.fd : P.face) + '_' + fi;
+  const name = 'p' + lk.g + heroVar(lk) + '_' + an + '_' + dirOf(P.fd != null ? P.fd : P.face) + '_' + fi;
   const wm = ART.meta.wpn && ART.meta.wpn[name];
   const front = !wm || wm[4];
   const busy = an === 'eat' || an === 'drink' || an === 'pickup' || an === 'work';
@@ -211,6 +211,8 @@ function drawZombie(z, an, fi, alpha, force) {
   const pal = z.pal;
   drawChar(z, 'z' + (pal.b || 'm') + '_' + an + '_' + dirOf(z.face) + '_' + fi, 'z' + pal.pi, ZPALS[pal.pi], z.x, z.y, 0, !force && z.stun > .3, alpha, force);
 }
+// вариант кадров героя: '' — без одежды, 't' — в верхе, 'f' — в верхе и штанах (одежда не в облипку); 43r решает
+let heroVar = lk => '';
 // палитра героя для кадра: старая схема (перекраска слотов); 43j заменяет её на одежду по областям тела
 let playerLookPal = function (lk) {
   const pal = lookPal(lk), ct = P.cloth && P.cloth.torso, ch = P.cloth && P.cloth.head;

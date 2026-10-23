@@ -21,22 +21,28 @@ SPEC = {
   'sneak':  dict(clip='Crouch_Fwd_Loop', mode='loop', n=16, arms=0, blend=('Walk_Formal_Loop', .5), upright=.6),   # полуприсед, спина чуть наклонена
   'attack': dict(clip='Sword_Attack', mode='once', n=10, seg=(.12, .72), blend=('Idle_Loop', .62, 0), arms=.15, calm=.5),
   'punch':  dict(clip='Punch_Cross', mode='once', n=8, arms=.1, blend=('Idle_Loop', .2, 0), calm=.4),
+  'punch2': dict(clip='Punch_Jab', mode='once', n=8, arms=.1, blend=('Idle_Loop', .2, 0), calm=.4),   # другой рукой — чередуются
   'hit':    dict(clip='Hit_Chest', mode='once', n=4, calm=.3),
   'search': dict(clip='Interact', mode='loop', n=12, calm=.4, arms=.1),
   'work':   dict(clip='Interact', mode='loop', n=12, calm=.4, arms=.1),
   'death':  dict(clip='Death01', mode='end', n=8),
   'pickup': dict(clip='PickUp_Table', mode='once', n=8, calm=.3),
-  'eat':    dict(clip='Interact', mode='once', n=6, calm=.4),
-  'drink':  dict(clip='Interact', mode='once', n=6, calm=.4),
-  'read':   dict(readbook=True, mode='loop', n=14),   # держит раскрытую книгу, голова опущена, правая рука перелистывает страницу
+  'eat':    dict(mouth='eat', mode='once', n=8),     # подносит ко рту, откусывает
+  'drink':  dict(mouth='drink', mode='once', n=8),   # подносит ко рту, запрокидывает голову
+  'read':   dict(clip='Idle_Talking_Loop', mode='loop', n=12, calm=.6, arms=-.02, look=True),   # руки у груди (книгу рисует игра), голова опущена
   'attackrun': dict(clip='Sword_Attack', mode='once', n=10, seg=(.12, .72), blend=('Idle_Loop', .62, 0), arms=.15, runlegs=True),
   'punchrun':  dict(clip='Punch_Cross', mode='once', n=8, arms=.1, blend=('Idle_Loop', .2, 0), runlegs=True),
+  'punchrun2': dict(clip='Punch_Jab', mode='once', n=8, arms=.1, blend=('Idle_Loop', .2, 0), runlegs=True),
+  'sneakidle': dict(clip='Crouch_Idle_Loop', mode='loop', n=10, blend=('Idle_Loop', .5, 0), upright=.7, arms=0, calm=.35),   # присел и стоит: чуть согнут
   'jacks':  dict(jacks=True, mode='loop', n=8),
   'searchlow': dict(rummage=True, mode='loop', n=12),   # чуть присел, наклонился и перебирает руками
   'shower': dict(clip='Idle_Talking_Loop', mode='loop', n=12, calm=.6, arms=-.02),   # трёт плечи и грудь — спокойное живое движение
 }
 COUNTS = {k: v['n'] for k, v in SPEC.items()}
-EXTRA = {'pickup', 'eat', 'drink', 'read', 'jacks', 'searchlow', 'shower', 'attackrun', 'punchrun'}
+EXTRA = {'pickup', 'eat', 'drink', 'read', 'jacks', 'searchlow', 'shower', 'attackrun', 'punchrun', 'punchrun2', 'punch2', 'sneakidle'}
+# одежда «не в облипку»: тело под одеждой чуть раздуто (метры по нормали) — t: верх, f: верх и ноги
+VARS = {'': {}, 't': {1: .03, 2: .026, 3: .022, 4: .02, 13: .008},
+        'f': {1: .03, 2: .026, 3: .022, 4: .02, 13: .008, 6: .03, 7: .03, 8: .026, 9: .022, 10: .018}}
 H = None
 def init():
     global H; H = ubc.Hero()
@@ -79,6 +85,29 @@ def read_pose(t):
                 ex, _, x = ik.reach(H, 'Idle_Loop', 0, side, tgt, x0=prev[side], calm=.6, base_extra=ex); prev[side] = x
             READ.append(ex)
     return H.pose('Idle_Loop', 0, calm=.6, extra=READ[int(round(t * n)) % n])
+MOUTH = None
+def mouth_pose(kind, t):
+    """ест/пьёт: правая кисть от груди ко рту и обратно; у рта — «откусывает» (eat) или запрокидывает голову (drink)"""
+    global MOUTH
+    import ik
+    body = H.parts[0]
+    if MOUTH is None:
+        A, _, xa = ik.reach(H, 'Idle_Loop', 0, 'r', lambda G: G[body.name['spine_03']][:3, 3] + np.array([-.1, -.1, .22]), calm=.6)
+        B, _, xb = ik.reach(H, 'Idle_Loop', 0, 'r', lambda G: G[body.name['Head']][:3, 3] + np.array([-.02, -.06, .13]), x0=xa, calm=.6)
+        MOUTH = (A, B)
+    A, B = MOUTH
+    up = min(1, t / .35) if t < .35 else (1 if t < .7 else max(0, 1 - (t - .7) / .3))
+    e = up * up * (3 - 2 * up)
+    if kind == 'eat' and .35 <= t < .7: e = 1 - .18 * abs(math.sin((t - .35) / .35 * math.pi * 2))   # откусывает
+    ex = {nm: C.slerp(np.asarray(A[nm], float), np.asarray(B[nm], float), e) for nm in ('upperarm_r', 'lowerarm_r')}
+    idle = H.sample('Idle_Loop', 0)
+    if kind == 'drink':
+        tilt = -.3 * e
+        for nm, k in (('neck_01', .5), ('Head', .5)): ex[nm] = ubc.qmul(np.asarray(idle[nm][1], float), ubc.qaxis((1, 0, 0), tilt * k))
+    return H.pose('Idle_Loop', 0, calm=.6, extra=ex)
+def look_extra():
+    idle = H.sample('Idle_Loop', 0)
+    return {nm: ubc.qmul(np.asarray(idle[nm][1], float), ubc.qaxis((1, 0, 0), a)) for nm, a in (('neck_01', .22), ('Head', .3))}
 RUMMAGE = None
 RUM_PK = dict(lower=('Crouch_Idle_Loop', 0, 0, .35))
 def rummage_pose(t):
@@ -132,18 +161,19 @@ def grip(Gs, face, hips):
     return pts
 
 def job(a):
-    an, d, i = a
+    an, d, i, var = a
     sp = SPEC[an]; n = sp['n']; t = t_of(i, n, sp['mode']); hop = 0
     if 'seg' in sp: t = sp['seg'][0] + (sp['seg'][1] - sp['seg'][0]) * t
     if sp.get('jacks'): Gs, hop = jacks_pose(t)
     elif sp.get('shower'): Gs = shower_pose(t)
     elif sp.get('rummage'): Gs = rummage_pose(t)
-    elif sp.get('readbook'): Gs = read_pose(t)
+    elif sp.get('mouth'): Gs = mouth_pose(sp['mouth'], t)
+    elif sp.get('look'): Gs = H.pose(sp['clip'], t, calm=sp.get('calm', 0), arms=sp.get('arms', 0), extra=look_extra())
     elif sp.get('runlegs'): Gs = H.pose(sp['clip'], t, calm=0, arms=sp.get('arms', 0), blend=sp.get('blend'), lower=('Jog_Fwd_Loop', i / n, 0))   # ноги бегут, руки бьют
     elif sp.get('swing'): Gs = H.pose(sp['clip'], t, calm=sp.get('calm', 0), extra=swing_extra(sp['clip'], t, sp['swing'], sp.get('arms', 0)))
     else: Gs = H.pose(sp['clip'], t, calm=sp.get('calm', 0), arms=sp.get('arms', 0), blend=sp.get('blend'), lower=sp.get('lower'), upright=sp.get('upright', 0))
     face = d * math.pi / 4
-    im, (ax, ay), rm = H.render(Gs, face, K, rmap=True, pixel=True)
+    im, (ax, ay), rm = H.render(Gs, face, K, rmap=True, pixel=True, inflate=VARS[var])
     # точка персонажа — под тазом; высота — по самой низкой точке тела (как в render)
     ch = H.parts[0]; geo = ch.skinned(Gs[0]); zmin = min(P[:, 2].min() for P, _ in geo)
     hk = 'pelvis'; hips = Gs[0][ch.name[hk]][:3, 3] @ C.AX.T
@@ -156,23 +186,26 @@ def job(a):
     g = np.zeros_like(al); g[1:] |= al[:-1]; g[:-1] |= al[1:]; g[:, 1:] |= al[:, :-1]; g[:, :-1] |= al[:, 1:]
     a[g & ~al] = (24, 20, 18, 255); im = Image.fromarray(a)
     bb = im.getbbox(); im = im.crop(bb); rm = rm.crop(bb)
-    return 'pm_%s_%d_%d' % (an, d, i), np.array(im), np.array(rm), ax - bb[0], ay - bb[1] + hop, [round(float(hp[0]), 2), round(float(hp[1]), 2), round(float(dv[0]), 3), round(float(dv[1]), 3), front, round(float(lp[0]), 2), round(float(lp[1]), 2)]
+    return 'pm%s_%s_%d_%d' % (var, an, d, i), np.array(im), np.array(rm), ax - bb[0], ay - bb[1] + hop, [round(float(hp[0]), 2), round(float(hp[1]), 2), round(float(dv[0]), 3), round(float(dv[1]), 3), front, round(float(lp[0]), 2), round(float(lp[1]), 2)]
 
 if __name__ == '__main__':
     import bake as BK                                                        # упаковка листов — как у старого запекания
     from multiprocessing import Pool
     t0 = time.time()
-    jobs = [(an, d, i) for an in COUNTS for d in range(8) for i in range(COUNTS[an])]
+    jobs = [(an, d, i, v) for v in VARS for an in COUNTS for d in range(8) for i in range(COUNTS[an])]
     with Pool(2, initializer=init) as pool:
         res = []
         for k, r in enumerate(pool.imap_unordered(job, jobs, chunksize=4)):
             res.append(r); print('\r%d/%d' % (k + 1, len(jobs)), end='', flush=True)
     print()
     atlas = json.load(open(os.path.join(ROOT, 'assets/atlas.json')))
-    for k in [k for k in atlas['frames'] if k.startswith('pm_')]: del atlas['frames'][k]
-    for k in [k for k in atlas.get('wpn', {}) if k.startswith('pm_')]: del atlas['wpn'][k]
-    groups = {'pchar_m': [], 'pchar_mx': []}
-    for r in res: groups['pchar_mx' if r[0].split('_')[1] in EXTRA else 'pchar_m'].append(r)
+    import re
+    for k in [k for k in atlas['frames'] if re.match(r'pm[tf]?_', k)]: del atlas['frames'][k]
+    for k in [k for k in atlas.get('wpn', {}) if re.match(r'pm[tf]?_', k)]: del atlas['wpn'][k]
+    groups = {}
+    for r in res:
+        v = r[0].split('_')[0][2:]; an = r[0][len('pm' + v) + 1:].rsplit('_', 2)[0]
+        groups.setdefault('pchar_m' + v + ('x' if an in EXTRA else ''), []).append(r)
     for sname, items in groups.items():
         sheet, pos = BK.pack([(n, a, ax, ay, w) for n, a, r, ax, ay, w in items], 4096)
         Image.fromarray(sheet, 'RGBA').save(os.path.join(ROOT, 'assets/sprites', sname + '.png'), optimize=True)

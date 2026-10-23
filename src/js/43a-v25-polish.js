@@ -172,11 +172,11 @@ drawDoll = function () {
   const g = cv2.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv2.width, cv2.height);
   const lk = P.look, dir = (Math.floor(animT / 1.6) + 1) % 8, nw = AN('p', 'idle'), fi = Math.floor(animT * 2.6) % nw;
   const pp = playerLookPal(lk);
-  const fr = charFrame('p' + lk.g + '_idle_' + dir + '_' + fi, pp.key, pp.pal, true);
+  const fr = charFrame('p' + lk.g + heroVar(lk) + '_idle_' + dir + '_' + fi, pp.key, pp.pal, true);
   const W = cv2.width, H = cv2.height, foot = H - 18;
   g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(W / 2, foot, W * .2, 11, 0, 0, 6.283); g.fill();
   if (!fr) return;
-  const k = (fr.s || 1) > 1 ? Math.min((H - 30) / fr.ay, 3.2) : Math.max(1, Math.floor((H - 30) / fr.ay)), b = 1 + Math.sin(animT * 2.3) * .012;   // пиксельный герой — целый масштаб, во весь рост
+  const k = (fr.s || 1) > 1 ? Math.min((H - 30) / fr.ay, 3.2) : Math.max(1, Math.floor((H - 30) / 62)), b = 1 + Math.sin(animT * 2.3) * .012;   // пиксельный герой — целый масштаб, во весь рост
   g.imageSmoothingEnabled = (fr.s || 1) > 1; g.imageSmoothingQuality = 'high';               // пиксельный герой — без размытия
   g.translate(W / 2, foot); g.scale(k, k * b); g.drawImage(fr.cv, -fr.ax, -fr.ay); g.setTransform(1, 0, 0, 1, 0, 0);
 };

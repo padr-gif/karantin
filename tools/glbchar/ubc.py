@@ -155,16 +155,20 @@ class Hero:
             over = {ch.name[nm]: v for nm, v in named.items() if nm in ch.name}
             out.append(ch.globals_(ch.local(over)))
         return out
-    def render(s, Gs, face, K=2, rmap=False, pixel=False):
-        return render_multi(s.parts, Gs, face, K, rmap, pixel)
+    def render(s, Gs, face, K=2, rmap=False, pixel=False, inflate=None):
+        return render_multi(s.parts, Gs, face, K, rmap, pixel, inflate)
 
-def render_multi(chars, Gs, face, K=2, rmap=False, pixel=False):
+def render_multi(chars, Gs, face, K=2, rmap=False, pixel=False, inflate=None):
     """как C.render, но несколько персонажей-частей (тело, волосы …) в одном кадре"""
     class Merged: pass
     m = Merged(); m.prims = []; m.name = chars[0].name
     geo = []
     for ch, Gm in zip(chars, Gs):
-        for (P, N), p in zip(ch.skinned(Gm), ch.prims): geo.append((P, N)); m.prims.append(p)
+        for (P, N), p in zip(ch.skinned(Gm), ch.prims):
+            if inflate and N is not None and p.get('rid') is not None and ch is chars[0]:   # одежда «не в облипку»: тело под ней толще
+                off = np.array([inflate.get(int(r), 0.0) for r in range(16)])[p['rid']]
+                n = N / np.maximum(np.linalg.norm(N, axis=1, keepdims=True), 1e-9); P = P + n * off[:, None]
+            geo.append((P, N)); m.prims.append(p)
     m.skinned = lambda _: geo
     return C.render(m, Gs[0], face, K, rmap=rmap, pixel=pixel)
 

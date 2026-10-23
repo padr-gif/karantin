@@ -41,7 +41,7 @@ function drawBook(name, zoff) {
     const it = P.act && P.act.it, bk = it && ITEMS[it.id] && (ITEMS[it.id].kind === 'book' || it.id === 'novel' || it.id === 'newspaper');
     const reading = bk && P.act.kind === 'use' && P.act.an === 'read' && heroMale() && AN('p', 'read') > 1;
     if (!reading) return dp(an, fi, zoff);
-    const name = 'pm_read_' + dirOf(P.fd != null ? P.fd : P.face) + '_' + fi, w = ART.meta.wpn && ART.meta.wpn[name];
+    const name = 'pm' + heroVar(P.look || look) + '_read_' + dirOf(P.fd != null ? P.fd : P.face) + '_' + fi, w = ART.meta.wpn && ART.meta.wpn[name];
     const front = ![4, 5, 6].includes(dirOf(P.fd != null ? P.fd : P.face));   // со спины книгу не видно
     if (!front) drawBook(name, zoff);
     dp(an, fi, zoff);
