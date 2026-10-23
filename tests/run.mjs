@@ -208,6 +208,27 @@ await D("settings.fps = false");
 await D("settings.smooth = false; applySettings();"); await sleep(500);
 check('и возвращается к пикселям', await D("HDQ === 1 && [...CHUNKS.values()].every(c => c.q === 1)"));
 
+console.log('Соседние районы');
+await fresh();
+check('через бетонный блок на блокпосту можно перелезть', await D("(() => { P.x = FEN + .98; P.y = EXIT_R + .5; P.face = Math.PI; const pl = blockClimbPlan(-1, 0); return !!pl && pl.tx < FEN; })()"));
+check('на краю карты спрашивает, идти ли дальше', await D("(() => { P.x = .5; P.y = EXIT_R + .5; zs.length = 0; update(.05); const ok = !!document.querySelector('.travelask'); closeTravelAsk(); P._edgeHold = false; return ok; })()"));
+const dist = await D(`(() => {
+  const home = world.seed; furns[5].searched = true; furns[5].items = []; P.inv.push(mkItem('canned')); const inv = P.inv.length, gm = gameMin;
+  P.x = .5; P.y = EXIT_R + .5; doTravel('w', -1, 0);
+  const a = {dx:world.dx, other:world.seed !== home, east:P.x > MW - 3, inv:P.inv.length === inv, time:Math.abs(gameMin - gm - 30) < .1, clean:!furns.some(f => f.items && f.items.some(i => i.u || i.story))};
+  P.x = MW - .5; doTravel('e', 0, 0);
+  const b = {home:world.seed === home, kept:furns[5].searched && furns[5].items.length === 0, west:P.x < 3, rem:Object.keys(world.dist).join()};
+  applySave(JSON.parse(JSON.stringify(serialize())));
+  return {a, b, saved:Object.keys(world.dist).join(), root:world.root === home};
+})()`);
+check('ушёл в новый район: другой город, вещи и время при себе', dist.a.dx === -1 && dist.a.other && dist.a.east && dist.a.inv && dist.a.time, dist);
+check('в чужих районах нет записок сюжета и особых находок', dist.a.clean, dist);
+check('вернулся домой — там всё как оставил', dist.b.home && dist.b.kept && dist.b.west && dist.b.rem === '-1,0', dist);
+check('районы переживают сохранение', dist.saved === '-1,0' && dist.root, dist);
+check('старое сохранение без районов грузится как родной район', await D("(() => { const d = JSON.parse(JSON.stringify(serialize())); delete d.x50; applySave(d); return world.dx === 0 && world.root === d.seed && Object.keys(world.dist).length === 0; })()"));
+
+check('сжатие районов без потерь', await D("(() => { const a = JSON.stringify(serialize()) + 'Мертвецы 😀 \\u0000 \"' + 'абв'.repeat(9000); let r = ''; for (let i = 0; i < 30000; i++) r += String.fromCharCode(Math.floor(Math.random() * 65536)); return [a, r, '', 'a', 'aaaaaaaaaaaaaaaaaaa'].every(s => lzUnpack(JSON.parse(JSON.stringify(lzPack(s)))) === s); })()"));
+
 console.log('Живая игра 15 секунд');
 await fresh("['coward']");
 await D("P.weapon = mkItem('shotgun'); P.weapon.mag = 2; P.inv.push(mkItem('shells')); gameMin += 14 * 60; for (let i = 0; i < 25; i++) spawnZombie(4, false);");

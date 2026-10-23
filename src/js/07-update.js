@@ -72,7 +72,7 @@ function update(dt) {
   updateGens(dt, gm); updateBeds(gm); updateHeli(dt); updateDrops(dt); updateBlazes(dt); updateTraps(); updateFlares(dt); updateBino(dt); updateClimate(gm); updateStorm(dt); updateHorde(); updateSnow(gm); updateMood(gm, dt); P.achT = (P.achT || 0) - dt; if (P.achT <= 0) { P.achT = 1; checkAch(); }
   { const dark = lightLevel() < .3, day = Math.floor(gameMin / 1440); if (dark && P.nightDay !== day) { P.nightDay = day; toast('Стемнело. Ночью мертвецы бегают быстрее'); } }
   P.fenceT = Math.max(0, (P.fenceT || 0) - dt);
-  if (!P.fenceT && (P.x < FEN + 2.3 || P.y < FEN + 2.3 || P.x > MW - FEN - 2.3 || P.y > MH - FEN - 2.3)) { P.fenceT = 45; toast('Карантинная зона. Ограждение и военные посты: из города не выбраться'); }
+  if (!P.fenceT && (P.x < FEN + 2.3 || P.y < FEN + 2.3 || P.x > MW - FEN - 2.3 || P.y > MH - FEN - 2.3)) { P.fenceT = 45; toast('Карантинная зона. Через сетку не перелезть, а через бетонные блоки на блокпосту можно: дальше соседние районы'); }
   if (!panel && piles.some(p => !p.items.length)) piles = piles.filter(p => p.items.length);
 
   const rate = P.sleep ? .5 : 1;
