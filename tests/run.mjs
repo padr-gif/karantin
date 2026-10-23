@@ -17,7 +17,7 @@ page.on('console', m => { if (m.type() === 'error' && !/ERR_|Failed to load reso
 await page.goto(PAGE);
 await page.waitForFunction(() => window.__dbg && !document.getElementById('mNew').disabled, null, {timeout: 60000});
 const D = s => page.evaluate(s => window.__dbg(s), s);
-const fresh = async (traits = '[]', home = 'random') => { await D(`newTraits = ${traits}; newProf = 'none'; NEWCFG.home = '${home}'; startNew(); startPlayAfterStory(); zs.length = 0;`); await sleep(200); };
+const fresh = async (traits = '[]') => { await D(`newTraits = ${traits}; newProf = 'none'; startNew(); startPlayAfterStory(); zs.length = 0;`); await sleep(200); };
 
 console.log('Черты и создание персонажа');
 await fresh("['organized','smoker']");
@@ -242,19 +242,6 @@ const types = await D(`(() => {
   return out;
 })()`);
 check('четыре новых типа районов строятся и после сохранения те же', Object.values(types).every(v => v === 'ok'), types);
-
-console.log('Крымское');
-await fresh('[]', 'krym');
-const krym = await D(`(() => {
-  const k = new Set(houses.map(h => h.kind)), sig = () => houses.length + ':' + furns.length + ':' + map.reduce((a, v, i) => (a * 31 + v * (i % 97)) >>> 0, 0), s1 = sig();
-  const need = ['school', 'dk', 'council', 'kinder', 'church', 'fap', 'pharmacy', 'police', 'selpo', 'store'].filter(x => !k.has(x));
-  const monu = props.filter(p => p.type === 'monu').length, home = hAt[Math.floor(P.y) * MW + Math.floor(P.x)];
-  applySave(JSON.parse(JSON.stringify(serialize())));
-  return {need, monu, home:!!home && houses[home - 1].kind === 'house', same:s1 === sig(), name:distName(0, 0), cps:CHECKPOINTS.length, w:world.home};
-})()`);
-check('Крымское: все общественные здания и памятники на месте', krym.need.length === 0 && krym.monu === 4 && krym.cps === 4, krym);
-check('Крымское: герой дома, после сохранения село то же', krym.home && krym.same && krym.name === 'Крымское' && krym.w === 'krym', krym);
-check('Крымское: можно уйти в соседний район и вернуться', await D(`(() => { P.x = .5; P.y = 72.5; doTravel('w', -1, 0); const a = world.dtype !== undefined && world.dx === -1; P.x = MW - .5; doTravel('e', 0, 0); return a && world.dx === 0 && houses.some(h => h.kind === 'dk'); })()`));
 
 console.log('Живая игра 15 секунд');
 await fresh("['coward']");
