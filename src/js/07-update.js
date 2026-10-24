@@ -10,6 +10,9 @@ function lightLevel() {
 let U = 30, hh = 15, WH = 72, ox = 0, oy = 0;
 function screenToWorld(sx, sy) { const a = (sx - ox) / U, b = (sy - oy) / hh; return [(a + b) / 2, (b - a) / 2]; }
 
+const doorList = {src:null, t:0, L:[]};
+const sepHead = new Int32Array(NT); let sepNext = new Int32Array(256);
+const sepCell = z => clamp(Math.floor(z.y), 0, MH - 1) * MW + clamp(Math.floor(z.x), 0, MW - 1);
 function update(dt) {
   const gm = dt * settings.dayLen * (P.sleep ? 40 : 1);
   autoT += gm; if (settings.autosave && autoT >= 120) { autoT = 0; writeSave('auto').then(flashSaved); }
@@ -98,7 +101,9 @@ function update(dt) {
 
   flowTimer -= dt; if (flowTimer <= 0) { buildFlow(); flowTimer = .3; }
   visTimer -= dt; if (visTimer <= 0) { computeVis(); fogDirty = true; visTimer = .12; }
-  for (const o of obs) if (o && o.t === 'door') { const tg = o.open && !o.dead ? 1 : 0; if (o.ang == null) o.ang = tg; o.ang += clamp(tg - o.ang, -dt * 5, dt * 5); }
+  // двери: список дверей кэшируется (раньше каждый кадр перебирались все 34 тыс. клеток карты)
+  if (doorList.src !== obs || (doorList.t -= dt) < 0) { doorList.src = obs; doorList.t = 3; doorList.L = obs.filter(o => o && o.t === 'door'); }
+  for (const o of doorList.L) { const tg = o.open && !o.dead ? 1 : 0; if (o.ang == null) o.ang = tg; if (o.ang !== tg) o.ang += clamp(tg - o.ang, -dt * 5, dt * 5); }
   for (const c of corpses) if (c.fall < 1) { c.fall = Math.min(1, c.fall + dt / .5); if (c.fall >= 1) stampQ.push({c}); }
 
   const sight = (4 + 6 * L + (fl ? 2.5 : 0)) * (P.sneak ? .6 : 1) * (rain > .5 ? .85 : 1);
@@ -175,13 +180,21 @@ function update(dt) {
       z.face += Math.atan2(Math.sin(ta - z.face), Math.cos(ta - z.face)) * Math.min(1, dt * 6);
     }
   }
+  // расталкивание мертвецов: сетка по клеткам вместо перебора всех пар (190 мертвецов = 18 тыс. пар за кадр)
+  if (sepNext.length < zs.length) sepNext = new Int32Array(zs.length * 2);
+  sepHead.fill(-1);
+  for (let i = 0; i < zs.length; i++) { const c = sepCell(zs[i]); sepNext[i] = sepHead[c]; sepHead[c] = i; }
   for (let i = 0; i < zs.length; i++) {
-    const a = zs[i];
-    for (let j = i + 1; j < zs.length; j++) {
-      const b = zs[j], dx = b.x - a.x, dy = b.y - a.y;
-      if (Math.abs(dx) > .6 || Math.abs(dy) > .6) continue;
-      const d = Math.hypot(dx, dy);
-      if (d < .5 && d > 1e-4) { const p = (.5 - d) * .5, ux = dx / d * p, uy = dy / d * p; move(a, -ux, -uy); move(b, ux, uy); }
+    const a = zs[i], cx = clamp(Math.floor(a.x), 0, MW - 1), cy = clamp(Math.floor(a.y), 0, MH - 1);
+    for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) {
+      const nx = cx + ox, ny = cy + oy; if (nx < 0 || ny < 0 || nx >= MW || ny >= MH) continue;
+      for (let j = sepHead[ny * MW + nx]; j >= 0; j = sepNext[j]) {
+        if (j <= i) continue;
+        const b = zs[j], dx = b.x - a.x, dy = b.y - a.y;
+        if (Math.abs(dx) > .6 || Math.abs(dy) > .6) continue;
+        const d = Math.hypot(dx, dy);
+        if (d < .5 && d > 1e-4) { const p = (.5 - d) * .5, ux = dx / d * p, uy = dy / d * p; move(a, -ux, -uy); move(b, ux, uy); }
+      }
     }
     const dx = a.x - P.x, dy = a.y - P.y, d = Math.hypot(dx, dy);
     if (d < .52 && d > 1e-4) { const p = .52 - d; move(a, dx / d * p, dy / d * p); }

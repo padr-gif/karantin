@@ -78,16 +78,33 @@ function updateGoTo(dt) {
   return [dx / l, dy / l];
 }
 // ---- loot markers above unsearched containers ----
+// мебель и машины в квадрате 21×21 вокруг героя; пересчёт, только когда герой перешёл в другую клетку (или раз в секунду)
+const LN = {k:-1, t:0, f:[], p:[]};
+function lootNear() {
+  const px = Math.floor(P.x), py = Math.floor(P.y), k = py * MW + px;
+  if (k === LN.k && animT - LN.t < 1) return LN;
+  LN.k = k; LN.t = animT; LN.f = []; LN.p = [];
+  const sf = new Set(), sp = new Set();
+  for (let y = Math.max(0, py - 10); y <= Math.min(MH - 1, py + 10); y++) for (let x = Math.max(0, px - 10); x <= Math.min(MW - 1, px + 10); x++) {
+    const i = y * MW + x;
+    if (furn[i]) sf.add(furns[furn[i] - 1]);
+    if (propAt[i]) { const p = props[propAt[i] - 1]; if (p && p.type === 'car') sp.add(p); }
+  }
+  for (const p of typeof dynCars !== 'undefined' ? dynCars : []) if (Math.abs(p.cx - P.x) < 10 && Math.abs(p.cy - P.y) < 10) sp.add(p);
+  LN.f = [...sf].filter(Boolean); LN.p = [...sp]; return LN;
+}
 function drawLootMarks() {
   if (mode !== 'play') return;
   const pulse = .6 + .4 * Math.sin(animT * 4);
   const mark = (x, y, z, col) => { const sx = SX(x, y), sy = SY(x, y, z); ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(sx, sy - 3); ctx.lineTo(sx + 2.4, sy); ctx.lineTo(sx, sy + 3); ctx.lineTo(sx - 2.4, sy); ctx.closePath(); ctx.fill(); };
-  for (const f of furns) {
+  // только клетки вокруг героя (раньше — вся мебель и все предметы города каждый кадр)
+  const near = lootNear();
+  for (const f of near.f) {
     if (f.searched || !CONT[f.type] || !CONT[f.type].loot) continue;
     if (Math.abs(f.cx - P.x) > 9 || Math.abs(f.cy - P.y) > 9 || !vis[f.y * MW + f.x]) continue;
     mark(f.cx, f.cy, 38, `rgba(232,180,70,${pulse})`);
   }
-  for (const p of props) if (p.type === 'car' && !p.searched && Math.abs(p.cx - P.x) < 9 && Math.abs(p.cy - P.y) < 9 && vis[Math.floor(p.cy) * MW + Math.floor(p.cx)]) mark(p.cx, p.cy, 34, `rgba(232,180,70,${pulse})`);
+  for (const p of near.p) if (p.type === 'car' && !p.searched && Math.abs(p.cx - P.x) < 9 && Math.abs(p.cy - P.y) < 9 && vis[Math.floor(p.cy) * MW + Math.floor(p.cx)]) mark(p.cx, p.cy, 34, `rgba(232,180,70,${pulse})`);
   if (tapMark && tapMark.t > 0) { const sx = SX(tapMark.x, tapMark.y), sy = SY(tapMark.x, tapMark.y, 0); ctx.strokeStyle = `rgba(232,180,70,${tapMark.t})`; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(sx, sy, 10 * (1.4 - tapMark.t * .5), 5 * (1.4 - tapMark.t * .5), 0, 0, 6.283); ctx.stroke(); }
   if (goTo) { const sx = SX(goTo.x, goTo.y), sy = SY(goTo.x, goTo.y, 0); ctx.strokeStyle = 'rgba(232,180,70,.8)'; ctx.setLineDash([2, 2]); ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(SX(P.x, P.y), SY(P.x, P.y, 0)); ctx.lineTo(sx, sy); ctx.stroke(); ctx.setLineDash([]); }
 }

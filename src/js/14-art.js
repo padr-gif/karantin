@@ -138,7 +138,7 @@ function keyPx(a, i, pal) {
   }
 }
 function recolor8(f, pal) {
-  const c = mkCanvas(f[3], f[4]), g = c.getContext('2d');
+  const c = mkCanvas(f[3], f[4]), g = c.getContext('2d', {willReadFrequently:true});   // перекраска читает пиксели: холст в памяти, без чтения с видеокарты
   g.drawImage(ART.imgs[f[0]], f[1], f[2], f[3], f[4], 0, 0, f[3], f[4]);
   if (f[8] === 1) return pal && pal.outfit ? dressFrame(f, c, pal.outfit) : {cv:c, ax:f[5], ay:f[6], w:f[3], h:f[4], s:f[7] || 1};   // цветной кадр (готовая модель): не перекрашиваем
   const d = g.getImageData(0, 0, f[3], f[4]), a = d.data;
@@ -149,7 +149,7 @@ function recolor8(f, pal) {
 function charFrame(name, palKey, pal, force) {
   const k = palKey + '|' + name; let c = frameCache.get(k);
   if (c) { frameCache.delete(k); frameCache.set(k, c); return c; }
-  if (!force && recolorsThisFrame > 36) return null;
+  if (!force && recolorsThisFrame > 16) return null;                       // не больше 16 перекрасок за кадр: толпа появляется за пару кадров, без рывка
   const f = ART.meta.frames[name]; if (!f) return null;
   recolorsThisFrame++;
   c = recolor8(f, pal); frameCache.set(k, c);

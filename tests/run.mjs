@@ -39,8 +39,10 @@ check('перелом в шине сросся, рана заживает', awai
 
 console.log('Бой');
 await fresh();
-check('удар со спины убивает', await D(`(() => { P.x = 61.5; P.y = 40.5; computeVis(); const z = mkZombie(P.x + .7, P.y, {pi:1, b:'m', blood:0}, 60, 1); z.state = 'wander'; z.face = 0; P.face = 0; P.sneak = true; P.cd = 0; P.weapon = mkItem('knife'); attack(); return !zs.includes(z); })()`));
-check('пистолет попадает на открытом месте', await D(`(() => { let hits = 0; for (let k = 0; k < 10; k++) { P.x = 61.5; P.y = 40.5; zs.length = 0; const z = mkZombie(P.x + 3.5, P.y + .2, {pi:1, b:'m', blood:0}, 999, 1); computeVis(); P.weapon = mkItem('pistol'); P.weapon.mag = 2; P.cd = 0; P.panic = 0; attack(); if (z.hp < 999) hits++; } return hits >= 6; })()`));
+// открытое место: 5 клеток травы/асфальта на восток, без предметов (карта случайная, фиксированные координаты бывают в стене)
+await D(`window.__open = () => { for (let y = 30; y < MH - 30; y++) for (let x = 30; x < MW - 36; x++) { let ok = true; for (let dx = -1; dx <= 5 && ok; dx++) for (let dy = -1; dy <= 1 && ok; dy++) { const i = (y + dy) * MW + x + dx; if (![GRASS, ROAD, WALK].includes(map[i]) || propAt[i] || furn[i] || hAt[i]) ok = false; } if (ok) { P.x = x + .5; P.y = y + .5; return; } } }`);
+check('удар со спины убивает', await D(`(() => { __open(); computeVis(); const z = mkZombie(P.x + .7, P.y, {pi:1, b:'m', blood:0}, 60, 1); z.state = 'wander'; z.face = 0; P.face = 0; P.sneak = true; P.cd = 0; P.weapon = mkItem('knife'); attack(); return !zs.includes(z); })()`));
+check('пистолет попадает на открытом месте', await D(`(() => { let hits = 0; for (let k = 0; k < 10; k++) { __open(); zs.length = 0; const z = mkZombie(P.x + 3.5, P.y + .2, {pi:1, b:'m', blood:0}, 999, 1); computeVis(); P.weapon = mkItem('pistol'); P.weapon.mag = 2; P.cd = 0; P.panic = 0; attack(); if (z.hp < 999) hits++; } return hits >= 6; })()`));
 check('перезарядка из пачки', await D(`(() => { P.weapon.mag = 0; P.inv.push(mkItem('ammo9')); P.cd = 0; attack(); const a = P.act; P.act = null; finishAct(a); return P.weapon.mag > 0; })()`));
 
 console.log('Хранилище, приманка, сохранение');
@@ -258,6 +260,34 @@ check('огород копается, и это переживает сохра�
   applySave(JSON.parse(JSON.stringify(serialize()))); return props[k].dug === true && props[k].type === 'veg';
 })()`));
 check('старое сохранение строит город старым генератором', await D(`(() => { const d = JSON.parse(JSON.stringify(serialize())); delete d.x53; delete d.x53v; applySave(d); return world.gen === 1 && ROADSX === null && !houses.some(h => h.kind === 'flats'); })()`));
+
+console.log('Надёжные сохранения');
+await fresh();
+const sv = await D(`(async () => {
+  for (const s of SAVE_SLOTS) await deleteSave(s);
+  const k = furns.findIndex(f => CONT[f.type] && CONT[f.type].loot);
+  furns[k].searched = false; await writeSave('2');
+  furns[k].searched = true; await writeSave('2');
+  const small = localStorage.getItem(LKEY('2')).length < JSON.stringify(serialize()).length / 2;
+  await loadSlot('2'); const main = furns[k].searched === true;
+  localStorage.setItem(LKEY('2'), '{"meta":{"t":9e15},"body":"мусор","z":1}');
+  await loadSlot('2'); const prev = furns[k].searched === false && mode === 'play';
+  // старый формат: несжатое тело
+  localStorage.setItem(LKEY('3'), JSON.stringify({meta:{day:1, t:Date.now()}, body:JSON.stringify(serialize())}));
+  const old = !!(await readSave('3'));
+  return {small, main, prev, old};
+})()`);
+check('сохранение сжато и загружается', sv.small && sv.main, sv);
+check('битое сохранение — грузится запасная копия', sv.prev, sv);
+check('старые несжатые сохранения читаются', sv.old, sv);
+await page.setViewportSize({width:640, height:360});
+await sleep(400);
+check('на узком экране слоты не заезжают под кнопки', await D("(() => { fitDock(); const d = $('dock').getBoundingClientRect(); return ['bSneak', 'bRun', 'bAtk'].every(id => { const r = $(id).getBoundingClientRect(); return d.right <= r.left || d.bottom <= r.top || d.top >= r.bottom; }); })()"));
+await page.setViewportSize({width:932, height:430});
+check('отчёт об ошибках собирается', await D("errReport().includes('Карантин') && !!document.getElementById('pReport')"));
+
+check('тест скорости проходит и пишет результат', await D(`(async () => { toMenu(); BENCH_SCENES.forEach(s => s); const keep = BENCH_SCENES.splice(1); await runBench(); BENCH_SCENES.push(...keep); return BENCH && BENCH.rows.length === 1 && BENCH.rows[0].fps > 0 && mode === 'menu' && perfStat().includes('FPS'); })()`));
+await fresh();
 
 console.log('Живая игра 15 секунд');
 await fresh("['coward']");

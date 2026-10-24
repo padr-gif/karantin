@@ -70,7 +70,7 @@ let menuDrift = 0, last = performance.now();
 let frameErr = 0;
 function frame(t) {
   requestAnimationFrame(frame);
-  try { frameBody(t); } catch (err) { console.error(err); if (!frameErr++) toast('Ошибка отрисовки, игра продолжает работать'); }
+  try { frameBody(t); } catch (err) { console.error(err); logErr(err, 'кадр'); if (!frameErr++) toast('Ошибка отрисовки, игра продолжает работать'); }
 }
 function frameBody(t) {
   const raw = (t - last) / 1000;

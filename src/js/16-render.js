@@ -46,7 +46,8 @@ function render(dt) {
     const Hs = houses[k];
     Hs.mode = (k + 1 === inside) ? 1 : 0;
     if (!Hs.mode && mode !== 'menu') {
-      const top = WH + U * 1.2;
+      const top = WH + U * 1.2, reach = top / U + .9;
+      if (Hs.ix1 < P.x - .6 || Hs.iy1 < P.y - .6 || Hs.ix0 > P.x + reach || Hs.iy0 > P.y + reach) continue;   // дом не на луче от героя к камере
       for (let s = .15; s <= top / U + .3 && !Hs.mode; s += .25)
         for (const o of [-.25, 0, .25]) { const qx = P.x + s + o, qy = P.y + s - o; if (qx >= Hs.ix0 - .3 && qx < Hs.ix1 + .3 && qy >= Hs.iy0 - .3 && qy < Hs.iy1 + .3) { Hs.mode = 2; break; } }
     }
