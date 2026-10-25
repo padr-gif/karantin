@@ -16,7 +16,10 @@ page.on('pageerror', e => errors.push(String(e)));
 page.on('console', m => { if (m.type() === 'error' && !/ERR_|Failed to load resource/.test(m.text())) errors.push(m.text()); });
 await page.goto(PAGE);
 await page.waitForFunction(() => window.__dbg && !document.getElementById('mNew').disabled, null, {timeout: 60000});
-const D = s => page.evaluate(s => window.__dbg(s), s);
+// сторож: если игра зависла (вызов не вернулся за 90 с), печатаем стек и выходим, а не висим до таймаута
+const cdp = await page.context().newCDPSession(page); await cdp.send('Debugger.enable');
+cdp.on('Debugger.paused', ev => { console.log('\nЗАВИСАНИЕ, стек:'); for (const f of ev.callFrames.slice(0, 14)) console.log('   ', f.functionName || '(anon)', 'строка', f.location.lineNumber + 1); process.exit(2); });
+const D = s => { let t; const guard = new Promise(r => { t = setTimeout(async () => { console.log('\nвызов не вернулся: ' + String(s).slice(0, 120)); await cdp.send('Debugger.pause'); setTimeout(() => process.exit(3), 8000); }, 90000); }); return Promise.race([page.evaluate(s => window.__dbg(s), s).finally(() => clearTimeout(t)), guard]); };
 const fresh = async (traits = '[]') => { await D(`newTraits = ${traits}; newProf = 'none'; startNew(); startPlayAfterStory(); zs.length = 0;`); await sleep(200); };
 
 console.log('Черты и создание персонажа');

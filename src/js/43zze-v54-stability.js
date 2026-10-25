@@ -134,7 +134,7 @@ function errReport() {
   const L = [];
   L.push('Карантин ' + GAME_VER + ' · ' + new Date().toLocaleString('ru-RU'));
   L.push(navigator.userAgent);
-  L.push('Экран ' + innerWidth + '×' + innerHeight + ' @' + (devicePixelRatio || 1) + ', графика ' + settings.gfx + (typeof perfStat === 'function' ? ' · ' + perfStat() : ''));
+  L.push('Экран ' + innerWidth + '×' + innerHeight + ' @' + (devicePixelRatio || 1) + ', графика ' + settings.gfx + ', холст ' + cv.width + '×' + cv.height + (settings.smooth ? ', сглаживание' : '') + (typeof perfStat === 'function' ? ' · ' + perfStat() : ''));
   if (P && mode !== 'menu') L.push('День ' + (Math.floor(gameMin / 1440) + 1) + ', район ' + (world.dx || 0) + ',' + (world.dy || 0) + ' (' + (world.dtype || '?') + '), мертвецов ' + (zs ? zs.length : 0));
   L.push('');
   if (!ERRLOG.length) L.push('Ошибок не было.');
@@ -166,7 +166,7 @@ async function runBench() {
   const ov = mk('div'); ov.id = 'benchov'; document.body.appendChild(ov);
   const keepU = update, keepR = render, wait = ms => new Promise(r => setTimeout(r, ms));
   let js = 0, frames = [], lastT = 0, on = false;
-  update = function (dt) { const t = performance.now(); try { return keepU(dt); } finally { if (on) js += performance.now() - t; } };
+  update = function (dt) { slowT = 0; const t = performance.now(); try { return keepU(dt); } finally { if (on) js += performance.now() - t; } };   // качество не меняется посреди теста: иначе сцены мерятся в разных условиях
   render = function (dt) { const t = performance.now(); try { return keepR(dt); } finally { if (on) js += performance.now() - t; } };
   const tick = t => { if (!on) return; if (lastT) frames.push(t - lastT); lastT = t; requestAnimationFrame(tick); };
   const rows = [];
@@ -232,4 +232,17 @@ setInterval(() => { if (mode === 'play') fitDock(); }, 1500);
   st.textContent = '#dock.tight{gap:3px!important;padding:3px!important}#dock.tight .hslot{width:40px!important}#dock.tight .wslot{width:48px!important}#dock.tight .hslot small,#dock.tight .wslot small{font-size:9px!important}'
     + '#zoomBox .ibtn.sm{width:38px!important;height:38px!important}#zoomBox .ibtn.sm .ic{width:18px;height:18px}';
   document.head.appendChild(st);
+}
+
+// ---- статичные процедурные предметы (заборы дворов, грядки, блоки, мешки, колонки, сетка карантина) рисуются один раз в спрайт ----
+// раньше каждый штакетник собирался из десятков граней каждый кадр; на слабом планшете это заметная доля кадра
+const PROC_CACHE = new Set(['pfence', 'veg', 'jersey', 'sandbag', 'pump', 'fence']);
+let procSid = 0;
+{ const dp = drawProc;
+  drawProc = function (p, f) {
+    if (baking || !PROC_CACHE.has(p.type)) return dp(p, f);
+    if (!p._sid) p._sid = ++procSid;
+    const x = Math.floor(p.cx), y = Math.floor(p.cy), fq = Math.round(f * 20) / 20;
+    sprite('Q' + p._sid, p.type + '|' + fq + '|' + (p.dug ? 1 : 0) + '|' + (p.sign ? 1 : 0), x, y, -U - 6, -78, U + 6, 2 * hh + 6, () => dp(p, fq));
+  };
 }

@@ -29,8 +29,10 @@ function viewH() {
   }
   vpStretch = true; return exp;
 }
+// большой экран (планшет) в «Экономии»: картинку можно считать в 0.75 от размера экрана — на треть меньше пикселей за кадр
+const devMin = () => gfxCap <= 1.5 && innerWidth * innerHeight > 800000 ? .75 : 1;
 function resize() {
-  DEV = Math.max(1, Math.min(gfxCap, window.devicePixelRatio || 1) * resQ);
+  DEV = Math.max(devMin(), Math.min(gfxCap, window.devicePixelRatio || 1) * resQ);
   const cw = innerWidth, chh = viewH();
   cv.width = Math.round(cw * DEV); cv.height = Math.round(chh * DEV);
   cv.style.width = cw + 'px'; cv.style.height = chh + 'px'; cv.style.bottom = vpStretch ? 'auto' : '';

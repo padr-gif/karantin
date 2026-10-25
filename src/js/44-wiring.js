@@ -86,7 +86,7 @@ function frameBody(t) {
   // adaptive resolution: drop the backing-store density if the device can't keep up
   if (mode === 'play' && !paused && raw > 0 && raw < .5) {
     if (raw > 1 / 38) { slowT += raw; fastT = 0; } else { fastT += raw; if (fastT > 4) slowT = 0; }
-    if (slowT > 2.5 && Math.min(gfxCap, devicePixelRatio || 1) * resQ > 1.05) { resQ *= .75; slowT = 0; resize(); }
+    if (slowT > 2.5 && Math.min(gfxCap, devicePixelRatio || 1) * resQ > devMin() + .05) { resQ *= .75; slowT = 0; resize(); }
   }
   drawMinimap(dt);
   hudTimer -= dt;
