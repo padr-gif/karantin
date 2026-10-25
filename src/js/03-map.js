@@ -1,14 +1,26 @@
 // ================= map =================
-const MW = 184, MH = 184, NT = MW * MH;
-const RW = 4, FEN = 20, CITY0 = 30, CITY1 = 154, EXIT_R = 90;
+let MW = 184, MH = 184, NT = MW * MH;                    // v65: размер зависит от района (setWorldSize): старые карты 184, новый городок 256
+const RW = 4, FEN = 20, CITY0 = 30; let CITY1 = 154, EXIT_R = 90;
 let SPECIAL = [], CHECKPOINTS = [];
 const COMM = new Set(['store', 'police', 'pharmacy', 'hardware', 'gas']);
 const inCityBox = (x, y) => x >= CITY0 - 1 && x <= CITY1 && y >= CITY0 - 1 && y <= CITY1;
 const insideFence = (x, y) => x > FEN && y > FEN && x < MW - 1 - FEN && y < MH - 1 - FEN;
 const GRASS=0, ROAD=1, WALK=2, FLOOR=3, WALL=4, WIN=5, TREE=6, DOOR=7, WATER=8;
-const map = new Uint8Array(NT), furn = new Int16Array(NT), hAt = new Int16Array(NT), propAt = new Int16Array(NT);
-const vis = new Uint8Array(NT), seen = new Uint8Array(NT);
+let map = new Uint8Array(NT), furn = new Int16Array(NT), hAt = new Int16Array(NT), propAt = new Int16Array(NT);
+let vis = new Uint8Array(NT), seen = new Uint8Array(NT);
+let soil = new Uint8Array(NT);                         // v65: грунт поверх травы (74-county): 1 — грунтовка, 2/3 — пашня с бороздами вдоль x / y
 let obs = new Array(NT).fill(null), wpC = new Array(NT).fill(null), wpV = new Array(NT).fill(null);
+// размер карты района: вызывает generate() до постройки. Все массивы по клеткам пересоздаются, трасса — посередине
+function setWorldSize(n) {
+  if (n === MW) return;
+  MW = MH = n; NT = n * n; EXIT_R = (n >> 1) - 2; CITY1 = n - 30;
+  map = new Uint8Array(NT); furn = new Int16Array(NT); hAt = new Int16Array(NT); propAt = new Int16Array(NT);
+  vis = new Uint8Array(NT); seen = new Uint8Array(NT); soil = new Uint8Array(NT);
+  obs = new Array(NT).fill(null); wpC = new Array(NT).fill(null); wpV = new Array(NT).fill(null);
+  flow = new Int16Array(NT); sepHead = new Int32Array(NT);
+  fogC.width = MW; fogC.height = MH;
+  if (typeof clearCaches === 'function') clearCaches();
+}
 let houses = [], furns = [], props = [];
 const D4 = [[1,0],[-1,0],[0,1],[0,-1]];
 const D8 = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
@@ -365,7 +377,7 @@ let GCFG = {};                                            // настройки 
 // старый город (квартальная сетка ROADS): дома, улицы, особые здания; затем крупная мебель и вещи в комнатах
 function genTown() {
   const G = Object.assign({roles:['police', 'pharmacy', 'hardware', 'gas', 'store', 'store', 'park', 'park'], per:4, gap:2, cars:90, lamp:8, cabins:4, greens:900}, GCFG);
-  map.fill(GRASS); furn.fill(0); hAt.fill(0); propAt.fill(0); seen.fill(0); vis.fill(0);
+  map.fill(GRASS); soil.fill(0); furn.fill(0); hAt.fill(0); propAt.fill(0); seen.fill(0); vis.fill(0);
   obs = new Array(NT).fill(null); houses = []; furns = []; props = []; SPECIAL = []; CHECKPOINTS = [];
   const RL = ROADS[ROADS.length - 1] + RW - 1;
   // city streets

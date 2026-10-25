@@ -1,6 +1,6 @@
 // ================= interface 3.0 — icon HUD, ring gauges, context pill, weapon slot, two-pane panels =================
 const svgIc = (id, cls) => { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('class', 'ic' + (cls ? ' ' + cls : '')); const u = document.createElementNS('http://www.w3.org/2000/svg', 'use'); u.setAttribute('href', '#' + id); s.appendChild(u); return s; };
-const PROPN = {tree:'Дерево', car:'Машина', barrel:'Бочка', crate:'Ящик', trap:'Капкан', pump:'Колонка', gen:'Генератор', bush:'Куст', fire:'Костёр', pile:'Вещи на земле', gbed:'Грядка', pond:'Пруд', drop:'Груз'};
+const PROPN = {tree:'Дерево', car:'Машина', barrel:'Бочка', crate:'Ящик', trap:'Капкан', pump:'Колонка', gen:'Генератор', bush:'Куст', fire:'Костёр', pile:'Вещи на земле', gbed:'Грядка', pond:'Водоём', drop:'Груз'};
 function actIcon(a) {
   const d = a && ACT[a.kind]; if (d && d.icon) return d.icon(a);
   const l = (a.label || '').toLowerCase();

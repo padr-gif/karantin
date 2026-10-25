@@ -3,7 +3,7 @@
 // Если основное не читается или не загружается, игра берёт запасное. Сохранение можно выгрузить файлом и загрузить
 // из файла (перенести игру на другой телефон). Ошибки кадра и скрипта пишутся в журнал; в паузе — «Отчёт об ошибках».
 
-const GAME_VER = '0.65';
+const GAME_VER = '0.66';
 const PKEY = s => LKEY(s) + '-prev';
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } };
@@ -213,7 +213,7 @@ async function runBench() {
     godMode = false; resLock = false; logicOff = false; renderOff = false; uiOff = false; keys.clear(); ov.remove();
     BENCH = {t:Date.now(), rows, diag:rows.diag || [], draws:rows.draws || '', res:+resQ.toFixed(2), dpr:devicePixelRatio || 1, gfx:settings.gfx};
     try { localStorage.setItem('karantin-bench', JSON.stringify(BENCH)); } catch (e) {}
-    newGame(); for (let i = 0; i < NT; i++) seen[i] = 1; toMenu();
+    newGame(); for (let i = 0; i < NT; i++) seen[i] = 1; fogFull = true; toMenu();
     showBench();
   }
 }

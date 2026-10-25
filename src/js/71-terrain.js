@@ -78,13 +78,13 @@ const BLOOK = {warehouse:{brick:false, concrete:true}, garage:{concrete:true}, f
 
 // ---- общие кирпичики генерации ----
 function genReset() {
-  map.fill(GRASS); furn.fill(0); hAt.fill(0); propAt.fill(0); seen.fill(0); vis.fill(0);
+  map.fill(GRASS); soil.fill(0); furn.fill(0); hAt.fill(0); propAt.fill(0); seen.fill(0); vis.fill(0);
   obs = new Array(NT).fill(null); houses = []; furns = []; props = []; SPECIAL = []; CHECKPOINTS = [];
 }
 const inMap = (x, y, m) => x >= m && y >= m && x < MW - m && y < MH - m;
 function rectFree(x, y, w, h, m) {
   if (!inMap(x - m, y - m, 2) || !inMap(x + w + m - 1, y + h + m - 1, 2)) return false;
-  for (let yy = y - m; yy < y + h + m; yy++) for (let xx = x - m; xx < x + w + m; xx++) { const i = yy * MW + xx; if (map[i] !== GRASS || hAt[i] || propAt[i]) return false; }
+  for (let yy = y - m; yy < y + h + m; yy++) for (let xx = x - m; xx < x + w + m; xx++) { const i = yy * MW + xx; if (map[i] !== GRASS || hAt[i] || propAt[i] || soil[i]) return false; }
   return true;
 }
 function carve(x0, y0, x1, y1, t) { for (let y = Math.min(y0, y1); y <= Math.max(y0, y1); y++) for (let x = Math.min(x0, x1); x <= Math.max(x0, x1); x++) set(x, y, t); }
@@ -157,7 +157,7 @@ function genFinish(o) {
   for (const H of houses) for (let y = H.y - 2; y <= H.y + H.h + 1; y++) for (let x = H.x - 2; x <= H.x + H.w + 1; x++) if (inMap(x, y, 0)) near[y * MW + x] = 1;
   const nearRoad = (x, y) => { for (let yy = y - 1; yy <= y + 1; yy++) for (let xx = x - 1; xx <= x + 1; xx++) { const t = get(xx, yy); if (t === ROAD || t === WALK || t === WATER) return true; } return false; };
   for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) {
-    const i = y * MW + x; if (map[i] !== GRASS || near[i] || propAt[i] || furn[i] || nearRoad(x, y)) continue;
+    const i = y * MW + x; if (map[i] !== GRASS || near[i] || propAt[i] || furn[i] || soil[i] || nearRoad(x, y)) continue;
     if (rng() < o.tree(x, y, hash(x * 7 + 3, y * 5 + 1))) set(x, y, TREE);
   }
   for (let i = 0; i < NT; i++) if (map[i] === WALL) { const x = i % MW, y = (i / MW) | 0; wpC[i] = pieces(x, y, HWC); wpV[i] = pieces(x, y, HWV); } else { wpC[i] = wpV[i] = null; }
@@ -165,7 +165,7 @@ function genFinish(o) {
     if (propAt[i] || furn[i]) continue;
     const x = i % MW, y = (i / MW) | 0;
     if (map[i] === WALK && rng() < (o.bins || .012)) addProp({type:'bin', cx:x + .5, cy:y + .5, solid:true, r:[x + .3, y + .3, x + .7, y + .7], ci:ri(0, 2)}, [[x, y]]);
-    else if (map[i] === GRASS && rng() < (o.bush || .04)) addProp({type:'bush', cx:x + .5, cy:y + .5, solid:false, s:.6 + rng() * .5}, [[x, y]]);
+    else if (map[i] === GRASS && !soil[i] && rng() < (o.bush || .04)) addProp({type:'bush', cx:x + .5, cy:y + .5, solid:false, s:.6 + rng() * .5}, [[x, y]]);
   }
   for (const Hs of houses) {
     if (Hs.kind !== 'house' || !Hs.doors.length) continue;
@@ -346,6 +346,8 @@ function genIndustrial() {
 function generate() {
   ROADSX = ROADSY = null; curAct = null;                                    // прежнее действие ссылается на старую карту
   const t = curDType();
+  setWorldSize(world.gen >= 3 && t === 'town' ? 256 : 184);                 // новый городок — большая карта, остальные районы как были
+  if (world.gen >= 3 && t === 'town') { world.dtype = t; GCFG = {}; genCounty(); growFurniture(); return; }   // городок вдоль трассы с фермами (74-county)
   if (world.gen >= 2 && (t === 'town' || t === 'downtown')) { world.dtype = t; GCFG = {}; genCity(t); growFurniture(); return; }
   world.dtype = t; world.nofence = false;
   ROADS.length = 0; ROADS.push(30, 60, 90, 120, 150);

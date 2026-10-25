@@ -230,7 +230,7 @@ function getAction(excl) {
   }
   if (!best) { const fa = forageAction(excl); if (fa) best = fa; }
   if (!best && excl && excl.size && !excl.has('w')) excl.add('w');
-  else if (!best && nearWater()) best = hasTool('rod') ? {kind:'fish', label:'рыбачить', f:{type:'pond', cx:P.x, cy:P.y}} : {kind:'pond', label:'попить из пруда', f:{type:'pond', cx:P.x, cy:P.y}};
+  else if (!best && nearWater()) best = hasTool('rod') ? {kind:'fish', label:'рыбачить', f:{type:'pond', cx:P.x, cy:P.y}} : {kind:'pond', label:'попить из водоёма', f:{type:'pond', cx:P.x, cy:P.y}};
   if (!best && (world.snow || 0) > .3 && !insideHouse(P.x, P.y) && P.inv.some(i => i.id === 'bottle')) best = {kind:'snow', label:'набрать снега в бутылки', f:{type:'snow', cx:P.x, cy:P.y}};
   if (best && best.kind === 'unbar' && best.o && obs[best.o.i].mhp > 0) best = {kind:'unmetal', label:'снять лист металла', o:best.o};
   if (best || P.car) return best;
@@ -301,7 +301,7 @@ function doActionBase(a0) {
   else if (a.kind === 'snow') { let n = 0; for (const it of P.inv) if (it.id === 'bottle') { it.id = 'waterD'; n++; } SFX.rustle(); toast(`Набрал снега: ${n} бут. Растопи и вскипяти в кастрюле`); }
   else if (a.kind === 'move') moveFurn(a.f);
   else if (a.kind === 'fish') P.act = {kind:'fish', t:0, dur:10 + rng() * 6};
-  else if (a.kind === 'pond') { let used = 0; while (P.hyd < 90) { P.hyd = Math.min(100, P.hyd + 30); used++; } if (used && rng() < .35) { P.pois = Math.max(P.pois, 100); toast('Вода из пруда. Живот крутит'); } let n = 0; for (const it of P.inv) if (it.id === 'bottle') { it.id = 'waterD'; n++; } SFX.drink(); toast((used ? 'Попил прудовой воды' : 'Пить не хочется') + (n ? `, набрал ${n} бут.` : '')); }
+  else if (a.kind === 'pond') { let used = 0; while (P.hyd < 90) { P.hyd = Math.min(100, P.hyd + 30); used++; } if (used && rng() < .35) { P.pois = Math.max(P.pois, 100); toast('Сырая вода из водоёма. Живот крутит'); } let n = 0; for (const it of P.inv) if (it.id === 'bottle') { it.id = 'waterD'; n++; } SFX.drink(); toast((used ? 'Попил сырой воды' : 'Пить не хочется') + (n ? `, набрал ${n} бут.` : '')); }
   else if (a.kind === 'toilet') { const t = a.f; if (t.w < 1) { toast('Бачок пуст'); return; } let used = 0; while (P.hyd < 90 && t.w >= 1) { P.hyd = Math.min(100, P.hyd + 25); t.w -= 1; used++; } for (const it of P.inv) { if (t.w < 1) break; if (it.id === 'bottle') { it.id = 'water'; t.w -= 1; } else if (ITEMS[it.id].kind === 'canteen') while ((it.w || 0) < wcap(it) && t.w >= 1) { it.w = (it.w || 0) + 1; t.w -= 1; } } SFX.drink(); toast(used ? 'Попил из бачка. Вода чистая' : 'Набрал воды из бачка'); renderInv(); }
   else if (a.kind === 'tv') { if (!poweredAt(a.f.cx, a.f.cy)) { toast('Без электричества телевизор не включить'); return; } SFX.radio(); P.bored = Math.max(0, (P.bored || 0) - 25); openPanel('radio', {it:{ch:100}, tv:true, news:radioNews()}); }
   else if (a.kind === 'trapget') { if (invFull()) { toast('Слишком тяжело — не унести'); return; } const t = a.f, i = props.indexOf(t) + 1; for (let q = 0; q < NT; q++) if (propAt[q] === i) propAt[q] = 0; t.dead = true; traps = traps.filter(x => x !== t); P.inv.push(mkItem('trap')); toast('Капкан в рюкзаке'); }

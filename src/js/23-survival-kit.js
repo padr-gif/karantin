@@ -213,7 +213,7 @@ function drawMapCanvas(c) {
     const i = y * MW + x, sn = seen[i];
     if (!sn && !P.mapRead) continue;
     g.globalAlpha = sn ? 1 : .42;
-    g.fillStyle = MAPC[map[i]] || '#444'; g.fillRect(x, y, 1.04, 1.04);
+    g.fillStyle = soilCol(i); g.fillRect(x, y, 1.04, 1.04);
   }
   g.globalAlpha = 1;
   // quarantine fence

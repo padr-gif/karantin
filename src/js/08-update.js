@@ -11,9 +11,22 @@ let U = 30, hh = 15, WH = 72, ox = 0, oy = 0;
 function screenToWorld(sx, sy) { const a = (sx - ox) / U, b = (sy - oy) / hh; return [(a + b) / 2, (b - a) / 2]; }
 
 const doorList = {src:null, t:0, L:[]};
-const sepHead = new Int32Array(NT); let sepNext = new Int32Array(256);
+let sepHead = new Int32Array(NT); let sepNext = new Int32Array(256);
 const sepCell = z => clamp(Math.floor(z.y), 0, MH - 1) * MW + clamp(Math.floor(z.x), 0, MW - 1);
 function update(dt) { runHooked('update', updateCore, dt); }
+// мертвец вне активной зоны: раз в ~секунду одним шагом идёт к шуму (investigate) или бредёт куда-то рядом
+function farZombie(z, dt) {
+  z.mv = 0; z.sl = (z.sl == null ? (z.seed || 0) % 1 : z.sl) + dt;
+  if (z.sl < 1) return;
+  const t = z.sl; z.sl = 0;
+  if (z.state === 'investigate') { z.it = (z.it || 0) + t; if (z.it > 16) { z.state = 'wander'; z.wt = 0; } }
+  else { z.wt = (z.wt || 0) - t; if (z.wt <= 0) { z.wt = 4 + rng() * 8; z.tx = clamp(z.x + (rng() - .5) * 10, 1, MW - 1); z.ty = clamp(z.y + (rng() - .5) * 10, 1, MH - 1); } }
+  if (z.crawl || z.tx == null) return;
+  const tx = z.tx - z.x, ty = z.ty - z.y, td = Math.hypot(tx, ty); if (td < .5) { if (z.state === 'investigate') { z.state = 'wander'; z.wt = 0; } return; }
+  const step = Math.min(td, (z.state === 'investigate' ? .8 : .33) * z.spd * t, 1.5);
+  for (let k = 0, n = Math.ceil(step / .4); k < n; k++) move(z, tx / td * step / n, ty / td * step / n);
+  z.face = Math.atan2(ty, tx);
+}
 function updateCore(dt) {
   const gm = dt * settings.dayLen * (P.sleep ? 40 : 1);
   autoT += gm; if (settings.autosave && autoT >= 120) { autoT = 0; writeSave('auto').then(flashSaved); }
@@ -117,6 +130,7 @@ function updateCore(dt) {
     if (z.vt) { tickZVault(z, dt); continue; }
     if (z.down > 0) { z.down -= dt; z.downT = (z.downT || 0) + dt; z.wind = 0; z.mv = 0; continue; }
     if (z.stun > 0) { z.stun -= dt; z.wind = 0; continue; }
+    if (z.state !== 'chase' && (Math.abs(P.x - z.x) > ZONE_R || Math.abs(P.y - z.y) > ZONE_R)) { farZombie(z, dt); continue; }   // вне активной зоны — спит
     const dx = P.x - z.x, dy = P.y - z.y, d = Math.hypot(dx, dy);
     const zsg = sight * sightK(z), sees = d < zsg && los(z.x, z.y, P.x, P.y);
     let spot = sees;

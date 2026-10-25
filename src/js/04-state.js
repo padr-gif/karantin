@@ -5,7 +5,7 @@ let godMode = false, uiOff = false;                                    // тес
 let spawnTimer = 0, flowTimer = 0, visTimer = 0, noiseTimer = 0, hudTimer = 0, weatherTimer = 0;
 let shake = 0, camX = 0, camY = 0, lastCause = 'Загрызли', curAct = null, curBar = null;
 let rain = 0, rainTarget = 0;
-const flow = new Int16Array(NT);
+let flow = new Int16Array(NT);
 const buckets = Array.from({length:90}, () => []);
 function zPal() {
   const r = rng(), rb = rng(), b = rb < .34 ? 'f' : rb < .5 ? 'h' : 'm';
@@ -56,7 +56,7 @@ function newGameCore(o) {
   if (!o.save) {
     world.evac = null;
     { const hi = hAt[Math.floor(P.y) * MW + Math.floor(P.x)]; const fs = furns.filter(f => hi && hAt[f.y * MW + f.x] === hi && CONT[f.type] && CONT[f.type].loot && ['nightstand', 'dresser', 'wardrobe', 'hanger'].includes(f.type)); if (fs.length) fs[Math.floor(rng() * fs.length)].items.push(mkItem('watchQ')); }
-    for (let i = 0, n = Math.round(125 * DIFF[world.diff].z); i < n; i++) spawnZombie(11, true);
+    for (let i = 0, n = Math.round(125 * DIFF[world.diff].z * NT / 33856); i < n; i++) spawnZombie(11, true);   // на большой карте — больше, плотность та же
     for (const g of SPECIAL) if (g.corpse) { corpses.push({x:g.x, y:g.y, face:rng() * 6.28, pal:{pi:g.pi, b:rng() < .4 ? 'f' : 'm', blood:3}, fall:1, dir:-1, seed:rng()}); for (let q = 0; q < 3; q++) addBlood(g.x + (rng() - .5), g.y + (rng() - .5), .8); }
     for (const g of SPECIAL) for (let k = 0; k < g.n && !g.corpse; k++) { const x = g.x + (rng() - .5) * 3, y = g.y + (rng() - .5) * 3; if (navBlocked(Math.floor(x), Math.floor(y)) || Math.hypot(x - P.x, y - P.y) < 12) continue; mkZombie(x, y, {pi:g.pi, b:rng() < .3 ? 'f' : 'm', blood:0}, ri(55, 80), (.8 + rng() * .3) * DIFF[world.diff].spd); }
   }

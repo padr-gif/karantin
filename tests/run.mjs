@@ -252,12 +252,14 @@ check('четыре новых типа районов строятся и по�
 console.log('Разные города и дворы');
 await fresh();
 const city = await D(`(() => {
-  const g = s => { newGame({seed:s}); return {rx:ROADSX.join(), ry:ROADSY.join(), flats:houses.filter(h => h.kind === 'flats').length, homes:houses.filter(h => h.kind === 'house').length, pf:props.filter(p => p.type === 'pfence').length, veg:props.filter(p => p.type === 'veg').length}; };
+  const g = s => { newGame({seed:s}); const k = t => houses.filter(h => h.kind === t).length; return {rx:ROADSX.join(), ry:ROADSY.join(), homes:k('house'), pf:props.filter(p => p.type === 'pfence').length, veg:props.filter(p => p.type === 'veg').length,
+    farms:k('farm'), gas:k('gas'), shops:k('store') + k('pharmacy') + k('hardware'), dirt:soil.reduce((a, v) => a + (v === 1), 0), field:soil.reduce((a, v) => a + (v > 1), 0)}; };
   const a = g(101), b = g(202), c = g(303);
   return {diff:new Set([a.rx + a.ry, b.rx + b.ry, c.rx + c.ry]).size, a, b, c};
 })()`);
 check('у разных городов разная сетка улиц', city.diff >= 2, city);
-check('в городе многоэтажки, жилые дома, заборы и огороды', [city.a, city.b, city.c].every(v => v.flats >= 1 && v.homes >= 20 && v.pf > 100 && v.veg > 10), city);
+check('в городе жилые дома, магазины, заборы и огороды', [city.a, city.b, city.c].every(v => v.homes >= 10 && v.shops >= 3 && v.pf > 100 && v.veg > 10), city);
+check('за городом фермы с пашней, заправка и грунтовки', [city.a, city.b, city.c].every(v => v.farms >= 1 && v.gas >= 1 && v.field > 100 && v.dirt > 40), city);
 check('огород копается, и это переживает сохранение', await D(`(() => {
   const p = props.find(p => p.type === 'veg'); P.x = p.cx + .9; P.y = p.cy; zs.length = 0;
   const a = getActions().find(a => a.kind === 'veg'); if (!a) return 'нет действия'; doAction(a); const k = props.indexOf(p);

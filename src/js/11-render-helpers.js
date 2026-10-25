@@ -89,14 +89,22 @@ const fogAt = (x, y) => (x < 0 || y < 0 || x >= MW || y >= MH) ? .24 : fogF(y * 
 
 // smooth fog of war layer: one pixel per tile, drawn stretched with smoothing
 const fogC = mkCanvas(MW, MH), fogG = fogC.getContext('2d');
+// v65: обычно меняется только круг видимости вокруг героя — пересчитываем окно ±32 клетки; всю карту — после загрузки,
+// смены района или прочитанной карты (fogFull)
+let fogImg = null, fogFull = true, fogPX = -1e9, fogPY = -1e9;
 function updateFog() {
-  const img = fogG.createImageData(MW, MH), d = img.data;
+  if (!fogImg || fogImg.width !== MW || fogImg.height !== MH) { fogImg = fogG.createImageData(MW, MH); fogFull = true; }
+  const img = fogImg, d = img.data;
   if (!d || !d.length) return;
-  for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) {
+  const cx = Math.floor(P ? P.x : MW / 2), cy = Math.floor(P ? P.y : MH / 2);
+  if (Math.abs(cx - fogPX) > 24 || Math.abs(cy - fogPY) > 24) fogFull = true;     // телепорт, поездка — всё заново
+  const R = 32, x0 = fogFull ? 0 : Math.max(0, cx - R), y0 = fogFull ? 0 : Math.max(0, cy - R), x1 = fogFull ? MW - 1 : Math.min(MW - 1, cx + R), y1 = fogFull ? MH - 1 : Math.min(MH - 1, cy + R);
+  fogFull = false; fogPX = cx; fogPY = cy;
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
     const i = y * MW + x;
     let f = fogF(i);
     if (isWallish(map[i])) { let s = 0, n = 0; for (const [ox2, oy2] of D4) { const t = get(x + ox2, y + oy2); if (!isWallish(t)) { s += fogAt(x + ox2, y + oy2); n++; } } if (n) f = Math.max(s / n, f * .8); }
     const k = i * 4; d[k] = 4; d[k + 1] = 6; d[k + 2] = 12; d[k + 3] = (1 - f) * 255;
   }
-  fogG.putImageData(img, 0, 0);
+  fogG.putImageData(img, 0, 0, x0, y0, x1 - x0 + 1, y1 - y0 + 1);
 }

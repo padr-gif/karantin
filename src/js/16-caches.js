@@ -3,7 +3,7 @@ let baking = false;
 const SPR = new Map(), CHUNKS = new Map(), CH = 8;
 let sprU = 0, sprDPR = 0, bakes = 0, stampQ = [];
 const SPR_MAX = 1100, CH_MAX = 56, BAKE_BUDGET = 40;
-function clearCaches() { SPR.clear(); CHUNKS.clear(); stampQ.length = 0; atlasReset(); }
+function clearCaches() { SPR.clear(); CHUNKS.clear(); stampQ.length = 0; atlasReset(); fogFull = true; }
 function cachesValid() { if (sprU !== U) { clearCaches(); sprU = U; sprDPR = DPR; } }
 // ---- атлас спрайтов: заготовки лежат на нескольких больших холстах, а не на сотне маленьких ----
 // Маленький холст браузер держит в памяти процессора, и на планшетах (Mali) каждая его отрисовка на экран — заливка
@@ -126,7 +126,7 @@ function drawGroundRange(gx0, gy0, gx1, gy1) {
       if (get(x, y - 1) === ROAD) blitObj('g_curb_n', sx, sy);
       if (get(x - 1, y) === ROAD) blitObj('g_curb_w', sx, sy);
     } else if (t === WATER) { blitObj('g_grass_' + Math.floor(hv * 4), sx, sy); drawWaterTile(x, y); }
-    else blitObj('g_grass_' + Math.floor(hv * 4), sx, sy);
+    else { blitObj('g_grass_' + Math.floor(hv * 4), sx, sy); if (soil[y * MW + x]) drawSoil(x, y, soil[y * MW + x]); }
   }
   for (const Hs of houses) {
     if (Hs.x > x1 + 1 || Hs.x + Hs.w < x0 - 1 || Hs.y > y1 + 1 || Hs.y + Hs.h < y0 - 1) continue;

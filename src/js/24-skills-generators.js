@@ -17,7 +17,7 @@ Object.assign(DESC, {
 });
 const ICONA = {potatoC:'potato'};
 COOK.push({id:'potatoC', raw:'potato', tool:'pot', toolName:'кастрюля', water:true});
-Object.assign(CONT, {pond:{name:'Пруд'}, snow:{name:'Снег'}, gen:{name:'Генератор'}, pump:{name:'Колонка'}, gbed:{name:'Грядка'}, trap:{name:'Капкан'}, airdrop:{name:'Сброшенный груз', loot:['mre','mre','medkit','antibio','vest','canteen','battery','map','seeds','jerrycan','energy','water','bandage','stew'], n:[4,6]}});
+Object.assign(CONT, {pond:{name:'Водоём'}, snow:{name:'Снег'}, gen:{name:'Генератор'}, pump:{name:'Колонка'}, gbed:{name:'Грядка'}, trap:{name:'Капкан'}, airdrop:{name:'Сброшенный груз', loot:['mre','mre','medkit','antibio','vest','canteen','battery','map','seeds','jerrycan','energy','water','bandage','stew'], n:[4,6]}});
 SPRA.airdrop = 'crate';
 {
   const add = (k, ...ids) => CONT[k].loot.push(...ids);

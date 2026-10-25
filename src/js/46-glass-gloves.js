@@ -67,7 +67,7 @@ RECIPES.push(
     make:() => { removeItem('bottle'); removeItem('rag'); removeItem('rag'); removeItem('sticks'); P.inv.push(mkItem('filter')); addXp('farm', 1); toast('Фильтр готов: процеживай сырую воду без огня'); }},
 );
 // crafting hints (v25): what the result does and where to find what is missing
-Object.assign(SRC_HINT, {glass:'убери осколки из разбитого окна, лучше в перчатках', waterD:'набери в бочку дождевой воды, снега или воды из пруда'});
+Object.assign(SRC_HINT, {glass:'убери осколки из разбитого окна, лучше в перчатках', waterD:'набери в бочку дождевой воды, снега, воды из пруда или реки'});
 Object.assign(RES_INFO, {
   'Перчатки из тряпок':'Надеваются на руки. Обычно спасают от стекла, когда лезешь в окно или убираешь осколки, и чуть греют. Со временем рвутся.',
   'Стеклянная заточка':'Быстрое, но хрупкое оружие: выдерживает около девяти ударов. Без перчаток можно порезаться при сборке.',

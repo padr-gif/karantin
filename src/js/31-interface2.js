@@ -160,7 +160,7 @@ function drawMinimap(dt) {
     if (x < 0 || y < 0 || x >= MW || y >= MH) continue;
     const i = y * MW + x; if (!seen[i] && !P.mapRead) continue;
     const dx = x + .5 - px, dy = y + .5 - py, sx = cx + (dx - dy) * s, sy = cy + (dx + dy) * s / 2;
-    g.globalAlpha = seen[i] ? (vis[i] ? 1 : .7) : .35; g.fillStyle = MAPC[map[i]] || '#444'; g.fillRect(sx - s, sy - s / 2, s * 2, s);
+    g.globalAlpha = seen[i] ? (vis[i] ? 1 : .7) : .35; g.fillStyle = soilCol(i); g.fillRect(sx - s, sy - s / 2, s * 2, s);
   }
   g.globalAlpha = 1;
   const dot = (x, y, r, col) => { const dx = x - px, dy = y - py, sx = cx + (dx - dy) * s, sy = cy + (dx + dy) * s / 2; g.fillStyle = col; g.beginPath(); g.arc(sx, sy, r, 0, 6.283); g.fill(); };
@@ -181,6 +181,7 @@ function mapPin(e, c) {
   const r = c.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
   const m0 = c._m0, s = c._s, cw = c._cw; if (!s) return;
   const u = (mx - cw / 2) / s, v = my / (s / 2) + 2 * m0, x = (u + v) / 2, y = (v - u) / 2;
+  if (adminTp) { adminTp = false; closePanel(); adminTeleport(x, y); return; }   // админ-меню: телепорт тапом
   world.marks = world.marks || [];
   const near = world.marks.findIndex(m => Math.hypot(m.x - x, m.y - y) < 3);
   if (markPick) markPick.remove();

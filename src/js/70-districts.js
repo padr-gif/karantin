@@ -188,7 +188,7 @@ function travelTo(side) {
   showRoad('Дорога в район «' + distName(nx, ny) + '»…', () => { try { doTravel(side, nx, ny); } finally { traveling = false; if ($('pause').hidden && !panel && !travelAsk) paused = false; } });
 }
 function doTravel(side, nx, ny) {
-  const along = side === 'w' || side === 'e' ? P.y : P.x;
+  const along0 = side === 'w' || side === 'e' ? P.y : P.x, exit0 = EXIT_R;     // районы бывают разного размера: место у трассы считаем от её оси
   closePanel(); P.act = null;
   const cur = JSON.parse(JSON.stringify(serialize()));
   const fromKey = distKey(world.dx || 0, world.dy || 0), toKey = distKey(nx, ny);
@@ -204,7 +204,7 @@ function doTravel(side, nx, ny) {
     newGame({seed, diff:cur.diff, look:cur.look});
     stripFromFresh(); postGen(world.dtype);
     const day = Math.floor((cur.gm - cur.sm) / 1440), extra = Math.min(1.6, .22 * distRing(nx, ny) + .03 * day);
-    const target = Math.min(280, Math.round(125 * DIFF[cur.diff || 'normal'].z * DTYPES[world.dtype].zk * (1 + extra)));   // больше — тяжело для телефона
+    const sz = NT / 33856, target = Math.min(280 * sz, Math.round(125 * sz * DIFF[cur.diff || 'normal'].z * DTYPES[world.dtype].zk * (1 + extra)));   // больше — тяжело для телефона
     if (zs.length > target) { shuffle(zs); zs.length = target; }
     for (let i = zs.length; i < target; i++) spawnZombie(11, true);
     stored = pickDist(JSON.parse(JSON.stringify(serialize())));
@@ -215,7 +215,7 @@ function doTravel(side, nx, ny) {
   d.x50 = {root, dx:nx, dy:ny, dist, vis:(cur.x50 && cur.x50.vis || 1) + (fresh ? 1 : 0)};
   applySave(d);
   gameMin += 30;                                                            // дорога по трассе — полчаса
-  const [x, y] = entrySpot(side, along);
+  const [x, y] = entrySpot(side, along0 - exit0 + EXIT_R);
   P.x = x; P.y = y; P.act = null; P.moving = false; P._edgeHold = true; P.fd = P.face = Math.atan2(MH / 2 - y, MW / 2 - x);
   // зомби не стоят прямо у входа
   zs = zs.filter(z => Math.hypot(z.x - P.x, z.y - P.y) > 9);

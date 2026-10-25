@@ -35,6 +35,7 @@ function toMenu() {
   mode = 'menu'; paused = false;
   $('hud').hidden = true; $('ctrl').hidden = true; $('sleep').hidden = true;
   for (let i = 0; i < NT; i++) seen[i] = 1;
+  fogFull = true;
   show('menu'); refreshMenu();
 }
 async function exitToMenu() { if (settings.autosave && mode === 'play') { await writeSave('auto'); } toMenu(); }
@@ -137,6 +138,7 @@ function openSettings(from) {
   seg($('sFps'), [[false, 'Нет'], [true, 'Да']], () => !!settings.fps, v => { settings.fps = v; saveSettings(); });
   seg($('sJoy'), [[false, 'Где коснулся'], [true, 'Закреплён']], () => !!settings.joyFix, v => { settings.joyFix = v; saveSettings(); if (!v) { $('stick').hidden = true; $('stick').classList.remove('fixed'); } });
   seg($('sNight'), onoff, () => settings.nightSnd !== false, v => { settings.nightSnd = v; saveSettings(); });
+  seg($('sAdmin'), onoff, () => !!settings.admin, v => { settings.admin = v; saveSettings(); adminApply(); });
 }
 function openCreate() {
   show('create'); prevCache.clear();

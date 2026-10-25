@@ -61,10 +61,17 @@ function openingCost(i) {
   if (!openingBlocks(i)) return t === WIN ? 2 : 1;
   return 4 + Math.ceil(o.bhp / 45) * 3 + (o.mhp > 0 ? 8 : 0);
 }
+// активная зона (v65): поле путей и полный ум мертвецов — только в квадрате ZONE_R клеток вокруг героя,
+// чтобы на большой карте нагрузка не росла. Дальние мертвецы «спят» и изредка дёшево сдвигаются (updateCore)
+const ZONE_R = 56;
+let flowBox = null;                                                           // [x0, y0, x1, y1] прошлого поля — его и чистим
 function buildFlow() {
-  flow.fill(-1);
+  if (flowBox && flow.length === NT) { const [a0, b0, a1, b1] = flowBox; for (let y = b0; y <= b1; y++) flow.fill(-1, y * MW + a0, y * MW + a1 + 1); }
+  else flow.fill(-1);
   for (const b of buckets) b.length = 0;
   const [sx, sy] = navTile(P.x, P.y), s = sy * MW + sx;
+  const X0 = Math.max(0, sx - ZONE_R), Y0 = Math.max(0, sy - ZONE_R), X1 = Math.min(MW - 1, sx + ZONE_R), Y1 = Math.min(MH - 1, sy + ZONE_R);
+  flowBox = [X0, Y0, X1, Y1];
   flow[s] = 0; buckets[0].push(s);
   for (let d = 0; d < buckets.length; d++) {
     const b = buckets[d];
@@ -73,7 +80,7 @@ function buildFlow() {
       const x = i % MW, y = (i / MW) | 0;
       for (const [ox, oy] of D4) {
         const nx = x + ox, ny = y + oy;
-        if (nx < 0 || ny < 0 || nx >= MW || ny >= MH) continue;
+        if (nx < X0 || ny < Y0 || nx > X1 || ny > Y1) continue;
         const j = ny * MW + nx, t = map[j];
         if (t === WALL || t === TREE || t === WATER || furn[j] || (propAt[j] && props[propAt[j] - 1].solid)) continue;
         const nd = d + openingCost(j);

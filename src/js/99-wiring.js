@@ -55,7 +55,7 @@ function die() {
 function flashSaved(ok) { $('saveInd').textContent = ok ? 'сохранено ' + fmtTime(gameMin) : ''; setTimeout(() => { $('saveInd').textContent = ''; }, 4000); }
 
 loadSettings();
-newGame(); for (let i = 0; i < NT; i++) seen[i] = 1;
+newGame(); for (let i = 0; i < NT; i++) seen[i] = 1; fogFull = true;
 mode = 'menu'; show('menu'); setMenuEnabled(false);
 $('keysHelp').textContent = isTouch
   ? 'Левая половина экрана — джойстик. Тап справа или «Удар» — атака. «Действие» — обыскать, открыть, готовить, спать. Держи телефон горизонтально.'
