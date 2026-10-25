@@ -12,19 +12,6 @@ heroVar = function (lk) {
 // ---- удары: кулаки по очереди (правой — левой), в движении ноги продолжают идти ----
 { const at = attack;
   attack = function () { const t0 = P.atkT; at(); if (P.atkT === 0 && t0 !== 0) P._altHand = !P._altHand; };
-  const pa = playerAnim;
-  playerAnim = function (pAtk) {
-    if (heroMale() && !(mode === 'dead')) {
-      const gun = P.weapon && ITEMS[P.weapon.id].gun;
-      if (pAtk >= 0 && !gun) {
-        const alt = !P.weapon && P._altHand;
-        const an = P.moving ? (P.weapon ? 'attackrun' : alt ? 'punchrun2' : 'punchrun') : (P.weapon ? 'attack' : alt ? 'punch2' : 'punch');
-        const n = AN('p', an); if (n > 1) return [an, Math.min(n - 1, Math.floor(pAtk * n))];
-      }
-      if (P.sneak && !P.moving && !P.act && AN('p', 'sneakidle') > 1) return pmLoop('sneakidle');
-    }
-    return pa(pAtk);
-  };
 }
 
 // ---- настройки: «Готово» всегда под рукой — список прокручивается внутри карточки ----
@@ -83,18 +70,8 @@ addEventListener('pointerdown', e => { if (CTLE) CTLE.down(e); }, true);
 addEventListener('pointermove', e => { if (CTLE) CTLE.move(e); }, true);
 addEventListener('pointerup', e => { if (CTLE) CTLE.up(e); }, true);
 addEventListener('click', e => { if (CTLE && CTL_IDS.some(id => $(id) && $(id).contains(e.target))) { e.preventDefault(); e.stopPropagation(); } }, true);
-let settingsFrom = 'menu';
-{ const os = openSettings;
-  openSettings = function (from) {
-    settingsFrom = from || settingsFrom; os(from);
-    const list = document.querySelector('#settings .setlist'); if (!list || $('sCtl')) return;
-    const row = document.createElement('div'); row.className = 'set';
-    row.innerHTML = '<div><b>Кнопки управления</b><small>Передвинь и измени размер кнопок под свои пальцы</small></div><div class="seg" id="sCtl"><button type="button" id="sCtlGo">Настроить</button><button type="button" id="sCtlReset">Сбросить</button></div>';
-    list.appendChild(row);
-    $('sCtlGo').onclick = () => { SFX.ui(); ctlEditOpen(); };
-    $('sCtlReset').onclick = () => { SFX.ui(); settings.btn = {}; saveSettings(); ctlApply(); toast('Кнопки на своих местах'); };
-  };
-}
+$('sCtlGo').onclick = () => { SFX.ui(); ctlEditOpen(); };
+$('sCtlReset').onclick = () => { SFX.ui(); settings.btn = {}; saveSettings(); ctlApply(); toast('Кнопки на своих местах'); };
 { const as = applySettings; applySettings = function () { as(); ctlApply(); }; }
 ctlApply();
 

@@ -67,11 +67,9 @@ function moveAll(toBag) {
   };
 }
 // ---- обыск: в заголовке видно, сколько ещё унесёшь ----
-{ const rp = renderPanel;
-  renderPanel = function () {
-    rp();
+{ onPanel(() => {
     if (panel && panel.kind === 'loot' && $('pnSub') && !xferQ.length) $('pnSub').textContent = 'унесёшь ещё ' + fmtKg(Math.max(0, invHardKg() - invKg())) + ' кг · ' + (invOver() > 0 ? 'уже перегруз' : 'без перегруза ещё ' + fmtKg(Math.max(0, invCapKg() - invKg())) + ' кг');
-  };
+  });
 }
 
 // ---- редактор персонажа: герой крупнее ----

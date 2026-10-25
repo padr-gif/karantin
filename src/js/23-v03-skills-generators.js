@@ -24,8 +24,6 @@ SPRA.airdrop = 'crate';
   add('toolrack', 'jerrycan', 'seeds', 'seeds', 'generator'); add('crate', 'jerrycan', 'seeds'); add('counter', 'jerrycan'); add('armybox', 'jerrycan');
   add('car', 'jerrycan'); add('cabinet', 'seeds');
 }
-const _mk2 = mkItem;
-mkItem = function (id) { const it = _mk2(id); if (id === 'jerrycan') it.fuel = ri(0, 60); if (id === 'generator') it.fuel = ri(0, 30); return it; };
 // ---- skills ----
 const SKILLS = {fight:{name:'Ближний бой', per:'+6% урона за уровень'}, carp:{name:'Плотничество', per:'быстрее и прочнее баррикады'}, cook:{name:'Кулинария', per:'+10% сытости готовой еды'}, farm:{name:'Огородничество', per:'больше урожай, быстрее растёт'}};
 const XPL = [0, 4, 12, 26, 48, 80];

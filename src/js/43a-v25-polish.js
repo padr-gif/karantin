@@ -205,12 +205,10 @@ function recipeInfo(det) {
   } else if ((card.dataset.parts || '').length) box.appendChild(mk('p', 'rready', '✓ Всё есть, можно делать'));
   det.appendChild(box);
 }
-const renderPanel25 = renderPanel;
-renderPanel = function () {
-  renderPanel25();
+onPanel(() => {
   if (!panel) return;
   if ((panel.kind === 'inv' && panel.tab === 'craft') || panel.kind === 'cook') { const det = $('pnBody').querySelector('.rdet'); if (det) recipeInfo(det); }
-};
+});
 
 const tickV25 = tickV23;
 tickV23 = function (dt, gm) { tickV25(dt, gm); unstick(); };

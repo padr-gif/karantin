@@ -74,11 +74,28 @@ function opaquePt(x, y) {
   return alongX(tx, ty) ? Math.abs(ly0 - .5) < h : Math.abs(lx0 - .5) < h;
 }
 
+// новая вещь со случайным состоянием (заряд, прочность, сколько осталось)
+let exactBag = false;                                                 // true — «рюкзак» именно этот, а не случайный по редкости (mkBag)
 function mkItem(id) {
+  if (id === 'bag' && !exactBag) id = rollBag();
   const d = ITEMS[id], it = {id};
   if (d.kind === 'weapon') it.dur = d.dur;
   if (id === 'flashlight') { it.ch = ri(25, 100); it.on = false; }
-  if (d.uses) it.uses = id === 'matches' ? ri(2, d.uses) : ri(6, d.uses);
+  if (d.uses) {
+    if (id === 'matches') it.uses = ri(2, d.uses);
+    else { ri(6, d.uses); it.uses = ri(Math.max(1, Math.ceil(d.uses * .4)), d.uses); }   // первый бросок не нужен, но оставлен: не сдвигает случайную последовательность
+  }
+  if (id === 'canteen') it.w = ri(0, 3);
+  if (id === 'jug') it.w = ri(0, 5);
+  if (id === 'note') it.text = NOTES[Math.floor(rng() * NOTES.length)];
+  if (id === 'radio') it.ch = ri(30, 100);
+  if (id === 'vest') it.dur = ri(30, 60);
+  if (id === 'jerrycan') it.fuel = ri(0, 60);
+  if (id === 'generator') it.fuel = ri(0, 30);
+  if (id === 'candle') { it.ch = 100; it.on = false; }
+  if (d && d.gun) it.mag = rng() < .5 ? 0 : ri(1, d.mag);
+  if (d && d.kind === 'cloth' && d.slot !== 'wrist' && rng() < .35) it.cd = ri(45, 95);
+  if (id === 'lure') it.ch = 3;
   return it;
 }
 function houseOk(Hs) {

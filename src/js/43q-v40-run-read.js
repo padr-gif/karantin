@@ -2,15 +2,6 @@
 // бег чуть медленнее
 { const mk = moveK; moveK = function () { return mk() * (P && P.running ? .88 : 1); }; }
 // удар на бегу: ноги продолжают бежать, руки бьют
-{ const pa = playerAnim;
-  playerAnim = function (pAtk) {
-    if (pAtk >= 0 && heroMale() && P.running && P.moving && !(P.weapon && ITEMS[P.weapon.id].gun)) {
-      const an = P.weapon ? 'attackrun' : 'punchrun', n = AN('p', an);
-      if (n > 1) return [an, Math.min(n - 1, Math.floor(pAtk * n))];
-    }
-    return pa(pAtk);
-  };
-}
 // ---- книга в руках: раскрытая, между кистями; на первой трети цикла правая страница переворачивается ----
 const BOOKC = {carp:'#8a5a32', cook:'#b0302a', farm:'#3f7a3a', fight:'#2f4f8a', med:'#d8d2c4', tail:'#6a3a7a', mech:'#c8782a'};
 function bookColor() { const it = P.act && P.act.it, d = it && ITEMS[it.id]; return (d && d.skill && BOOKC[d.skill]) || '#7a3a2e'; }

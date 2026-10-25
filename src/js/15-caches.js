@@ -170,7 +170,42 @@ function propName(p, on) {
   if (p.type === 'barrel') return 'barrel';
   return 'bush_' + (Math.floor(hash(Math.floor(p.cx * 7), Math.floor(p.cy * 3)) * 3));
 }
+// кадр анимации героя: у мужского героя есть свои клипы (удар на бегу, двуручное, присед, душ…), остальное — общее
 function playerAnim(pAtk) {
+  if (heroMale()) {
+    const A = P.act;
+    if (pAtk < 0 && A && A.kind === 'job' && A.an === 'searchlow' && AN('p', 'searchlow') > 1) return pmLoop('searchlow');
+    if (mode !== 'dead') {
+      const w = P.weapon && ITEMS[P.weapon.id];
+      if (pAtk >= 0 && w && !w.gun && TWO_H.has(P.weapon.id)) {                       // двуручное
+        const an = P.moving ? 'attack2hrun' : 'attack2h', n = AN('p', an);
+        if (n > 1) return [an, Math.min(n - 1, Math.floor(pAtk * n))];
+      }
+      if (A && A.kind === 'forage' && A.a && (A.a.what === 'berries' || A.a.what === 'mushroom') && AN('p', 'searchlow') > 1) return pmLoop('searchlow');   // присел и копается
+      if (pAtk >= 0 && !(w && w.gun)) {                                                // удар на ходу и вторая рука
+        const alt = !P.weapon && P._altHand;
+        const an = P.moving ? (P.weapon ? 'attackrun' : alt ? 'punchrun2' : 'punchrun') : (P.weapon ? 'attack' : alt ? 'punch2' : 'punch');
+        const n = AN('p', an); if (n > 1) return [an, Math.min(n - 1, Math.floor(pAtk * n))];
+      }
+      if (P.sneak && !P.moving && !P.act && AN('p', 'sneakidle') > 1) return pmLoop('sneakidle');
+    }
+    if (pAtk >= 0 && P.running && P.moving && !(P.weapon && ITEMS[P.weapon.id].gun)) {
+      const an = P.weapon ? 'attackrun' : 'punchrun', n = AN('p', an);
+      if (n > 1) return [an, Math.min(n - 1, Math.floor(pAtk * n))];
+    }
+  }
+  const r = playerAnimBase(pAtk);
+  if (!heroMale() || mode === 'dead') return r;
+  const A = P.act, act = A && A.kind;
+  if (A && act === 'job' && A.an === 'jacks' && AN('p', 'jacks') > 1) return pmLoop('jacks');
+  if (A && act === 'job' && A.shower) return P._inShower && AN('p', 'shower') > 1 ? pmLoop('shower') : pmLoop('idle', .8);
+  // обыск низкой мебели и вещей на полу — присев
+  if (r[0] === 'search' && A && A.f && AN('p', 'searchlow') > 1 && (LOW_FURN.has(A.f.type) || A.f.type === 'pile' || !A.f.type)) return pmLoop('searchlow');
+  if (A && act === 'use' && A.an === 'read' && AN('p', 'read') > 1) return pmLoop('read');
+  if (r[0] === 'idle' || r[0] === 'search' || r[0] === 'work') return pmLoop(r[0]);   // живые циклы стояния и работы
+  return r;
+}
+function playerAnimBase(pAtk) {
   if (mode === 'dead') { const n = AN('p', 'death'); return ['death', Math.min(n - 1, Math.floor((P.fall || 0) * n))]; }
   if (pAtk >= 0 && P.weapon && ITEMS[P.weapon.id].gun && P.atkDur <= .21) return ['punch', Math.min(AN('p', 'punch') - 1, 2)];
   if (pAtk >= 0) { const an = P.weapon ? 'attack' : 'punch', n = AN('p', an); return [an, Math.min(n - 1, Math.floor(pAtk * n))]; }

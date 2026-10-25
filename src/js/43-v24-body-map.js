@@ -172,14 +172,15 @@ openPanel = function (kind, opt) { openPanel24(kind, opt); if (panel && kind ===
 // ---- keep scroll positions when a panel re-renders (recipe lists, columns) ----
 const SCROLL_SEL = ['.rlist', '.rdet', '.pcol', '.pdet', '.bodyinfo', '.skillwrap', '.infolay > div', '.self3 > div'];
 let scrollKey = '';
-const renderPanel24 = renderPanel;
-renderPanel = function () {
-  const body = $('pnBody'), key = panel ? panel.kind + '|' + (panel.tab || '') + '|' + (panel.sub || '') : '', keep = [];
-  if (panel && key === scrollKey) { keep.push(['', 0, body.scrollTop]); for (const sel of SCROLL_SEL) body.querySelectorAll(sel).forEach((e, i) => { if (e.scrollTop) keep.push([sel, i, e.scrollTop]); }); }
-  renderPanel24();
+onPanel((a, {key, keep}) => {
+  const body = $('pnBody');
   scrollKey = key;
   for (const [sel, i, v] of keep) { const e = sel ? body.querySelectorAll(sel)[i] : body; if (e) e.scrollTop = v; }
-};
+}, () => {
+  const body = $('pnBody'), key = panel ? panel.kind + '|' + (panel.tab || '') + '|' + (panel.sub || '') : '', keep = [];
+  if (panel && key === scrollKey) { keep.push(['', 0, body.scrollTop]); for (const sel of SCROLL_SEL) body.querySelectorAll(sel).forEach((e, i) => { if (e.scrollTop) keep.push([sel, i, e.scrollTop]); }); }
+  return {key, keep};
+});
 // ---- save the diary and fitness timer too ----
 onSave(d => { Object.assign(d.p, {log:P.log || [], fitT:r2(P.fitT || 0), _logDay:P._logDay, _logK:P._logK || 0, _logPw:P._logPw || 0, _logWt:P._logWt || 0});
 });

@@ -156,7 +156,8 @@ function recipeCard(title, parts, result, buttons, note) {
   const a = mk('div', 'acts'); for (const b of buttons) a.appendChild(b); r.appendChild(a);
   return r;
 }
-function renderPanel() {
+function renderPanel() { runHooked('panel', renderPanelCore); }
+function renderPanelCore() {
   if (!panel) return;
   const body = $('pnBody'), tabs = $('pnTabs'); body.textContent = ''; tabs.textContent = '';
   const sec = t => body.appendChild(mk('div', 'sect', t));

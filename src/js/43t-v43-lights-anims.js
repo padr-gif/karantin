@@ -2,20 +2,6 @@
 
 // ---- анимации героя ----
 const TWO_H = new Set(['bat', 'nailbat', 'pipe', 'axe', 'crowbar', 'sledge', 'shovel', 'golf', 'spear']);   // большое — обеими руками
-{ const pa = playerAnim;
-  playerAnim = function (pAtk) {
-    if (heroMale() && mode !== 'dead') {
-      const w = P.weapon && ITEMS[P.weapon.id];
-      if (pAtk >= 0 && w && !w.gun && TWO_H.has(P.weapon.id)) {
-        const an = P.moving ? 'attack2hrun' : 'attack2h', n = AN('p', an);
-        if (n > 1) return [an, Math.min(n - 1, Math.floor(pAtk * n))];
-      }
-      const A = P.act;
-      if (A && A.kind === 'forage' && A.a && (A.a.what === 'berries' || A.a.what === 'mushroom') && AN('p', 'searchlow') > 1) return pmLoop('searchlow');   // присел и копается
-    }
-    return pa(pAtk);
-  };
-}
 // перелезть через окно: присесть на подоконник, перебраться в глубоком приседе, встать — как было
 { const va = vaultAnim;
   vaultAnim = function () {
@@ -145,16 +131,6 @@ setInterval(() => {
   st.hidden = !show; st.classList.add('fixed');
   if (joy.id === null) $('knob').style.transform = '';
 }, 120);
-{ const os = openSettings;
-  openSettings = function (from) {
-    os(from);
-    const list = document.querySelector('#settings .setlist'); if (!list || $('sJoy')) return;
-    const row = document.createElement('div'); row.className = 'set';
-    row.innerHTML = '<div><b>Джойстик</b><small>Закреплённый всегда стоит на одном месте слева внизу</small></div><div class="seg" id="sJoy"></div>';
-    const ctl = $('sCtl'); list.insertBefore(row, ctl ? ctl.closest('.set') : null);
-    seg($('sJoy'), [[false, 'Где коснулся'], [true, 'Закреплён']], () => !!settings.joyFix, v => { settings.joyFix = v; saveSettings(); if (!v) { $('stick').hidden = true; $('stick').classList.remove('fixed'); } });
-  };
-}
 $('kills').title = 'Убито мертвецов'; $('kills').setAttribute('aria-label', 'Убито мертвецов');
 
 // ---- выключенный свет — правда темно: окна не светятся, вокруг героя видно меньше (16-render) ----

@@ -60,16 +60,14 @@ function readStory(it) {
     }
   }
 }
-{ const rp = renderPanel;
-  renderPanel = function () {
-    rp();
+{ onPanel(() => {
     if (!panel || panel.kind !== 'note' || !panel.it || !panel.it.story) return;
     const n = storyNote(panel.it.story); if (!n) return;
     readStory(panel.it);
     $('pnTitle').textContent = n.title; $('pnSub').textContent = STORY_LINES[n.line];
     const body = $('pnBody'); body.textContent = '';
     const pg = mk('div', 'diary snote'); for (const para of n.text.split('\n\n')) pg.appendChild(mk('p', 'dline', para)); body.appendChild(pg);
-  };
+  });
 }
 // в дневнике — страница «Записки»: по линиям, ненайденные — пропуски
 { const bd = buildDiary;
@@ -173,13 +171,3 @@ function drawNightMarks() {
   }
 }
 function extraDl(dl) { if (nightMarks.length && mode === 'play') dl.push({d:1e9, k:99, fn:drawNightMarks}); }
-{ const os = openSettings;
-  openSettings = function (from) {
-    os(from);
-    const list = document.querySelector('#settings .setlist'); if (!list || $('sNight')) return;
-    const row = document.createElement('div'); row.className = 'set';
-    row.innerHTML = '<div><b>Ночные звуки</b><small>Скрипы, стуки и шорохи ночью. Скрежет — всегда правда, стук — проверь сам</small></div><div class="seg" id="sNight"></div>';
-    list.appendChild(row);
-    seg($('sNight'), [[true, 'Вкл'], [false, 'Выкл']], () => settings.nightSnd !== false, v => { settings.nightSnd = v; saveSettings(); });
-  };
-}

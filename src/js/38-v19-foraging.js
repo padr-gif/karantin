@@ -69,14 +69,6 @@ function finishForage(act) {
   else { world.tcd[a.key] = gameMin + 1440; const n = hasTool('axe') || hasTool('hatchet') ? 4 : 2; give('sticks', n); toast('Наломал хвороста: ' + n); }
   renderInv(); updateHud();
 }
-// eating raw mushrooms is a gamble
-const useItemS = useItem;
-useItem = function (id, idx) {
-  const k = idx != null ? idx : P.inv.findIndex(i => i.id === id), it = P.inv[k];
-  const raw = it && it.id === 'mushroom';
-  useItemS(id, idx);
-  if (raw && skillLv('farm') < 2 && rng() < .3) { P.pois = Math.max(P.pois || 0, 140); P.hp -= 6; lastCause = 'Отравление грибами'; toast('Грибы оказались ядовитыми. Мутит'); }
-};
 // crops sleep in the cold and die in frost
 const updateBeds0 = updateBeds;
 updateBeds = function (gm) {

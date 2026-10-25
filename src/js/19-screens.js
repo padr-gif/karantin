@@ -120,7 +120,9 @@ async function renderSaves() {
     row.appendChild(info); row.appendChild(acts); list.appendChild(row);
   }
 }
+let settingsFrom = 'menu';                                           // откуда открыли настройки (вернуться туда после настройки кнопок)
 function openSettings(from) {
+  settingsFrom = from || settingsFrom;
   backTo = from; show('settings');
   const onoff = [[true, 'Вкл'], [false, 'Выкл']];
   const bind = (id, opts, key) => seg($(id), opts, () => settings[key], v => { settings[key] = v; saveSettings(); });
@@ -130,6 +132,10 @@ function openSettings(from) {
   bind('sGfx', [[1.5, 'Экономия'], [2, 'Обычная'], [3, 'Максимум']], 'gfx');
   bind('sRain', onoff, 'rain'); bind('sShake', onoff, 'shake'); bind('sGore', onoff, 'gore'); bind('sHints', onoff, 'hints'); bind('sAuto', onoff, 'autosave');
   bind('sUia', [[1, 'Нет'], [.8, '20%'], [.6, '40%'], [.4, '60%']], 'uia');
+  seg($('sSmooth'), [[false, 'Пиксели'], [true, 'Детальная']], () => !!settings.smooth, v => { settings.smooth = v; saveSettings(); });
+  seg($('sFps'), [[false, 'Нет'], [true, 'Да']], () => !!settings.fps, v => { settings.fps = v; saveSettings(); });
+  seg($('sJoy'), [[false, 'Где коснулся'], [true, 'Закреплён']], () => !!settings.joyFix, v => { settings.joyFix = v; saveSettings(); if (!v) { $('stick').hidden = true; $('stick').classList.remove('fixed'); } });
+  seg($('sNight'), onoff, () => settings.nightSnd !== false, v => { settings.nightSnd = v; saveSettings(); });
 }
 function openCreate() {
   show('create'); prevCache.clear();

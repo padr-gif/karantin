@@ -76,20 +76,13 @@ function placeUniques() {
   }, dt => { const s0 = P && P.stress; return {s0}; });
 }
 // дневник врача: читать можно снова и снова; колода — отмечает тайники; аптечка скорой — лечит сильнее
-{ const ui = useItem;
-  useItem = function (id, idx) {
-    const k = idx != null ? idx : P.inv.findIndex(i => i.id === id), it = P.inv[k], q = uniqOf(it);
-    if (q && q.u === 'diary') { P.stress = Math.max(0, (P.stress || 0) - 25); P.bored = Math.max(0, (P.bored || 0) - 35); P.unh = Math.max(0, (P.unh || 0) - 20); SFX.rustle(); toast('Перечитал записи Ковалёвой. Кто-то держался — и я продержусь'); renderInv(); return; }
-    if (q && q.u === 'cards') {
+// (бонус аптечки скорой — в useItem)
+defUse(it => { const q = uniqOf(it); return q && q.u === 'diary'; }, () => { P.stress = Math.max(0, (P.stress || 0) - 25); P.bored = Math.max(0, (P.bored || 0) - 35); P.unh = Math.max(0, (P.unh || 0) - 20); SFX.rustle(); toast('Перечитал записи Ковалёвой. Кто-то держался — и я продержусь'); renderInv(); });
+defUse(it => { const q = uniqOf(it); return q && q.u === 'cards'; }, () => {
       const L = furns.filter(f => !f.gone && !f.searched && ['locker', 'armybox', 'crate', 'chest', 'pantry'].includes(f.type)).sort(() => rng() - .5).slice(0, 3);
       world.marks = world.marks || []; for (const f of L) world.marks.push({x:Math.round(f.cx), y:Math.round(f.cy)});
-      SFX.rustle(); toast(L.length ? 'На картах — адреса. Отметил на карте ' + L.length + ' места' : 'Все пометки на картах уже проверены'); return;
-    }
-    const hp0 = P.hp; const r = ui(id, idx);
-    if (q && q.u === 'medkit' && P.hp > hp0) P.hp = Math.min(100, P.hp + 20);
-    return r;
-  };
-}
+      SFX.rustle(); toast(L.length ? 'На картах — адреса. Отметил на карте ' + L.length + ' места' : 'Все пометки на картах уже проверены');
+});
 
 // ---- вкладка «Находки» ----
 function buildUniq(body) {
@@ -104,15 +97,13 @@ function buildUniq(body) {
   }
   body.appendChild(g);
 }
-{ const rp = renderPanel;
-  renderPanel = function () {
-    rp();
+{ onPanel(() => {
     if (!panel || panel.kind !== 'inv') return;
     const tabs = $('pnTabs');
     if (tabs && !tabs.querySelector('.utab')) { const b = btn('Находки', () => { panel.tab = 'uniq'; renderPanel(); }, panel.tab === 'uniq' ? 'on' : ''); b.classList.add('utab'); tabs.appendChild(b); }
     $('pnBody').classList.toggle('scrolly', panel.tab === 'uniq');
     if (panel.tab === 'uniq') { const body = $('pnBody'); body.classList.remove('fit'); buildUniq(body); for (const b of tabs.querySelectorAll('button')) b.classList.toggle('on', b.classList.contains('utab')); }
-  };
+  });
 }
 // сохранение: коллекция — у города
 { onSave(d => { d.x48 = {uniq:world.uniq || []};

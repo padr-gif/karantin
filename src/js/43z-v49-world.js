@@ -68,9 +68,7 @@ function cacheText(c) {
 }
 { onNewWorld((o) => { if (!(o && o.save)) placeCaches();
 }); }
-{ const rp = renderPanel;
-  renderPanel = function () {
-    rp();
+{ onPanel(() => {
     if (!panel || panel.kind !== 'note' || !panel.it || !panel.it.cache) return;
     const c = (world.caches || []).find(c => c.id === panel.it.cache); if (!c) return;
     $('pnTitle').textContent = 'Записка с приметами'; $('pnSub').textContent = 'кто-то спрятал припасы';
@@ -79,7 +77,7 @@ function cacheText(c) {
     else pg.appendChild(mk('p', 'dline dsub', 'Примета отмечена на карте. Подойди и копай рядом.'));
     body.appendChild(pg);
     if (!c.read) { c.read = true; world.marks = world.marks || []; world.marks.push({x:c.lx, y:c.ly, t:'stash', cid:c.id}); logEv('Нашёл записку с приметами тайника'); }
-  };
+  });
 }
 function nearCache() { return (world.caches || []).find(c => c.read && !c.dug && Math.hypot(c.x - P.x, c.y - P.y) < 1.3); }
 { addActions(out => { const c = mode === 'play' && !P.car && nearCache(); if (c) out.push({kind:'digcache', label:'Раскопать тайник', f:{type:'cache', cx:c.x, cy:c.y}, c});
@@ -333,6 +331,5 @@ function drawCat(c) {
 }
 
 // копать — присев
-{ const pa = playerAnim; playerAnim = function (pAtk) { const A = P.act; if (pAtk < 0 && A && A.kind === 'job' && A.an === 'searchlow' && heroMale() && AN('p', 'searchlow') > 1) return pmLoop('searchlow'); return pa(pAtk); }; }
 // тап мимо — закрыть выбор значка
 addEventListener('pointerdown', e => { if (markPick && !markPick.contains(e.target) && !(e.target && e.target.tagName === 'CANVAS' && e.target.closest('#pnBody'))) { markPick.remove(); markPick = null; } }, true);

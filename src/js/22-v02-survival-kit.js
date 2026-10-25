@@ -89,17 +89,6 @@ Object.assign(CONT, {pile:{name:'На земле'}});
   add('crate', 'tape', 'burner', 'canteen', 'sleepbag');
   add('car', 'map', 'map', 'medkit', 'choco', 'energy', 'radio', 'mre', 'canteen', 'mre');
 }
-const _mkItem0 = mkItem;
-mkItem = function (id) {
-  const it = _mkItem0(id), d = ITEMS[id];
-  if (d.uses && id !== 'matches') it.uses = ri(Math.max(1, Math.ceil(d.uses * .4)), d.uses);
-  if (id === 'canteen') it.w = ri(0, 3);
-  if (id === 'jug') it.w = ri(0, 5);
-  if (id === 'note') it.text = NOTES[Math.floor(rng() * NOTES.length)];
-  if (id === 'radio') it.ch = ri(30, 100);
-  if (id === 'vest') it.dur = ri(30, 60);
-  return it;
-};
 // ---- ground piles ----
 let piles = [], thrown = [], rings = [];
 function addToPile(x, y, it) {

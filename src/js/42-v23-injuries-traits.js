@@ -77,14 +77,6 @@ Object.assign(WSPEC, {
   pistol:{segs:[[0, 2.2, 1.6, '#2b2a2c'], [2.2, 5.2, 1.25, '#3b3e44']]},
   shotgun:{segs:[[0, 4, 1.7, '#7a5232'], [4, 6, 1.2, '#2e3034'], [6, 14.5, .85, '#45484e']]},
 });
-const mkItem23 = mkItem;
-mkItem = function (id) {
-  const it = mkItem23(id), d = ITEMS[id];
-  if (d && d.gun) it.mag = rng() < .5 ? 0 : ri(1, d.mag);
-  if (d && d.kind === 'cloth' && d.slot !== 'wrist' && rng() < .35) it.cd = ri(45, 95);
-  if (id === 'lure') it.ch = 3;
-  return it;
-};
 const catOf23 = catOf;
 catOf = function (id) { const d = ITEMS[id]; if (!d) return 'Материалы'; if (d.kind === 'ammo') return 'Оружие'; if (id === 'splint') return 'Медицина'; if (id === 'sewkit' || id === 'lure') return 'Снаряжение'; return catOf23(id); };
 
@@ -743,36 +735,16 @@ RECIPES.push(
 
 // ================= item use =================
 const useKind23 = useKind;
+defUse(it => ['bandage', 'rag', 'splint', 'antisep', 'medkit'].includes(it.id), it => {   // перевязки и лечение ран
+  const w = woundFor(it.id);
+  if (!w && it.id !== 'medkit' && it.id !== 'antisep') { toast(it.id === 'splint' ? 'Переломов нет' : 'Перевязывать нечего'); return; }
+  if (!w && it.id === 'antisep') { toast('Обрабатывать нечего'); return; }
+  applyTreat(it.id, w);
+});
+defUse((it, d) => d.kind === 'ammo', (it, k, d) => { const g = P.weapon && ITEMS[P.weapon.id]; if (g && g.ammo === it.id) startReload(); else toast('Возьми в руки: ' + ITEMS[d.gun].name.toLowerCase()); });
+defUse(it => it.id === 'sewkit', () => toast('Открой одежду в рюкзаке: там появятся кнопки «Зашить» и «Утеплить»'));
+defUse(it => it.id === 'lure', (it, k) => placeLure(k));
 useKind = function (it) { if (it.id === 'rag') return ['work', 2.2]; if (it.id === 'splint') return ['work', 3]; return useKind23(it); };
-const useItem23 = useItem;
-useItem = function (id, idx) {
-  const k = idx != null ? idx : P.inv.findIndex(i => i.id === id), it = P.inv[k]; if (!it) return;
-  const d = ITEMS[it.id];
-  if (it.id === 'bandage' || it.id === 'rag' || it.id === 'splint' || it.id === 'antisep' || it.id === 'medkit') {
-    const w = woundFor(it.id);
-    if (!w && it.id !== 'medkit' && it.id !== 'antisep') { toast(it.id === 'splint' ? 'Переломов нет' : 'Перевязывать нечего'); return; }
-    if (!w && it.id === 'antisep') { toast('Обрабатывать нечего'); return; }
-    applyTreat(it.id, w); return;
-  }
-  if (d.kind === 'ammo') { const g = P.weapon && ITEMS[P.weapon.id]; if (g && g.ammo === it.id) startReload(); else toast('Возьми в руки: ' + ITEMS[d.gun].name.toLowerCase()); return; }
-  if (it.id === 'sewkit') { toast('Открой одежду в рюкзаке: там появятся кнопки «Зашить» и «Утеплить»'); return; }
-  if (it.id === 'lure') { placeLure(k); return; }
-  const pois0 = P.pois || 0, hp0 = P.hp, bad = isRotten(it), cap0 = P.cap;
-  useItem23(id, idx);
-  if (it.id === 'pills' || it.id === 'painkill') { P.painkT = Math.max(P.painkT || 0, it.id === 'painkill' ? 420 : 300); toast('Боль притупилась'); }
-  if (it.id === 'vodka' || it.id === 'whiskey') P.painkT = Math.max(P.painkT || 0, 90);
-  if (it.id === 'antibio') for (const w of wounds()) w.sep = Math.max(0, w.sep - 60);
-  if (d.kind === 'smoke') { P.smokeT = 0; P._smokeMsg = 0; }
-  if (d.kind === 'fun') P.unh = Math.max(0, (P.unh || 0) - 15);
-  if (d.warm && (d.kind === 'food' || d.kind === 'drink')) P.unh = Math.max(0, (P.unh || 0) - 5);
-  if (d.sweet) P.unh = Math.max(0, (P.unh || 0) - 5);
-  if (d.calm && (d.kind === 'drink')) P.unh = Math.max(0, (P.unh || 0) - 6);
-  if (bad) P.unh = Math.min(100, (P.unh || 0) + 8);
-  if ((P.pois || 0) > pois0) {
-    if (hasTr('irongut') && rng() < .5) { P.pois = pois0; P.hp = Math.max(P.hp, hp0); toast('Железный желудок справился'); }
-  } else if (hasTr('weakgut') && (bad || d.rawRisk || d.dirty) && rng() < .3) { P.pois = Math.max(P.pois || 0, 100); P.hp -= 4; lastCause = 'Отравление'; toast('Слабый желудок: тебя мутит'); }
-  if (d.kind === 'bag' && P.cap !== cap0 && P.capB) P.cap += P.capB;
-};
 HOT[2].pick = () => {
   const L = P.inv.map((it, k) => [it, k]), f = id => L.find(([it]) => it.id === id), W = wounds();
   if (W.some(w => w.k === 'frac' && !w.spl) && f('splint')) return f('splint');
@@ -844,9 +816,7 @@ function woundRow(w) {
   const bar = mk('i', 'wbar'), u = mk('u'); u.style.width = Math.floor(w.h * 100) + '%'; bar.appendChild(u); r.appendChild(bar);
   return r;
 }
-const renderPanel23 = renderPanel;
-renderPanel = function () {
-  renderPanel23();
+onPanel(() => {
   if (!panel) return;
   const body = $('pnBody');
   if (panel.kind === 'inv' && panel.tab === 'self') buildSelf(body);
@@ -859,7 +829,7 @@ renderPanel = function () {
     if (f.label) bx.appendChild(btn('Разложить из рюкзака', () => sortInto(stashes.filter(s => !s.gone && Math.hypot(s.cx - P.x, s.cy - P.y) < 9))));
     row.after(bx); fitPanel();
   }
-};
+});
 
 // ================= HUD helpers =================
 function drawV23() {

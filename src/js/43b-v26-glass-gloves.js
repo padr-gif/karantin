@@ -90,24 +90,18 @@ finishVault = function (a) {
 };
 
 // ---- water filter ----
-const useItem26 = useItem;
-useItem = function (id, idx) {
-  const k = idx != null ? idx : P.inv.findIndex(i => i.id === id), it = P.inv[k];
-  if (it && it.id === 'filter') {
-    const raw = P.inv.filter(i => i.id === 'waterD');
-    if (!raw.length) { toast('Нечего процеживать: нужна сырая вода в бутылках'); return; }
-    if (it.uses == null) it.uses = FILTER_USES;
-    job(1.2 + raw.length * .5, () => {
-      let n = 0; for (const w of P.inv) if (w.id === 'waterD' && it.uses > 0) { w.id = 'water'; it.uses--; n++; }
-      SFX.rustle(); addXp('farm', 1);
-      if (it.uses <= 0) { const j = P.inv.indexOf(it); if (j >= 0) P.inv.splice(j, 1); toast(`Процежено ${n} бут. Фильтр забился, выброшен`); }
-      else toast(`Процежено ${n} бут. Фильтра хватит ещё на ${it.uses}`);
-      renderInv();
-    }, {an:'work'});
-    return;
-  }
-  useItem26(id, idx);
-};
+defUse(it => it.id === 'filter', it => {
+  const raw = P.inv.filter(i => i.id === 'waterD');
+  if (!raw.length) { toast('Нечего процеживать: нужна сырая вода в бутылках'); return; }
+  if (it.uses == null) it.uses = FILTER_USES;
+  job(1.2 + raw.length * .5, () => {
+    let n = 0; for (const w of P.inv) if (w.id === 'waterD' && it.uses > 0) { w.id = 'water'; it.uses--; n++; }
+    SFX.rustle(); addXp('farm', 1);
+    if (it.uses <= 0) { const j = P.inv.indexOf(it); if (j >= 0) P.inv.splice(j, 1); toast(`Процежено ${n} бут. Фильтр забился, выброшен`); }
+    else toast(`Процежено ${n} бут. Фильтра хватит ещё на ${it.uses}`);
+    renderInv();
+  }, {an:'work'});
+});
 
 // ---- recipes ----
 RECIPES.push(

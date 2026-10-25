@@ -99,10 +99,6 @@ SETTINGS_DEF.smooth = false; if (settings.smooth == null) settings.smooth = fals
 const applySettings28 = applySettings;
 applySettings = function () { applySettings28(); hdApply(); };
 addEventListener('resize', () => hdApply());
-{ const row = document.querySelector('#sGfx'); if (row) { const set = row.closest('.set'), n = set.cloneNode(true);
-  n.querySelector('b').textContent = 'Стиль графики'; n.querySelector('small').textContent = 'Пиксели как раньше или гладкая картинка (проба)'; n.querySelector('.seg').id = 'sSmooth'; set.after(n); } }
-const openSettings28 = openSettings;
-openSettings = function (from) { openSettings28(from); seg($('sSmooth'), [[false, 'Пиксели'], [true, 'Гладкая']], () => !!settings.smooth, v => { settings.smooth = v; saveSettings(); }); };
 hdApply();
 
 // ---- smooth furniture: drawn from simple shapes (in the spirit of Kenney's low-poly kits) instead of pixel sprites ----

@@ -49,11 +49,8 @@ function rollBag() {                                                      // в�
   for (let k = 0; k < w.length; k++) { r -= w[k]; if (r <= 0) return BAG_ROLL[k][0]; }
   return 'bag_school';
 }
-// в добыче «рюкзак» — случайный вид по редкости (exactBag — когда нужен именно этот)
-let exactBag = false;
-{ for (const k of ['hanger', 'wardrobe', 'car', 'locker', 'desk']) { const L = CONT[k] && CONT[k].loot; if (L) L.push('bag'); }
-  const mk42 = mkItem; mkItem = function (id) { return mk42(id === 'bag' && !exactBag ? rollBag() : id); };
-}
+// в добыче «рюкзак» — случайный вид по редкости (mkItem), mkBag — именно этот
+for (const k of ['hanger', 'wardrobe', 'car', 'locker', 'desk']) { const L = CONT[k] && CONT[k].loot; if (L) L.push('bag'); }
 const mkBag = id => { exactBag = true; try { return mkItem(id); } finally { exactBag = false; } };
 
 // ---- вместимость ----
@@ -119,13 +116,7 @@ function takeOffBag() {
   const b = P.bag; P.bag = null; for (const x of P.inv) x.bp = 0; b.bp = 0; P.inv.push(b);
   SFX.rustle(); toast('Рюкзак снят. Вещи из него — в руках и карманах'); renderInv(); updateHud();
 }
-{ const ui = useItem;
-  useItem = function (id, idx) {
-    const k = idx != null ? idx : P.inv.findIndex(i => i.id === id), it = P.inv[k];
-    if (it && ITEMS[it.id] && ITEMS[it.id].kind === 'bag') { wearBag(k); return; }
-    return ui(id, idx);
-  };
-}
+defUse((it, d) => d && d.kind === 'bag', (it, k) => wearBag(k));   // рюкзак — надеть
 // одежда: карманы больше не «места» — просто надеть/снять
 wearCloth = function (k) {
   const it = P.inv[k], d = ITEMS[it.id]; P.cloth = P.cloth || {};
@@ -228,6 +219,5 @@ function invSection(title, sub, frac, list, onlyBag) {
   };
 }
 // подзаголовок окна рюкзака — вес
-{ const rp = renderPanel;
-  renderPanel = function () { rp(); if (panel && panel.kind === 'inv' && $('pnSub')) $('pnSub').textContent = invCapTxt(); };
+{ onPanel(() => { if (panel && panel.kind === 'inv' && $('pnSub')) $('pnSub').textContent = invCapTxt(); });
 }

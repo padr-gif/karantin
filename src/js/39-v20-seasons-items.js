@@ -42,14 +42,9 @@ Object.assign(DESC, {
   add('fridge', 'pelmeni', 'pelmeni', 'salo'); add('hanger', 'umbrella', 'umbrella'); add('wardrobe', 'umbrella', 'hotpack'); add('nightstand', 'handheld', 'thermos');
   add('desk', 'handheld', 'thermos'); add('dresser', 'handheld'); add('locker', 'thermos', 'hotpack'); add('armybox', 'hotpack', 'salo', 'hatchet'); }
 for (const k in LOOTK) { if (LOOTK[k].counter) LOOTK[k].counter.push('condmilk', 'sprats', 'vodka'); if (LOOTK[k].fridge) LOOTK[k].fridge.push('pelmeni'); }
+defUse(it => it.id === 'hotpack', (it, k) => { P.inv.splice(k, 1); P.cold = Math.max(0, (P.cold || 0) - 60); toast('Грелка нагрелась. Тепло разливается по телу'); SFX.rustle(); renderInv(); updateHud(); });
+defUse(it => it.id === 'umbrella', () => toast(DESC.umbrella));
 COOK.push({id:'porridge', raw:'oatmeal', tool:'pot', toolName:'кастрюля', water:true}, {id:'pelmeniC', raw:'pelmeni', tool:'pot', toolName:'кастрюля', water:true});
-const useItemH = useItem;
-useItem = function (id, idx) {
-  const k = idx != null ? idx : P.inv.findIndex(i => i.id === id), it = P.inv[k];
-  if (it && it.id === 'hotpack') { P.inv.splice(k, 1); P.cold = Math.max(0, (P.cold || 0) - 60); toast('Грелка нагрелась. Тепло разливается по телу'); SFX.rustle(); renderInv(); updateHud(); return; }
-  if (it && (it.id === 'umbrella')) { toast(DESC.umbrella); return; }
-  useItemH(id, idx);
-};
 
 // ---- starting season ----
 const SEASONS = {autumn:{name:'Осень', off:0, info:'15 сентября. Тепло, но впереди долгая зима.'}, winter:{name:'Зима', off:91, info:'15 декабря. Мороз, снег, короткие дни. Жёсткий старт.'}, spring:{name:'Весна', off:181, info:'15 марта. Снег тает, скоро можно сажать огород.'}, summer:{name:'Лето', off:273, info:'15 июня. Жара, ягоды и долгие светлые вечера.'}};

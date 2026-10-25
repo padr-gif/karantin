@@ -92,15 +92,14 @@ buildInvDoll = function (body) {
   if (!Dd.children.length) Dd.appendChild(pickHint(P.inv.length ? 'Тапни вещь или ячейку одежды, чтобы увидеть описание и действия' : 'Рюкзак пуст. Обыщи дома и машины поблизости'));
   drawDoll();
 };
-// wrap renderPanel once more: size the grids to the window after every render
-const renderPanel1 = renderPanel;
-renderPanel = function () {
-  const body = $('pnBody'); body.classList.remove('fit'); renderPanel1(); if (!panel) return;
+// после каждой перерисовки окна: карточки готовки, раскладка рецептов и «Состояния», размер сеток под окно
+onPanel(() => {
+  const body = $('pnBody'); if (!panel) return;
   if (panel.kind === 'cook' && panel.src) { const first = body.querySelector(':scope > .recipe'); const rc = ragoutCard(panel.src); if (first) first.after(rc); else body.appendChild(rc); let last = rc; for (const c of extraCookCards(panel.src)) { last.after(c); last = c; } }
   if ((panel.kind === 'inv' && panel.tab === 'craft') || panel.kind === 'cook') recipeSplit(body);
   if (panel.kind === 'inv' && panel.tab === 'self') { const kids = [...body.children], a = mk('div'), b = mk('div'), c = mk('div'); let cur = a; for (const k of kids) { if (k.classList.contains('sect')) cur = /Навык/.test(k.textContent) ? b : c; cur.appendChild(k); } body.textContent = ''; const w = mk('div', 'self3'); w.append(a, b, c); body.appendChild(w); body.classList.add('fit'); }
   fitPanel();
-};
+}, () => $('pnBody').classList.remove('fit'));
 // drop the old floating transfer row (progress is in the cell now)
 xferRow = function () { return mk('span'); };
 

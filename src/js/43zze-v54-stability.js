@@ -220,14 +220,7 @@ function showBench() {
   eventBanner('Тест скорости', BENCH.rows.map(r => r.n + ': ' + r.fps + ' FPS').join(' · ') + '. ' + verdict, '', 'i-star');
   if (worst < 28 && settings.gfx > 1.5) { settings.gfx = 1.5; saveSettings(); applySettings(); toast('Включил графику «Экономия»'); }
 }
-{ const list = document.querySelector('#settings .setlist');
-  if (list && !$('sBench')) {
-    const row = mk('div', 'set'), info = mk('div');
-    info.appendChild(mk('b', '', 'Тест скорости')); info.appendChild(mk('small', '', 'Около полутора минут. Результат попадёт в отчёт об ошибках'));
-    const b = mk('button', 'mbtn', 'Проверить'); b.type = 'button'; b.id = 'sBench';
-    b.addEventListener('click', () => { if (backTo !== 'menu') { toast('Запусти тест из главного меню'); return; } SFX.ui(); show(null); runBench(); });
-    row.appendChild(info); row.appendChild(b); list.appendChild(row);
-  }
+{ $('sBench').addEventListener('click', () => { if (backTo !== 'menu') { toast('Запусти тест из главного меню'); return; } SFX.ui(); show(null); runBench(); });
   const st = document.createElement('style');
   st.textContent = 'body.benchnoui #hud,body.benchnoui #ctrl,body.benchnoui #dock,body.benchnoui #mini,body.benchnoui #toasts,body.benchnoui #events{visibility:hidden!important}#benchov{position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:80;background:rgba(12,16,18,.9);color:#efe7d2;font:600 14px "PT Sans",sans-serif;padding:8px 14px;border-radius:8px;border:1px solid #2c343a;pointer-events:none}';
   document.head.appendChild(st);

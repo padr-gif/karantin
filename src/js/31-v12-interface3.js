@@ -68,10 +68,8 @@ function cycleWeapon() {
 }
 function setAtk(car) { document.body.classList.toggle('incar', !!car); if ($('carPad')) $('carPad').hidden = !car; for (const k in CARB) CARB[k] = 0; const b = $('bAtk'); b.innerHTML = '<svg class="ic"><use href="#' + (car ? 'i-horn' : 'i-strike') + '"/></svg>'; b.setAttribute('aria-label', car ? 'Гудок' : 'Удар'); }
 const HOTIC = {food:'i-food', drink:'i-drop', med:'i-cross', throw:'i-bottle', light:'i-light'};
-// two-pane wrappers around renderPanel
-const renderPanel0 = renderPanel;
-renderPanel = function () {
-  renderPanel0();
+// после перерисовки окна: иконки вкладок и кукла в рюкзаке
+onPanel(() => {
   if (!panel) return;
   const body = $('pnBody'), tabs = $('pnTabs');
   // tab icons
@@ -81,4 +79,4 @@ renderPanel = function () {
     buildInvDoll(body);
 
   }
-};
+});

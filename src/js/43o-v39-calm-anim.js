@@ -5,19 +5,6 @@ const heroMale = () => ((P && P.look) || look).g === 'm' && ART.meta && ART.meta
 const AN39 = AN;
 AN = function (k, a) { if (k === 'p' && heroMale() && ART.meta.anims.pm[a]) return ART.meta.anims.pm[a]; return AN39(k, a); };
 const pmLoop = (an, speed) => { const n = AN('p', an), d = (ART.meta.anims.pmdur && ART.meta.anims.pmdur[an]) || 2; return [an, Math.floor(animT * (speed || 1) / d * n) % n]; };
-const playerAnim39 = playerAnim;
-playerAnim = function (pAtk) {
-  const r = playerAnim39(pAtk);
-  if (!heroMale() || mode === 'dead') return r;
-  const A = P.act, act = A && A.kind;
-  if (A && act === 'job' && A.an === 'jacks' && AN('p', 'jacks') > 1) return pmLoop('jacks');
-  if (A && act === 'job' && A.shower) return P._inShower && AN('p', 'shower') > 1 ? pmLoop('shower') : pmLoop('idle', .8);
-  // обыск низкой мебели и вещей на полу — присев
-  if (r[0] === 'search' && A && A.f && AN('p', 'searchlow') > 1 && (LOW_FURN.has(A.f.type) || A.f.type === 'pile' || !A.f.type)) return pmLoop('searchlow');
-  if (A && act === 'use' && A.an === 'read' && AN('p', 'read') > 1) return pmLoop('read');
-  if (r[0] === 'idle' || r[0] === 'search' || r[0] === 'work') return pmLoop(r[0]);
-  return r;
-};
 
 // ---- зарядка: прыжки «ноги врозь — руки в стороны», дольше и полезнее ----
 workout = function () {

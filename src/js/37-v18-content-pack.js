@@ -66,26 +66,11 @@ RECIPES.push(
 );
 COOK.push({id:'soupC', raw:'noodles', tool:'pot', toolName:'кастрюля', water:true});
 // candles light up and burn down; they need fire to light
-const mkItem0 = mkItem; mkItem = function (id) { const it = mkItem0(id); if (id === 'candle') { it.ch = 100; it.on = false; } return it; };
-const useItem0 = useItem;
-useItem = function (id, idx) {
-  const k = idx != null ? idx : P.inv.findIndex(i => i.id === id), it = P.inv[k]; if (!it) return;
-  const d = ITEMS[it.id];
-  if (it.id === 'candle') {
-    if (!it.on && !fireTool()) { toast('Нечем зажечь: нужны спички или зажигалка'); return; }
-    if (!it.on) useFireTool(); it.on = !it.on; toast(it.on ? 'Свеча горит' : 'Свеча потушена'); SFX.fireUp(); renderInv(); updateHud(); return;
-  }
-  if (d.kind === 'bag' && d.cap) {
-    if (P.cap >= d.cap) { toast('Рюкзак не меньше уже надет'); return; }
-    P.cap = d.cap; P.inv.splice(k, 1); toast('Надел ' + d.name.toLowerCase() + ': ' + d.cap + ' мест'); SFX.equip(); renderInv(); updateHud(); return;
-  }
-  if (it.id === 'cansalarm') { toast('Подойди к двери и выбери «Повесить банки»'); return; }
-  const calm = d.calm, warm = d.warm;
-  if (P.flu > 0 && ['painkill', 'vitamins', 'pills', 'thermos', 'antibio'].includes(it.id)) { P.flu = Math.max(0, P.flu - 480); toast(P.flu > 0 ? 'Полегчало, насморк слабее' : 'Простуда отступила'); }
-  useItem0(id, idx);
-  if (calm) P.stress = Math.max(0, (P.stress || 0) - calm);
-  if (warm) P.cold = Math.max(0, (P.cold || 0) - 30);
-};
+defUse(it => it.id === 'candle', it => {
+  if (!it.on && !fireTool()) { toast('Нечем зажечь: нужны спички или зажигалка'); return; }
+  if (!it.on) useFireTool(); it.on = !it.on; toast(it.on ? 'Свеча горит' : 'Свеча потушена'); SFX.fireUp(); renderInv(); updateHud();
+});
+defUse(it => it.id === 'cansalarm', () => toast('Подойди к двери и выбери «Повесить банки»'));
 const clothProt = () => { let p = 0; for (const s of ['torso', 'head']) { const c = P.cloth && P.cloth[s]; if (c && ITEMS[c.id].prot) p += ITEMS[c.id].prot; } return Math.min(.6, p); };
 
 // ---- door alarm made of bottles ----

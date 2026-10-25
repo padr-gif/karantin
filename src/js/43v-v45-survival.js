@@ -95,14 +95,12 @@ function buildDiary(body) {
   }
   body.appendChild(pg);
 }
-{ const rp = renderPanel;
-  renderPanel = function () {
-    rp();
+{ onPanel(() => {
     if (!panel || panel.kind !== 'inv') return;
     const tabs = $('pnTabs');
     if (tabs && !tabs.querySelector('.ttab')) { const b = btn('Дневник', () => { panel.tab = 'tasks'; renderPanel(); }, panel.tab === 'tasks' ? 'on' : ''); b.classList.add('ttab'); tabs.appendChild(b); }
     if (panel.tab === 'tasks') { const body = $('pnBody'); body.classList.remove('fit'); buildDiary(body); for (const b of tabs.querySelectorAll('button')) b.classList.toggle('on', b.classList.contains('ttab')); }
-  };
+  });
 }
 { let tc = 0;
   onUpdate(dt => { if (mode !== 'play' || !P) return; tc += dt; if (tc > .5) { tc = 0; diaryTick(); diaryChip(); }

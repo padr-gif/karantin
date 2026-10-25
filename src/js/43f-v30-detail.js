@@ -39,17 +39,7 @@ hdReset = function () { hdReset30(); HDFOG.clear(); };
 // ---- настройка: «Пиксели» или «Детальная»; детальная теперь по умолчанию ----
 SETTINGS_DEF.smooth = true;
 if (settings.gfxv !== 30) { settings.smooth = true; settings.gfxv = 30; try { localStorage.setItem('karantin-settings', JSON.stringify(settings)); } catch (e) {} }
-{ const n = $('sSmooth') && $('sSmooth').closest('.set');
-  if (n) { n.querySelector('small').textContent = 'Детальная — объёмная мебель и текстуры. Пиксели — как раньше, легче для слабых телефонов'; } }
 SETTINGS_DEF.fps = false;
-{ const row = $('sSmooth') && $('sSmooth').closest('.set'); if (row) { const n = row.cloneNode(true);
-  n.querySelector('b').textContent = 'Счётчик FPS'; n.querySelector('small').textContent = 'Кадры в секунду и память — для проверки скорости'; n.querySelector('.seg').id = 'sFps'; row.after(n); } }
-const openSettings29 = openSettings;
-openSettings = function (from) {
-  openSettings29(from);
-  seg($('sSmooth'), [[false, 'Пиксели'], [true, 'Детальная']], () => !!settings.smooth, v => { settings.smooth = v; saveSettings(); });
-  seg($('sFps'), [[false, 'Нет'], [true, 'Да']], () => !!settings.fps, v => { settings.fps = v; saveSettings(); });
-};
 
 // ---- счётчик FPS и памяти: включается в настройках или адресом ?fps ----
 const FPS = {el:null, frames:0, t0:0, worst:0, last:0, rt:0, ut:0, txt:''};

@@ -373,10 +373,37 @@ function wake(msg) {
   if (msg) toast(msg);
 }
 
+// применить вещь: особые вещи (defUse) — своим способом, остальные — по виду (еда, оружие, одежда…)
 function useItem(id, idx) {
   const k = idx != null ? idx : P.inv.findIndex(i => i.id === id);
   const it = P.inv[k]; if (!it) return;
-  const d = ITEMS[it.id];
+  const d = ITEMS[it.id], hp0 = P.hp;
+  let sp = null; for (let i = USE.length - 1; i >= 0 && !sp; i--) if (USE[i].test(it, d)) sp = USE[i];
+  if (sp) sp.fn(it, k, d); else useItemPlain(it, k, d);
+  const q = uniqOf(it); if (q && q.u === 'medkit' && P.hp > hp0) P.hp = Math.min(100, P.hp + 20);   // аптечка скорой лечит сильнее
+}
+// обычное применение и его последствия: настроение, боль, простуда, желудок
+function useItemPlain(it, k, d) {
+  const pois0 = P.pois || 0, hp0 = P.hp, bad = isRotten(it), raw = it.id === 'mushroom';
+  if (P.flu > 0 && ['painkill', 'vitamins', 'pills', 'thermos', 'antibio'].includes(it.id)) { P.flu = Math.max(0, P.flu - 480); toast(P.flu > 0 ? 'Полегчало, насморк слабее' : 'Простуда отступила'); }
+  useItemBase(it, k, d);
+  if (d.calm) P.stress = Math.max(0, (P.stress || 0) - d.calm);
+  if (d.warm) P.cold = Math.max(0, (P.cold || 0) - 30);
+  if (raw && skillLv('farm') < 2 && rng() < .3) { P.pois = Math.max(P.pois || 0, 140); P.hp -= 6; lastCause = 'Отравление грибами'; toast('Грибы оказались ядовитыми. Мутит'); }   // сырые грибы — риск
+  if (it.id === 'pills' || it.id === 'painkill') { P.painkT = Math.max(P.painkT || 0, it.id === 'painkill' ? 420 : 300); toast('Боль притупилась'); }
+  if (it.id === 'vodka' || it.id === 'whiskey') P.painkT = Math.max(P.painkT || 0, 90);
+  if (it.id === 'antibio') for (const w of wounds()) w.sep = Math.max(0, w.sep - 60);
+  if (d.kind === 'smoke') { P.smokeT = 0; P._smokeMsg = 0; }
+  if (d.kind === 'fun') P.unh = Math.max(0, (P.unh || 0) - 15);
+  if (d.warm && (d.kind === 'food' || d.kind === 'drink')) P.unh = Math.max(0, (P.unh || 0) - 5);
+  if (d.sweet) P.unh = Math.max(0, (P.unh || 0) - 5);
+  if (d.calm && (d.kind === 'drink')) P.unh = Math.max(0, (P.unh || 0) - 6);
+  if (bad) P.unh = Math.min(100, (P.unh || 0) + 8);
+  if ((P.pois || 0) > pois0) {
+    if (hasTr('irongut') && rng() < .5) { P.pois = pois0; P.hp = Math.max(P.hp, hp0); toast('Железный желудок справился'); }
+  } else if (hasTr('weakgut') && (bad || d.rawRisk || d.dirty) && rng() < .3) { P.pois = Math.max(P.pois || 0, 100); P.hp -= 4; lastCause = 'Отравление'; toast('Слабый желудок: тебя мутит'); }
+}
+function useItemBase(it, k, d) {
   if (d.kind === 'weapon') {
     P.inv.splice(k, 1);
     if (P.weapon) P.inv.push(P.weapon);
@@ -384,9 +411,6 @@ function useItem(id, idx) {
   } else if (d.kind === 'light') {
     if (it.ch <= 0) { toast('Батарейка села'); return; }
     it.on = !it.on; toast(it.on ? 'Фонарик включён' : 'Фонарик выключен');
-  } else if (d.kind === 'bag') {
-    if (P.cap >= 28) { toast('Большой рюкзак уже надет'); return; }
-    P.cap = 28; P.inv.splice(k, 1); toast('Надел туристический рюкзак: +10 мест');
   } else if (d.kind === 'battery') {
     const fl = P.inv.filter(i => i.id === 'flashlight' || i.id === 'radio').sort((a, b) => (a.ch || 0) - (b.ch || 0))[0];
     if (!fl) { toast('Некуда вставить: нужен фонарик или радио'); return; }

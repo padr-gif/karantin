@@ -18,6 +18,7 @@ for (const k in MAGS) {
   add('desk', 'book_fight2', 'book_cook2'); add('nightstand', 'book_cook2', 'book_farm2'); add('crate', 'book_carp2', 'book_carp3', 'book_farm2');
   add('toolrack', 'book_carp2', 'book_carp3'); add('locker', 'book_fight2', 'book_fight3'); add('counter', 'book_cook3'); }
 // reading: right volume gives a learning boost, wrong volume teaches nothing
+defUse((it, d) => d && d.kind === 'book' && d.skill, (it, k) => readMag(k));   // журнал навыка — читать
 function readMag(k) {
   const it = P.inv[k], d = ITEMS[it.id], lv = skillLv(d.skill), [lo, hi] = MAG_TIER[d.vol || 1];
   P.readMag = P.readMag || {}; P.boost = P.boost || {};
@@ -30,11 +31,5 @@ function readMag(k) {
   toast('Прочитано: ' + d.name + '. До уровня ' + (hi + 1) + ' навык «' + SKILLS[d.skill].name + '» растёт втрое быстрее');
   SFX.rustle(); P.bored = Math.max(0, (P.bored || 0) - 20); renderInv();
 }
-const useItemB = useItem;
-useItem = function (id, idx) {
-  const k = idx != null ? idx : P.inv.findIndex(i => i.id === id), it = P.inv[k];
-  if (it && ITEMS[it.id] && ITEMS[it.id].kind === 'book' && ITEMS[it.id].skill) { readMag(k); return; }
-  useItemB(id, idx);
-};
 const addXp0 = addXp;
 addXp = function (k, n) { const b = P.boost && P.boost[k]; if (b && skillLv(k) <= b.max) n *= b.mult; else if (b) delete P.boost[k]; addXp0(k, n); };
