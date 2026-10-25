@@ -42,6 +42,7 @@ const SFX = (() => {
     o.connect(fl); fl.connect(g); g.connect(out); o.start(t); lfo.start(t); o.stop(t + dur + .1); lfo.stop(t + dur + .1);
   }
   return {
+    mute(on) { if (!ac) return; try { on ? ac.suspend() : ac.resume(); } catch (e) {} },
     init, get ac() { return ac; }, get out() { return out; }, vol, ok,
     ui() { noise(.05, .03, 'highpass', 3000, .7); },
     step(inside, run) { const r = .8 + Math.random() * .4; if (inside) { noise((run ? .16 : .1), .07, 'bandpass', 420 * r, 1.4); tone(.05, .06, 'sine', 110 * r, 70); } else noise((run ? .14 : .08), .09, 'bandpass', 1700 * r, .8, 0, .006, 900); },

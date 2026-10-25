@@ -3,7 +3,7 @@
 // Если основное не читается или не загружается, игра берёт запасное. Сохранение можно выгрузить файлом и загрузить
 // из файла (перенести игру на другой телефон). Ошибки кадра и скрипта пишутся в журнал; в паузе — «Отчёт об ошибках».
 
-const GAME_VER = '0.56';
+const GAME_VER = '0.57';
 const PKEY = s => LKEY(s) + '-prev';
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } };
@@ -154,7 +154,7 @@ async function copyReport() {
 
 // ---- тест скорости: из главного меню, ~25 секунд, четыре сцены. Результат — в отчёт и на экран ----
 let BENCH = null; try { BENCH = JSON.parse(localStorage.getItem('karantin-bench') || 'null'); } catch (e) {}
-function perfStat() { return BENCH ? 'тест скорости: ' + BENCH.rows.map(r => r.n + ' ' + r.fps + ' FPS (худшие ' + r.low + ', код ' + r.js + ' мс)').join('; ') + ', качество ' + BENCH.res + (BENCH.diag && BENCH.diag.length ? '\nдиагностика (улица): ' + BENCH.diag.map(r => r.n + ' ' + r.fps).join(' · ') : '') : 'тест скорости не запускался'; }
+function perfStat() { return BENCH ? 'тест скорости: ' + BENCH.rows.map(r => r.n + ' ' + r.fps + ' FPS (худшие ' + r.low + ', код ' + r.js + ' мс)').join('; ') + ', качество ' + BENCH.res + (BENCH.diag && BENCH.diag.length ? '\nдиагностика (улица): ' + BENCH.diag.map(r => r.n + ' ' + r.fps + (r.j != null ? ' (' + r.u + '+' + (r.j - r.u).toFixed(1) + ' мс)' : '')).join(' · ') : '') : 'тест скорости не запускался'; }
 const BENCH_SCENES = [
   ['Улица днём', () => { const H = houses.find(h => h.kind === 'store') || houses[0]; P.x = H.x + H.w / 2; P.y = H.y + H.h + 2.5; gameMin = 12 * 60; rain = rainTarget = 0; }],
   ['Ночь и дождь', () => { gameMin = 23 * 60; rain = rainTarget = 1; P.inv.push(mkItem('flashlight')); }],
@@ -186,23 +186,29 @@ async function runBench() {
     // диагностика: одна и та же сцена (улица днём), каждый раз выключаем что-то одно — видно, что съедает кадр на этом устройстве
     BENCH_SCENES[0][1](); camX = P.x; camY = P.y; computeVis(); fogDirty = true;
     const keepM = drawMinimap, keepQ = resQ;
+    let upd = 0, keepZ = null, keepV = settings.vol;
+    const uWrap = function (dt) { slowT = 0; const t = performance.now(); try { return keepU(dt); } finally { if (on) { const d = performance.now() - t; js += d; upd += d; } } };
+    const rWrap = function (dt) { const t = performance.now(); try { return keepR(dt); } finally { if (on) js += performance.now() - t; } };
+    update = uWrap;
     const DIAG = [
       ['как есть', () => {}, () => {}],
-      ['без интерфейса', () => document.body.classList.add('benchnoui'), () => document.body.classList.remove('benchnoui')],
-      ['без миникарты', () => { drawMinimap = () => {}; }, () => { drawMinimap = keepM; }],
+      ['стоя', () => keys.clear(), () => keys.add('KeyD')],
+      ['без мертвецов', () => { keepZ = zs; zs = []; }, () => { zs = keepZ; }],
+      ['без звука', () => { settings.vol = 0; SFX.mute && SFX.mute(true); }, () => { settings.vol = keepV; SFX.mute && SFX.mute(false); }],
+      ['без логики', () => { update = function () { slowT = 0; }; }, () => { update = uWrap; }],
+      ['без интерфейса', () => { document.body.classList.add('benchnoui'); drawMinimap = () => {}; }, () => { document.body.classList.remove('benchnoui'); drawMinimap = keepM; }],
       ['пол-разрешения', () => { resQ = keepQ * .5; resize(); clearCaches(); }, () => { resQ = keepQ; resize(); clearCaches(); }],
-      ['без логики', () => { update = function () { slowT = 0; }; }, () => { update = function (dt) { slowT = 0; const t = performance.now(); try { return keepU(dt); } finally { if (on) js += performance.now() - t; } }; }],
-      ['пустой кадр', () => { render = function () { mainCtx.setTransform(1, 0, 0, 1, 0, 0); mainCtx.fillStyle = '#0c0f12'; mainCtx.fillRect(0, 0, cv.width, cv.height); }; }, () => { render = function (dt) { const t = performance.now(); try { return keepR(dt); } finally { if (on) js += performance.now() - t; } }; }],
+      ['пустой кадр', () => { render = function () { mainCtx.setTransform(1, 0, 0, 1, 0, 0); mainCtx.fillStyle = '#0c0f12'; mainCtx.fillRect(0, 0, cv.width, cv.height); }; }, () => { render = rWrap; }],
     ];
     const diag = [];
     for (let k = 0; k < DIAG.length; k++) {
       const [n, on1, off1] = DIAG[k];
       ov.textContent = 'Диагностика · ' + (k + 1) + ' из ' + DIAG.length + ': ' + n + '…';
       on1(); await wait(900);
-      js = 0; frames = []; lastT = 0; on = true; requestAnimationFrame(tick);
+      js = 0; upd = 0; frames = []; lastT = 0; on = true; requestAnimationFrame(tick);
       await wait(3000); on = false; off1();
-      const f = frames, sum = f.reduce((a, b) => a + b, 0) || 1;
-      diag.push({n, fps:Math.round(1000 * (f.length || 1) / sum)});
+      const f = frames, sum = f.reduce((a, b) => a + b, 0) || 1, nf = f.length || 1;
+      diag.push({n, fps:Math.round(1000 * nf / sum), u:+(upd / nf).toFixed(1), j:+(js / nf).toFixed(1)});
     }
     rows.diag = diag;
   } catch (e) { logErr(e, 'тест скорости'); }
@@ -224,7 +230,7 @@ function showBench() {
 { const list = document.querySelector('#settings .setlist');
   if (list && !$('sBench')) {
     const row = mk('div', 'set'), info = mk('div');
-    info.appendChild(mk('b', '', 'Тест скорости')); info.appendChild(mk('small', '', 'Около 50 секунд. Результат попадёт в отчёт об ошибках'));
+    info.appendChild(mk('b', '', 'Тест скорости')); info.appendChild(mk('small', '', 'Около минуты. Результат попадёт в отчёт об ошибках'));
     const b = mk('button', 'mbtn', 'Проверить'); b.type = 'button'; b.id = 'sBench';
     b.addEventListener('click', () => { if (backTo !== 'menu') { toast('Запусти тест из главного меню'); return; } SFX.ui(); show(null); runBench(); });
     row.appendChild(info); row.appendChild(b); list.appendChild(row);
