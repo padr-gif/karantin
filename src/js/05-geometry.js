@@ -63,7 +63,7 @@ function openingCost(i) {
 }
 // активная зона (v65): поле путей и полный ум мертвецов — только в квадрате ZONE_R клеток вокруг героя,
 // чтобы на большой карте нагрузка не росла. Дальние мертвецы «спят» и изредка дёшево сдвигаются (updateCore)
-const ZONE_R = 56;
+const ZONE_R = 36;
 let flowBox = null;                                                           // [x0, y0, x1, y1] прошлого поля — его и чистим
 function buildFlow() {
   if (flowBox && flow.length === NT) { const [a0, b0, a1, b1] = flowBox; for (let y = b0; y <= b1; y++) flow.fill(-1, y * MW + a0, y * MW + a1 + 1); }

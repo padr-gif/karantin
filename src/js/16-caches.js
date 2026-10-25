@@ -15,7 +15,10 @@ function atlasReset() {
   ATL.n = 0;
   for (const [k, s] of SPR) if (s.slot) SPR.delete(k);                             // их места больше не принадлежат им
 }
+// v66: атлас выключен по умолчанию — на телефонах перерисовка куска листа 2048×2048 (стены меняются на каждом шаге)
+// стоила дороже, чем выигрыш. Включается settings.atlas (в тесте скорости — строка «с атласом»)
 function atlasAlloc(w, h) {
+  if (!settings.atlas) return null;
   if (w + ATL_PAD > ATL_W || h + ATL_PAD > ATL_W) return null;
   for (let tries = 0; tries < 2; tries++) {
     for (let k = Math.max(0, ATL.n - 1); k < ATL_PAGES; k++) {
@@ -40,7 +43,11 @@ function sprite(id, key, wx, wy, bx0, by0, bx1, by1, fn, alpha, offX) {
   if (!s || s.q !== HDQ || (s.key !== key && bakes < BAKE_BUDGET)) {
     const cw = w * HDQ, chh = h * HDQ, nested = baking;                         // заготовка внутри заготовки — в свой холст
     let slot = s && s.slot && s.slot.w === cw && s.slot.h === chh ? s.slot : null;
-    if (!slot && !nested) { slot = atlasAlloc(cw, chh); if (slot && !SPR.has(id)) s = null; }   // сброс атласа мог выкинуть s
+    // в атлас — только то, что не перерисовывается: перерисовка куска заставляет заново грузить в видеопамять весь лист
+    // 2048×2048. Стены (ключ зависит от видимости) и всё, что уже перерисовывалось, живут в своём маленьком холсте
+    const hot = (s && s.key !== key) || (typeof id === 'string' && id.charCodeAt(0) === 119);   // 'w…' — стены, двери, окна
+    if (hot && slot) slot = null;
+    if (!slot && !nested && !hot) { slot = atlasAlloc(cw, chh); if (slot && !SPR.has(id)) s = null; }   // сброс атласа мог выкинуть s
     let c, g, sx = 0, sy = 0;
     if (slot) { c = slot.p.c; g = slot.p.g; sx = slot.x; sy = slot.y; }
     else { c = s && !s.slot && s.c.width === cw && s.c.height === chh ? s.c : mkCanvas(cw, chh); g = hdCtx(c.getContext('2d')); }

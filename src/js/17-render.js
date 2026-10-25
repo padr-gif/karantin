@@ -39,7 +39,9 @@ function render(dt) {
   }
   if (fogDirty) { updateFog(); fogDirty = false; }
   drawSnowCover(x0, y0, x1, y1);
-  groundT(0); ctx.imageSmoothingEnabled = true; ctx.drawImage(fogC, 0, 0, MW, MH); ctx.imageSmoothingEnabled = false; resetT();
+  { const fx0 = clamp(Math.floor(x0) - 2, 0, MW - 1), fy0 = clamp(Math.floor(y0) - 2, 0, MH - 1), fx1 = clamp(Math.ceil(x1) + 2, fx0 + 1, MW), fy1 = clamp(Math.ceil(y1) + 2, fy0 + 1, MH);
+    // туман — только видимый кусок: растягивать весь холст карты каждый кадр очень дорого (v66: на 256×256 кадр падал в разы)
+    groundT(0); ctx.imageSmoothingEnabled = true; ctx.drawImage(fogC, fx0, fy0, fx1 - fx0, fy1 - fy0, fx0, fy0, fx1 - fx0, fy1 - fy0); ctx.imageSmoothingEnabled = false; resetT(); }
 
   let inside = 0;
   if (mode !== 'menu') for (let k = 0; k < houses.length; k++) { const Hs = houses[k]; if (P.x > Hs.ix0 && P.x < Hs.ix1 && P.y > Hs.iy0 && P.y < Hs.iy1) inside = k + 1; }

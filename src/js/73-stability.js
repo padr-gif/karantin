@@ -3,7 +3,7 @@
 // Если основное не читается или не загружается, игра берёт запасное. Сохранение можно выгрузить файлом и загрузить
 // из файла (перенести игру на другой телефон). Ошибки кадра и скрипта пишутся в журнал; в паузе — «Отчёт об ошибках».
 
-const GAME_VER = '0.66';
+const GAME_VER = '0.67';
 const PKEY = s => LKEY(s) + '-prev';
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } };
@@ -192,6 +192,7 @@ async function runBench() {
       ['без стен и вещей', () => { RD.objects = false; }, () => { RD.objects = true; }],
       ['без тьмы', () => { RD.light = false; }, () => { RD.light = true; }],
       ['с ImageBitmap', () => { keepB = bmpOff; bmpOff = false; }, () => { bmpOff = keepB; }],
+      ['с атласом', () => { settings.atlas = !settings.atlas; clearCaches(); }, () => { settings.atlas = !settings.atlas; clearCaches(); }],
       ['без интерфейса', () => { document.body.classList.add('benchnoui'); uiOff = true; }, () => { document.body.classList.remove('benchnoui'); uiOff = false; }],
       ['пол-разрешения', () => { resQ = keepQ * .5; resize(); clearCaches(); }, () => { resQ = keepQ; resize(); clearCaches(); }],
       ['пустой кадр', () => { renderOff = true; }, () => { renderOff = false; }],
