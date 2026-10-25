@@ -164,17 +164,17 @@ takeOffCloth = function (slot) {
 }
 
 // ---- старт: базовый школьный рюкзак; старые сохранения — по прежнему числу мест ----
-{ const sn = startNew; startNew = function () { sn(); if (P) { P.bag = mkBag('bag_school'); invPlace(); } }; }
-{ const ser = serialize; serialize = function () { const d = ser(); if (d && d.p) d.p.bag = P.bag || null; return d; }; }
-{ const as = applySave;
-  applySave = function (d) {
-    as(d);
+{ onStartNew(() => { if (P) { P.bag = mkBag('bag_school'); invPlace(); }
+}); }
+{ onSave(d => { if (d && d.p) d.p.bag = P.bag || null;
+}); }
+{ onLoad((d) => {
     if (!P) return;
     if (d && d.p && 'bag' in d.p) P.bag = d.p.bag;
     else { const c = (d && d.p && d.p.cap) || 18, b = c >= 34 ? 'milbag' : c >= 28 ? 'bag' : 'bag_school'; P.bag = mkBag(b); }
     for (const it of P.inv) if (it.bp == null) it.bp = null;
     invPlace();
-  };
+});
 }
 
 // ---- рюкзак в интерфейсе: карманы и рюкзак — два отдельных списка ----

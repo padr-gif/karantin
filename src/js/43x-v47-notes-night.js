@@ -42,7 +42,8 @@ function placeStoryNotes() {
     const it = mkItem('note'); it.story = n.id; it.text = n.text; c.items.push(it);
   }
 }
-{ const ng = newGame; newGame = function (o) { const r = ng(o); if (!(o && o.save)) placeStoryNotes(); return r; }; }
+{ onNewWorld((o) => { if (!(o && o.save)) placeStoryNotes();
+}); }
 // прочитать записку из сюжета
 function readStory(it) {
   const n = storyNote(it.story); if (!n) return;
@@ -96,9 +97,12 @@ function storyPage() {
   return pg;
 }
 // сохранение: найденные записки — у города (переживают «ещё одну жизнь»)
-{ const ser = serialize; serialize = function () { const d = ser(); d.x47 = {story:world.story || [], gifts:Object.keys(world).filter(k => k.startsWith('gift_'))}; return d; }; }
-{ const as = applySave; applySave = function (d) { as(d); const x = d && d.x47; world.story = (x && x.story) || []; for (const k of (x && x.gifts) || []) world[k] = true; }; }
-{ const sn = startNew; startNew = function () { world.story = []; for (const k of Object.keys(world)) if (k.startsWith('gift_')) delete world[k]; sn(); }; }
+{ onSave(d => { d.x47 = {story:world.story || [], gifts:Object.keys(world).filter(k => k.startsWith('gift_'))};
+}); }
+{ onLoad((d) => { const x = d && d.x47; world.story = (x && x.story) || []; for (const k of (x && x.gifts) || []) world[k] = true;
+}); }
+{ onStartNew(() => {
+}, () => { world.story = []; for (const k of Object.keys(world)) if (k.startsWith('gift_')) delete world[k]; }); }
 
 // ---- ночные звуки: ночью, не чаще раза в 1–2 игровых часа. Безобидные — всегда ложные, скрежет — всегда правда,
 // стук — 50 на 50 (пойди проверь). Ложные никогда не будят; настоящий рядом — будит ----

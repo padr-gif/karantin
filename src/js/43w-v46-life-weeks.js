@@ -65,17 +65,10 @@ function newLife() {
   }
 }
 // сохранение: прежние герои-мертвецы и их вещи
-{ const ser = serialize;
-  serialize = function () {
-    const d = ser();
+{ onSave(d => {
     d.x46 = {ghosts:ghosts.filter(g => !g.dead).map(g => { const z = zs.find(z => z.ghost === g); return {pi:g.pi, pal:g.pal, items:g.items, n:g.n, at:z ? [r2(z.x), r2(z.y)] : null}; }), lives:world.lives || 1, week:world.week || null, ws:world.weekStart != null ? world.weekStart : null};
-    return d;
-  };
-  const as = applySave;
-  applySave = function (d) {
-    const x = d && d.x46;
-    if (x) for (const g of x.ghosts || []) setGhostPal(g.pi, g.pal);           // палитры — до того, как появятся мертвецы
-    as(d);
+});
+  onLoad((d, {x}) => {
     ghosts = [];
     if (x) {
       world.lives = x.lives || 1; world.week = x.week || null; world.weekStart = x.ws != null ? x.ws : null;
@@ -85,8 +78,12 @@ function newLife() {
         if (z) z.ghost = G;
       }
     }
-  };
-  const sn = startNew; startNew = function () { sn(); ghosts = []; world.lives = 1; world.week = null; world.weekStart = null; };
+}, d => { const x = d && d.x46;
+    if (x) for (const g of x.ghosts || []) setGhostPal(g.pi, g.pal);           // палитры — до того, как появятся мертвецы
+    return {x};
+  });
+  onStartNew(() => { ghosts = []; world.lives = 1; world.week = null; world.weekStart = null;
+});
 }
 
 // ---- каждая неделя меняет город: одно событие оставляет след навсегда, одна «погода недели» действует только эту неделю ----

@@ -57,7 +57,8 @@ async function deleteSave(s) {
 const r2 = v => Math.round(v * 100) / 100;
 function packBits(arr) { const b = new Uint8Array(Math.ceil(arr.length / 8)); for (let i = 0; i < arr.length; i++) if (arr[i]) b[i >> 3] |= 1 << (i & 7); let s = ''; for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]); return btoa(s); }
 function unpackBits(str, arr) { const s = atob(str); arr.fill(0); for (let i = 0; i < arr.length; i++) if (s.charCodeAt(i >> 3) & (1 << (i & 7))) arr[i] = 1; }
-function serialize() {
+function serialize() { return runHooked('save', serializeCore); }
+function serializeCore() {
   const obsL = [];
   for (let i = 0; i < NT; i++) { const o = obs[i]; if (!o) continue; obsL.push(o.t === 'door' ? [i, 0, o.open ? 1 : 0, r2(o.hp), o.dead ? 1 : 0, r2(o.bhp), o.locked ? 1 : 0, o.alarm ? 1 : 0] : [i, 1, o.broken ? 1 : 0, r2(o.ghp), r2(o.bhp), o.open ? 1 : 0, o.cc ? 1 : 0, o.cur || 0, o.cleared ? 1 : 0, o.stiff == null ? -1 : o.stiff]); }
   return {v:3, seed:world.seed, diff:world.diff, look:P.look,
@@ -77,7 +78,8 @@ function serialize() {
     moved:furns.map((f, k) => f.moved ? [k, f.x, f.y, r2(f.cx), r2(f.cy), f.r.map(r2)] : null).filter(Boolean),
     seen:packBits(seen)};
 }
-function applySave(d) {
+function applySave(d) { return runHooked('load', applySaveCore, d); }
+function applySaveCore(d) {
   if (d.v !== 3) throw new Error('old');
   newGame({seed:d.seed, diff:d.diff, look:d.look, save:true});
   gameMin = d.gm; startMin = d.sm; powerOffAt = d.poff; waterOffAt = d.woff; powerMsg = d.pm; waterMsg = d.wm;

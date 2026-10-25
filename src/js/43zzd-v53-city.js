@@ -310,10 +310,13 @@ const VEG_LOOT = [['potato', 'potato', 'carrot'], ['carrot', 'cabbage', 'potato'
 }
 
 // ---- включение: новые игры строят города новым генератором ----
-{ const sn = startNew; startNew = function () { world.gen = 2; sn(); }; }
+{ onStartNew(() => {
+}, () => { world.gen = 2; }); }
 DIST_FIELDS.push('x53v');
-{ const ser = serialize; serialize = function () { const d = ser(); d.x53 = {gen:world.gen || 1}; d.x53v = {dug:props.map((p, k) => p.type === 'veg' && p.dug ? k : -1).filter(k => k >= 0)}; return d; }; }
-{ const as = applySave; applySave = function (d) { world.gen = (d && d.x53 && d.x53.gen) || 1; as(d); for (const k of (d && d.x53v && d.x53v.dug) || []) if (props[k] && props[k].type === 'veg') props[k].dug = true; }; }
+{ onSave(d => { d.x53 = {gen:world.gen || 1}; d.x53v = {dug:props.map((p, k) => p.type === 'veg' && p.dug ? k : -1).filter(k => k >= 0)};
+}); }
+{ onLoad((d) => { for (const k of (d && d.x53v && d.x53v.dug) || []) if (props[k] && props[k].type === 'veg') props[k].dug = true;
+}, d => { world.gen = (d && d.x53 && d.x53.gen) || 1; }); }
 { const gen = generate;
   generate = function () {
     ROADSX = ROADSY = null; curAct = null;                                    // прежнее действие ссылается на старую карту

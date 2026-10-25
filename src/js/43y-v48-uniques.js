@@ -32,7 +32,8 @@ function placeUniques() {
     const c = pick(L); used.add(c); fill(c); c.items.push(mkUniq(q));
   }
 }
-{ const ng = newGame; newGame = function (o) { const r = ng(o); if (!(o && o.save)) placeUniques(); return r; }; }
+{ onNewWorld((o) => { if (!(o && o.save)) placeUniques();
+}); }
 
 // ---- как выглядит: своё имя, золотая рамка, своя история в карточке ----
 { const ce = cell;
@@ -114,6 +115,9 @@ function buildUniq(body) {
   };
 }
 // сохранение: коллекция — у города
-{ const ser = serialize; serialize = function () { const d = ser(); d.x48 = {uniq:world.uniq || []}; return d; }; }
-{ const as = applySave; applySave = function (d) { as(d); world.uniq = (d && d.x48 && d.x48.uniq) || []; }; }
-{ const sn = startNew; startNew = function () { world.uniq = []; sn(); }; }
+{ onSave(d => { d.x48 = {uniq:world.uniq || []};
+}); }
+{ onLoad((d) => { world.uniq = (d && d.x48 && d.x48.uniq) || [];
+}); }
+{ onStartNew(() => {
+}, () => { world.uniq = []; }); }

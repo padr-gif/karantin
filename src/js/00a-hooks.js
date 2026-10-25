@@ -4,14 +4,14 @@
 //   onUpdate(post, pre)  — каждый кадр логики: pre(dt) до основного шага, post(dt, x) после (x — то, что вернул pre)
 //   onSave(fn)           — fn(d): дописать своё в объект сохранения
 //   onLoad(post, pre)    — загрузка сохранения: pre(d) до восстановления мира, post(d) после
-//   onStartNew(post, pre)— новая игра (экран «Новый выживший»)
-//   onNewWorld(fn)       — fn(o) после постройки мира в newGame (o.save — мир строится под загрузку)
+//   onStartNew(post, pre)— новая игра (экран «Новый выживший»); onLoad/onStartNew/onNewWorld — тоже pre до, post после
+//   onNewWorld(post, pre)— newGame(o): pre(o) до постройки мира, post(o) после (o.save — мир строится под загрузку)
 const HOOKS = {update:[], save:[], load:[], startNew:[], newWorld:[]};
 const onUpdate = (post, pre) => HOOKS.update.push({post, pre});
-const onSave = fn => HOOKS.save.push({post:fn});
+const onSave = fn => HOOKS.save.push({post:(a, x, d) => fn(d)});
 const onLoad = (post, pre) => HOOKS.load.push({post, pre});
 const onStartNew = (post, pre) => HOOKS.startNew.push({post, pre});
-const onNewWorld = fn => HOOKS.newWorld.push({post:fn});
+const onNewWorld = (post, pre) => HOOKS.newWorld.push({post, pre});
 // pre — с последнего подключённого к первому, post — с первого к последнему (как вложенные вызовы)
 function runHooked(name, core, arg) {
   const L = HOOKS[name], x = new Array(L.length);

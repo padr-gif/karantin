@@ -9,8 +9,8 @@ const addXp24 = addXp;
 addXp = function (k, n) { const b = skillLv(k); addXp24(k, n); const a = skillLv(k); if (a > b) logEv('Навык «' + SKILLS[k].name + '» вырос до ' + a); };
 const startHorde24 = startHorde;
 startHorde = function () { startHorde24(); logEv('Через город пошла орда'); };
-const startNew24 = startNew;
-startNew = function () { startNew24(); if (P && !P.log) { P.log = []; logEv('Город закрыли на карантин. Я дома, один. Нужно продержаться'); } };
+onStartNew(() => { if (P && !P.log) { P.log = []; logEv('Город закрыли на карантин. Я дома, один. Нужно продержаться'); }
+});
 function tickDiary() {
   const day = Math.floor(gameMin / 1440);
   if (P._logDay !== day) { if (P._logDay != null) logEv('Начался день ' + (day + 1) + ': ' + dateStr(gameMin) + ', ' + Math.round(outsideTemp()) + '°C'); P._logDay = day; }
@@ -181,7 +181,7 @@ renderPanel = function () {
   for (const [sel, i, v] of keep) { const e = sel ? body.querySelectorAll(sel)[i] : body; if (e) e.scrollTop = v; }
 };
 // ---- save the diary and fitness timer too ----
-const serialize24 = serialize;
-serialize = function () { const d = serialize24(); Object.assign(d.p, {log:P.log || [], fitT:r2(P.fitT || 0), _logDay:P._logDay, _logK:P._logK || 0, _logPw:P._logPw || 0, _logWt:P._logWt || 0}); return d; };
+onSave(d => { Object.assign(d.p, {log:P.log || [], fitT:r2(P.fitT || 0), _logDay:P._logDay, _logK:P._logK || 0, _logPw:P._logPw || 0, _logWt:P._logWt || 0});
+});
 const tickV23b = tickV23;
 tickV23 = function (dt, gm) { tickV23b(dt, gm); tickDiary(); };

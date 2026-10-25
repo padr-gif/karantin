@@ -59,17 +59,17 @@ const packDist = o => ({z:lzPack(JSON.stringify(o)), left:o.left});
 const unpackDist = s => s && s.z != null ? JSON.parse(lzUnpack(s.z)) : s;
 
 // ---- новая игра и сохранение ----
-{ const sn = startNew; startNew = function () { world.dx = world.dy = 0; sn(); distInit(world.seed); }; }
-{ const ser = serialize;
-  serialize = function () { const d = ser(); d.x50 = {root:world.root >>> 0, dx:world.dx || 0, dy:world.dy || 0, dist:world.dist || {}, vis:world.visited || 1}; return d; };
-  const as = applySave;
-  applySave = function (d) {
-    const x = d && d.x50;
-    if (x) { world.root = x.root >>> 0; world.dx = x.dx || 0; world.dy = x.dy || 0; } else world.dx = world.dy = 0;   // до постройки: тип района зависит от координат
-    as(d);
+{ onStartNew(() => { distInit(world.seed);
+}, () => { world.dx = world.dy = 0; }); }
+{ onSave(d => { d.x50 = {root:world.root >>> 0, dx:world.dx || 0, dy:world.dy || 0, dist:world.dist || {}, vis:world.visited || 1};
+});
+  onLoad((d, {x}) => {
     if (x) { world.root = x.root >>> 0; world.dx = x.dx || 0; world.dy = x.dy || 0; world.dist = x.dist || {}; world.visited = x.vis || 1; }
     else distInit(d.seed);                                         // старое сохранение: его город и есть родной район
-  };
+}, d => { const x = d && d.x50;
+    if (x) { world.root = x.root >>> 0; world.dx = x.dx || 0; world.dy = x.dy || 0; } else world.dx = world.dy = 0;   // до постройки: тип района зависит от координат
+    return {x};
+  });
 }
 
 // ---- перелезть через бетонный блок или мешки на блокпосту ----

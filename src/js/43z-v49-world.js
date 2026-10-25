@@ -66,7 +66,8 @@ function cacheText(c) {
   const lead = ['Закопал всё, что осталось', 'Спрятал припасы на чёрный день', 'Если не вернусь — пусть кому-то пригодится'];
   return lead[c.id.charCodeAt(1) % lead.length] + ': у ' + LANDMARK[c.lm] + ', в шаге от него. Земля там рыхлая — заметишь.';
 }
-{ const ng = newGame; newGame = function (o) { const r = ng(o); if (!(o && o.save)) placeCaches(); return r; }; }
+{ onNewWorld((o) => { if (!(o && o.save)) placeCaches();
+}); }
 { const rp = renderPanel;
   renderPanel = function () {
     rp();
@@ -136,8 +137,10 @@ function decayDay() {
     if (lastD == null) lastD = world.decayDay != null ? world.decayDay : d;
     if (d > lastD) { for (let k = lastD; k < d && k < lastD + 3; k++) decayDay(); lastD = d; world.decayDay = d; }
   });
-  const sn = startNew; startNew = function () { sn(); lastD = null; world.decayDay = null; };
-  const as = applySave; applySave = function (d) { as(d); lastD = null; };
+  onStartNew(() => { lastD = null; world.decayDay = null;
+});
+  onLoad((d) => { lastD = null;
+});
 }
 
 // ---- 5. шрамы: зажившая рана оставляет след на теле и строчку в истории ----
@@ -206,7 +209,8 @@ function placeCats() {
   }
 }
 function houseFloor(H) { for (let t = 0; t < 80; t++) { const x = ri(H.x + 1, H.x + H.w - 2), y = ri(H.y + 1, H.y + H.h - 2), i = y * MW + x; if (map[i] === FLOOR && !furn[i]) return [x + .5, y + .5]; } return null; }
-{ const ng = newGame; newGame = function (o) { const r = ng(o); if (!(o && o.save)) placeCats(); return r; }; }
+{ onNewWorld((o) => { if (!(o && o.save)) placeCats();
+}); }
 function catMove(c, tx, ty, sp, dt) {
   const dx = tx - c.x, dy = ty - c.y, l = Math.hypot(dx, dy); if (l < .08) { c.mv = 0; return true; }
   const s = Math.min(l, sp * dt), mx = dx / l * s, my = dy / l * s; let moved = false;
@@ -326,11 +330,12 @@ function drawCat(c) {
 }
 
 // ---- сохранение ----
-{ const ser = serialize;
-  serialize = function () { const d = ser(); d.x49 = {caches:world.caches || [], cats, scars:P.scars || [], decay:world.decayDay != null ? world.decayDay : null}; return d; };
-  const as = applySave;
-  applySave = function (d) { as(d); const x = d && d.x49; if (x) { world.caches = x.caches || []; cats = x.cats || []; P.scars = x.scars || []; world.decayDay = x.decay; } else { world.caches = []; cats = []; } };
-  const sn = startNew; startNew = function () { sn(); if (P) P.scars = []; };
+{ onSave(d => { d.x49 = {caches:world.caches || [], cats, scars:P.scars || [], decay:world.decayDay != null ? world.decayDay : null};
+});
+  onLoad((d) => { const x = d && d.x49; if (x) { world.caches = x.caches || []; cats = x.cats || []; P.scars = x.scars || []; world.decayDay = x.decay; } else { world.caches = []; cats = []; }
+});
+  onStartNew(() => { if (P) P.scars = [];
+});
 }
 
 // копать — присев

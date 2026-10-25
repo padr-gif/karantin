@@ -108,6 +108,9 @@ function buildDiary(body) {
   onUpdate(dt => { if (mode !== 'play' || !P) return; tc += dt; if (tc > .5) { tc = 0; diaryTick(); diaryChip(); }
   });
 }
-{ const ser = serialize; serialize = function () { const d = ser(); d.x45 = {tasks:P.tasks || null}; return d; }; }
-{ const as = applySave; applySave = function (d) { as(d); if (d && d.x45 && d.x45.tasks) P.tasks = d.x45.tasks; diaryChip(); }; }
-{ const sn = startNew; startNew = function () { sn(); if (P) P.tasks = null; tasksToday(); diaryChip(); }; }
+{ onSave(d => { d.x45 = {tasks:P.tasks || null};
+}); }
+{ onLoad((d) => { if (d && d.x45 && d.x45.tasks) P.tasks = d.x45.tasks; diaryChip();
+}); }
+{ onStartNew(() => { if (P) P.tasks = null; tasksToday(); diaryChip();
+}); }

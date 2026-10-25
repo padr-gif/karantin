@@ -49,6 +49,10 @@ function beginPlay() {
   try { navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => {}); } catch (e) {}
 }
 function startNew() {
+  if (typeof traitPts === 'function' && traitPts() < 0) { toast('Не хватает очков на черты'); return; }   // черты (v23)
+  runHooked('startNew', startNewCore);
+}
+function startNewCore() {
   newGame({look:Object.assign({}, look), diff:newDiff});
   applyProf(newProf);
   if (NEWCFG.season === 'winter') { world.snow = .8; world.snowMsg = true; P.inv.push(mkItem('sweater')); P.inv.push(mkItem('hotpack')); }

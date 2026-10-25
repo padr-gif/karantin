@@ -114,19 +114,16 @@ function nearSwitch() {
   const ai = actIcon; actIcon = function (a) { return a && a.kind === 'lightsw' ? 'i-light' : ai(a); };
 }
 // сохранение: какие комнаты выключены
-{ const ser = serialize;
-  serialize = function () {
-    const d = ser(), off = [];
+{ onSave(d => { const off = [];
     houses.forEach((Hs, h) => (Hs.rooms || []).forEach((r, k) => { if (r.off) off.push([h, k]); }));
-    d.x43 = {off}; return d;
-  };
-  const as = applySave;
-  applySave = function (d) {
-    as(d); swBuilt = null;
+    d.x43 = {off};
+});
+  onLoad((d) => { swBuilt = null;
     for (const [h, k] of (d && d.x43 && d.x43.off) || []) { const r = houses[h] && houses[h].rooms && houses[h].rooms[k]; if (r) r.off = true; }
     clearCaches();
-  };
-  const sn = startNew; startNew = function () { sn(); swBuilt = null; };
+});
+  onStartNew(() => { swBuilt = null;
+});
 }
 
 // ---- закреплённый джойстик: всегда на одном месте (его можно передвинуть в настройке кнопок) ----

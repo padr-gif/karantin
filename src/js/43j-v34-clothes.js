@@ -163,10 +163,10 @@ function starterClothes() {
   for (const [s, id] of [['shirt', 'tshirt'], ['legs', 'jeans'], ['feet', 'sneakers']]) if (!P.cloth[s]) { const it = mkItem(id); delete it.cd; P.cloth[s] = it; }
   P.cloth.v = 34;
 }
-const startNew34 = startNew;
-startNew = function () { startNew34(); if (P) starterClothes(); };
-const applySave34 = applySave;
-applySave = function (d) { applySave34(d); if (P && !(P.cloth && P.cloth.v)) starterClothes(); };   // старые сохранения: раньше одежда была «нарисована»
+onStartNew(() => { if (P) starterClothes();
+});
+onLoad((d) => { if (P && !(P.cloth && P.cloth.v)) starterClothes();
+});   // старые сохранения: раньше одежда была «нарисована»
 
 // ---- картинка: красим области тела цветом надетых вещей ----
 const hash34 = (x, y) => (((x * 73856093) ^ (y * 19349663)) >>> 0) % 1000 / 1000;

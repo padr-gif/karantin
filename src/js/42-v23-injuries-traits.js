@@ -274,14 +274,11 @@ function renderTraitsUI() {
 }
 const openCreate23 = openCreate;
 openCreate = function () { openCreate23(); renderTraitsUI(); };
-const startNew23 = startNew;
-startNew = function () {
-  if (traitPts() < 0) { toast('Не хватает очков на черты'); return; }
-  startNew23();
+onStartNew(() => {
   P.traits = newTraits.slice();
   if (hasTr('organized')) { P.capB = 4; P.cap += 4; }
   if (hasTr('smoker')) P.inv.push(mkItem('cigs'), mkItem('lighter'));
-};
+});
 
 // ================= panic & gloom =================
 function panicK() { return (hasTr('brave') ? .5 : 1) * (hasTr('coward') ? 2 : 1) * ((P.stress || 0) > 60 ? 1.3 : 1); }
@@ -920,8 +917,8 @@ function tickV23(dt, gm) {
   for (const z of zs) if (z.spT > 0) z.spT -= dt;
   if (P.act && P.act.kind === 'job' && P.act.noisy) { P.act.nT = (P.act.nT || 0) - dt; if (P.act.nT <= 0) { P.act.nT = 1.5; noise(P.x, P.y, P.act.noisy); } }
 }
-const newGame23 = newGame;
-newGame = function (o) { lures = []; stashes = []; gunFx = []; newGame23(o); };
+onNewWorld((o) => {
+}, o => { lures = []; stashes = []; gunFx = []; });
 addEventListener('keydown', e => { if (mode !== 'play' || paused || !P || P.sleep) return; const k = e.key.toLowerCase(); if (k === 't' || k === 'е') startReload(); });
 ACH.push(['gun', 'Громкое решение', 'Выстрелить из огнестрела'], ['ninja', 'Тихий убийца', 'Убить 5 мертвецов со спины'], ['splint', 'Срослось', 'Вылечить перелом'],
   ['sew', 'Портной', 'Зашить одежду'], ['fixcar', 'Механик', 'Починить машину'], ['stash', 'Свой склад', 'Сколотить ящик для хранения'], ['lure', 'Ложный след', 'Увести орду приманкой']);
@@ -930,9 +927,7 @@ RADIO_TIPS.push('Переломы фиксируйте шиной: доска и
   'Ползуны прячутся в высокой траве. Смотрите под ноги.', 'Шумовая приманка вдали от дома отвлечёт толпу от вашего убежища.');
 
 // ================= saves =================
-const serialize23 = serialize;
-serialize = function () {
-  const d = serialize23();
+onSave(d => {
   Object.assign(d.p, {traits:P.traits || [], capB:P.capB || 0, wounds:wounds(), pain:r2(P.pain || 0), painkT:r2(P.painkT || 0), panic:r2(P.panic || 0), unh:r2(P.unh || 0), smokeT:r2(P.smokeT || 0)});
   const si = new Set(stashes.map(f => furns.indexOf(f)));
   if (d.fmov) d.fmov = d.fmov.filter(m => !si.has(m[0]));
@@ -943,11 +938,8 @@ serialize = function () {
     metal:obs.map((o, i) => o && o.mhp > 0 ? [i, r2(o.mhp)] : null).filter(Boolean),
     strip:props.map((p, k) => p.type === 'car' && p.stripped ? k : -1).filter(k => k >= 0),
   };
-  return d;
-};
-const applySave23 = applySave;
-applySave = function (d) {
-  applySave23(d);
+});
+onLoad((d) => {
   if (!P.wounds) { P.wounds = []; if (P.bleed) addWound('cut', 'arm'); if (P.inf) addWound('bite', 'arm'); }
   P.traits = P.traits || [];
   const x = d.x23; if (!x) return;
@@ -956,4 +948,4 @@ applySave = function (d) {
   for (const [i, h] of x.metal || []) if (obs[i]) obs[i].mhp = h;
   for (const k of x.strip || []) if (props[k] && props[k].type === 'car') props[k].stripped = true;
   buildFlow(); clearCaches();
-};
+});

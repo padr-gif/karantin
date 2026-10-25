@@ -47,7 +47,7 @@ const shot = async () => crypto.createHash('sha1').update(await D(`cv.toDataURL(
 const state = async () => D(`(() => { const d = serialize(); delete d.x50; return JSON.stringify(d); })()`);
 const out = {};
 
-await D(`settings.vol = 0; settings.gfx = 2; settings.smooth = false; settings.mini = true; settings.hints = true; applySettings(); NEWCFG.season = 'autumn'; NEWCFG.mut = true; newTraits = ['athlete']; newProf = 'none'; startNew(); startPlayAfterStory();`);
+await D(`settings.vol = 0; settings.gfx = 2; settings.smooth = false; settings.mini = true; settings.hints = true; applySettings(); NEWCFG.season = 'autumn'; NEWCFG.mut = true; newTraits = ['organized', 'smoker']; newProf = 'none'; startNew(); if (mode !== 'story' && !document.getElementById('story').hidden === false) {} startPlayAfterStory();`);
 await frames(10);
 out.start = {state: await state(), shot: await shot()};
 // идти, драться — по сценарию: открытое место на улице, рядом мертвецы

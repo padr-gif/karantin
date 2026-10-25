@@ -222,8 +222,8 @@ function reRegisterAll() {
   for (let i = 0; i < furn.length; i++) if (furn[i]) { const f = furns[furn[i] - 1]; if (!f || f.gone || f.big) furn[i] = 0; }
   for (const f of furns) if (!f.gone && f.tiles && f.tiles.length > 1) { const T = tilesOfRect(f.r, f.x, f.y); if (T.length > 1) regFurn(f); }
 }
-const applySave29 = applySave;
-applySave = function (d) { const r = applySave29(d); try { for (const f of furns) if (f.moved && !f.gone) f.tiles = tilesOfRect(f.r, f.x, f.y); reRegisterAll(); buildFlow(); } catch (e) {} return r; };
+onLoad((d) => { try { for (const f of furns) if (f.moved && !f.gone) f.tiles = tilesOfRect(f.r, f.x, f.y); reRegisterAll(); buildFlow(); } catch (e) {}
+});
 
 // ---- drawing ----
 const furnName29 = furnName;
