@@ -1,10 +1,14 @@
 // ================= sound: everything synthesised with WebAudio =================
+const LOW_AUDIO = /Android/i.test(navigator.userAgent) || /[?&]lowaudio\b/.test(location.search);
+let ACTIVE_SND = 0; const MAX_SND = LOW_AUDIO ? 10 : 24;          // сколько звуков одновременно; лишние пропускаем
+const sndStart = (src, t, off) => { ACTIVE_SND++; src.onended = () => { ACTIVE_SND--; }; off != null ? src.start(t, off) : src.start(t); };
 const SFX = (() => {
   let ac = null, out = null, noiseBuf = null, rainG = null, rainF = null, windG = null, last = {};
   function init() {
     if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
-    try { ac = new AC(); } catch (e) { return; }
+    // Android: крупный звуковой буфер — звук будит процессор реже (на планшете звук съедал треть кадра); задержка ~0.1 с на слух не мешает
+    try { ac = new AC(LOW_AUDIO ? {latencyHint:'playback'} : undefined); } catch (e) { try { ac = new AC(); } catch (e2) { return; } }
     out = ac.createDynamicsCompressor(); out.threshold.value = -14; out.ratio.value = 4;
     const master = ac.createGain(); master.gain.value = 1; out.connect(master); master.connect(ac.destination);
     noiseBuf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate);
@@ -19,27 +23,27 @@ const SFX = (() => {
   function at(x, y) { if (x == null || !P) return 1; const d = Math.hypot(x - P.x, y - P.y); return Math.max(0, 1 - d / 16) ** 1.4; }
   function env(g, t, a, peak, dec) { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(.0002, peak), t + a); g.gain.exponentialRampToValueAtTime(.0001, t + a + dec); }
   function noise(peak, dur, type, f, q, delay, a, f2) {
-    if (!ac || peak * vol() < .002) return;
+    if (!ac || peak * vol() < .002 || ACTIVE_SND >= MAX_SND) return;
     const t = ac.currentTime + (delay || 0), s = ac.createBufferSource(); s.buffer = noiseBuf;
     const fl = ac.createBiquadFilter(); fl.type = type || 'bandpass'; fl.frequency.setValueAtTime(f || 1000, t); if (f2) fl.frequency.exponentialRampToValueAtTime(f2, t + dur); fl.Q.value = q || 1;
     const g = ac.createGain(); env(g, t, a || .004, peak * vol(), dur);
-    s.connect(fl); fl.connect(g); g.connect(out); s.start(t, Math.random() * 1.5); s.stop(t + dur + .1);
+    s.connect(fl); fl.connect(g); g.connect(out); sndStart(s, t, Math.random() * 1.5); s.stop(t + dur + .1);
   }
   function tone(peak, dur, type, f, f2, delay, a) {
-    if (!ac || peak * vol() < .002) return;
+    if (!ac || peak * vol() < .002 || ACTIVE_SND >= MAX_SND) return;
     const t = ac.currentTime + (delay || 0), o = ac.createOscillator(); o.type = type || 'sine';
     o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
     const g = ac.createGain(); env(g, t, a || .005, peak * vol(), dur);
-    o.connect(g); g.connect(out); o.start(t); o.stop(t + dur + .1);
+    o.connect(g); g.connect(out); sndStart(o, t); o.stop(t + dur + .1);
   }
   function voice(peak, dur, f, f2, delay, form) {
-    if (!ac || peak * vol() < .002) return;
+    if (!ac || peak * vol() < .002 || ACTIVE_SND >= MAX_SND) return;
     const t = ac.currentTime + (delay || 0), o = ac.createOscillator(); o.type = 'sawtooth';
     o.frequency.setValueAtTime(f, t); o.frequency.linearRampToValueAtTime(f * 1.12, t + dur * .3); o.frequency.exponentialRampToValueAtTime(f2, t + dur);
     const lfo = ac.createOscillator(), lg = ac.createGain(); lfo.frequency.value = 5 + Math.random() * 4; lg.gain.value = f * .05; lfo.connect(lg); lg.connect(o.frequency);
     const fl = ac.createBiquadFilter(); fl.type = 'bandpass'; fl.frequency.value = form || 600; fl.Q.value = 3;
     const g = ac.createGain(); env(g, t, dur * .25, peak * vol(), dur * .75);
-    o.connect(fl); fl.connect(g); g.connect(out); o.start(t); lfo.start(t); o.stop(t + dur + .1); lfo.stop(t + dur + .1);
+    o.connect(fl); fl.connect(g); g.connect(out); sndStart(o, t); lfo.start(t); o.stop(t + dur + .1); lfo.stop(t + dur + .1);
   }
   return {
     mute(on) { if (!ac) return; try { on ? ac.suspend() : ac.resume(); } catch (e) {} },

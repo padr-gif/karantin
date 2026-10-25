@@ -32,8 +32,9 @@ function bus() {
   hp.type = 'highpass'; hp.frequency.value = 70;
   shelf.type = 'highshelf'; shelf.frequency.value = 1500; shelf.gain.value = -6;
   lp.type = 'lowpass'; lp.frequency.value = 2800; lp.Q.value = .4;
-  dry.gain.value = 1; wet.gain.value = .05; conv.buffer = makeIR(ac, .45);
-  inp.connect(hp); hp.connect(shelf); shelf.connect(lp); lp.connect(dry); dry.connect(SFX.out); lp.connect(conv); conv.connect(wet); wet.connect(SFX.out);
+  dry.gain.value = 1; wet.gain.value = .05;
+  inp.connect(hp); hp.connect(shelf); shelf.connect(lp); lp.connect(dry); dry.connect(SFX.out);
+  if (!LOW_AUDIO) { conv.buffer = makeIR(ac, .45); lp.connect(conv); conv.connect(wet); wet.connect(SFX.out); }   // «комната» (свёртка) — дорогая; на Android без неё, её почти не слышно
   return (BUS = {inp, lp, wet, inside:null});
 }
 function busPlace() {                                                             // дом / улица — плавно, за полсекунды
@@ -41,7 +42,7 @@ function busPlace() {                                                           
   const t = SFX.ac.currentTime; B.lp.frequency.setTargetAtTime(ins ? 2300 : 3200, t, .25); B.wet.gain.setTargetAtTime(ins ? .06 : .015, t, .25);
 }
 function smp(g, v, rate, delay, lp) {
-  const ac = SFX.ac, b = smpPick(g), B = bus(); if (!ac || !b || !B) return false;
+  const ac = SFX.ac, b = smpPick(g), B = bus(); if (!ac || !b || !B || ACTIVE_SND >= MAX_SND) return false;
   busPlace();
   const s = ac.createBufferSource(); s.buffer = b; const r = (rate || 1) * (.94 + Math.random() * .12); s.playbackRate.value = r;
   const gn = ac.createGain(), t = ac.currentTime + (delay || 0), dur = b.duration / r, peak = v * .78 * (SMP_GAIN[g] || 1) * SFX.vol();
@@ -49,7 +50,7 @@ function smp(g, v, rate, delay, lp) {
   gn.gain.setTargetAtTime(0, t + dur * .55, dur * .18);                                          // плавное затухание вместо обрыва
   let node = s;
   if (lp) { const f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = lp; s.connect(f); node = f; }
-  node.connect(gn); gn.connect(B.inp); s.start(t); s.stop(t + dur + .05);
+  node.connect(gn); gn.connect(B.inp); sndStart(s, t); s.stop(t + dur + .05);
   return true;
 }
 const SMP_GAIN = {soft:.5, step_bare:1.2};   // выравниваем громкость записей
