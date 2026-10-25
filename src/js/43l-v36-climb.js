@@ -50,17 +50,11 @@ onUpdate((dt, {x0, y0}) => {
   else if (pl && pl.no && !LOW_FURN.has(pl.no.type) && (P._noClimbT || 0) < gameMin) { P._noClimbT = gameMin + 30; toast('Слишком высоко — не перелезть'); }
 }, dt => { const x0 = P && P.x, y0 = P && P.y; return {x0, y0}; });
 // в списке действий: «Перелезть» через то, к чему стоишь лицом
-const getActions36 = getActions;
-getActions = function () {
-  const out = getActions36(), pl = climbPlan(Math.cos(P.face), Math.sin(P.face));
+addActions(out => { const pl = climbPlan(Math.cos(P.face), Math.sin(P.face));
   if (pl && pl.f) out.push({kind:'climb', label:'Перелезть', f:pl.f, pl});
-  return out;
-};
-const doAction36 = doAction;
-doAction = function (a0) {
-  if (a0 && a0.kind === 'climb') { if (mode !== 'play' || paused || panel || P.sleep) return; $('actMenu').hidden = true; const pl = climbPlan(a0.pl.tx - P.x, a0.pl.ty - P.y); if (pl && pl.f) startClimb(pl); return; }
-  doAction36(a0);
-};
+});
+defAction('climb', {run:a0 => { if (mode !== 'play' || paused || panel || P.sleep) return; $('actMenu').hidden = true; const pl = climbPlan(a0.pl.tx - P.x, a0.pl.ty - P.y); if (pl && pl.f) startClimb(pl);
+}});
 // после прыжка — мягкое приземление
 const finishVault36 = finishVault;
 finishVault = function (a) { if (a.climb) { P.x = a.tx; P.y = a.ty; fogDirty = true; SFX.step(true, false); return; } finishVault36(a); };

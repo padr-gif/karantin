@@ -638,15 +638,6 @@ const XACT = {
     f.label = nx; SFX.rustle(); toast(nx ? 'Табличка: ' + LABELS[nx].name : 'Табличка снята');
   },
 };
-const doAction23 = doAction;
-doAction = function (a0) {
-  if (mode !== 'play' || paused || panel || P.sleep) return;
-  const a = a0 || getAction(); if (!a) return;
-  const h = XACT[a.kind];
-  if (h) { $('actMenu').hidden = true; goTo = null; h(a); return; }
-  doAction23(a);
-  if (a.kind === 'tv' && poweredAt(a.f.cx, a.f.cy)) P.unh = Math.max(0, (P.unh || 0) - 6);
-};
 const finishAct23 = finishAct;
 finishAct = function (a) {
   if (a.kind === 'job') {
@@ -661,15 +652,6 @@ finishAct = function (a) {
     return;
   }
   finishAct23(a);
-};
-const actIcon23 = actIcon;
-actIcon = function (a) {
-  const l = (a.label || '').toLowerCase();
-  if (/кузов|ремонт/.test(l)) return 'i-tool';
-  if (/разобрать|лист/.test(l)) return 'i-hammer';
-  if (/приманк/.test(l)) return 'i-bottle';
-  if (/таблич|подписать/.test(l)) return 'i-hand';
-  return actIcon23(a);
 };
 // metal sheets take the hits first; bashing zombies set off lures
 const damageOpening23 = damageOpening;

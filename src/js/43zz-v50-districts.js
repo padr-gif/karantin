@@ -102,18 +102,12 @@ function blockClimbPlan(dx, dy) {
     if (pl) startClimb(pl);
   }, dt => { const x0 = P && P.x, y0 = P && P.y; return {x0, y0}; });
 }
-{ const ga = getActions;
-  getActions = function () {
-    const out = ga(), pl = blockClimbPlan(Math.cos(P.face), Math.sin(P.face));
+{ addActions(out => { const pl = blockClimbPlan(Math.cos(P.face), Math.sin(P.face));
     if (pl) out.push({kind:'climbj', label:'Перелезть через блок', pl, f:pl.p});
-    return out;
-  };
-  const da = doAction;
-  doAction = function (a) {
-    if (a && a.kind === 'climbj') { if (mode !== 'play' || paused || panel || P.sleep) return; $('actMenu').hidden = true; const pl = blockClimbPlan(a.pl.tx - P.x, a.pl.ty - P.y); if (pl) startClimb(pl); return; }
-    da(a);
-  };
-  const an = actName; actName = function (a) { return a && a.kind === 'climbj' ? 'Перелезть' : an(a); };
+});
+  defAction('climbj', {run:a => { if (mode !== 'play' || paused || panel || P.sleep) return; $('actMenu').hidden = true; const pl = blockClimbPlan(a.pl.tx - P.x, a.pl.ty - P.y); if (pl) startClimb(pl);
+}});
+  defAction('climbj', {name:a => 'Перелезть'});
 }
 
 // ---- край карты: уйти в соседний район ----

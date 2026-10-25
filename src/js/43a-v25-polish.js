@@ -140,17 +140,6 @@ function clearDoorway(o) {
   }
   return 'stuck';
 }
-const doAction25 = doAction;
-doAction = function (a0) {
-  if (mode !== 'play' || paused || panel || P.sleep) return;
-  const a = a0 || getAction(); if (!a) return;
-  if (a.o && ((a.kind === 'door' && obs[a.o.i].open) || (a.kind === 'window' && obs[a.o.i].open))) {
-    const r = clearDoorway(a.o);
-    if (r === 'z') { toast('В проёме мертвец, не закрыть'); return; }
-    if (r === 'stuck') { toast('Отойди от проёма'); return; }
-  }
-  doAction25(a);
-};
 const finishAct25 = finishAct;
 finishAct = function (a) {
   if (a.kind === 'bar' && a.o && obs[a.o.i].t === 'door' && obs[a.o.i].open) { const r = clearDoorway(a.o); if (r === 'z') { toast('В проёме мертвец'); return; } }

@@ -5,8 +5,6 @@ furnName = function (fu) {
   if (isShower(fu) && ART.meta.frames['f_shower_0_' + WDI(fu.wd)]) return 'f_shower_0_' + WDI(fu.wd);
   return furnName38(fu);
 };
-const actName38 = actName;
-actName = function (a) { return a && isShower(a.f) ? 'Душ' : actName38(a); };
 // ---- помыться: пока есть вода. Снимает стресс и уныние, но ты мокрый — в холодном доме замёрзнешь ----
 function washTarget() {
   let best = null, bd = 1.25;
@@ -17,15 +15,11 @@ function washTarget() {
   }
   return best;
 }
-const getActions38 = getActions;
-getActions = function () {
-  const out = getActions38(), f = washTarget();
+addActions(out => {
+  const f = washTarget();
   if (f) out.push({kind:'wash', label:waterOn() ? (isShower(f) ? 'Принять душ' : 'Помыться') : 'Помыться: воды нет', f});
-  return out;
-};
-const doAction38 = doAction;
-doAction = function (a0) {
-  if (!(a0 && a0.kind === 'wash')) return doAction38(a0);
+});
+function washStart(a0) {
   if (mode !== 'play' || paused || panel || P.sleep) return;
   $('actMenu').hidden = true;
   if (!waterOn()) { toast('Из крана не течёт. Воду отключили'); return; }
@@ -40,4 +34,4 @@ doAction = function (a0) {
     if (cold) P.cold = Math.min(100, (P.cold || 0) + 15);
   }, {noisy:1});
   if (SFX.ac) smp('cloth', .25);
-};
+}

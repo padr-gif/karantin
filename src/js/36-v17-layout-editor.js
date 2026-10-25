@@ -52,8 +52,6 @@ function vaultAnim() {
   const n = AN('p', 'pickup'); return ['pickup', Math.max(0, n - 1 - Math.floor((k - .75) / .25 * n))];
 }
 // ---- action list: no duplicates (two windows → one "Открыть окно", the nearest) ----
-const getActions0 = getActions;
-getActions = function () { const seen2 = new Set(), out = []; for (const a of getActions0()) { const k = a.label + '|' + actName(a); if (seen2.has(k)) continue; seen2.add(k); out.push(a); } return out; };
 
 // ---- furniture editor ("Обустройство") ----
 const EDIT = {on:false, sel:null};

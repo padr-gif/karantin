@@ -38,14 +38,12 @@ workout = function () {
 
 // ---- душ: заходишь в кабину, моешься ~30 секунд, выходишь ----
 const SHOWER_S = 30;
-const doAction39 = doAction;
-doAction = function (a0) {
-  if (!(a0 && a0.kind === 'wash')) return doAction39(a0);
+defAction('wash', {run: a0 => {                                                   // помыться (43n), затем зайти в кабину на SHOWER_S секунд
   const f = a0.f, x0 = P.x, y0 = P.y;
-  doAction39(a0);
+  washStart(a0);
   const A = P.act; if (!A || A.kind !== 'job') return;
   A.dur = SHOWER_S * (isShower(f) ? 1 : 1.3); A.shower = {f, x0, y0, cx:(f.r[0] + f.r[2]) / 2, cy:(f.r[1] + f.r[3]) / 2};
-};
+}});
 { onUpdate((dt, {A, sh}) => {
     if (!sh) { if (P && P._inShower) { P._inShower = false; } return; }
     if (P.act !== A) {                                                           // прервали (мертвец, кнопка) — выходим из кабины

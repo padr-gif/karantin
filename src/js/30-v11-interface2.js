@@ -11,7 +11,11 @@ function getActions() {
     out.push(a);
     if (a.kind === 'exit') break;
   }
-  return out;
+  // одинаковые по виду (одна подпись у одной цели) — один раз
+  const seen2 = new Set(), list = [];
+  for (const a of out) { const k = a.label + '|' + actName(a); if (seen2.has(k)) continue; seen2.add(k); list.push(a); }
+  for (const f of ACT_SOURCES) f(list);
+  return list;
 }
 function getActionAt(x, y) { const sx = P.x, sy = P.y; P.x = x; P.y = y; try { return getAction(); } finally { P.x = sx; P.y = sy; } }
 const ACT_LABEL = a => {

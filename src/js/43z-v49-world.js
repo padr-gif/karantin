@@ -82,11 +82,9 @@ function cacheText(c) {
   };
 }
 function nearCache() { return (world.caches || []).find(c => c.read && !c.dug && Math.hypot(c.x - P.x, c.y - P.y) < 1.3); }
-{ const ga = getActions;
-  getActions = function () { const out = ga(), c = mode === 'play' && !P.car && nearCache(); if (c) out.push({kind:'digcache', label:'Раскопать тайник', f:{type:'cache', cx:c.x, cy:c.y}, c}); return out; };
-  const da = doAction;
-  doAction = function (a0) {
-    if (!(a0 && a0.kind === 'digcache')) return da(a0);
+{ addActions(out => { const c = mode === 'play' && !P.car && nearCache(); if (c) out.push({kind:'digcache', label:'Раскопать тайник', f:{type:'cache', cx:c.x, cy:c.y}, c});
+});
+  defAction('digcache', {run:a0 => {
     if (mode !== 'play' || paused || panel || P.sleep) return;
     $('actMenu').hidden = true;
     const c = a0.c, shovel = P.weapon && P.weapon.id === 'shovel' || P.inv.some(i => i.id === 'shovel');
@@ -96,9 +94,9 @@ function nearCache() { return (world.caches || []).find(c => c.read && !c.dug &&
       SFX.rustle(); toast('Под землёй — свёрток в клеёнке. Припасы на земле рядом'); logEv('Раскопал чужой тайник');
     }, {an:'searchlow', noisy:1});
     toast(shovel ? 'Копаешь лопатой…' : 'Копаешь руками — без лопаты долго');
-  };
-  const an = actName; actName = function (a) { return a && a.kind === 'digcache' ? 'Тайник' : an(a); };
-  const ai = actIcon; actIcon = function (a) { return a && a.kind === 'digcache' ? 'i-search' : ai(a); };
+}});
+  defAction('digcache', {name:a => 'Тайник'});
+  defAction('digcache', {icon:a => 'i-search'});
 }
 // раскопанная земля / рыхлое пятно, если знаешь, где искать
 function drawCache(c) {
@@ -249,17 +247,12 @@ function catMove(c, tx, ty, sp, dt) {
   });
 }
 function catNear() { return cats.find(c => Math.hypot(c.x - P.x, c.y - P.y) < 1.8 && vis[Math.floor(c.y) * MW + Math.floor(c.x)]); }
-{ const ga = getActions;
-  getActions = function () {
-    const out = ga(), c = mode === 'play' && !P.car && catNear(); if (!c) return out;
+{ addActions(out => { const c = mode === 'play' && !P.car && catNear(); if (!c) return;
     const food = P.inv.some(it => CAT_FOOD.has(it.id)), f = {type:'cat', cx:c.x, cy:c.y};
     if (c.st === 'wild') out.push({kind:'catfeed', label:food ? 'Угостить кошку' : 'Кошке нужна рыба или мясо', f, c});
     else { if (food && gameMin - c.fedAt > 600) out.push({kind:'catfeed', label:'Покормить', f, c}); out.push({kind:'catpet', label:'Погладить', f, c}); }
-    return out;
-  };
-  const da = doAction;
-  doAction = function (a0) {
-    if (!(a0 && (a0.kind === 'catfeed' || a0.kind === 'catpet'))) return da(a0);
+});
+  const run_catfeed = a0 => {
     if (mode !== 'play' || paused || panel || P.sleep) return;
     $('actMenu').hidden = true; const c = a0.c;
     if (a0.kind === 'catpet') {
@@ -274,9 +267,10 @@ function catNear() { return cats.find(c => Math.hypot(c.x - P.x, c.y - P.y) < 1.
       else toast('Съела и не убежала. Ещё раз — и подпустит');
     } else toast(c.name + ' довольна');
     renderInv();
-  };
-  const an = actName; actName = function (a) { return a && a.f && a.f.type === 'cat' ? (a.c && a.c.st === 'friend' ? a.c.name : 'Кошка') : an(a); };
-  const ai = actIcon; actIcon = function (a) { return a && (a.kind === 'catfeed' || a.kind === 'catpet') ? 'i-heart' : ai(a); };
+};
+defAction('catfeed', {run:run_catfeed}); defAction('catpet', {run:run_catfeed});
+  for (const k of ['catfeed', 'catpet']) defAction(k, {name:a => a.c && a.c.st === 'friend' ? a.c.name : 'Кошка'});
+  defAction('catfeed', {icon:a => 'i-heart'}); defAction('catpet', {icon:a => 'i-heart'});
 }
 // пиксельная кошка: сидит, идёт (2 кадра), спит клубком
 const catArt = (() => {

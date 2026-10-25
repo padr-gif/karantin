@@ -287,26 +287,19 @@ const PF_COL = [[132, 98, 64], [78, 112, 72], [74, 98, 134], [128, 132, 136]];
 }
 // выкопать овощи
 const VEG_LOOT = [['potato', 'potato', 'carrot'], ['carrot', 'cabbage', 'potato'], ['cabbage', 'potato', 'carrot']];
-{ const ga = getActions;
-  getActions = function () {
-    const out = ga();
+{ addActions(out => {
     if (P && !P.car) for (const p of propsNear(P.x, P.y)) if (p.type === 'veg' && !p.dug && Math.hypot(p.cx - P.x, p.cy - P.y) < 1.3) { out.push({kind:'veg', label:'Выкопать овощи', p, f:p}); break; }
-    return out;
-  };
-  const da = doAction;
-  doAction = function (a) {
-    if (a && a.kind === 'veg') {
+});
+  defAction('veg', {run:a => {
       $('actMenu').hidden = true; if (a.p.dug) return;
       const m = typeof monthNow === 'function' ? monthNow() : 9, ripe = m >= 7 && m <= 10;
       a.p.dug = true; SFX.rustle(); noise(P.x, P.y, 2);
       const n = ripe ? ri(1, 3) : (rng() < .4 ? 1 : 0), L = VEG_LOOT[a.p.v || 0].filter(id => ITEMS[id]);
       for (let k = 0; k < n && L.length; k++) { const it = mkItem(pick(L)); if (invFull()) { piles.push({type:'pile', x:P.x, y:P.y, cx:P.x, cy:P.y, items:[it]}); } else P.inv.push(it); }
       toast(n ? 'Выкопал: ' + n + ' шт. овощей' : ripe ? 'Пусто — кто-то успел раньше' : 'Не сезон: на грядке почти ничего');
-      clearCaches(); updateHud(); return;
-    }
-    da(a);
-  };
-  const an = actName; actName = function (a) { return a && a.kind === 'veg' ? 'Грядка' : an(a); };
+      clearCaches(); updateHud();
+}});
+  defAction('veg', {name:a => 'Грядка'});
 }
 
 // ---- включение: новые игры строят города новым генератором ----

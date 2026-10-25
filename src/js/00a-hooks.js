@@ -12,6 +12,12 @@ const onSave = fn => HOOKS.save.push({post:(a, x, d) => fn(d)});
 const onLoad = (post, pre) => HOOKS.load.push({post, pre});
 const onStartNew = (post, pre) => HOOKS.startNew.push({post, pre});
 const onNewWorld = (post, pre) => HOOKS.newWorld.push({post, pre});
+// Действия рядом с героем (кнопка «Действие» и список действий):
+//   addActions(fn)       — fn(out): дописать свои действия в список (после основных)
+//   defAction(kind, {name, icon, run}) — у действия этого вида своё имя цели, иконка и выполнение
+const ACT = {}, ACT_SOURCES = [];
+const addActions = fn => ACT_SOURCES.push(fn);
+const defAction = (kind, d) => { ACT[kind] = Object.assign(ACT[kind] || {}, d); };
 // pre — с последнего подключённого к первому, post — с первого к последнему (как вложенные вызовы)
 function runHooked(name, core, arg) {
   const L = HOOKS[name], x = new Array(L.length);

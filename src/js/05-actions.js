@@ -201,7 +201,29 @@ function cellOccupied(x, y) {
   const near = e => Math.hypot(e.x - x - .5, e.y - y - .5) < .55;
   return near(P) || zs.some(near);
 }
+// выполнить действие (a0 — из списка; без него — главное действие рядом)
 function doAction(a0) {
+  const d = a0 && ACT[a0.kind];
+  if (d && d.run) return d.run(a0);                                // своё действие механики (лазать, душ, свет, тайник, кошка, грядка…)
+  const was = P && P.act;
+  doActionMain(a0);
+  const A = P && P.act;                                             // начался обыск — звук открывания и шуршания
+  if (A && A !== was && A.kind === 'search' && A.f) { SFX.contOpen(A.f.type); SFX.rummage(A.f.type); sndOpened = [A.f, performance.now()]; }
+}
+function doActionMain(a0) {
+  if (mode !== 'play' || paused || panel || P.sleep) return;
+  const a = a0 || getAction(); if (!a) return;
+  if (a.o && ((a.kind === 'door' && obs[a.o.i].open) || (a.kind === 'window' && obs[a.o.i].open))) {   // закрыть проём, где кто-то стоит, нельзя
+    const r = clearDoorway(a.o);
+    if (r === 'z') { toast('В проёме мертвец, не закрыть'); return; }
+    if (r === 'stuck') { toast('Отойди от проёма'); return; }
+  }
+  const h = XACT[a.kind];                                          // действия из таблицы XACT (v23: машины, приманки, таблички…)
+  if (h) { $('actMenu').hidden = true; goTo = null; h(a); return; }
+  doActionBase(a);
+  if (a.kind === 'tv' && poweredAt(a.f.cx, a.f.cy)) P.unh = Math.max(0, (P.unh || 0) - 6);
+}
+function doActionBase(a0) {
   if (mode !== 'play' || paused || panel || P.sleep) return;
   $('actMenu').hidden = true; goTo = null;
   const a = a0 || getAction(); if (!a) return;

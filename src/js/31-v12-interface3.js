@@ -2,7 +2,12 @@
 const svgIc = (id, cls) => { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('class', 'ic' + (cls ? ' ' + cls : '')); const u = document.createElementNS('http://www.w3.org/2000/svg', 'use'); u.setAttribute('href', '#' + id); s.appendChild(u); return s; };
 const PROPN = {tree:'Дерево', car:'Машина', barrel:'Бочка', crate:'Ящик', trap:'Капкан', pump:'Колонка', gen:'Генератор', bush:'Куст', fire:'Костёр', pile:'Вещи на земле', gbed:'Грядка', pond:'Пруд', drop:'Груз'};
 function actIcon(a) {
+  const d = a && ACT[a.kind]; if (d && d.icon) return d.icon(a);
   const l = (a.label || '').toLowerCase();
+  if (/кузов|ремонт/.test(l)) return 'i-tool';
+  if (/разобрать|лист/.test(l)) return 'i-hammer';
+  if (/приманк/.test(l)) return 'i-bottle';
+  if (/таблич|подписать/.test(l)) return 'i-hand';
   if (/штор/.test(l)) return 'i-curtain';
   if (/перелез/.test(l)) return 'i-run';
   if (/окно/.test(l)) return 'i-window';
@@ -16,6 +21,8 @@ function actIcon(a) {
   return 'i-hand';
 }
 function actName(a) {
+  const d = a && ACT[a.kind]; if (d && d.name) return d.name(a);
+  if (a && isShower(a.f)) return 'Душ';
   if (a.o) return obs[a.o.i].t === 'door' ? 'Дверь' : 'Окно';
   const t = a.f && a.f.type;
   if (!t) return '';

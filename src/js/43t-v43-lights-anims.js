@@ -92,15 +92,10 @@ function nearSwitch() {
   const r = roomAtXY(P.x, P.y); if (!r || !r.sw) return null;
   const [sx, sy] = swPoint(r); return Math.hypot(sx - P.x, sy - P.y) < 1.8 ? r : null;
 }
-{ const ga = getActions;
-  getActions = function () {
-    const out = ga(), r = nearSwitch();
+{ addActions(out => { const r = nearSwitch();
     if (r) out.push({kind:'lightsw', label:r.off ? 'Включить свет' : 'Выключить свет', r, tk:'ls' + r.sw.i});
-    return out;
-  };
-  const da = doAction;
-  doAction = function (a0) {
-    if (!(a0 && a0.kind === 'lightsw')) return da(a0);
+});
+  defAction('lightsw', {run:a0 => {
     if (mode !== 'play' || paused || panel || P.sleep) return;
     $('actMenu').hidden = true;
     const r = a0.r; r.off = !r.off; clearCaches();
@@ -109,9 +104,9 @@ function nearSwitch() {
     if (!poweredAt(P.x, P.y)) toast('Щёлк. Электричества нет — свет не загорится');
     else toast(r.off ? 'Свет в комнате выключен' : 'Свет включён');
     updateHud();
-  };
-  const an = actName; actName = function (a) { return a && a.kind === 'lightsw' ? 'Выключатель' : an(a); };
-  const ai = actIcon; actIcon = function (a) { return a && a.kind === 'lightsw' ? 'i-light' : ai(a); };
+}});
+  defAction('lightsw', {name:a => 'Выключатель'});
+  defAction('lightsw', {icon:a => 'i-light'});
 }
 // сохранение: какие комнаты выключены
 { onSave(d => { const off = [];

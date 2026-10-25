@@ -132,13 +132,6 @@ SFX.rummage = function (type) {
 
 // открываем/закрываем вместе с окном обыска; обыск начинается с открытия
 let sndOpened = null;                                                             // [мебель, время] — чтобы не открыть дважды
-const doAction35 = doAction;
-doAction = function (a0) {
-  const was = P && P.act;
-  doAction35(a0);
-  const A = P && P.act;
-  if (A && A !== was && A.kind === 'search' && A.f) { SFX.contOpen(A.f.type); SFX.rummage(A.f.type); sndOpened = [A.f, performance.now()]; }
-};
 const openPanel35 = openPanel;
 openPanel = function (kind, opt) {
   const was = panel && panel.kind === 'loot' ? panel.src : null;
