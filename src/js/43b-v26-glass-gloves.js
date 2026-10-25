@@ -30,8 +30,8 @@ const gloveGuard = () => { const g = gloveItem(); return g ? ITEMS[g.id].glass *
 function glassCut(chance, what) {
   if (rng() >= chance) return false;
   const g = gloveItem();
-  if (g && rng() < gloveGuard()) { tearCloth(g, .25); return false; }   // the glove takes the cut and wears a little
-  const w = addWound('cut', 'arm'); P.hp -= 3; lastCause = 'Порезы';
+  if (g && rng() < gloveGuard()) { tearCloth(g, .25); return false; }
+  const w = addWound('cut', 'arm', pick(['левая кисть', 'правая кисть'])); P.hp -= 3; lastCause = 'Порезы';
   toast((what || 'Порезался о стекло') + (w ? ': ' + w.where : '') + '. Перевяжи');
   return true;
 }
@@ -41,12 +41,6 @@ function glassCut(chance, what) {
 const winGlass = ob => ob && ob.broken && !ob.open && !ob.cleared;
 // curtains belong to the room: from the street you can't reach them
 // climbing through: a cleared frame doesn't cut, gloves usually save your hands
-const finishVault26 = finishVault;
-finishVault = function (a) {
-  const ob = a.o && obs[a.o.i];
-  if (a.br && ob && !ob.cleared) { a.br = false; finishVault26(a); glassCut(.3, 'Порезался о битое стекло'); return; }
-  a.br = false; finishVault26(a);
-};
 
 // ---- water filter ----
 defUse(it => it.id === 'filter', it => {

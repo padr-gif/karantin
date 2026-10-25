@@ -178,41 +178,16 @@ function startTreat(id, w) { const part = panel && panel.part; job(TREAT_DUR[id]
 const cdur = it => it.cd == null ? 100 : it.cd;
 const slotOf = part => part === 'head' || part === 'neck' ? 'head' : part === 'torso' || part === 'arm' ? 'torso' : null;
 let clothAt = part => { const s = slotOf(part); return s && P.cloth ? P.cloth[s] : null; };
-function partProt(part) { const c = clothAt(part); let p = c && ITEMS[c.id].prot ? ITEMS[c.id].prot * cdur(c) / 100 : 0; if (part === 'neck') p *= .4; return Math.min(.6, p); }
+function partProt(part) {
+  let keep = 1; for (const c of coverOf(part)) keep *= 1 - (ITEMS[c.id].prot || 0) * cdur(c) / 100;
+  let p = 1 - keep; if (part === 'neck') p *= .4; return Math.min(.7, p);
+}
 function tearCloth(c, k) {
   if (!c || ITEMS[c.id].slot === 'wrist') return;
   const before = cdur(c); c.cd = Math.max(0, before - (3 + rng() * 6) * (k || 1));
   if (before > 0 && c.cd <= 0) toast(ITEMS[c.id].name + ': порвано в клочья, почти не греет');
   else if (before >= 50 && c.cd < 50) toast(ITEMS[c.id].name + ': порвано. Зашей, пока не развалилось');
 }
-hurtPlayer = function (z) {
-  if (godMode) return;
-  if (P.car && P.car.hp > 0) { P.car.hp = Math.max(0, P.car.hp - 4); if ((P.carMsgT || 0) < gameMin) { P.carMsgT = gameMin + 20; toast(P.car.hp > 0 ? 'Мертвецы ломятся в машину! Корпус ' + Math.round(P.car.hp) + '%' : 'Стекло выбито!'); } SFX.knock(P.x, P.y); return; }
-  if (panel && panel.kind === 'loot') { closePanel(); toast('На тебя напали! Обыск прерван'); }
-  const brute = !!(z && z.brute), crawl = !!(z && z.crawl), part = crawl ? 'leg' : rollPart();
-  const dmg = (6 + rng() * 7) * DIFF[world.diff].dmg * (brute ? 1.45 : 1) * (crawl ? .75 : 1);
-  let arm = 1;
-  if (P.armor && (part === 'torso' || (part === 'arm' && rng() < .4))) { arm = .5; P.armor.dur -= 6 + rng() * 4; if (P.armor.dur <= 0) { P.armor = null; toast('Бронежилет разорван в клочья'); } }
-  P.stress = Math.min(100, (P.stress || 0) + 10); P.panic = Math.min(100, (P.panic || 0) + 12 * panicK());
-  P.hp -= dmg * (arm < 1 ? .55 : 1); P.hurt = .45; lastCause = 'Загрызли';
-  if (!P.act || (P.act.kind !== 'vault' && P.act.kind !== 'reload')) P.act = null;
-  SFX.bite();
-  if (P.sleep) wake('Тебя разбудили зубы мертвеца');
-  if (!reduceMotion && settings.shake) shake = .35;
-  addBlood(P.x, P.y, .5); emit('blood', P.x, P.y, 1.2, 6, null, 0, 1.8);
-  const skin = hasTr('thick') ? .75 : hasTr('thin') ? 1.3 : 1;
-  const roll = rng() / arm / (1 - partProt(part)) / skin;
-  tearCloth(clothAt(part), roll < .4 ? 1.6 : 1);
-  if (crawl) { P.grabT = 1.6; if ((P._grabMsg || 0) < gameMin) { P._grabMsg = gameMin + 60; toast('Ползун вцепился в ногу! Вырвись и отойди'); } }
-  let w = null;
-  if (roll < .1 && !P.inf) { P.inf = true; P.infT = 0; w = addWound('bite', part); toast('Укус: ' + w.where + '. Рана глубокая'); }
-  else if (roll < .2) { w = addWound('deep', part); toast('Рваная рана: ' + w.where + '. Нужен бинт'); }
-  else if (roll < .4) { w = addWound('scratch', part); toast('Царапина: ' + w.where); }
-  const crowd = zs.filter(q => q.state === 'chase' && Math.hypot(q.x - P.x, q.y - P.y) < 1.3).length;
-  if (!brute && crowd >= 3 && rng() < .04) { const f = addWound('frac', 'leg'); if (f) toast('Толпа сбила тебя с ног. Перелом: ' + f.where); }
-  if (brute && rng() < .28) { const fp = rng() < .5 ? 'arm' : 'leg', f = addWound('frac', fp); if (f) { toast('Громила сломал тебе ' + (fp === 'leg' ? 'ногу' : 'руку') + '! Нужна шина'); SFX.wood(P.x, P.y); } }
-  P.bleed = wounds().some(bleeding);
-};
 function crashInjury(v) {
   if (rng() > .4) return;
   if (rng() < .45) { const fp = rng() < .5 ? 'arm' : 'leg', f = addWound('frac', fp); if (f) { toast('Удар о руль! Перелом: ' + f.where); P.hp -= 8; lastCause = 'Авария'; return; } }
@@ -745,6 +720,7 @@ function tickV23(dt, gm) {
   for (const s of gunFx) s.t -= dt; if (gunFx.length) gunFx = gunFx.filter(s => s.t > 0);
   for (const z of zs) if (z.spT > 0) z.spT -= dt;
   if (P.act && P.act.kind === 'job' && P.act.noisy) { P.act.nT = (P.act.nT || 0) - dt; if (P.act.nT <= 0) { P.act.nT = 1.5; noise(P.x, P.y, P.act.noisy); } }
+  tickDiary(); unstick();
 }
 onNewWorld((o) => {
 }, o => { lures = []; stashes = []; gunFx = []; });

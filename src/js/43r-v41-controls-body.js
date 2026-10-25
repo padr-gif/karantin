@@ -69,7 +69,6 @@ addEventListener('pointerup', e => { if (CTLE) CTLE.up(e); }, true);
 addEventListener('click', e => { if (CTLE && CTL_IDS.some(id => $(id) && $(id).contains(e.target))) { e.preventDefault(); e.stopPropagation(); } }, true);
 $('sCtlGo').onclick = () => { SFX.ui(); ctlEditOpen(); };
 $('sCtlReset').onclick = () => { SFX.ui(); settings.btn = {}; saveSettings(); ctlApply(); toast('Кнопки на своих местах'); };
-{ const as = applySettings; applySettings = function () { as(); ctlApply(); }; }
 ctlApply();
 
 // ---- «Состояние»: анатомическая фигура — мышцы и вены ----

@@ -182,7 +182,18 @@ function mapPin(e, c) {
   const u = (mx - cw / 2) / s, v = my / (s / 2) + 2 * m0, x = (u + v) / 2, y = (v - u) / 2;
   world.marks = world.marks || [];
   const near = world.marks.findIndex(m => Math.hypot(m.x - x, m.y - y) < 3);
-  if (near >= 0) { world.marks.splice(near, 1); toast('Метка убрана'); }
-  else { world.marks.push({x, y}); toast('Метка поставлена. Нажми на неё ещё раз, чтобы убрать'); }
-  drawMapCanvas(c); miniT = 0;
+  if (markPick) markPick.remove();
+  const box = markPick = document.createElement('div'); box.className = 'markpick';
+  const host = document.body;
+  box.style.left = Math.max(6, Math.min(innerWidth - 240, e.clientX - 118)) + 'px';
+  box.style.top = (e.clientY + 140 < innerHeight ? e.clientY + 12 : Math.max(6, e.clientY - 140)) + 'px';
+  const done = () => { box.remove(); markPick = null; drawMapCanvas(c); miniT = 0; };
+  for (const k of ['done', 'danger', 'water', 'back', 'home', 'pin']) {
+    const b = document.createElement('button'); b.type = 'button'; b.innerHTML = '<i style="background:' + MARKT[k].c + '">' + MARKT[k].g + '</i>' + MARKT[k].n;
+    b.onclick = ev => { ev.stopPropagation(); if (near >= 0) world.marks.splice(near, 1); world.marks.push({x, y, t:k}); SFX.ui(); done(); };
+    box.appendChild(b);
+  }
+  if (near >= 0) { const b = document.createElement('button'); b.type = 'button'; b.className = 'del'; b.textContent = 'Убрать метку'; b.onclick = ev => { ev.stopPropagation(); world.marks.splice(near, 1); SFX.ui(); done(); }; box.appendChild(b); }
+  box.addEventListener('click', ev => ev.stopPropagation());
+  host.appendChild(box);
 }

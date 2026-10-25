@@ -102,9 +102,12 @@ function winAction(a) {
   }
   return true;
 }
+// перелез через окно или на мебель (climb); битое неубранное стекло может порезать
 function finishVault(a) {
   P.x = a.tx; P.y = a.ty; fogDirty = true;
-  if (a.br && rng() < .3 && !(P.cloth && P.cloth.torso && ITEMS[P.cloth.torso.id].ins >= 4)) { P.bleed = true; P.hp -= 4; lastCause = 'Порезы'; toast('Порезался о битое стекло. Перевяжи рану'); }
+  if (a.climb) { SFX.step(true, false); return; }
+  const ob = a.o && obs[a.o.i], cut = a.br && ob && !ob.cleared; a.br = false;
+  if (cut) glassCut(.3, 'Порезался о битое стекло');
 }
 // ---- alarm (digital watch) ----
 function sleepAlarmUI() {
@@ -122,14 +125,16 @@ function tickAlarm() {
 // ---- paper-doll backpack ----
 function drawDoll() {
   const cv2 = document.getElementById('dollCv'); if (!cv2 || !P) return;
-  const g = cv2.getContext('2d'); g.clearRect(0, 0, cv2.width, cv2.height);
-  g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(96, 206, 34, 12, 0, 0, 6.283); g.fill();
+  const g = cv2.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv2.width, cv2.height);
   const lk = P.look, dir = (Math.floor(animT / 1.6) + 1) % 8, nw = AN('p', 'idle'), fi = Math.floor(animT * 2.6) % nw;
-  const pal = lookPal(lk), ct = P.cloth && P.cloth.torso, ch = P.cloth && P.cloth.head;
-  if (ct) pal[3] = pal[4] = ITEMS[ct.id].col; if (ch) pal[2] = ITEMS[ch.id].col;
-  const fr = charFrame('p' + lk.g + '_idle_' + dir + '_' + fi, 'P' + lk.g + lk.skin + lk.hair + lk.shirt + lk.pants + (ct ? ct.id : '') + (ch ? ch.id : ''), pal, true);
-  const PS = 2 / ((fr && fr.s) || ART.meta.charScale || 1);
-  if (fr) { g.imageSmoothingEnabled = PS < 1; g.drawImage(fr.cv, 96 - fr.ax * PS, 206 - fr.ay * PS, fr.w * PS, fr.h * PS); }
+  const pp = playerLookPal(lk);
+  const fr = charFrame('p' + lk.g + heroVar(lk) + '_idle_' + dir + '_' + fi, pp.key, pp.pal, true);
+  const W = cv2.width, H = cv2.height, foot = H - 18;
+  g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(W / 2, foot, W * .2, 11, 0, 0, 6.283); g.fill();
+  if (!fr) return;
+  const k = (fr.s || 1) > 1 ? Math.min((H - 30) / fr.ay, 3.2) : Math.max(1, Math.floor((H - 30) / 62)), b = 1 + Math.sin(animT * 2.3) * .012;   // пиксельный герой — целый масштаб, во весь рост
+  g.imageSmoothingEnabled = (fr.s || 1) > 1; g.imageSmoothingQuality = 'high';               // пиксельный герой — без размытия
+  g.translate(W / 2, foot); g.scale(k, k * b); g.drawImage(fr.cv, -fr.ax, -fr.ay); g.setTransform(1, 0, 0, 1, 0, 0);
 }
 // карточка выбранной вещи или ячейки куклы: описание и кнопки (надеть/снять, зашить, перезарядить, переложить)
 function invDetail(body) {

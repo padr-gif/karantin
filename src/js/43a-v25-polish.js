@@ -19,18 +19,6 @@ function ntfIcon(t) {
   return 'i-hand';
 }
 function ntfBox() { let b = $('toasts'); return b; }
-toast = function (text) {
-  if (!text) return;
-  const ev = eventFor(text); if (ev) { eventBanner(ev[0], text, ev[1], ev[2]); return; }
-  const box = ntfBox();
-  for (const t of box.children) if (t._text === text && !t._gone) { const u = t.querySelector('u'); if (u) { u.style.animation = 'none'; void u.offsetWidth; u.style.animation = ''; } t.classList.remove('bump'); void t.offsetWidth; t.classList.add('bump'); clearTimeout(t._tm); t._tm = setTimeout(() => dropNtf(t), ntfLife(text)); return; }
-  const el = mk('div', 'ntf ' + ntfKind(text)); el._text = text;
-  el.appendChild(svgIc(ntfIcon(text))); el.appendChild(mk('span', 'nt', text));
-  const bar = mk('i', 'nbar'), u = mk('u'); u.style.animationDuration = ntfLife(text) + 'ms'; bar.appendChild(u); el.appendChild(bar);
-  box.appendChild(el);
-  while (box.children.length > 3) dropNtf(box.firstChild, true);
-  el._tm = setTimeout(() => dropNtf(el), ntfLife(text));
-};
 function dropNtf(el, now) { if (!el || el._gone) return; el._gone = true; clearTimeout(el._tm); if (now) { el.remove(); return; } el.classList.add('out'); setTimeout(() => el.remove(), 320); }
 // ---- special events get their own banner ----
 const EVENTS = [
@@ -149,19 +137,6 @@ function unstick() {
 }
 
 // ---- bigger character in the backpack ----
-drawDoll = function () {
-  const cv2 = document.getElementById('dollCv'); if (!cv2 || !P) return;
-  const g = cv2.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv2.width, cv2.height);
-  const lk = P.look, dir = (Math.floor(animT / 1.6) + 1) % 8, nw = AN('p', 'idle'), fi = Math.floor(animT * 2.6) % nw;
-  const pp = playerLookPal(lk);
-  const fr = charFrame('p' + lk.g + heroVar(lk) + '_idle_' + dir + '_' + fi, pp.key, pp.pal, true);
-  const W = cv2.width, H = cv2.height, foot = H - 18;
-  g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(W / 2, foot, W * .2, 11, 0, 0, 6.283); g.fill();
-  if (!fr) return;
-  const k = (fr.s || 1) > 1 ? Math.min((H - 30) / fr.ay, 3.2) : Math.max(1, Math.floor((H - 30) / 62)), b = 1 + Math.sin(animT * 2.3) * .012;   // пиксельный герой — целый масштаб, во весь рост
-  g.imageSmoothingEnabled = (fr.s || 1) > 1; g.imageSmoothingQuality = 'high';               // пиксельный герой — без размытия
-  g.translate(W / 2, foot); g.scale(k, k * b); g.drawImage(fr.cv, -fr.ax, -fr.ay); g.setTransform(1, 0, 0, 1, 0, 0);
-};
 
 // ---- recipe detail: what you get and where to find what is missing ----
 const RES_INFO = {'Костёр':'Горит около четырёх часов: на нём готовят и греются. Дождь заливает огонь, в доме разводить нельзя.', 'Бочка для дождевой воды':'Собирает дождевую воду, до 20 литров. Ставь на улице, сырую воду лучше вскипятить.',
@@ -201,5 +176,3 @@ onPanel(() => {
   if ((panel.kind === 'inv' && panel.tab === 'craft') || panel.kind === 'cook') { const det = $('pnBody').querySelector('.rdet'); if (det) recipeInfo(det); }
 });
 
-const tickV25 = tickV23;
-tickV23 = function (dt, gm) { tickV25(dt, gm); unstick(); };

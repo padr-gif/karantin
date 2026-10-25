@@ -45,17 +45,6 @@ function takeUseful(c) {
   queueXfer(c, want, 'take');
 }
 // transfer progress lives inside the item's own cell
-markQueued = function (grid, groups, owner) {
-  const cells = grid.children, cur = xferQ[0];
-  groups.forEach((g, i) => {
-    const cl = cells[i]; if (!cl) return;
-    const mine = q => (owner === P ? q.dir === 'put' : q.dir === 'take' && q.c === owner) && sameStack(q.it, g.it);
-    if (!xferQ.some(mine)) return;
-    cl.classList.add('q');
-    if (cur && mine(cur)) { cl.classList.add('qnow'); const b = mk('span', 'xprog'), f = mk('i'); f.id = 'xferFill'; f.style.width = Math.min(100, cur.t / cur.dur * 100) + '%'; b.appendChild(f); cl.appendChild(b); }
-  });
-  return grid;
-};
 function fitGrid(g) {
   const host = g.parentNode; if (!host || !host.clientHeight) return;
   let used = 0; for (const ch of host.children) if (ch !== g && ch.offsetParent !== null) used += ch.offsetHeight + 6;
@@ -79,7 +68,6 @@ onPanel(() => {
   fitPanel();
 }, () => $('pnBody').classList.remove('fit'));
 // drop the old floating transfer row (progress is in the cell now)
-xferRow = function () { return mk('span'); };
 
 // ---- stacked context buttons (each action gets its own full-size button) ----
 let stackKey = '';

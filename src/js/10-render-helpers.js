@@ -51,6 +51,15 @@ function box(x0, y0, x1, y1, z0, z1, rgb, f, a, tex) {
   vface(x1, y0, x1, y1, z0, z1, tex && tex.e || C(rgb, 1), 1 - f * .62, g);
   hface(x0, y0, x1, y1, z1, tex && tex.t || C(rgb, 1), 1 - f, g);
   resetT(); ctx.globalAlpha = 1;
+  // детальная графика: контур силуэта, светлая кромка верха, тёмная складка переднего угла
+  if (HDQ <= 1 || !baking) return;
+  const P_ = (x, y, z) => [SX(x, y), SY(x, y, z)], L = (pts, col, w) => { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineJoin = 'round'; ctx.beginPath(); pts.forEach((p, k) => k ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke(); };
+  if (a != null && a < 1) ctx.globalAlpha = a;
+  // outline of the silhouette, a lit rim on the top's front edges, a dark crease at the front corner
+  L([P_(x0, y1, z0), P_(x1, y1, z0), P_(x1, y0, z0), P_(x1, y0, z1), P_(x0, y0, z1), P_(x0, y1, z1), P_(x0, y1, z0)], C(rgb, f * .38, .55), .7);
+  L([P_(x0, y1, z1), P_(x1, y1, z1), P_(x1, y0, z1)], C(rgb, Math.min(1.6, f * 1.35), .6), .6);
+  L([P_(x1, y1, z1), P_(x1, y1, z0)], C(rgb, f * .55, .5), .6);
+  ctx.globalAlpha = 1;
 }
 // oriented thin slab from (ax,ay) along (dx,dy)
 function obox(ax, ay, dx, dy, len, th, z0, z1, rgb, f, tex) {

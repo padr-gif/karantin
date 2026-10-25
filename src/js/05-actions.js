@@ -12,27 +12,44 @@ function addBlood(x, y, s) {
   if (decals.length > 800) decals.shift();
 }
 function toast(text) {
-  const box = $('toasts');
-  for (const t of box.children) if (t.textContent === text && t.style.opacity !== '0') { t.style.animation = 'none'; void t.offsetWidth; t.style.animation = 'tpulse .3s'; return; }
-  const el = document.createElement('div'); el.className = 'toast'; el.textContent = text;
+  if (!text) return;
+  const ev = eventFor(text); if (ev) { eventBanner(ev[0], text, ev[1], ev[2]); return; }
+  const box = ntfBox();
+  for (const t of box.children) if (t._text === text && !t._gone) { const u = t.querySelector('u'); if (u) { u.style.animation = 'none'; void u.offsetWidth; u.style.animation = ''; } t.classList.remove('bump'); void t.offsetWidth; t.classList.add('bump'); clearTimeout(t._tm); t._tm = setTimeout(() => dropNtf(t), ntfLife(text)); return; }
+  const el = mk('div', 'ntf ' + ntfKind(text)); el._text = text;
+  el.appendChild(svgIc(ntfIcon(text))); el.appendChild(mk('span', 'nt', text));
+  const bar = mk('i', 'nbar'), u = mk('u'); u.style.animationDuration = ntfLife(text) + 'ms'; bar.appendChild(u); el.appendChild(bar);
   box.appendChild(el);
-  while (box.children.length > 2) box.firstChild.remove();
-  setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 450); }, 2800);
+  while (box.children.length > 3) dropNtf(box.firstChild, true);
+  el._tm = setTimeout(() => dropNtf(el), ntfLife(text));
 }
-function hurtPlayer() {
+function hurtPlayer(z) {
+  if (godMode) return;
   if (P.car && P.car.hp > 0) { P.car.hp = Math.max(0, P.car.hp - 4); if ((P.carMsgT || 0) < gameMin) { P.carMsgT = gameMin + 20; toast(P.car.hp > 0 ? 'Мертвецы ломятся в машину! Корпус ' + Math.round(P.car.hp) + '%' : 'Стекло выбито!'); } SFX.knock(P.x, P.y); return; }
   if (panel && panel.kind === 'loot') { closePanel(); toast('На тебя напали! Обыск прерван'); }
-  const dmg = (6 + rng() * 7) * DIFF[world.diff].dmg;
+  const brute = !!(z && z.brute), crawl = !!(z && z.crawl), part = crawl ? 'leg' : rollPart();
+  const dmg = (6 + rng() * 7) * DIFF[world.diff].dmg * (brute ? 1.45 : 1) * (crawl ? .75 : 1);
   let arm = 1;
-  if (P.armor) { arm = .5; P.armor.dur -= 6 + rng() * 4; if (P.armor.dur <= 0) { P.armor = null; toast('Бронежилет разорван в клочья'); } }
-  P.stress = Math.min(100, (P.stress || 0) + 10);
-  P.hp -= dmg * (arm < 1 ? .55 : 1); P.hurt = .45; lastCause = 'Загрызли'; if (!P.act || P.act.kind !== 'vault') P.act = null; SFX.bite();
+  if (P.armor && (part === 'torso' || (part === 'arm' && rng() < .4))) { arm = .5; P.armor.dur -= 6 + rng() * 4; if (P.armor.dur <= 0) { P.armor = null; toast('Бронежилет разорван в клочья'); } }
+  P.stress = Math.min(100, (P.stress || 0) + 10); P.panic = Math.min(100, (P.panic || 0) + 12 * panicK());
+  P.hp -= dmg * (arm < 1 ? .55 : 1); P.hurt = .45; lastCause = 'Загрызли';
+  if (!P.act || (P.act.kind !== 'vault' && P.act.kind !== 'reload')) P.act = null;
+  SFX.bite();
   if (P.sleep) wake('Тебя разбудили зубы мертвеца');
   if (!reduceMotion && settings.shake) shake = .35;
   addBlood(P.x, P.y, .5); emit('blood', P.x, P.y, 1.2, 6, null, 0, 1.8);
-  const roll = rng() / arm / (1 - clothProt());
-  if (roll < .1 && !P.inf) { P.inf = true; P.infT = 0; P.bleed = true; toast('Укус. Рана глубокая.'); }
-  else if (roll < .38 && !P.bleed) { P.bleed = true; toast('Царапина. Идёт кровь.'); }
+  const skin = hasTr('thick') ? .75 : hasTr('thin') ? 1.3 : 1;
+  const roll = rng() / arm / (1 - partProt(part)) / skin;
+  tearCloth(clothAt(part), roll < .4 ? 1.6 : 1);
+  if (crawl) { P.grabT = 1.6; if ((P._grabMsg || 0) < gameMin) { P._grabMsg = gameMin + 60; toast('Ползун вцепился в ногу! Вырвись и отойди'); } }
+  let w = null;
+  if (roll < .1 && !P.inf) { P.inf = true; P.infT = 0; w = addWound('bite', part); toast('Укус: ' + w.where + '. Рана глубокая'); }
+  else if (roll < .2) { w = addWound('deep', part); toast('Рваная рана: ' + w.where + '. Нужен бинт'); }
+  else if (roll < .4) { w = addWound('scratch', part); toast('Царапина: ' + w.where); }
+  const crowd = zs.filter(q => q.state === 'chase' && Math.hypot(q.x - P.x, q.y - P.y) < 1.3).length;
+  if (!brute && crowd >= 3 && rng() < .04) { const f = addWound('frac', 'leg'); if (f) toast('Толпа сбила тебя с ног. Перелом: ' + f.where); }
+  if (brute && rng() < .28) { const fp = rng() < .5 ? 'arm' : 'leg', f = addWound('frac', fp); if (f) { toast('Громила сломал тебе ' + (fp === 'leg' ? 'ногу' : 'руку') + '! Нужна шина'); SFX.wood(P.x, P.y); } }
+  P.bleed = wounds().some(bleeding);
 }
 function damageOpening(i, dmg) {
   const o = obs[i]; if (!o) return;

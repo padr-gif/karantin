@@ -32,17 +32,16 @@ function tickXfer(dt) {
   if (xferQ.length && Math.random() < .5) SFX.rustle();
   renderPanel(); updateHud();
 }
-function xferRow() {
-  const q = xferQ[0], r = mk('div', 'xfer'), d = ITEMS[q.it.id] || {name:q.it.id};
-  const ic = mk('span', 'xi'); ic.appendChild(iconEl(q.it.id, 28)); r.appendChild(ic);
-  const t = mk('div'); t.appendChild(mk('b', '', (q.dir === 'take' ? 'Берёшь: ' : 'Кладёшь: ') + d.name)); t.appendChild(mk('small', '', xferQ.length > 1 ? 'в очереди ещё ' + (xferQ.length - 1) + ' · мир не стоит на месте' : 'мир не стоит на месте, следи за округой')); r.appendChild(t);
-  r.appendChild(btn('Отмена', () => { xferQ.length = 0; renderPanel(); }));
-  const b = mk('div', 'xb'), i = mk('i'); i.id = 'xferFill'; i.style.width = Math.min(100, q.t / q.dur * 100) + '%'; b.appendChild(i); r.appendChild(b);
-  return r;
-}
+function xferRow() { return mk('span'); }
 function markQueued(grid, groups, owner) {
-  const cells = grid.children;
-  groups.forEach((g, i) => { if (cells[i] && xferQ.some(q => (owner === P ? q.dir === 'put' : q.dir === 'take' && q.c === owner) && sameStack(q.it, g.it))) cells[i].classList.add('q'); });
+  const cells = grid.children, cur = xferQ[0];
+  groups.forEach((g, i) => {
+    const cl = cells[i]; if (!cl) return;
+    const mine = q => (owner === P ? q.dir === 'put' : q.dir === 'take' && q.c === owner) && sameStack(q.it, g.it);
+    if (!xferQ.some(mine)) return;
+    cl.classList.add('q');
+    if (cur && mine(cur)) { cl.classList.add('qnow'); const b = mk('span', 'xprog'), f = mk('i'); f.id = 'xferFill'; f.style.width = Math.min(100, cur.t / cur.dur * 100) + '%'; b.appendChild(f); cl.appendChild(b); }
+  });
   return grid;
 }
 function useFromCont(c, it) {

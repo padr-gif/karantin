@@ -15,7 +15,11 @@ const DIST_NAMES = ['Заречье', 'Сосновка', 'Луговой', 'К�
 const mix32 = (a, b, c) => { let h = (a ^ Math.imul(b | 0, 0x9E3779B1) ^ Math.imul(c | 0, 0x85EBCA77)) >>> 0; h = Math.imul(h ^ (h >>> 16), 0x7feb352d); h = Math.imul(h ^ (h >>> 15), 0x846ca68b); return (h ^ (h >>> 16)) >>> 0; };
 const distKey = (dx, dy) => dx + ',' + dy;
 function distSeed(dx, dy) { return dx === 0 && dy === 0 ? world.root : mix32(world.root, dx * 7919 + 13, dy * 104729 + 7); }
-function distName(dx, dy) { if (!dx && !dy) return 'Родной район'; return DIST_NAMES[mix32(world.root || 1, dx + 500, dy + 900) % DIST_NAMES.length]; }
+function distName(dx, dy) {
+  if (!dx && !dy) return 'Родной район';
+  const L = DTYPES[distType(dx, dy)].names;
+  return L[mix32(world.root || 1, dx + 500, dy + 900) % L.length];
+}
 function distRing(dx, dy) { return Math.max(Math.abs(dx), Math.abs(dy)); }
 function distInit(root) { world.root = root >>> 0; world.dx = 0; world.dy = 0; world.dist = {}; world.visited = 1; }
 const SIDE_D = {w:[-1, 0], e:[1, 0], n:[0, -1], s:[0, 1]};

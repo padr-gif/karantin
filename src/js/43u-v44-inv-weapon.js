@@ -62,15 +62,3 @@ function moveAll(toBag) {
 }
 
 // ---- редактор персонажа: герой крупнее ----
-drawPreview = function () {
-  const cvp = $('cPrev'); if (cvp.width !== 240) { cvp.width = 240; cvp.height = 300; }
-  const g = cvp.getContext('2d');
-  g.clearRect(0, 0, cvp.width, cvp.height);
-  g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(120, 282, 52, 16, 0, 0, 6.283); g.fill();
-  const dir = Math.floor(animT / 1.2) % 8, nw = AN('p', 'walk'), fi = Math.floor(animT * 12) % nw;
-  const name = 'p' + look.g + '_walk_' + dir + '_' + fi;
-  const fr = charFrame(name, 'P' + look.g + look.skin + look.hair + look.shirt + look.pants, lookPal(look), true);
-  if (!fr) return;
-  const ps = 3.5 / ((fr && fr.s) || ART.meta.charScale || 1);                // вчетверо — крупно, пиксели ровные, размер не прыгает
-  g.imageSmoothingEnabled = false; g.drawImage(fr.cv, 120 - fr.ax * ps, 282 - fr.ay * ps, fr.w * ps, fr.h * ps);
-};

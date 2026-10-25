@@ -12,7 +12,21 @@ function vnP(x, y, per) { // periodic value noise
 }
 function fbm(x, y, per) { return vnP(x, y, per) * .55 + vnP(x * 2, y * 2, per * 2) * .3 + vnP(x * 4, y * 4, per * 4) * .15; }
 // per-pixel painter: fn(x, y) -> [r,g,b,a?]
+// текстура size×size из функции цвета fn(x, y); в детальной графике — HDQ× мельче и слегка размыта (бесшовно)
 function paint(size, fn) {
+  if (HDQ <= 1) return paintRaw(size, fn);
+  const q = HDQ, c = paintRaw(size * q, (x, y) => fn(x / q, y / q));
+  const g = c.getContext('2d'); g.setTransform(q, 0, 0, q, 0, 0);   // later strokes by the maker land in the same place
+  c._q = q;
+  try {
+    const t = mkCanvas(c.width, c.height), g = t.getContext('2d');
+    g.filter = 'blur(' + (c._q * .45).toFixed(2) + 'px)';
+    for (const [dx, dy] of [[0, 0], [-c.width, 0], [c.width, 0], [0, -c.height], [0, c.height]]) g.drawImage(c, dx, dy);   // wrap so the tile stays seamless
+    const cg = c.getContext('2d'); cg.save(); cg.setTransform(1, 0, 0, 1, 0, 0); cg.clearRect(0, 0, c.width, c.height); cg.drawImage(t, 0, 0); cg.restore();
+  } catch (e) {}
+  return c;
+}
+function paintRaw(size, fn) {
   const c = mkCanvas(size, size), g = c.getContext('2d');
   const img = g.createImageData(size, size), d = img.data;
   if (d && d.length) for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
@@ -25,12 +39,13 @@ function paint(size, fn) {
 const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 const shadeC = (c, k) => [c[0] * k, c[1] * k, c[2] * k];
 function pattern(key, make) {
-  let p = texCache.get(key);
+  const k = key + '@' + HDQ; let p = texCache.get(k);
   if (!p) {
-    const cnv = make();
+    const cnv = make(); hdCtx(mainCtx);
     p = mainCtx.createPattern(cnv, 'repeat');
-    try { if (p && p.setTransform && typeof DOMMatrix !== 'undefined') p.setTransform(new DOMMatrix([1 / TP, 0, 0, 1 / TP, 0, 0])); } catch (e) {}
-    texCache.set(key, p);
+    const q = cnv._q || (cnv.width > 0 && HDQ > 1 ? HDQ : 1);
+    try { if (p && p.setTransform && typeof DOMMatrix !== 'undefined') p.setTransform(new DOMMatrix([1 / (TP * q), 0, 0, 1 / (TP * q), 0, 0])); } catch (e) {}
+    texCache.set(k, p);
   }
   return p;
 }

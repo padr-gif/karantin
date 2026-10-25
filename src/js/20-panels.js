@@ -19,17 +19,29 @@ const COOK = [
   {id:'pastaC', raw:'pasta', tool:'pot', toolName:'кастрюля', water:true},
   {id:'riceC', raw:'rice', tool:'pot', toolName:'кастрюля', water:true},
 ];
+let sndOpened = null;                                                       // [мебель, время] последнего звука открывания — чтобы не открыть дважды
+let markPick = null;                                                        // всплывающий выбор метки на карте
+// открыть окно (рюкзак, обыск, готовка, карта…); при обыске — звук открывания ящика
 function openPanel(kind, opt) {
-  if (mode !== 'play' || P.sleep) return;
-  if (P.car && kind !== 'inv' && kind !== 'map' && kind !== 'radio') return;
-  const tab = kind === 'inv' ? (panel && panel.kind === 'inv' ? panel.tab : 'items') : null;
-  panel = Object.assign({kind, tab}, opt || {});
-  paused = true; P.act = null; atkHeld = false; joy.id = null; joy.x = joy.y = 0; $('stick').hidden = true;
-  $('panel').hidden = false; $('panel').classList.toggle('live', kind === 'loot');
-  if (kind === 'loot') paused = false;
-  renderPanel();
+  const was = panel && panel.kind === 'loot' ? panel.src : null;
+  if (mode === 'play' && !P.sleep && !(P.car && kind !== 'inv' && kind !== 'map' && kind !== 'radio')) {
+    const tab = kind === 'inv' ? (panel && panel.kind === 'inv' ? panel.tab : 'items') : null;
+    panel = Object.assign({kind, tab}, opt || {});
+    paused = true; P.act = null; atkHeld = false; joy.id = null; joy.x = joy.y = 0; $('stick').hidden = true;
+    $('panel').hidden = false; $('panel').classList.toggle('live', kind === 'loot');
+    if (kind === 'loot') paused = false;
+    renderPanel();
+  }
+  if (panel && kind === 'inv') panel.sub = (opt && opt.sub) || 'body';
+  const src = panel && panel.kind === 'loot' && panel.src;
+  if (src && src !== was && src.type && src.type !== 'pile' && !(sndOpened && sndOpened[0] === src && performance.now() - sndOpened[1] < 4000)) SFX.contOpen(src.type);
 }
-function closePanel() { if (!panel) return; panel = null; $('panel').hidden = true; if ($('pause').hidden) paused = false; }
+function closePanel() {
+  if (markPick) { markPick.remove(); markPick = null; }                     // выбор метки на карте
+  const src = panel && panel.kind === 'loot' && panel.src;
+  if (panel) { panel = null; $('panel').hidden = true; if ($('pause').hidden) paused = false; }
+  if (src && src.type && src.type !== 'pile') SFX.contClose(src.type);
+}
 function renderInv() { if (panel) renderPanel(); }
 function toggleInv(force) { if (force === false) closePanel(); else if (panel && panel.kind === 'inv') closePanel(); else openPanel('inv'); }
 function groupItems(list) {
@@ -146,18 +158,21 @@ function detailCard(it, n, buttons, eq) {
   return r;
 }
 function recipeCard(title, parts, result, buttons, note) {
-  const r = mk('div', 'recipe');
-  const row = mk('div', 'ingr');
+  const r = mk('div', 'recipe rc4'); r.dataset.result = result; r.dataset.parts = parts.map(p => (p.ok ? '+' : '-') + (p.id || '')).join(',');
+  const out = mk('div', 'rout'); out.appendChild(iconEl(result, 36)); r.appendChild(out);
+  const mid = mk('div', 'rmid'); mid.appendChild(mk('b', '', title));
+  const chips = mk('div', 'chips');
   for (const p of parts) {
-    const c = cell(p.id ? {id:p.id} : null, 0, null, {cls:p.ok ? 'ok' : 'miss', badge:p.badge, size:36});
-    if (!p.id) { c.classList.remove('void'); c.appendChild(mk('span', 'lab', p.label)); }
-    c.disabled = true; c.title = p.label || ''; row.appendChild(c);
+    const ch = mk('span', 'chip ' + (p.ok ? 'ok' : 'no'));
+    if (p.id && (ITEMS[p.id] || PNAMES[p.id])) ch.appendChild(iconEl(p.id, 18));
+    const nm = p.id && ITEMS[p.id] ? (ITEMS[p.id].sh || ITEMS[p.id].name) : (PNAMES[p.id] || p.label || p.id || '');
+    const bd = p.badge && !String(p.badge).startsWith('×') ? (String(p.badge).includes('%') ? ' ' + p.badge : ' ×' + p.badge) : '';
+    ch.appendChild(mk('span', '', (p.ok ? '✓ ' : '') + nm + bd)); chips.appendChild(ch);
   }
-  row.appendChild(mk('span', 'arrow', '→'));
-  const out = cell({id:result}, 0, null, {cls:'out', size:44}); out.disabled = true; row.appendChild(out);
-  r.appendChild(row);
-  const nm = mk('div', 'nm'); nm.appendChild(mk('b', '', title)); if (note) { const s = mk('small'); s.innerHTML = note; nm.appendChild(s); } r.appendChild(nm);
-  const a = mk('div', 'acts'); for (const b of buttons) a.appendChild(b); r.appendChild(a);
+  mid.appendChild(chips);
+  if (note) { const s = mk('small', 'rnote'); s.innerHTML = note; r.title = s.textContent; mid.appendChild(s); }
+  r.appendChild(mid);
+  const a = mk('div', 'acts'); for (const b of buttons) { if (b.disabled && /Создать|Приготовить/.test(b.textContent)) b.textContent = 'Не хватает'; a.appendChild(b); } r.appendChild(a);
   return r;
 }
 function renderPanel() { runHooked('panel', renderPanelCore); }

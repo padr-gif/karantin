@@ -76,7 +76,6 @@ TX.woodLight = rgb => detail('woodL' + rgb, () => TX30.woodLight(rgb), (x, y) =>
   return shadeC(rgb, k);
 });
 // ковры на полу — с каймой и узором вместо трёх вложенных прямоугольников
-const RUGTEX = new Map();
 function rugTex(c) {
   const k = c.join(); let cv = RUGTEX.get(k); if (cv) return cv;
   const S = 96; cv = mkCanvas(S, S); const g = cv.getContext('2d'), img = g.createImageData(S, S), d = img.data;
@@ -91,5 +90,3 @@ function rugTex(c) {
   }
   g.putImageData(img, 0, 0); RUGTEX.set(k, cv); return cv;
 }
-const hdReset31 = hdReset;
-hdReset = function () { hdReset31(); RUGTEX.clear(); };

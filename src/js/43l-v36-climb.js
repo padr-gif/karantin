@@ -56,5 +56,3 @@ addActions(out => { const pl = climbPlan(Math.cos(P.face), Math.sin(P.face));
 defAction('climb', {run:a0 => { if (mode !== 'play' || paused || panel || P.sleep) return; $('actMenu').hidden = true; const pl = climbPlan(a0.pl.tx - P.x, a0.pl.ty - P.y); if (pl && pl.f) startClimb(pl);
 }});
 // после прыжка — мягкое приземление
-const finishVault36 = finishVault;
-finishVault = function (a) { if (a.climb) { P.x = a.tx; P.y = a.ty; fogDirty = true; SFX.step(true, false); return; } finishVault36(a); };

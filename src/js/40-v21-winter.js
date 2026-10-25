@@ -14,29 +14,6 @@ function snowPat(kind) {
   try { p.setTransform(new DOMMatrix().scale(kind === 'roof' ? 1 / 40 : 1 / 34)); } catch (e) {}
   return SNP[kind] = p;
 }
-drawSnowCover = function (x0, y0, x1, y1) {
-  const s = world.snow || 0; if (s < .03) return;
-  groundT(0);
-  const a = Math.min(1, s * 1.25);
-  for (const kind of ['ground', 'road']) {
-    ctx.beginPath(); let any = false;
-    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
-      const i = y * MW + x, t = map[i]; if (t === FLOOR || isWallish(t) || hAt[i] || t === WATER) continue;
-      const road = t === ROAD || t === WALK; if (road !== (kind === 'road')) continue;
-      ctx.rect(x - .01, y - .01, 1.02, 1.02); any = true;
-    }
-    if (!any) continue;
-    ctx.globalAlpha = kind === 'road' ? a * .86 : a; ctx.fillStyle = snowPat(kind); ctx.fill();
-  }
-  // footprints
-  ctx.globalAlpha = 1;
-  for (const f of BZ.steps || []) {
-    if (f.x < x0 - 1 || f.x > x1 + 1 || f.y < y0 - 1 || f.y > y1 + 1) continue;
-    const al = (1 - f.t / 120) * .5 * a; if (al <= 0) continue;
-    ctx.fillStyle = `rgba(120,132,152,${al})`; ctx.save(); ctx.translate(f.x, f.y); ctx.rotate(f.a); ctx.beginPath(); ctx.ellipse(0, 0, .09, .045, 0, 0, 6.283); ctx.fill(); ctx.restore();
-  }
-  resetT();
-};
 // frosted trees and bushes once the snow settles
 const seasonTint0 = seasonTint;
 seasonTint = function () { const s = world.snow || 0; if (s > .25) return `rgba(232,238,248,${(Math.round((.12 + .2 * Math.min(1, s)) * 10) / 10).toFixed(1)})`; return seasonTint0(); };

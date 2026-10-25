@@ -25,11 +25,6 @@ function distType(dx, dy) {
   for (let k = 0; k < w.length; k++) { if (r < w[k]) return DT_ORDER[k]; r -= w[k]; }
   return 'town';
 }
-distName = function (dx, dy) {
-  if (!dx && !dy) return 'Родной район';
-  const L = DTYPES[distType(dx, dy)].names;
-  return L[mix32(world.root || 1, dx + 500, dy + 900) % L.length];
-};
 function curDType() { return (world.dx || world.dy) ? distType(world.dx, world.dy) : 'town'; }
 
 // ---- новые здания ----

@@ -172,13 +172,14 @@ function recolorFrame(name, pal) {
   return {c, ax:f[5], ay:f[6]};
 }
 function drawPreview() {
-  const cvp = $('cPrev'); if (cvp.width !== 192) { cvp.width = 192; cvp.height = 240; }
+  const cvp = $('cPrev'); if (cvp.width !== 240) { cvp.width = 240; cvp.height = 300; }
   const g = cvp.getContext('2d');
   g.clearRect(0, 0, cvp.width, cvp.height);
-  g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(96, 206, 34, 14, 0, 0, 6.283); g.fill();
+  g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(120, 282, 52, 16, 0, 0, 6.283); g.fill();
   const dir = Math.floor(animT / 1.2) % 8, nw = AN('p', 'walk'), fi = Math.floor(animT * 12) % nw;
   const name = 'p' + look.g + '_walk_' + dir + '_' + fi;
   const fr = charFrame(name, 'P' + look.g + look.skin + look.hair + look.shirt + look.pants, lookPal(look), true);
-  const PS = 2 / ((fr && fr.s) || ART.meta.charScale || 1);   // превью всегда в двойном размере игрового пикселя
-  if (fr) { g.imageSmoothingEnabled = PS < 1; g.drawImage(fr.cv, 96 - fr.ax * PS, 206 - fr.ay * PS, fr.w * PS, fr.h * PS); }
+  if (!fr) return;
+  const ps = 3.5 / ((fr && fr.s) || ART.meta.charScale || 1);                // вчетверо — крупно, пиксели ровные, размер не прыгает
+  g.imageSmoothingEnabled = false; g.drawImage(fr.cv, 120 - fr.ax * ps, 282 - fr.ay * ps, fr.w * ps, fr.h * ps);
 }

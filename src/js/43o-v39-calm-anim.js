@@ -7,15 +7,6 @@ AN = function (k, a) { if (k === 'p' && heroMale() && ART.meta.anims.pm[a]) retu
 const pmLoop = (an, speed) => { const n = AN('p', an), d = (ART.meta.anims.pmdur && ART.meta.anims.pmdur[an]) || 2; return [an, Math.floor(animT * (speed || 1) / d * n) % n]; };
 
 // ---- зарядка: прыжки «ноги врозь — руки в стороны», дольше и полезнее ----
-workout = function () {
-  const why = canWorkout(); if (why) { toast(why); return; }
-  job(25, () => {
-    P.en = Math.max(0, P.en - 16); P.sat = Math.max(0, P.sat - 4); P.hyd = Math.max(0, P.hyd - 7);
-    P.bored = Math.max(0, (P.bored || 0) - 20); P.stress = Math.max(0, (P.stress || 0) - 14); P.unh = Math.max(0, (P.unh || 0) - 8);
-    P.fitT = gameMin + 240; addXp('fit', 4); stat('workout'); SFX.rustle();
-    toast('Сотня прыжков с руками в стороны. Сердце стучит, голова ясная');
-  }, {reopen:'self', sub:'skills', noisy:2, an:'jacks'});
-};
 // шаги в такт прыжкам
 { let lastJ = -1;
   onUpdate(dt => {

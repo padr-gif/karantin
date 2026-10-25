@@ -6,7 +6,6 @@
 
 // ---- кадры повышенной детализации ----
 const hdFrame = name => HDQ > 1 && ART.meta.frames['hd_' + name];
-const HDFOG = new Map();                       // затемнённые туманом копии: кадр в полном разрешении, LRU
 function hdFogged(fr, f, tint) {
   const fq = Math.round(f * 20) / 20, k = fr[1] + ',' + fr[2] + '|' + fq + '|' + (tint || '');
   let c = HDFOG.get(k);
@@ -33,8 +32,6 @@ function objAtDraw(id, name, wx, wy, f, alpha, offX, tint) {
   else ctx.drawImage(ART.imgs[fr[0]], fr[1], fr[2], fr[3], fr[4], x, y, fr[3] / s, fr[4] / s);
   ctx.globalAlpha = 1; ctx.imageSmoothingEnabled = false;
 }
-const hdReset30 = hdReset;
-hdReset = function () { hdReset30(); HDFOG.clear(); };
 
 // ---- настройка: «Пиксели» или «Детальная»; детальная теперь по умолчанию ----
 SETTINGS_DEF.smooth = true;

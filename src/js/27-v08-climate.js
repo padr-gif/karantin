@@ -51,12 +51,17 @@ function updateClimate(gm) {
   const dc = (P.cold || 0) - c0; if (dc > 0) P.cold = clamp(c0 + dc * (hasTr('cold') ? 1.45 : 1) * (hasTr('hardy') ? .7 : 1), 0, 100);
   const f = P.cloth && P.cloth.feet; if (f && ITEMS[f.id].dry && (P.wet || 0) > w0) P.wet = w0 + (P.wet - w0) * .7;
 }
+// надеть / снять одежду (снятое — в инвентарь; вещи раскладываются по карманам и рюкзаку заново)
 function wearCloth(k) {
   const it = P.inv[k], d = ITEMS[it.id]; P.cloth = P.cloth || {};
-  P.inv.splice(k, 1); if (P.cloth[d.slot]) P.inv.push(P.cloth[d.slot]); P.cloth[d.slot] = it;
-  SFX.rustle(); toast('Надето: ' + d.name.toLowerCase()); renderInv(); updateHud();
+  const old = P.cloth[d.slot];
+  P.inv.splice(k, 1); if (old) { delete old.bp; P.inv.push(old); } P.cloth[d.slot] = it; delete it.bp;
+  SFX.equip(); toast((d.slot === 'feet' ? 'Обул: ' : 'Надел: ') + d.name.toLowerCase()); invPlace(); renderInv(); updateHud();
 }
-function takeOffCloth(slot) { if (!P.cloth || !P.cloth[slot]) return; if (invFull()) { toast('Слишком тяжело — не унести'); return; } P.inv.push(P.cloth[slot]); P.cloth[slot] = null; SFX.rustle(); renderInv(); }
+function takeOffCloth(slot) {
+  const it = P.cloth && P.cloth[slot]; if (!it) return;
+  P.inv.push(it); P.cloth[slot] = null; SFX.rustle(); invPlace(); renderInv(); updateHud();
+}
 // ---- thunderstorms ----
 let flash = 0;
 function updateStorm(dt) {

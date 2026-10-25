@@ -334,10 +334,6 @@ const bump = c => { if (c) { c._v = (c._v || 0) + 1; c._st = true; } };
     return di.call(this, bm, a, b, c, d, e, f, g, h);
   };
 }
-{ const sp = sprite;
-  sprite = function (id, key) { const s = SPR.get(id); if (s && s.key !== key) bump(s.c); sp.apply(this, arguments); const s2 = SPR.get(id); if (s2 && !s2.c._st) bump(s2.c); };
-}
-{ const wc = withChunk; withChunk = function (ch, fn) { bump(ch.c); return wc(ch, fn); }; }
 { const cf = charFrame; charFrame = function () { const r = cf.apply(this, arguments); if (r && r.cv && !r.cv._st) r.cv._st = true; return r; }; }
 { const hf = hdFogged; hdFogged = function () { const c = hf.apply(this, arguments); if (c && !c._st) c._st = true; return c; }; }
 

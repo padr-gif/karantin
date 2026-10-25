@@ -224,58 +224,9 @@ onLoad((d) => { try { for (const f of furns) if (f.moved && !f.gone) f.tiles = t
 });
 
 // ---- drawing ----
-const furnName29 = furnName;
-furnName = function (fu) {
-  const fr = ART.meta.frames;
-  let n = furnName29(fu); if (fu.art) n = n.replace(/^f_[a-z0-9]+_/, 'f_' + fu.art + '_');
-  if (fu.compact && fr['old_' + n]) return 'old_' + n;
-  if (fr[n]) return n;
-  const n0 = n.replace(/_(\d)_(\d)$/, '_0_$2'); return fr[n0] ? n0 : n;
-};
 
 // ---- furniture editor: whole footprint, any size ----
-canPlace = function (f, x, y, wd) {
-  wd = wd || (EDIT.tgt && EDIT.tgt.x === x && EDIT.tgt.y === y ? EDIT.tgt.wd : autoWd(f, x, y));
-  const behind = isWallT9(get(x + wd[0], y + wd[1])), door = get(x, y) === DOOR;
-  let R = null;
-  for (const d of [1, -1]) { const c = rectFor(artOf(f), x, y, wd, d, !behind && !door); if (!c) break; if (rectFits(f, c, wd, {free:!behind, door, x, y})) { R = c; break; } if (c.na === 1) break; }
-  if (!R) {
-    const i = y * MW + x, t = get(x, y);
-    if (!(t === FLOOR || t === DOOR)) return 'Ставить можно на пол в доме или в открытый дверной проём';
-    if (furn[i] && furns[furn[i] - 1] !== f) return 'Тут уже стоит мебель';
-    return Math.max(...(fsizeOf(artOf(f)) || [1, 1])) > 1.1 ? 'Не влезает: нужно больше места' : 'Место занято';
-  }
-  const [r0, r1, r2, r3] = R.r, px = clamp(P.x, r0, r2), py = clamp(P.y, r1, r3);
-  if (Math.hypot(px - P.x, py - P.y) < P.r * .9) return 'Ты стоишь на этом месте';
-  if (zs.some(z => z.x > r0 - .2 && z.x < r2 + .2 && z.y > r1 - .2 && z.y < r3 + .2)) return 'Мешает мертвец';
-  if (Math.hypot(R.cx - P.x, R.cy - P.y) > 3.6 + Math.max(R.sx, R.sy) / 2) return 'Далеко. Подойди ближе к месту';
-  f._place = R; return null;
-};
-relocate = function (f, x, y, wd) {
-  const why = canPlace(f, x, y, wd), R = !why && f._place;
-  if (!R) return false;
-  for (const t of f.tiles || [f.y * MW + f.x]) for (const ch of chunksNear((t % MW) + .5, ((t / MW) | 0) + .5, 2)) for (const [k, v] of CHUNKS) if (v === ch) CHUNKS.delete(k);
-  unregFurn(f);
-  Object.assign(f, {x, y, wd, cx:R.cx, cy:R.cy, sx:R.sx, sy:R.sy, r:R.r, moved:true, blockDoor:get(x, y) === DOOR, compact:false});
-  regFurn(f);
-  for (const t of f.tiles) for (const ch of chunksNear((t % MW) + .5, ((t / MW) | 0) + .5, 2)) for (const [k, v] of CHUNKS) if (v === ch) CHUNKS.delete(k);
-  buildFlow(); return true;
-};
-ghostRect = function (f, x, y, wd) { canPlace(f, x, y, wd); return f._place ? f._place.r : (rectFor(artOf(f), x, y, wd, 1, !isWallT9(get(x + wd[0], y + wd[1]))) || {r:[x, y, x + 1, y + 1]}).r; };
 const finishDismantle29 = finishDismantle;
 finishDismantle = function (a) { const f = a.f; unregFurn(f); f.tiles = [f.y * MW + f.x]; furn[f.y * MW + f.x] = furnIdx(f); finishDismantle29(a); f.tiles = []; f.big = false; f.dt = null; };
 const moveFurn29 = moveFurn;
 moveFurn = function (f) { if (f.big) { toast('Слишком большое: двигай в режиме обустройства'); return false; } return moveFurn29(f); };
-finishFurn = function (a) {
-  if (!relocate(a.f, a.x, a.y, a.wd)) { toast('Не получилось поставить'); EDIT.tgt = null; editUI(); return; }
-  noise(P.x, P.y, 5); P.en = Math.max(0, P.en - (a.f.big ? 4 : 2)); SFX.wood(a.f.cx, a.f.cy);
-  toast(a.f.blockDoor ? 'Проход загорожен: мертвецам придётся ломать' : furnLabel(a.f) + ': переставлено');
-  EDIT.sel = null; EDIT.tgt = null; editUI();
-};
-rotateSel = function () {
-  const f = EDIT.sel; if (!f) return;
-  if (EDIT.tgt) { const k = WDS.findIndex(w => w[0] === EDIT.tgt.wd[0] && w[1] === EDIT.tgt.wd[1]); EDIT.tgt.wd = WDS[(k + 1) % 4]; EDIT.tgt.why = canPlace(f, EDIT.tgt.x, EDIT.tgt.y, EDIT.tgt.wd); SFX.ui(); editUI(); return; }
-  const k = WDS.findIndex(w => w[0] === f.wd[0] && w[1] === f.wd[1]);
-  for (let s = 1; s < 4; s++) if (relocate(f, f.x, f.y, WDS[(k + s) % 4])) { SFX.wood(f.cx, f.cy); return; }
-  toast('Здесь не развернуть: мало места');
-};

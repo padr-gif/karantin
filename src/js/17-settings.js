@@ -27,4 +27,4 @@ const SETTINGS_DEF = {gfx:2, mini:true, vol:.7, zoom:0, dayLen:1, rain:true, sha
 const settings = Object.assign({}, SETTINGS_DEF);
 function loadSettings() { try { const s = JSON.parse(localStorage.getItem('karantin-settings') || 'null'); if (s) Object.assign(settings, s); } catch (e) {} applySettings(); }
 function saveSettings() { try { localStorage.setItem('karantin-settings', JSON.stringify(settings)); } catch (e) {} applySettings(); }
-function applySettings() { zoomOff = settings.zoom; gfxCap = settings.gfx || 2; resize(); document.body.classList.toggle('nohints', !settings.hints); document.body.style.setProperty('--uia', settings.uia || 1); }
+function applySettings() { zoomOff = settings.zoom; gfxCap = settings.gfx || 2; resize(); document.body.classList.toggle('nohints', !settings.hints); document.body.style.setProperty('--uia', settings.uia || 1); hdApply(); ctlApply(); }

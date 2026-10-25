@@ -27,12 +27,11 @@ Object.assign(FSZ, {armchair:[.88, .7], coffeetab:[.9, .5], floorlamp:[.4, .4], 
 
 // что ещё ставить в комнату (после основного списка), по площади; без rng генератора здесь нельзя — вызывается из него
 function extraFurn(type, area, rnd) {
-  const L = [];
-  const maybe = (p, ...t) => { if (rnd() < p) L.push(...t); };
-  if (type === 'living') { L.push('armchair', 'coffeetab'); maybe(.8, 'floorlamp'); maybe(.7, 'plant'); maybe(.6, 'endtable'); maybe(.5, 'radiator'); if (area >= 14) { maybe(.6, 'armchair'); maybe(.4, 'boxes'); } }
-  else if (type === 'bedroom') { maybe(.7, 'wdesk', 'chair'); maybe(.6, 'mirror'); maybe(.6, 'laundry'); maybe(.5, 'floorlamp'); maybe(.5, 'radiator'); maybe(.35, 'plant'); maybe(.3, 'boxes'); }
-  else if (type === 'kitchen') { L.push('kbin'); maybe(.7, 'pantry'); maybe(.45, 'washer'); maybe(.4, 'radiator'); maybe(.3, 'plant'); }
-  else if (type === 'bath') { L.push('bsink'); maybe(.6, 'towels'); maybe(.45, 'washer'); maybe(.4, 'laundry'); }
+  const L = [], maybe = (p, ...t) => { if (rnd() < p) L.push(...t); };
+  if (type === 'living') { L.push('armchair', 'floorlamp'); maybe(.7, 'plant'); maybe(.6, 'endtable'); maybe(.6, 'radiator'); maybe(.4, 'plant'); if (area >= 14) maybe(.4, 'boxes'); }
+  else if (type === 'bedroom') { L.push('nightstand'); maybe(.7, 'wdesk'); maybe(.6, 'mirror'); maybe(.6, 'laundry'); maybe(.5, 'floorlamp'); maybe(.6, 'radiator'); maybe(.4, 'plant'); maybe(.3, 'boxes'); }
+  else if (type === 'kitchen') { L.push('kbin'); maybe(.7, 'pantry'); maybe(.45, 'washer'); maybe(.5, 'radiator'); maybe(.3, 'plant'); }
+  else if (type === 'bath') { L.push('bsink'); maybe(.6, 'towels'); maybe(.45, 'washer'); maybe(.4, 'laundry'); maybe(.3, 'radiator'); }
   else if (type === 'hall') { L.push('shoerack'); maybe(.5, 'plant'); maybe(.4, 'mirror'); maybe(.4, 'boxes'); maybe(.3, 'radiator'); }
   return L;
 }

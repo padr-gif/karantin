@@ -60,15 +60,6 @@ wallOk = function (f, x, y, wd) {
   return true;
 };
 // что дописывать к основной мебели: центр комнаты (журнальный столик, стул к столу, сундук) ставится отдельно
-extraFurn = function (type, area, rnd) {
-  const L = [], maybe = (p, ...t) => { if (rnd() < p) L.push(...t); };
-  if (type === 'living') { L.push('armchair', 'floorlamp'); maybe(.7, 'plant'); maybe(.6, 'endtable'); maybe(.6, 'radiator'); maybe(.4, 'plant'); if (area >= 14) maybe(.4, 'boxes'); }
-  else if (type === 'bedroom') { L.push('nightstand'); maybe(.7, 'wdesk'); maybe(.6, 'mirror'); maybe(.6, 'laundry'); maybe(.5, 'floorlamp'); maybe(.6, 'radiator'); maybe(.4, 'plant'); maybe(.3, 'boxes'); }
-  else if (type === 'kitchen') { L.push('kbin'); maybe(.7, 'pantry'); maybe(.45, 'washer'); maybe(.5, 'radiator'); maybe(.3, 'plant'); }
-  else if (type === 'bath') { L.push('bsink'); maybe(.6, 'towels'); maybe(.45, 'washer'); maybe(.4, 'laundry'); maybe(.3, 'radiator'); }
-  else if (type === 'hall') { L.push('shoerack'); maybe(.5, 'plant'); maybe(.4, 'mirror'); maybe(.4, 'boxes'); maybe(.3, 'radiator'); }
-  return L;
-};
 
 // ---- вещи посреди комнаты ----
 function roomFurn(Hs, room) { const hi = houses.indexOf(Hs) + 1; return furns.filter(f => !f.gone && hAt[f.y * MW + f.x] === hi && f.x >= room.x0 && f.x <= room.x1 && f.y >= room.y0 && f.y <= room.y1); }

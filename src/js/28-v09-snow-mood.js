@@ -24,16 +24,23 @@ function updateSnow(gm) {
 function drawSnowCover(x0, y0, x1, y1) {
   const s = world.snow || 0; if (s < .03) return;
   groundT(0);
-  const lv = [.68, .76, .83, .9];
-  for (let k = 0; k < 4; k++) {
-    ctx.fillStyle = `rgba(246,249,255,${lv[k] * Math.min(1, s * 1.2)})`; ctx.beginPath();
+  const a = Math.min(1, s * 1.25);
+  for (const kind of ['ground', 'road']) {
+    ctx.beginPath(); let any = false;
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
-      const i = y * MW + x, t = map[i]; if (t === FLOOR || isWallish(t) || hAt[i]) continue;
-      let b = Math.floor(hash(x * 5 + 1, y * 3 + 2) * 3) + 1; if (t === ROAD) b -= 1; if (t === WALK) b = Math.max(0, b - 1);
-      if (b !== k) continue;
-      ctx.rect(x, y, 1.01, 1.01);
+      const i = y * MW + x, t = map[i]; if (t === FLOOR || isWallish(t) || hAt[i] || t === WATER) continue;
+      const road = t === ROAD || t === WALK; if (road !== (kind === 'road')) continue;
+      ctx.rect(x - .01, y - .01, 1.02, 1.02); any = true;
     }
-    ctx.fill();
+    if (!any) continue;
+    ctx.globalAlpha = kind === 'road' ? a * .86 : a; ctx.fillStyle = snowPat(kind); ctx.fill();
+  }
+  // footprints
+  ctx.globalAlpha = 1;
+  for (const f of BZ.steps || []) {
+    if (f.x < x0 - 1 || f.x > x1 + 1 || f.y < y0 - 1 || f.y > y1 + 1) continue;
+    const al = (1 - f.t / 120) * .5 * a; if (al <= 0) continue;
+    ctx.fillStyle = `rgba(120,132,152,${al})`; ctx.save(); ctx.translate(f.x, f.y); ctx.rotate(f.a); ctx.beginPath(); ctx.ellipse(0, 0, .09, .045, 0, 0, 6.283); ctx.fill(); ctx.restore();
   }
   resetT();
 }

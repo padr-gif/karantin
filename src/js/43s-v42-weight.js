@@ -117,17 +117,6 @@ function takeOffBag() {
   SFX.rustle(); toast('Рюкзак снят. Вещи из него — в руках и карманах'); renderInv(); updateHud();
 }
 defUse((it, d) => d && d.kind === 'bag', (it, k) => wearBag(k));   // рюкзак — надеть
-// одежда: карманы больше не «места» — просто надеть/снять
-wearCloth = function (k) {
-  const it = P.inv[k], d = ITEMS[it.id]; P.cloth = P.cloth || {};
-  const old = P.cloth[d.slot];
-  P.inv.splice(k, 1); if (old) { delete old.bp; P.inv.push(old); } P.cloth[d.slot] = it; delete it.bp;
-  SFX.equip(); toast((d.slot === 'feet' ? 'Обул: ' : 'Надел: ') + d.name.toLowerCase()); invPlace(); renderInv(); updateHud();
-};
-takeOffCloth = function (slot) {
-  const it = P.cloth && P.cloth[slot]; if (!it) return;
-  P.inv.push(it); P.cloth[slot] = null; SFX.rustle(); invPlace(); renderInv(); updateHud();
-};
 
 // ---- перегруз: медленнее и тяжелее ----
 { const ed = enDrainK; enDrainK = function () { return ed() * (1 + invOver() * 1.4); }; }

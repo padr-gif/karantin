@@ -5,48 +5,61 @@ let sprU = 0, sprDPR = 0, bakes = 0, stampQ = [];
 const SPR_MAX = 1100, CH_MAX = 56, BAKE_BUDGET = 40;
 function clearCaches() { SPR.clear(); CHUNKS.clear(); stampQ.length = 0; }
 function cachesValid() { if (sprU !== U) { clearCaches(); sprU = U; sprDPR = DPR; } }
+// спрайт из кэша: рисуется один раз (fn) в свой холст HDQ× крупнее, дальше — готовой картинкой
 function sprite(id, key, wx, wy, bx0, by0, bx1, by1, fn, alpha, offX) {
   let s = SPR.get(id);
-  if (!s || (s.key !== key && bakes < BAKE_BUDGET)) {
-    const w = Math.max(1, Math.ceil(bx1 - bx0)), h = Math.max(1, Math.ceil(by1 - by0));
-    const c = s && s.c.width === w && s.c.height === h ? s.c : mkCanvas(w, h);
-    const g = c.getContext('2d');
-    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, w, h); g.imageSmoothingEnabled = false;
+  if (s && s.key !== key) bump(s.c);                                            // учёт перерисовок для запекания в ImageBitmap
+  const w = Math.max(1, Math.ceil(bx1 - bx0)), h = Math.max(1, Math.ceil(by1 - by0));
+  if (!s || s.q !== HDQ || (s.key !== key && bakes < BAKE_BUDGET)) {
+    const cw = w * HDQ, chh = h * HDQ;
+    const c = s && s.c.width === cw && s.c.height === chh ? s.c : mkCanvas(cw, chh);
+    const g = hdCtx(c.getContext('2d'));
+    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cw, chh); g.imageSmoothingEnabled = false;
     const sc = ctx, sox = ox, soy = oy, sd = DPR;
-    ctx = g; ox = -bx0 - (wx - wy) * U; oy = -by0 - (wx + wy) * hh; baking = true; DPR = 1;
+    ctx = g; ox = -bx0 - (wx - wy) * U; oy = -by0 - (wx + wy) * hh; baking = true; DPR = HDQ;
     resetT();
     try { fn(); } finally { ctx = sc; ox = sox; oy = soy; baking = false; DPR = sd; resetT(); ctx.globalAlpha = 1; ctx.imageSmoothingEnabled = false; }
     if (!s) { s = {c}; SPR.set(id, s); }
-    s.c = c; s.key = key; bakes++;
+    s.c = c; s.key = key; s.q = HDQ; s.w = w; s.h = h; bakes++;
   }
   s.used = frameNo;
   const px = rd(SX(wx, wy) + bx0 + (offX || 0)), py = rd(SY(wx, wy, 0) + by0);
   if (alpha != null && alpha < 1) ctx.globalAlpha = alpha;
-  ctx.drawImage(s.c, px, py);
+  if (HDQ > 1) ctx.drawImage(s.c, px, py, s.w, s.h); else ctx.drawImage(s.c, px, py);
   ctx.globalAlpha = 1;
+  const s2 = SPR.get(id); if (s2 && !s2.c._st) bump(s2.c);
 }
+// выбросить давно не нужные спрайты и куски земли; в детальной графике — следить за памятью кусков
 function evict() {
   if (SPR.size > SPR_MAX) { const arr = [...SPR].sort((a, b) => a[1].used - b[1].used); for (let k = 0; k < arr.length - SPR_MAX * .75; k++) SPR.delete(arr[k][0]); }
   if (CHUNKS.size > CH_MAX) { const arr = [...CHUNKS].sort((a, b) => a[1].used - b[1].used); for (let k = 0; k < arr.length - CH_MAX * .75; k++) CHUNKS.delete(arr[k][0]); }
+  if (HDQ > 1 && CHUNKS.size > HD_CH_MAX) { const arr = [...CHUNKS].sort((a, b) => a[1].used - b[1].used); for (let k = 0; k < arr.length - HD_CH_MAX * .75; k++) CHUNKS.delete(arr[k][0]); }
+  if (HDQ <= 1) return;
+  let bytes = 0; for (const ch of CHUNKS.values()) bytes += ch.c.width * ch.c.height * 4;
+  if (bytes <= CHUNK_BUDGET) return;
+  const arr = [...CHUNKS].filter(e => e[1].used < frameNo - 1).sort((a, b) => a[1].used - b[1].used);
+  for (const [k, ch] of arr) { if (bytes <= CHUNK_BUDGET * .8) break; bytes -= ch.c.width * ch.c.height * 4; CHUNKS.delete(k); }
 }
 function withChunk(ch, fn) {
+  bump(ch.c);
   const sc = ctx, sox = ox, soy = oy, sd = DPR;
-  ctx = ch.g; ox = CH * U - (ch.ax - ch.ay) * U; oy = -(ch.ax + ch.ay) * hh; baking = true; DPR = 1;
+  ctx = ch.g; ox = CH * U - (ch.ax - ch.ay) * U; oy = -(ch.ax + ch.ay) * hh; baking = true; DPR = ch.q || 1;
   ctx.save();
   groundT(0); ctx.beginPath(); ctx.rect(ch.ax, ch.ay, CH, CH); resetT(); ctx.clip();
   try { fn(); } finally { ctx.restore(); ctx = sc; ox = sox; oy = soy; baking = false; DPR = sd; resetT(); }
 }
+// кусок земли CH×CH клеток (кэш, HDQ× крупнее в детальной графике)
 function getChunk(cx, cy) {
   const key = cx + ',' + cy;
   let ch = CHUNKS.get(key);
-  if (!ch) {
-    const c = mkCanvas(2 * CH * U + 2, CH * U + 2);
-    ch = {c, g:c.getContext('2d'), ax:cx * CH, ay:cy * CH, used:0};
+  if (!ch || ch.q !== HDQ) {
+    const c = mkCanvas((2 * CH * U + 2) * HDQ, (CH * U + 2) * HDQ);
+    ch = {c, g:hdCtx(c.getContext('2d')), ax:cx * CH, ay:cy * CH, used:0, q:HDQ};
     ch.g.imageSmoothingEnabled = false;
     withChunk(ch, () => drawGroundRange(ch.ax - 1, ch.ay - 1, ch.ax + CH, ch.ay + CH));
     CHUNKS.set(key, ch);
   }
-  ch.used = frameNo;
+  ch.used = frameNo; ch.c._chq = ch.q;
   return ch;
 }
 function chunksNear(x, y, m) {
@@ -157,10 +170,16 @@ function drawHi(fu) {
   ctx.moveTo(SX(x0, y0), SY(x0, y0, 0)); ctx.lineTo(SX(x1, y0), SY(x1, y0, 0)); ctx.lineTo(SX(x1, y1), SY(x1, y1, 0)); ctx.lineTo(SX(x0, y1), SY(x0, y1, 0)); ctx.closePath(); ctx.stroke();
 }
 const WDI = (wd) => wd[1] < 0 ? 0 : wd[0] > 0 ? 1 : wd[1] > 0 ? 2 : 3;
+// имя кадра мебели в атласе: вид, вариант, поворот; своя картинка (fu.art), старая компактная, запасной вариант 0
 function furnName(fu) {
+  const fr = ART.meta.frames;
+  if (isShower(fu) && fr['f_shower_0_' + WDI(fu.wd)]) return 'f_shower_0_' + WDI(fu.wd);
   const t = SPRA[fu.type] || fu.type;
   const v = t === 'shelf' ? (fu.items.length ? 1 : 0) : t === 'bed' ? (fu.x + fu.y) % 3 : (fu.v || 0);
-  return 'f_' + t + '_' + v + '_' + WDI(fu.wd);
+  let n = 'f_' + t + '_' + v + '_' + WDI(fu.wd); if (fu.art) n = n.replace(/^f_[a-z0-9]+_/, 'f_' + fu.art + '_');
+  if (fu.compact && fr['old_' + n]) return 'old_' + n;
+  if (fr[n]) return n;
+  const n0 = n.replace(/_(\d)_(\d)$/, '_0_$2'); return fr[n0] ? n0 : n;
 }
 function propName(p, on) {
   if (p.type === 'car') return 'car_' + p.ci + '_' + (p.dir === 'x' ? (p.flip ? 'nx' : 'px') : (p.flip ? 'ny' : 'py'));

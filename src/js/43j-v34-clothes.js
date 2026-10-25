@@ -96,10 +96,6 @@ function coverOf(part) {
   return out;
 }
 clothAt = part => coverOf(part)[0] || null;
-partProt = function (part) {
-  let keep = 1; for (const c of coverOf(part)) keep *= 1 - (ITEMS[c.id].prot || 0) * cdur(c) / 100;
-  let p = 1 - keep; if (part === 'neck') p *= .4; return Math.min(.7, p);
-};
 const REG2PART = {head:'head', neck:'neck', chest:'torso', belly:'torso', armR:'arm', armL:'arm', handR:'arm', handL:'arm', legR:'leg', legL:'leg'};
 function regClothText(sel) {
   const part = REG2PART[sel] || 'torso', cs = (sel === 'handR' || sel === 'handL') ? [P.cloth && P.cloth.hands].filter(Boolean) : coverOf(part);
@@ -113,20 +109,6 @@ const enDrainK34 = enDrainK;
 enDrainK = () => enDrainK34() * wornK('tire');
 
 // ---- надеть / снять (карманы меняют вместимость) ----
-const pockets = it => (it && ITEMS[it.id].cap) || 0;
-wearCloth = function (k) {
-  const it = P.inv[k], d = ITEMS[it.id]; P.cloth = P.cloth || {};
-  const old = P.cloth[d.slot], room = P.cap - pockets(old) + pockets(it);
-  if (P.inv.length - 1 + (old ? 1 : 0) > room) { toast('Некуда деть вещи из карманов'); return; }
-  P.inv.splice(k, 1); if (old) P.inv.push(old); P.cloth[d.slot] = it;
-  P.cap = room; SFX.equip(); toast((d.slot === 'feet' ? 'Обул: ' : 'Надел: ') + d.name.toLowerCase()); renderInv(); updateHud();
-};
-takeOffCloth = function (slot) {
-  const it = P.cloth && P.cloth[slot]; if (!it) return;
-  const room = P.cap - pockets(it);
-  if (P.inv.length + 1 > room) { toast(pockets(it) ? 'Сначала освободи место: в карманах вещи' : 'Рюкзак полон'); return; }
-  P.inv.push(it); P.cloth[slot] = null; P.cap = room; SFX.rustle(); renderInv(); updateHud();
-};
 
 // ---- описание вещи ----
 

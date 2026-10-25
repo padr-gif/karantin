@@ -28,12 +28,12 @@ function canWorkout() {
 }
 function workout() {
   const why = canWorkout(); if (why) { toast(why); return; }
-  job(7, () => {
-    P.en = Math.max(0, P.en - 12); P.sat = Math.max(0, P.sat - 3); P.hyd = Math.max(0, P.hyd - 5);
-    P.bored = Math.max(0, (P.bored || 0) - 15); P.stress = Math.max(0, (P.stress || 0) - 10); P.unh = Math.max(0, (P.unh || 0) - 5);
-    P.fitT = gameMin + 150; addXp('fit', 3); stat('workout'); SFX.rustle();
-    toast('Зарядка сделана: отжимания, приседания, пресс. Голова прояснилась');
-  }, {reopen:'self', sub:'skills', noisy:2});
+  job(25, () => {
+    P.en = Math.max(0, P.en - 16); P.sat = Math.max(0, P.sat - 4); P.hyd = Math.max(0, P.hyd - 7);
+    P.bored = Math.max(0, (P.bored || 0) - 20); P.stress = Math.max(0, (P.stress || 0) - 14); P.unh = Math.max(0, (P.unh || 0) - 8);
+    P.fitT = gameMin + 240; addXp('fit', 4); stat('workout'); SFX.rustle();
+    toast('Сотня прыжков с руками в стороны. Сердце стучит, голова ясная');
+  }, {reopen:'self', sub:'skills', noisy:2, an:'jacks'});
 }
 
 const panicK24 = panicK; panicK = function () { return panicK24() * (1 - .06 * fitLv()); };
@@ -166,8 +166,6 @@ function buildSelf(body) {
   if (sub === 'skills') buildSkillsTab(host); else if (sub === 'info') buildInfoTab(host); else buildBodyTab(host);
 }
 // the character tab always opens on the body map
-const openPanel24 = openPanel;
-openPanel = function (kind, opt) { openPanel24(kind, opt); if (panel && kind === 'inv') panel.sub = (opt && opt.sub) || 'body'; };
 // ---- keep scroll positions when a panel re-renders (recipe lists, columns) ----
 const SCROLL_SEL = ['.rlist', '.rdet', '.pcol', '.pdet', '.bodyinfo', '.skillwrap', '.infolay > div', '.self3 > div'];
 let scrollKey = '';
@@ -183,5 +181,3 @@ onPanel((a, {key, keep}) => {
 // ---- save the diary and fitness timer too ----
 onSave(d => { Object.assign(d.p, {log:P.log || [], fitT:r2(P.fitT || 0), _logDay:P._logDay, _logK:P._logK || 0, _logPw:P._logPw || 0, _logWt:P._logWt || 0});
 });
-const tickV23b = tickV23;
-tickV23 = function (dt, gm) { tickV23b(dt, gm); tickDiary(); };

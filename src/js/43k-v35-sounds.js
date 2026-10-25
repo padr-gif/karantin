@@ -131,20 +131,6 @@ SFX.rummage = function (type) {
 };
 
 // открываем/закрываем вместе с окном обыска; обыск начинается с открытия
-let sndOpened = null;                                                             // [мебель, время] — чтобы не открыть дважды
-const openPanel35 = openPanel;
-openPanel = function (kind, opt) {
-  const was = panel && panel.kind === 'loot' ? panel.src : null;
-  openPanel35(kind, opt);
-  const src = panel && panel.kind === 'loot' && panel.src;
-  if (src && src !== was && src.type && src.type !== 'pile' && !(sndOpened && sndOpened[0] === src && performance.now() - sndOpened[1] < 4000)) SFX.contOpen(src.type);
-};
-const closePanel35 = closePanel;
-closePanel = function () {
-  const src = panel && panel.kind === 'loot' && panel.src;
-  closePanel35();
-  if (src && src.type && src.type !== 'pile') SFX.contClose(src.type);
-};
 
 // ---- мертвецы: настоящие стоны вместо синтеза (синтез «голоса» жужжал, как комар) ----
 const zNear = (x, y) => !P ? 1 : Math.max(0, 1 - Math.hypot(x - P.x, y - P.y) / 16) ** 1.4;

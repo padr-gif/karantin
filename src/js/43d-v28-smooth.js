@@ -15,89 +15,22 @@ function hdCtx(g) {
   return g;
 }
 hdCtx(mainCtx);
-function hdReset() { clearCaches(); texCache.clear(); fogDirty = true; }
+const HDFOG = new Map();                       // затемнённые туманом копии: кадр в полном разрешении, LRU (43f)
+const RUGTEX = new Map();                      // текстуры ковров (43g)
+function hdReset() { clearCaches(); texCache.clear(); fogDirty = true; HDFOG.clear(); RUGTEX.clear(); }
 function hdApply() { const q = hdQ(); if (q !== HDQ) { HDQ = q; hdReset(); } }
 
-// ---- caches: same layout, HDQ× finer ----
-sprite = function (id, key, wx, wy, bx0, by0, bx1, by1, fn, alpha, offX) {
-  let s = SPR.get(id);
-  const w = Math.max(1, Math.ceil(bx1 - bx0)), h = Math.max(1, Math.ceil(by1 - by0));
-  if (!s || s.q !== HDQ || (s.key !== key && bakes < BAKE_BUDGET)) {
-    const cw = w * HDQ, chh = h * HDQ;
-    const c = s && s.c.width === cw && s.c.height === chh ? s.c : mkCanvas(cw, chh);
-    const g = hdCtx(c.getContext('2d'));
-    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cw, chh); g.imageSmoothingEnabled = false;
-    const sc = ctx, sox = ox, soy = oy, sd = DPR;
-    ctx = g; ox = -bx0 - (wx - wy) * U; oy = -by0 - (wx + wy) * hh; baking = true; DPR = HDQ;
-    resetT();
-    try { fn(); } finally { ctx = sc; ox = sox; oy = soy; baking = false; DPR = sd; resetT(); ctx.globalAlpha = 1; ctx.imageSmoothingEnabled = false; }
-    if (!s) { s = {c}; SPR.set(id, s); }
-    s.c = c; s.key = key; s.q = HDQ; s.w = w; s.h = h; bakes++;
-  }
-  s.used = frameNo;
-  const px = rd(SX(wx, wy) + bx0 + (offX || 0)), py = rd(SY(wx, wy, 0) + by0);
-  if (alpha != null && alpha < 1) ctx.globalAlpha = alpha;
-  if (HDQ > 1) ctx.drawImage(s.c, px, py, s.w, s.h); else ctx.drawImage(s.c, px, py);
-  ctx.globalAlpha = 1;
-};
-withChunk = function (ch, fn) {
-  const sc = ctx, sox = ox, soy = oy, sd = DPR;
-  ctx = ch.g; ox = CH * U - (ch.ax - ch.ay) * U; oy = -(ch.ax + ch.ay) * hh; baking = true; DPR = ch.q || 1;
-  ctx.save();
-  groundT(0); ctx.beginPath(); ctx.rect(ch.ax, ch.ay, CH, CH); resetT(); ctx.clip();
-  try { fn(); } finally { ctx.restore(); ctx = sc; ox = sox; oy = soy; baking = false; DPR = sd; resetT(); }
-};
-getChunk = function (cx, cy) {
-  const key = cx + ',' + cy;
-  let ch = CHUNKS.get(key);
-  if (!ch || ch.q !== HDQ) {
-    const c = mkCanvas((2 * CH * U + 2) * HDQ, (CH * U + 2) * HDQ);
-    ch = {c, g:hdCtx(c.getContext('2d')), ax:cx * CH, ay:cy * CH, used:0, q:HDQ};
-    ch.g.imageSmoothingEnabled = false;
-    withChunk(ch, () => drawGroundRange(ch.ax - 1, ch.ay - 1, ch.ax + CH, ch.ay + CH));
-    CHUNKS.set(key, ch);
-  }
-  ch.used = frameNo;
-  return ch;
-};
-const evict28 = evict;
-evict = function () {
-  evict28();
-  if (HDQ > 1 && CHUNKS.size > HD_CH_MAX) { const arr = [...CHUNKS].sort((a, b) => a[1].used - b[1].used); for (let k = 0; k < arr.length - HD_CH_MAX * .75; k++) CHUNKS.delete(arr[k][0]); }
-};
 // the frame draws a chunk at its 1× size; in smooth mode it is HDQ× bigger, so scale it down
 { const di = CanvasRenderingContext2D.prototype.drawImage;
   mainCtx.drawImage = function (img, a, b, c, d, e, f, g, h) {
     if (arguments.length === 3 && img && img._chq > 1) return di.call(this, img, a, b, img.width / img._chq, img.height / img._chq);
     return di.apply(this, arguments);
   }; }
-const getChunk28 = getChunk;
-getChunk = function (cx, cy) { const ch = getChunk28(cx, cy); ch.c._chq = ch.q; return ch; };
 
 // ---- textures: painted HDQ× denser from the same continuous noise ----
-const paint28 = paint;
-paint = function (size, fn) {
-  if (HDQ <= 1) return paint28(size, fn);
-  const q = HDQ, c = paint28(size * q, (x, y) => fn(x / q, y / q));
-  const g = c.getContext('2d'); g.setTransform(q, 0, 0, q, 0, 0);   // later strokes by the maker land in the same place
-  c._q = q; return c;
-};
-pattern = function (key, make) {
-  const k = key + '@' + HDQ; let p = texCache.get(k);
-  if (!p) {
-    const cnv = make(); hdCtx(mainCtx);
-    p = mainCtx.createPattern(cnv, 'repeat');
-    const q = cnv._q || (cnv.width > 0 && HDQ > 1 ? HDQ : 1);
-    try { if (p && p.setTransform && typeof DOMMatrix !== 'undefined') p.setTransform(new DOMMatrix([1 / (TP * q), 0, 0, 1 / (TP * q), 0, 0])); } catch (e) {}
-    texCache.set(k, p);
-  }
-  return p;
-};
 
 // ---- setting ----
 SETTINGS_DEF.smooth = false; if (settings.smooth == null) settings.smooth = false;
-const applySettings28 = applySettings;
-applySettings = function () { applySettings28(); hdApply(); };
 addEventListener('resize', () => hdApply());
 hdApply();
 
@@ -203,18 +136,6 @@ function objAtVec(id, name, wx, wy, f, alpha, offX, tint) {
 }
 
 // ---- finishing touches for smooth mode: soft edge lines on boxes, textures without blocky noise ----
-const box28 = box;
-box = function (x0, y0, x1, y1, z0, z1, rgb, f, a, tex) {
-  box28(x0, y0, x1, y1, z0, z1, rgb, f, a, tex);
-  if (HDQ <= 1 || !baking) return;
-  const P_ = (x, y, z) => [SX(x, y), SY(x, y, z)], L = (pts, col, w) => { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineJoin = 'round'; ctx.beginPath(); pts.forEach((p, k) => k ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke(); };
-  if (a != null && a < 1) ctx.globalAlpha = a;
-  // outline of the silhouette, a lit rim on the top's front edges, a dark crease at the front corner
-  L([P_(x0, y1, z0), P_(x1, y1, z0), P_(x1, y0, z0), P_(x1, y0, z1), P_(x0, y0, z1), P_(x0, y1, z1), P_(x0, y1, z0)], C(rgb, f * .38, .55), .7);
-  L([P_(x0, y1, z1), P_(x1, y1, z1), P_(x1, y0, z1)], C(rgb, Math.min(1.6, f * 1.35), .6), .6);
-  L([P_(x1, y1, z1), P_(x1, y1, z0)], C(rgb, f * .55, .5), .6);
-  ctx.globalAlpha = 1;
-};
 FV.crate = function (fu, f) {
   const [x0, y0, x1, y1] = fu.r.map((v, k) => v + (k < 2 ? .04 : -.04)), c = COL.crate, H = 26;
   box(x0, y0, x1, y1, 0, H, c, f); resetT();
@@ -228,17 +149,6 @@ FV.crate = function (fu, f) {
   ctx.strokeStyle = lt; ctx.lineWidth = .6; ctx.beginPath(); for (const t of [.33, .66]) { const y = y0 + (y1 - y0) * t; ctx.moveTo(SX(x0, y), SY(x0, y, H)); ctx.lineTo(SX(x1, y), SY(x1, y, H)); } ctx.stroke();
 };
 // textures: the noise was painted pixel by pixel; in smooth mode soften it a touch so floors read as surfaces, not grids
-const paint28b = paint;
-paint = function (size, fn) {
-  const c = paint28b(size, fn); if (HDQ <= 1 || !c._q) return c;
-  try {
-    const t = mkCanvas(c.width, c.height), g = t.getContext('2d');
-    g.filter = 'blur(' + (c._q * .45).toFixed(2) + 'px)';
-    for (const [dx, dy] of [[0, 0], [-c.width, 0], [c.width, 0], [0, -c.height], [0, c.height]]) g.drawImage(c, dx, dy);   // wrap so the tile stays seamless
-    const cg = c.getContext('2d'); cg.save(); cg.setTransform(1, 0, 0, 1, 0, 0); cg.clearRect(0, 0, c.width, c.height); cg.drawImage(t, 0, 0); cg.restore();
-  } catch (e) {}
-  return c;
-};
 
 // ---- small details on the kitchen pieces ----
 const fvBox = (F, u0, u1, d0, d1, z0, z1, rgb, f) => { const a = F.at(u0, d0), b = F.at(u1, d1); box(Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1]), z0, z1, rgb, f); };
