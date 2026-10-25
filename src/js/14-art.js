@@ -56,7 +56,9 @@ function loadArtFiles() {
     boot(.97, 'Почти готово…');
   });
 }
-function loadArt() {
+// загрузка атласов; на Android листы потом переводятся в ImageBitmap
+function loadArt() { return loadArtSheets().then(r => { if (BIG_SHEETS_BMP) sheetsToBitmaps(); return r; }); }
+function loadArtSheets() {
   const names = ART_EMBED ? Object.keys(ART_EMBED.png) : ['obj'];
   if (ART_EMBED && ART_EMBED.alt) return loadArtFiles();
   if (ART_EMBED) {

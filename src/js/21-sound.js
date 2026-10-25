@@ -94,6 +94,7 @@ const SFX = (() => {
     shriek(z) { const v = at(z.x, z.y); if (!ok('shriek', 900)) return; voice(.32 * v, .7, 420, 260, 0, 1400); voice(.2 * v, .5, 600, 300, .25, 1700); },
     ambient(rainV, night, inside) {
       if (!ac) return;
+      if (P && P._inShower) rainV = Math.max(rainV, 1);                      // в душе шумит вода
       const t = ac.currentTime, v = vol();
       rainG.gain.setTargetAtTime((settings.rain ? rainV : 0) * (inside ? .05 : .11) * v, t, .5);
       rainF.frequency.setTargetAtTime(inside ? 700 : 2400, t, .4);

@@ -70,13 +70,6 @@ function finishForage(act) {
   renderInv(); updateHud();
 }
 // crops sleep in the cold and die in frost
-const updateBeds0 = updateBeds;
-updateBeds = function (gm) {
-  const t = outsideTemp();
-  if (t < -3) { for (const b of beds) if (b.crop && b.g < 1) { b.crop = null; b.g = 0; if (Math.hypot(b.cx - P.x, b.cy - P.y) < 14) toast('Заморозки погубили всходы на грядке'); } return; }
-  if (t < 4) { for (const b of beds) if (rain > .5) b.w = 1; return; }
-  updateBeds0(gm);
-};
 // extra cooking cards: pickles, jerky, brushwood
 function cookCard(title, parts, result, ok, dur, fn, note) {
   const b = btn('Приготовить', () => { closePanel(); P.act = {kind:'cookx', t:0, dur, fn}; SFX.sizzle(); }); b.disabled = !ok;

@@ -12,7 +12,7 @@ Object.assign(DESC, {
 ICONA.novel = 'novel';
 { const add = (k, ...ids) => CONT[k].loot.push(...ids); add('bookshelf', 'novel', 'novel'); add('nightstand', 'novel', 'cigs', 'cards'); add('dresser', 'cards'); add('counter', 'cigs', 'cigs'); add('car', 'cigs'); add('desk', 'cigs', 'cards'); add('locker', 'cigs'); add('armybox', 'cigs', 'cards'); add('shelf', 'novel'); }
 // ---- snow ----
-function outsideTemp() { const h = (gameMin % 1440) / 60, day = Math.floor(gameMin / 1440); return 10 + 6 * Math.sin((h - 9) / 24 * 6.283) - seasonDrop(day) - rain * 2; }
+function outsideTemp() { const h = (gameMin % 1440) / 60, day = Math.floor(gameMin / 1440); return 10 + 6 * Math.sin((h - 9) / 24 * 6.283) - seasonDrop(day) - rain * 2 - (weekMod() === 'cold' ? 8 : 0); }
 const snowing = () => rain > .5 && outsideTemp() < -2;
 function updateSnow(gm) {
   world.snow = world.snow || 0;
@@ -56,6 +56,7 @@ function updateMood(gm, dt) {
 function moodText() { const m = []; if (P.stress > 60) m.push('Стресс: удары слабее. Помогут сон, сигареты или виски'); if (P.bored > 60) m.push('Скука: навыки растут медленнее. Почитай, раскинь карты, посмотри ТВ'); return m; }
 // ---- moving furniture ----
 function moveFurn(f) {
+  if (f.big) { toast('Слишком большое: двигай в режиме обустройства'); return false; }
   const ax = f.cx - P.x, ay = f.cy - P.y, dx = Math.abs(ax) > Math.abs(ay) ? Math.sign(ax) : 0, dy = dx ? 0 : Math.sign(ay);
   const nx = f.x + dx, ny = f.y + dy, i = ny * MW + nx, oi = f.y * MW + f.x;
   const t = get(nx, ny);

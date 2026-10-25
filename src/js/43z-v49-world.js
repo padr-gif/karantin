@@ -119,19 +119,6 @@ function decayDay() {
 // ---- 5. шрамы: зажившая рана оставляет след на теле и строчку в истории ----
 const SCAR_REG = {'левая рука':'armL', 'правая рука':'armR', 'левая нога':'legL', 'правая нога':'legR', 'грудь':'chest', 'спина':'chest', 'живот':'belly', 'голова':'head', 'шея':'neck'};
 const SCAR_AT = {head:[70, 18], neck:[70, 40], chest:[70, 62], belly:[70, 93], armR:[37, 86], armL:[103, 86], legR:[58, 148], legL:[82, 148]};
-{ const tw = tickWounds;
-  tickWounds = function (gm) {
-    const before = wounds().slice();
-    tw(gm);
-    const now = wounds();
-    for (const w of before) if (!now.includes(w) && w.h >= 1 && w.k !== 'scratch') {
-      P.scars = P.scars || [];
-      const D = WOUND[w.k], seed = (P.scars.length * 37 + (w.where || '').length * 11) % 100;
-      P.scars.push({k:w.k, where:w.where, day:w.day || Math.floor((gameMin - startMin) / 1440) + 1, ctx:w.ctx || '', s:seed});
-      logEv('Остался шрам: ' + D.name.toLowerCase() + ', ' + w.where);
-    }
-  };
-}
 // шрамы на схеме тела
 function bodyScarsSvg() {
     const sc = (P && P.scars) || []; if (!sc.length) return '';

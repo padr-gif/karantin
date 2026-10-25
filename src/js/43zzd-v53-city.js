@@ -256,7 +256,6 @@ function yardGarden(H) {
   for (let k = 0; k < 2; k++) { const tx = gx + ri(-1, W), ty = gy + (back < 2 ? (back === 0 ? -2 : Hh + 1) : ri(0, Hh)), i = ty * MW + tx; if (inMap(tx, ty, 2) && map[i] === GRASS && !propAt[i] && !hAt[i] && !D8.some(([ox, oy]) => isWallish(get(tx + ox, ty + oy)))) set(tx, ty, TREE); }
 }
 // деревня и дачи тоже получают заборы и огороды
-{ const pl = plot; plot = function (x, y, w, h) { const H = pl(x, y, w, h); if (H && world.gen >= 2) { if (rng() < .55) yardFence(H); if (rng() < .5) yardGarden(H); } return H; }; }
 
 // ---- как рисуются забор двора и грядка ----
 const PF_COL = [[132, 98, 64], [78, 112, 72], [74, 98, 134], [128, 132, 136]];

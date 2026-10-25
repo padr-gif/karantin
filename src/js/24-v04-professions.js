@@ -45,13 +45,21 @@ RECIPES.push(
 );
 // ---- fire on the ground ----
 let blazes = [];
+// мертвец убит не ударом (огонь, машина, капкан…); если это был прежний ты — его вещи на земле
 function killZombie(z, cause) {
-  if (!zs.includes(z)) return;
-  if (cause === 'fire') stat('fire'); else if (P.car) stat('ram');
-  corpses.push({x:z.x, y:z.y, face:z.face, pal:z.pal, fall:0, dir:-1, seed:z.seed});
-  if (corpses.length > 120) corpses.shift();
-  if (!cause) addBlood(z.x, z.y, .9);
-  zs.splice(zs.indexOf(z), 1); kills++; addXp('fight', 1); onZDeath(z);
+  const g = z && z.ghost, x = z && z.x, y = z && z.y;
+  if (zs.includes(z)) {
+    if (cause === 'fire') stat('fire'); else if (P.car) stat('ram');
+    corpses.push({x:z.x, y:z.y, face:z.face, pal:z.pal, fall:0, dir:-1, seed:z.seed});
+    if (corpses.length > 120) corpses.shift();
+    if (!cause) addBlood(z.x, z.y, .9);
+    zs.splice(zs.indexOf(z), 1); kills++; addXp('fight', 1); onZDeath(z);
+  }
+  if (g && !zs.includes(z)) {
+    for (const it of g.items) addToPile(x, y, it);
+    g.items = []; g.dead = true;
+    toast('Это был ты. Его вещи лежат на земле'); logEv('Упокоил того, кем был раньше');
+  }
 }
 function startBlaze(x, y) { blazes.push({x, y, t:10, seed:Math.random() * 9}); SFX.glass(x, y); SFX.fireUp(); noise(x, y, 12); }
 function updateBlazes(dt) {

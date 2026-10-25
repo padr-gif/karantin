@@ -46,6 +46,12 @@ function takeUseful(c) {
 }
 // transfer progress lives inside the item's own cell
 function fitGrid(g) {
+  if (g.closest && g.closest('.invsec')) {                                      // разделы рюкзака: по 4 в ряд
+    const host = g.closest('.pcol'); if (!host || !host.clientWidth) return;
+    const gap = 6, w = host.clientWidth - 22, s = Math.max(40, Math.min(70, Math.floor((w - gap * 3) / 4)));
+    g.style.gridTemplateColumns = `repeat(4, ${s}px)`; g.style.setProperty('--cs', s + 'px'); g.classList.toggle('tiny', s < 50);
+    return;
+  }
   const host = g.parentNode; if (!host || !host.clientHeight) return;
   let used = 0; for (const ch of host.children) if (ch !== g && ch.offsetParent !== null) used += ch.offsetHeight + 6;
   const cs = getComputedStyle(host), padV = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom), padH = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);

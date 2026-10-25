@@ -1,5 +1,7 @@
 // ================= v35: настоящие звуки (Kenney, CC0): шаги по поверхностям, двери, обыск, открыть/закрыть мебель =================
 // Записи лежат в SND_EMBED (build.mjs встраивает assets/sounds/*.mp3). Пока они не загрузились — играет старый синтез.
+// синтез из 21-sound — запасной звук, пока записи не загрузились (и если их нет); ниже SFX.* играют записи
+const SYN = {init:SFX.init, step:SFX.step, door:SFX.door, rustle:SFX.rustle, equip:SFX.equip, moan:SFX.moan, growl:SFX.growl, shriek:SFX.shriek, bite:SFX.bite, splat:SFX.splat, scream:SFX.scream, glass:SFX.glass, knock:SFX.knock, wood:SFX.wood, carAlarm:SFX.carAlarm};
 const SMP = {}, SMP_LAST = {};
 let smpLoad = false;
 function loadSamples() {
@@ -8,8 +10,7 @@ function loadSamples() {
     fetch(SND_EMBED[k]).then(r => r.arrayBuffer()).then(b => new Promise((ok, no) => ac.decodeAudioData(b, ok, no))).then(buf => { SMP[k] = buf; }).catch(() => {});
   }
 }
-const init35 = SFX.init;
-SFX.init = function () { init35(); loadSamples(); };
+SFX.init = function () { SYN.init(); loadSamples(); };
 // один случайный вариант из группы (не повторяя прошлый)
 function smpPick(g) {
   const keys = Object.keys(SMP).filter(k => k.startsWith(g + '_')); if (!keys.length) return null;
@@ -70,25 +71,21 @@ function surfaceAt(x, y) {
   return r.carpet != null ? 'carpet' : 'wood';
 }
 const STEP_V = {wood:.3, carpet:.3, tile:.3, concrete:.3, grass:.32, snow:.26, bare:.3};
-const step35 = SFX.step;
 SFX.step = function (inside, run) {
-  if (!P) return step35(inside, run);
+  if (!P) return SYN.step(inside, run);
   const s = surfaceAt(P.x, P.y), k = (run ? 1.3 : .8) * (P.sneak ? .45 : 1) * Math.min(1.3, Math.max(.6, stepNoiseK()));
-  if (!smp('step_' + s, STEP_V[s] * k, run ? 1.04 : .97, 0, P.sneak ? 1400 : run ? null : 2400)) step35(inside, run);
+  if (!smp('step_' + s, STEP_V[s] * k, run ? 1.04 : .97, 0, P.sneak ? 1400 : run ? null : 2400)) SYN.step(inside, run);
 };
 
 // ---- двери, окна, машина ----
-const door35 = SFX.door;
-SFX.door = function (open) { if (!smp(open ? 'door_open' : 'door_close', .55)) door35(open); };
+SFX.door = function (open) { if (!smp(open ? 'door_open' : 'door_close', .55)) SYN.door(open); };
 SFX.window = function (open) { if (!smp(open ? 'window_open' : 'window_close', .45)) SFX.wood(); };
-SFX.carDoor = function (open) { if (!smp(open ? 'cardoor_open' : 'cardoor_close', .55)) door35(open); };
+SFX.carDoor = function (open) { if (!smp(open ? 'cardoor_open' : 'cardoor_close', .55)) SYN.door(open); };
 
 // ---- вещи: взять, переложить, надеть ----
-const rustle35 = SFX.rustle;
-SFX.rustle = function () { if (!SFX.ok('rustle35', 120)) return; if (!smp(Math.random() < .6 ? 'handle' : 'cloth', .3)) rustle35(); };
-SFX.pickup = function () { if (!smp('handle', .32)) rustle35(); };
-const equip35 = SFX.equip;
-SFX.equip = function () { if (!smp('cloth', .35)) equip35(); };
+SFX.rustle = function () { if (!SFX.ok('rustle35', 120)) return; if (!smp(Math.random() < .6 ? 'handle' : 'cloth', .3)) SYN.rustle(); };
+SFX.pickup = function () { if (!smp('handle', .32)) SYN.rustle(); };
+SFX.equip = function () { if (!smp('cloth', .35)) SYN.equip(); };
 
 // ---- мебель: открыть и закрыть по материалу ----
 const CMAT = {
@@ -136,24 +133,20 @@ SFX.rummage = function (type) {
 const zNear = (x, y) => !P ? 1 : Math.max(0, 1 - Math.hypot(x - P.x, y - P.y) / 16) ** 1.4;
 const zRate = z => (z.pal && z.pal.b === 'f' ? 1.15 : z.pal && z.pal.b === 'h' ? .82 : 1) * (.92 + ((z.seed || 0) * 7 % 1) * .16);
 const zLp = v => 900 + 2600 * v;                                                 // дальний стон глуше
-const moan35 = SFX.moan, growl35 = SFX.growl, shriek35 = SFX.shriek, bite35 = SFX.bite, splat35 = SFX.splat;
-SFX.moan = function (z) { const v = zNear(z.x, z.y); if (v < .05 || !SFX.ok('moan35', 900)) return; if (!smp('groan', .42 * v, zRate(z) * .9, 0, zLp(v))) moan35(z); };
-SFX.growl = function (z) { const v = zNear(z.x, z.y); if (!SFX.ok('growl35', 350)) return; if (!smp('groan', .55 * Math.max(.3, v), zRate(z) * 1.08, 0, zLp(v))) growl35(z); };
-SFX.shriek = function (z) { const v = zNear(z.x, z.y); if (!SFX.ok('shriek35', 900)) return; if (!smp('groan', .6 * Math.max(.3, v), zRate(z) * 1.3, 0, zLp(v))) shriek35(z); };
-SFX.bite = function () { if (!smp('bite', .5)) return bite35(); smp('groan', .4, 1.1, .03); };
-SFX.splat = function (x, y) { splat35(x, y); const v = zNear(x, y); if (v > .05) smp('zdeath', .35 * v, .95, .05, zLp(v)); };
+SFX.moan = function (z) { const v = zNear(z.x, z.y); if (v < .05 || !SFX.ok('moan35', 900)) return; if (!smp('groan', .42 * v, zRate(z) * .9, 0, zLp(v))) SYN.moan(z); };
+SFX.growl = function (z) { const v = zNear(z.x, z.y); if (!SFX.ok('growl35', 350)) return; if (!smp('groan', .55 * Math.max(.3, v), zRate(z) * 1.08, 0, zLp(v))) SYN.growl(z); };
+SFX.shriek = function (z) { const v = zNear(z.x, z.y); if (!SFX.ok('shriek35', 900)) return; if (!smp('groan', .6 * Math.max(.3, v), zRate(z) * 1.3, 0, zLp(v))) SYN.shriek(z); };
+SFX.bite = function () { if (!smp('bite', .5)) return SYN.bite(); smp('groan', .4, 1.1, .03); };
+SFX.splat = function (x, y) { SYN.splat(x, y); const v = zNear(x, y); if (v > .05) smp('zdeath', .35 * v, .95, .05, zLp(v)); };
 // синтетические «голоса» на фоне (вороны, собаки) звучали как насекомые — без записей лучше тишина
 SFX.caw = function () {};
 SFX.dog = function () {};
-const scream35 = SFX.scream;
-SFX.scream = function () { if (!smp('groan', .25, 1.45, 0, 1400)) scream35(); };
+SFX.scream = function () { if (!smp('groan', .25, 1.45, 0, 1400)) SYN.scream(); };
 
 // ---- стекло, стук в дверь, ломающееся дерево — записи вместо синтеза («звенело, как опыт») ----
-const glass35 = SFX.glass, knock35 = SFX.knock, wood35 = SFX.wood;
-SFX.glass = function (x, y) { const v = zNear(x, y); if (v < .03) return; if (!smp('glass', .6 * v, 1, 0, zLp(v) + 800)) glass35(x, y); };
-SFX.knock = function (x, y) { if (!SFX.ok('knock35', 160)) return; const v = zNear(x, y); if (v < .03) return; if (!smp('knock', .5 * v, .95, 0, zLp(v))) knock35(x, y); };
-SFX.wood = function (x, y) { const v = zNear(x, y); if (v < .03) return; if (!smp('woodbreak', .55 * v, 1, 0, zLp(v) + 600)) wood35(x, y); };
+SFX.glass = function (x, y) { const v = zNear(x, y); if (v < .03) return; if (!smp('glass', .6 * v, 1, 0, zLp(v) + 800)) SYN.glass(x, y); };
+SFX.knock = function (x, y) { if (!SFX.ok('knock35', 160)) return; const v = zNear(x, y); if (v < .03) return; if (!smp('knock', .5 * v, .95, 0, zLp(v))) SYN.knock(x, y); };
+SFX.wood = function (x, y) { const v = zNear(x, y); if (v < .03) return; if (!smp('woodbreak', .55 * v, 1, 0, zLp(v) + 600)) SYN.wood(x, y); };
 // ---- автосигнализация: запись вместо пищащего синтеза; играет целиком, раз в ~2 секунды ----
-const carAlarm35 = SFX.carAlarm;
-SFX.carAlarm = function (x, y) { const v = Math.max(.12, zNear(x, y)); if (!SFX.ok('carAlarm35', 2150)) return; if (!smp('caralarm', .4 * v, 1, 0, zLp(v) + 1500)) carAlarm35(x, y); };
+SFX.carAlarm = function (x, y) { const v = Math.max(.12, zNear(x, y)); if (!SFX.ok('carAlarm35', 2150)) return; if (!smp('caralarm', .4 * v, 1, 0, zLp(v) + 1500)) SYN.carAlarm(x, y); };
 // ---- удары: прежние звуки замаха и попадания (записи убраны по просьбе) ----

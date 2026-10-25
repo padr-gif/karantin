@@ -9,8 +9,8 @@ const hdFrame = name => HDQ > 1 && ART.meta.frames['hd_' + name];
 function hdFogged(fr, f, tint) {
   const fq = Math.round(f * 20) / 20, k = fr[1] + ',' + fr[2] + '|' + fq + '|' + (tint || '');
   let c = HDFOG.get(k);
-  if (c) { HDFOG.delete(k); HDFOG.set(k, c); return c; }
-  c = mkCanvas(fr[3], fr[4]); const g = c.getContext('2d');
+  if (c) { HDFOG.delete(k); HDFOG.set(k, c); c._st = true; return c; }
+  c = mkCanvas(fr[3], fr[4]); c._st = true; const g = c.getContext('2d');
   g.drawImage(ART.imgs[fr[0]], fr[1], fr[2], fr[3], fr[4], 0, 0, fr[3], fr[4]);
   g.globalCompositeOperation = 'source-atop';
   if (tint) { g.fillStyle = tint; g.fillRect(0, 0, fr[3], fr[4]); }

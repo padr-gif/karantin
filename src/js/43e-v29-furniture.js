@@ -229,5 +229,3 @@ onLoad((d) => { try { for (const f of furns) if (f.moved && !f.gone) f.tiles = t
 // ---- drawing ----
 
 // ---- furniture editor: whole footprint, any size ----
-const moveFurn29 = moveFurn;
-moveFurn = function (f) { if (f.big) { toast('Слишком большое: двигай в режиме обустройства'); return false; } return moveFurn29(f); };

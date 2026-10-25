@@ -44,17 +44,6 @@ function newLife() {
   logEv('Я не первый, кто пытался тут выжить. Видел дом, где кто-то жил до меня');
   eventBanner('Жизнь ' + lives, 'Тот же город. Где-то бродит тот, кем ты был: упокой его — и его вещи твои. Его дом и тайники — на прежних местах.', 'gold', 'i-user');
 }
-{ const kz = killZombie;
-  killZombie = function (z, cause) {
-    const g = z && z.ghost, x = z && z.x, y = z && z.y;
-    kz(z, cause);
-    if (g && !zs.includes(z)) {
-      for (const it of g.items) addToPile(x, y, it);
-      g.items = []; g.dead = true;
-      toast('Это был ты. Его вещи лежат на земле'); logEv('Упокоил того, кем был раньше');
-    }
-  };
-}
 // кнопка на экране смерти
 { const row = document.querySelector('#dead .row-btns');
   if (row && !$('bLife')) {
@@ -142,10 +131,7 @@ function weekTick() {
   eventBanner('Неделя ' + (n + 1) + ': ' + M.name, M.text + (msg ? ' ' + msg : ''), 'gold', 'i-star');
   logEv('Неделя ' + (n + 1) + ': ' + M.name.toLowerCase() + (msg ? '. ' + msg.split('.')[0] : ''));
 }
-const weekMod = () => mode === 'play' && world.week && world.week.mod;
-{ const ot = outsideTemp; outsideTemp = function () { return ot() - (weekMod() === 'cold' ? 8 : 0); }; }
-{ const mz = mkZombie; mkZombie = function (x, y, pal, hp, spd) { return mz(x, y, pal, hp, spd * (weekMod() === 'restless' ? 1.15 : 1)); }; }
-{ const sz = spawnZombie; spawnZombie = function (minD, init) { if (!init && weekMod() === 'calm' && rng() < .45) return; return sz(minD, init); }; }
+function weekMod() { return mode === 'play' && world.week && world.week.mod; }   // особенность недели: cold, restless, calm…
 { let t = 0, sw = 0;
   onUpdate(dt => {
     if (mode !== 'play' || !P) return;

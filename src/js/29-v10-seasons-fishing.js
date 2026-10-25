@@ -5,6 +5,7 @@ const dateOf = m => new Date(2026, 8, 15 + Math.floor(m / 1440) + ((typeof world
 function dateStr(m, short) { const d = dateOf(m); return d.getDate() + ' ' + (short ? MSHORT : MONTHS)[d.getMonth()]; }
 const seasonDrop = day => 3 - 13 * Math.cos(2 * Math.PI * (day + (world.dayOff || 0) - 313) / 365);
 function seasonTint() {
+  { const s = world.snow || 0; if (s > .25) return `rgba(232,238,248,${(Math.round((.12 + .2 * Math.min(1, s)) * 10) / 10).toFixed(1)})`; }   // снег
   const d = Math.floor(gameMin / 1440) + (world.dayOff || 0);
   const dy = ((d % 365) + 365) % 365; if (dy > 190) return null;
   const t1 = Math.max(0, Math.min(1, (dy - 4) / 18)), t2 = Math.max(0, Math.min(1, (dy - 24) / 16));

@@ -15,8 +15,6 @@ function snowPat(kind) {
   return SNP[kind] = p;
 }
 // frosted trees and bushes once the snow settles
-const seasonTint0 = seasonTint;
-seasonTint = function () { const s = world.snow || 0; if (s > .25) return `rgba(232,238,248,${(Math.round((.12 + .2 * Math.min(1, s)) * 10) / 10).toFixed(1)})`; return seasonTint0(); };
 // snow on the roofs (roof sprites are cached per snow level)
 const snowLvl = () => Math.round(Math.min(1, (world.snow || 0) * 1.25) * 4) / 4;
 
@@ -55,6 +53,7 @@ function drawFog() {
 
 // ---- catching a cold: wet + cold → sneezing that zombies hear ----
 function tickFlu(gm) {
+  const f0 = P.fluR || 0;
   if (P.sleep && P.flu > 0) { P.flu = Math.max(0, P.flu - gm * .5); }
   if ((P.wet || 0) > 40 && (P.cold || 0) > 45) P.fluR = (P.fluR || 0) + gm * .0016; else P.fluR = Math.max(0, (P.fluR || 0) - gm * .0008);
   if (!(P.flu > 0) && P.fluR > 1) { P.fluR = 0; P.flu = 1440 * 2; toast('Ты простудился: насморк и чих. Чихание слышат мертвецы. Нужно тепло, сон и лекарства'); }
@@ -65,6 +64,7 @@ function tickFlu(gm) {
     P.snT = (P.snT == null ? 30 : P.snT) - gm;
     if (P.snT <= 0 && !P.sleep) { P.snT = 25 + rng() * 60; SFX.sneeze && SFX.sneeze(); noise(P.x, P.y, P.sneak ? 6 : 8); }
   }
+  { const d = (P.fluR || 0) - f0; if (d > 0) P.fluR = f0 + d * (hasTr('hardy') ? .5 : 1) * (hasTr('cold') ? 1.3 : 1); }   // черты
 }
 
 // ---- trash bins and mailboxes can be searched ----

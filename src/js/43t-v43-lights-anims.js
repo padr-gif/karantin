@@ -3,15 +3,6 @@
 // ---- анимации героя ----
 const TWO_H = new Set(['bat', 'nailbat', 'pipe', 'axe', 'crowbar', 'sledge', 'shovel', 'golf', 'spear']);   // большое — обеими руками
 // перелезть через окно: присесть на подоконник, перебраться в глубоком приседе, встать — как было
-{ const va = vaultAnim;
-  vaultAnim = function () {
-    if (!heroMale() || AN('p', 'vault') < 2) return va();
-    const A = P.act, k = Math.min(1, A.t / A.dur), np = AN('p', 'pickup');
-    if (k < .35) return ['pickup', Math.min(np - 1, Math.floor(k / .35 * np))];
-    if (k < .75) { const n = AN('p', 'vault'); return ['vault', Math.floor((k - .35) / .4 * n * 1.5) % n]; }
-    return ['pickup', Math.max(0, np - 1 - Math.floor((k - .75) / .25 * np))];
-  };
-}
 
 // ---- выключатели: в каждой комнате у двери на стене; свет горит, пока есть электричество и выключатель «вкл» ----
 function roomAtXY(x, y) {
@@ -45,10 +36,6 @@ function buildSwitches() {
   }
 }
 function swPoint(r) { const s = r.sw; return s.ax === 'y' ? [s.x + .5, s.f + .35] : [s.f + .35, s.y + .5]; }
-{ 
-  const wk = wallKey;
-  wallKey = function (x, y, i, cut) { buildSwitches(); const k = wk(x, y, i, cut); const r = SWT.get(i); return r ? k + (r.off ? '|s0' : '|s1') : k; };
-}
 // подсветка дома: только комнаты, где свет включён
 function litHousePoly(Hs) {
   const poly = (x0, y0, x1, y1) => {

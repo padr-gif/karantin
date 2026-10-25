@@ -11,20 +11,6 @@ REGP.handL = '<path d="M115 117 Q116 128 111 132 Q105 133 103 126 L102 117 Z"/>'
 // glass cuts land on the hands
 
 // ---- a dressing can be taken off (to look at the wound, or to put a clean one on later) ----
-const woundRow27 = woundRow;
-woundRow = function (w) {
-  const r = woundRow27(w);
-  if (w.band && w.k !== 'frac') {
-    const acts = r.querySelector('.acts') || r;
-    const b = btn(dirtyBand(w) ? 'Снять грязную' : 'Снять повязку', () => {
-      w.band = 0; w.bT = 0; SFX.rustle();
-      toast(WOUND[w.k].bleed > 0 && w.t < (WOUND[w.k].clot || 1e9) ? 'Повязка снята. Рана снова кровоточит' : 'Повязка снята: ' + w.where);
-      renderPanel();
-    }, 'ghost');
-    acts.appendChild(b);
-  }
-  return r;
-};
 
 // ---- windows: some are stiff or jammed; the sash slides up and down instead of jumping ----
 // stiff: 0 opens easily (sometimes needs a second try), 1 tight (takes a few tries), 2 jammed (only a crowbar helps)

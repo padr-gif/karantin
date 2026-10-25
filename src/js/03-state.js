@@ -15,6 +15,7 @@ function zPal() {
   return {pi, b, blood:0};
 }
 function mkZombie(x, y, pal, hp, spd) {
+  spd *= weekMod() === 'restless' ? 1.15 : 1;                              // беспокойная неделя
   const z = {x, y, r:.26, hp, spd, state:'wander', tx:x, ty:y, wt:0, it:0,
     atk:rng(), wind:0, stun:0, kx:0, ky:0, face:rng() * 6.28, lost:0, pal, sway:rng() * 6, bash:0, walk:rng() * 6,
     seed:rng(), gait:0, mv:0, reachA:0};
@@ -64,6 +65,7 @@ function newGameCore(o) {
   clearCaches();
 }
 function spawnZombie(minD, init) {
+  if (!init && weekMod() === 'calm' && rng() < .45) return;                 // тихая неделя
   for (let t = 0; t < 200; t++) {
     const x = ri(FEN + 1, MW - FEN - 2), y = ri(FEN + 1, MH - FEN - 2), i = y * MW + x;
     if (navBlocked(x, y) || map[i] === DOOR || map[i] === WIN) continue;

@@ -325,7 +325,6 @@ const bump = c => { if (c) { c._v = (c._v || 0) + 1; c._st = true; } };
     return di.call(this, bm, a, b, c, d, e, f, g, h);
   };
 }
-{ const hf = hdFogged; hdFogged = function () { const c = hf.apply(this, arguments); if (c && !c._st) c._st = true; return c; }; }
 
 // ---- Android: листы спрайтов (≈250 МБ в распакованном виде) — в ImageBitmap. Картинка <img> может быть выгружена
 // браузером из памяти и распакована заново при следующем обращении (лист 4096×1500 — это десятки миллисекунд).
@@ -340,7 +339,6 @@ async function sheetsToBitmaps() {
     await new Promise(r => setTimeout(r, 30));                          // по одному листу, не мешая кадрам
   }
 }
-{ const la = loadArt; loadArt = function () { return la.apply(this, arguments).then(r => { if (BIG_SHEETS_BMP) sheetsToBitmaps(); return r; }); }; }
 
 // ---- интерфейс поверх игры перерисовывался 7–20 раз в секунду: каждые 0.15 с HUD заново писал те же тексты,
 // подсказки и флаги hidden. На планшете каждая такая запись перерисовывала весь слой интерфейса (тест: «без

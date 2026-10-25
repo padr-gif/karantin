@@ -85,18 +85,3 @@ function wallArt(p0x, p0y, p1x, p1y, kind, f) {
   }
   resetT();
 }
-const wallPiece32 = wallPiece;
-wallPiece = function (x0, y0, x1, y1, z0, z1, Hs) {
-  wallPiece32(x0, y0, x1, y1, z0, z1, Hs);
-  if (!Hs || !Hs.rooms || z0 > 1 || z1 < WH * .9) return;
-  for (const side of [0, 1]) {
-    const L = side ? y1 - y0 : x1 - x0; if (L < .4) continue;   // стена тайла — два куска по .44 и стык .13
-    const px = side ? x1 + .05 : (x0 + x1) / 2, py = side ? (y0 + y1) / 2 : y1 + .05;
-    if (!faceTex(Hs, px, py)[1]) continue;                                   // только внутри дома
-    const tx = Math.floor(px), ty = Math.floor(py), hx2 = Math.floor(px * 2), hy2 = Math.floor(py * 2), hv = hash(hx2 * 7 + side * 131, hy2 * 13 + 17);
-    if (hv > .12) continue;
-    const fg = fogAt(tx, ty), f = Math.max(.06, fg * (side ? .76 : .94));   // fogAt: 1 — видно; восточная грань темнее, как у стены
-    if (side) wallArt(x1, y0, x1, y1, Math.floor(hash(hx2 + 5, hy2 + 9) * WALLART.length), f);
-    else wallArt(x0, y1, x1, y1, Math.floor(hash(hx2 + 5, hy2 + 9) * WALLART.length), f);
-  }
-};

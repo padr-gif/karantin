@@ -86,18 +86,6 @@ function invPlace() {
   for (const it of P.inv) if (it.bp == null) { const w = itemKg(it); if (used + w <= cap + 1e-6) { it.bp = 1; used += w; } else it.bp = 0; }
 }
 // в группах инвентаря вещи из карманов и из рюкзака — отдельно
-{ const gi = groupItems;
-  groupItems = function (list) {
-    if (list !== P.inv) { for (const it of list) if (it && it.bp != null && !P.inv.includes(it)) delete it.bp; return gi(list); }
-    const groups = [];
-    list.forEach((it, k) => {
-      const d = ITEMS[it.id];
-      const key = ((d.kind === 'weapon' || d.kind === 'light' || d.uses) ? 'u' + k : it.id + (isRotten(it) ? '!' : '')) + (it.bp ? '@b' : '') + (it.u ? '#' + it.u : '');   // особые находки — отдельной ячейкой
-      let g = groups.find(g => g.key === key); if (!g) groups.push(g = {key, idx:k, n:0, it}); g.n++;
-    });
-    return groups;
-  };
-}
 
 // ---- надеть / снять рюкзак ----
 function wearBag(k) {
@@ -118,9 +106,6 @@ defUse((it, d) => d && d.kind === 'bag', (it, k) => wearBag(k));   // рюкза
 
 // ---- перегруз: медленнее и тяжелее ----
 { const ed = enDrainK; enDrainK = function () { return ed() * (1 + invOver() * 1.4); }; }
-{ const wm = woundMoodles;
-  woundMoodles = function () { const m = wm(), o = invOver(); if (o > .45) m.push(['Сильный перегруз', 'crit']); else if (o > 0) m.push(['Перегруз', 'warn']); return m; };
-}
 { let t42 = 0, was = false;
   onUpdate(dt => {
     if (mode !== 'play' || !P) return;
@@ -154,6 +139,14 @@ function invSection(title, sub, frac, list, onlyBag) {
   box.appendChild(hd);
   const groups = groupItems(P.inv).filter(g => !!g.it.bp === onlyBag).sort((a, b) => CATS.indexOf(catOf(a.it.id)) - CATS.indexOf(catOf(b.it.id)));
   box.appendChild(gridOf(groups, g => { panel.sel = panel.sel === g.key ? null : g.key; renderPanel(); }, Math.max(4, groups.length + (4 - groups.length % 4) % 4), panel.sel));
+  const g = box.querySelector('.grid'); if (!g) return box;
+  for (const v of [...g.querySelectorAll('.cell.void')]) v.remove();                // пустые ячейки — до полного ряда из 4
+  const n = g.children.length, need = Math.max(4, Math.ceil(n / 4) * 4) - n;
+  for (let k = 0; k < need; k++) g.appendChild(cell(null));
+  if (P.bag && P.inv.some(it => !!it.bp === onlyBag)) {                              // «всё туда» — в заголовке раздела
+    const b = btn(onlyBag ? 'Всё в карманы' : 'Всё в рюкзак', () => moveAll(!onlyBag), 'ghost'); b.classList.add('mvall');
+    box.querySelector('.secrow').appendChild(b);
+  }
   return box;
 }
 // подзаголовок окна рюкзака — вес

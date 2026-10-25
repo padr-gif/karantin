@@ -126,6 +126,7 @@ onLoad((d) => { if (P && !(P.cloth && P.cloth.v)) starterClothes();
 // ---- картинка: красим области тела цветом надетых вещей ----
 const hash34 = (x, y) => (((x * 73856093) ^ (y * 19349663)) >>> 0) % 1000 / 1000;
 function outfitRegs() {
+  if (P && P._inShower) return new Array(16).fill(null);                    // в душе — без одежды
   const reg = new Array(16).fill(null);
   for (const s of DRAW_ORDER) {
     const c = P.cloth && P.cloth[s]; if (!c) continue;
@@ -135,7 +136,7 @@ function outfitRegs() {
   if (P.armor) reg[1] = {d:{col:[46, 56, 74], pat:'armor'}};
   return reg;
 }
-function outfitKey() { return DRAW_ORDER.map(s => { const c = P.cloth && P.cloth[s]; return c ? c.id + (cdur(c) < 35 ? '~' : '') : ''; }).join(',') + (P.armor ? ',A' : ''); }
+function outfitKey() { if (P && P._inShower) return 'shower'; return DRAW_ORDER.map(s => { const c = P.cloth && P.cloth[s]; return c ? c.id + (cdur(c) < 35 ? '~' : '') : ''; }).join(',') + (P.armor ? ',A' : ''); }
 function patCol(d, x, y) {
   const c = d.col;
   switch (d.pat) {

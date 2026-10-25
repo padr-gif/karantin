@@ -145,6 +145,7 @@ function updateThrown(dt) {
 }
 // ---- timed use (eat / drink / heal) ----
 function useKind(it) {
+  if (it.id === 'rag') return ['work', 2.2]; if (it.id === 'splint') return ['work', 3];
   const d = ITEMS[it.id];
   if (d.kind === 'book') return ['read', 6];
   if (d.kind === 'fun') return ['read', d.dur];

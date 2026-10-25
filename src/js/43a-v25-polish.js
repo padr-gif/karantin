@@ -110,6 +110,7 @@ function clearDoorway(o) {
 }
 // never stay stuck inside something (a door shut on you, a car parked on you, furniture moved)
 function unstick() {
+  if (P && P.act && P.act.shower) { P._stuckT = 0; return; }               // в кабине душа «застрять» — нормально
   if (P.car || (P.act && P.act.kind === 'vault') || !blocked(P.x, P.y, P.r * .85)) { P._stuckT = 0; return; }
   P._stuckT = (P._stuckT || 0) + 1; if (P._stuckT < 3) return;
   for (let r = .1; r <= 1.4; r += .1) for (let k = 0; k < 16; k++) {

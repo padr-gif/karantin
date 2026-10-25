@@ -34,7 +34,6 @@ function workout() {
   }, {reopen:'self', sub:'skills', noisy:2, an:'jacks'});
 }
 
-const panicK24 = panicK; panicK = function () { return panicK24() * (1 - .06 * fitLv()); };
 // ---- body map ----
 const WHERE2REG = {'голова':'head', 'шея':'neck', 'грудь':'chest', 'спина':'chest', 'живот':'belly', 'левая рука':'armL', 'правая рука':'armR', 'левая нога':'legL', 'правая нога':'legR'};
 const REG = {

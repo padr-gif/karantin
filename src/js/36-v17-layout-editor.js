@@ -4,6 +4,12 @@ const PNAMES = {campfire:'Огонь', burner:'Горелка', seeds:'Гряд�
 function vaultZ() { const A = P.act; if (!A || A.kind !== 'vault') return 0; const k = Math.min(1, A.t / A.dur); return Math.sin(Math.PI * Math.min(1, k * 1.15)) * U * .62; }
 function vaultAnim() {
   const A = P.act, k = Math.min(1, A.t / A.dur);
+  if (heroMale() && AN('p', 'vault') >= 2) {                                    // у мужского героя — свой клип перелезания
+    const np = AN('p', 'pickup');
+    if (k < .35) return ['pickup', Math.min(np - 1, Math.floor(k / .35 * np))];
+    if (k < .75) { const n = AN('p', 'vault'); return ['vault', Math.floor((k - .35) / .4 * n * 1.5) % n]; }
+    return ['pickup', Math.max(0, np - 1 - Math.floor((k - .75) / .25 * np))];
+  }
   if (k < .35) { const n = AN('p', 'pickup'); return ['pickup', Math.min(n - 1, Math.floor(k / .35 * n))]; }
   if (k < .75) { const n = AN('p', 'sneak'); return ['sneak', Math.floor((k - .35) / .4 * n * 1.5) % n]; }
   const n = AN('p', 'pickup'); return ['pickup', Math.max(0, n - 1 - Math.floor((k - .75) / .25 * n))];
@@ -117,8 +123,6 @@ function drawEditMarks() {
     quad(f.r, 0, null, `rgba(240,196,119,${.4 + .4 * pulse})`, 1.5);
   }
 }
-const tapWorld0 = tapWorld;
-tapWorld = function (cx, cy) { if (EDIT.on) return editorTap(cx, cy); return tapWorld0(cx, cy); };
 $('bEdit').addEventListener('click', () => { SFX.ui(); toggleEditor(); });
 $('edBreak').addEventListener('click', () => dismantleSel());
 $('stNext').addEventListener('click', () => { SFX.ui(); if (storyI < STORY.length - 1) showStory(storyI + 1); else startPlayAfterStory(); });

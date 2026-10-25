@@ -38,8 +38,6 @@ function placeUniques() {
 // ---- как выглядит: своё имя, золотая рамка, своя история в карточке ----
 
 // ---- свойства ----
-{ const ft = fireTool; fireTool = function () { return P.inv.find(i => i.u === 'lighter') || ft(); }; }
-{ const uf = useFireTool; useFireTool = function () { const t = fireTool(); if (t && t.u === 'lighter') return; uf(); }; }
 { let g0 = null;
   onUpdate((dt, {s0}) => {
     if (mode !== 'play' || !P) return;

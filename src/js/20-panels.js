@@ -47,11 +47,14 @@ function closePanel() {
 }
 function renderInv() { if (panel) renderPanel(); }
 function toggleInv(force) { if (force === false) closePanel(); else if (panel && panel.kind === 'inv') closePanel(); else openPanel('inv'); }
+// одинаковые вещи — в одну ячейку (с зарядом/прочностью — каждая своя; в рюкзаке и в карманах — отдельно; находки — отдельно)
 function groupItems(list) {
+  const inv = list === P.inv;
+  if (!inv) for (const it of list) if (it && it.bp != null && !P.inv.includes(it)) delete it.bp;   // вещь вне инвентаря забывает карман/рюкзак
   const groups = [];
   list.forEach((it, k) => {
     const d = ITEMS[it.id];
-    const key = (d.kind === 'weapon' || d.kind === 'light' || d.uses) ? 'u' + k : it.id + (isRotten(it) ? '!' : '') + (it.u ? '#' + it.u : '');
+    const key = ((d.kind === 'weapon' || d.kind === 'light' || d.uses) ? 'u' + k : it.id + (isRotten(it) ? '!' : '')) + (inv && it.bp ? '@b' : '') + (it.u ? '#' + it.u : '');
     let g = groups.find(g => g.key === key);
     if (!g) groups.push(g = {key, idx:k, n:0, it});
     g.n++;
@@ -104,6 +107,13 @@ function moodleList() {
   if (P.cold > 55) m.push('Холод: оденься теплее, зайди в дом или погрейся у костра');
   if (P.wet > 40) m.push('Промок: обсохни в доме или у огня');
   m.push(...moodText());
+  const W = wounds();
+  if (W.some(w => w.k === 'frac' && !w.spl)) m.push('Перелом: наложи шину (доска + бинт или тряпка)');
+  if (W.some(w => w.sep > 50)) m.push('Воспаление: антисептик, антибиотики или аптечка');
+  if (W.some(dirtyBand)) m.push('Грязная повязка: смени бинт');
+  if ((P.pain || 0) > 35) m.push('Боль: обезболивающее притупит её');
+  if ((P.unh || 0) > 50) m.push('Уныние: книги, музыка, горячая еда и сладкое');
+  if ((P.panic || 0) > 30) m.push('Паника: отойди от мертвецов, иначе будешь промахиваться');
   return m.length ? m : ['Всё в порядке'];
 }
 // ---- item cells ----

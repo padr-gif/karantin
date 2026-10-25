@@ -58,6 +58,7 @@ function findPath(tx, ty) {
 }
 function worldFromScreen(cx, cy) { const r = cv.getBoundingClientRect(), k = DEV / SCALE; return screenToWorld((cx - r.left) * k, (cy - r.top) * k + U * .9 * 0); }
 function tapWorld(cx, cy) {
+  if (EDIT.on) return editorTap(cx, cy);                                     // обустройство: тап выбирает и ставит мебель
   if (P.car) return false;
   const [wx, wy] = worldFromScreen(cx, cy);
   // nearest interactable around the tapped point

@@ -33,15 +33,5 @@ defAction('wash', {run: a0 => {                                                 
     P._inShower = w > .5;
     if (k > .99) { P.x = sh.x0; P.y = sh.y0; }
   }, dt => { const A = P && P.act, sh = A && A.kind === 'job' && A.shower; return {A, sh}; });
-  // вода шумит (как дождь за окном), пока моешься
-  const amb39 = SFX.ambient;
-  SFX.ambient = function (rainV, night, inside) { amb39(P && P._inShower ? Math.max(rainV, 1) : rainV, night, inside); };
-
+  // (вода шумит, пока моешься — SFX.ambient; в душе без одежды — outfitRegs; не «застревает» в кабине — unstick)
 }
-// в душе — без одежды (в белье): одежда «висит» снаружи
-{ const regs = outfitRegs, key = outfitKey;
-  outfitRegs = function () { return P && P._inShower ? new Array(16).fill(null) : regs(); };
-  outfitKey = function () { return P && P._inShower ? 'shower' : key(); }; }
-
-// в кабине «застрять» — нормально: не выталкивать героя наружу (иначе дёргался каждый кадр)
-{ const un = unstick; unstick = function () { if (P && P.act && P.act.shower) { P._stuckT = 0; return; } un(); }; }

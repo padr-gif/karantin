@@ -592,8 +592,8 @@ function itemText(it) {
   if (d.rot && it.rot != null) { const left = it.rot - gameMin; parts.push(left <= 0 ? '<em>испорчено</em>' : left < 600 ? 'скоро испортится' : 'свежее'); }
   return parts.join(' · ');
 }
-function fireTool() { return P.inv.find(i => (i.id === 'matches' || i.id === 'lighter') && i.uses > 0); }
-function useFireTool() { const t = fireTool(); if (!t) return; t.uses--; if (t.uses <= 0) { P.inv.splice(P.inv.indexOf(t), 1); toast(ITEMS[t.id].name + ': закончились'); } }
+function fireTool() { return P.inv.find(i => i.u === 'lighter') || P.inv.find(i => (i.id === 'matches' || i.id === 'lighter') && i.uses > 0); }   // зажигалка пожарного — первой
+function useFireTool() { const t = fireTool(); if (!t || t.u === 'lighter') return; t.uses--; if (t.uses <= 0) { P.inv.splice(P.inv.indexOf(t), 1); toast(ITEMS[t.id].name + ': закончились'); } }
 function insideHouse(x, y) { return houses.some(Hs => x > Hs.ix0 && x < Hs.ix1 && y > Hs.iy0 && y < Hs.iy1); }
 function frontTile() { const tx = Math.floor(P.x + Math.cos(P.face) * .95), ty = Math.floor(P.y + Math.sin(P.face) * .95); return [tx, ty]; }
 function tileFree(tx, ty) {

@@ -102,7 +102,7 @@ check('варежки греют', await D("P.cloth = {}; const a = insulation()
 
 console.log('Размер экрана');
 await D("window.__iw = Object.getOwnPropertyDescriptor(window, 'innerWidth'); Object.defineProperty(window, 'innerWidth', {get: () => 400, configurable: true})");
-await sleep(300);
+for (let k = 0; k < 20 && (await D("cv.style.width")) !== '400px'; k++) await sleep(150);   // проверка размера идёт по таймеру
 check('холст сам подстроился под новый размер без события resize', await D("cv.style.width") === '400px');
 await D("Object.defineProperty(window, 'innerWidth', window.__iw)"); await sleep(300);
 check('и вернулся обратно', await D("cv.style.width === innerWidth + 'px'"));

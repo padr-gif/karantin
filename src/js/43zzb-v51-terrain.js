@@ -188,6 +188,7 @@ function genFinish(o) {
 function plot(x, y, w, h) {
   if (!rectFree(x, y, w, h, 1)) return null;
   const H = bld(x, y, w, h, 'house'); pathFromDoor(H);
+  if (world.gen >= 2) { if (rng() < .55) yardFence(H); if (rng() < .5) yardGarden(H); }   // новые карты: заборы и огороды и в деревне
   return H;
 }
 

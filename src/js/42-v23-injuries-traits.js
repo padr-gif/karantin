@@ -118,6 +118,7 @@ function moveK() {
 function canRun() { return !fracAt('leg') && !(P.grabT > 0); }
 function healK() { return (P.prof === 'medic' ? 1.5 : 1) * (1 + .1 * skillLv('med')) * (hasTr('fastheal') ? 1.5 : 1) * (hasTr('slowheal') ? .66 : 1); }
 function tickWounds(gm) {
+  const before = wounds().slice();
   const W = wounds();
   if (P.bleed && !W.some(bleeding)) addWound('cut', rng() < .6 ? 'arm' : 'leg');   // older code paths (glass) only flag bleeding
   const lv = skillLv('med');
@@ -146,6 +147,14 @@ function tickWounds(gm) {
   if (P.painkT > 0) { P.painkT -= gm; pain *= .35; }
   P.pain = Math.min(100, pain); P.fever = fever;
   P.bleed = W.some(bleeding);
+  // зажившая рана оставляет шрам
+  const now = wounds();
+  for (const w of before) if (!now.includes(w) && w.h >= 1 && w.k !== 'scratch') {
+    P.scars = P.scars || [];
+    const D = WOUND[w.k], seed = (P.scars.length * 37 + (w.where || '').length * 11) % 100;
+    P.scars.push({k:w.k, where:w.where, day:w.day || Math.floor((gameMin - startMin) / 1440) + 1, ctx:w.ctx || '', s:seed});
+    logEv('Остался шрам: ' + D.name.toLowerCase() + ', ' + w.where);
+  }
 }
 // treatment: which wound an item goes to, and what it does
 function woundFor(id) {
@@ -251,7 +260,7 @@ onStartNew(() => {
 });
 
 // ================= panic & gloom =================
-function panicK() { return (hasTr('brave') ? .5 : 1) * (hasTr('coward') ? 2 : 1) * ((P.stress || 0) > 60 ? 1.3 : 1); }
+function panicK() { return (hasTr('brave') ? .5 : 1) * (hasTr('coward') ? 2 : 1) * ((P.stress || 0) > 60 ? 1.3 : 1) * (1 - .06 * fitLv()); }
 function tickMind(dt, gm) {
   let near = 0, close = 0;
   for (const z of zs) { if (z.state !== 'chase') continue; const d = Math.hypot(z.x - P.x, z.y - P.y); if (d < 9) { near++; if (d < 2.6) close++; } }
@@ -271,8 +280,6 @@ function missChance() { let m = Math.max(0, ((P.panic || 0) - 30) / 200); if ((P
 function dmgK() { let k = 1; if (hasTr('strong')) k *= 1.2; if (hasTr('weak')) k *= .8; const af = fracAt('arm'); if (af) k *= af.spl ? .75 : .5; if ((P.unh || 0) > 80) k *= .85; if ((P.pain || 0) > 50) k *= .9; return k * (1 + .03 * fitLv()) * (P.weapon && P.weapon.u === 'bat' ? 1.2 : 1); }
 let stepNoiseK = () => (hasTr('quiet') ? .5 : 1) * (hasTr('clumsy') ? 1.5 : 1);
 let enDrainK = () => (1 - .05 * skillLv('fit')) * (hasTr('wakeful') ? .7 : 1) * (hasTr('sleepy') ? 1.3 : 1) * ((P.unh || 0) > 50 ? 1.2 : 1);
-const tickFlu23 = tickFlu;
-tickFlu = function (gm) { const f0 = P.fluR || 0; tickFlu23(gm); const d = (P.fluR || 0) - f0; if (d > 0) P.fluR = f0 + d * (hasTr('hardy') ? .5 : 1) * (hasTr('cold') ? 1.3 : 1); };
 
 // ================= tailoring =================
 const TEXTILE = new Set(['jacket', 'sweater', 'raincoat', 'hat', 'leather', 'parka', 'ushanka']);
@@ -570,7 +577,6 @@ RECIPES.push(
 );
 
 // ================= item use =================
-const useKind23 = useKind;
 defUse(it => ['bandage', 'rag', 'splint', 'antisep', 'medkit'].includes(it.id), it => {   // перевязки и лечение ран
   const w = woundFor(it.id);
   if (!w && it.id !== 'medkit' && it.id !== 'antisep') { toast(it.id === 'splint' ? 'Переломов нет' : 'Перевязывать нечего'); return; }
@@ -580,7 +586,6 @@ defUse(it => ['bandage', 'rag', 'splint', 'antisep', 'medkit'].includes(it.id), 
 defUse((it, d) => d.kind === 'ammo', (it, k, d) => { const g = P.weapon && ITEMS[P.weapon.id]; if (g && g.ammo === it.id) startReload(); else toast('Возьми в руки: ' + ITEMS[d.gun].name.toLowerCase()); });
 defUse(it => it.id === 'sewkit', () => toast('Открой одежду в рюкзаке: там появятся кнопки «Зашить» и «Утеплить»'));
 defUse(it => it.id === 'lure', (it, k) => placeLure(k));
-useKind = function (it) { if (it.id === 'rag') return ['work', 2.2]; if (it.id === 'splint') return ['work', 3]; return useKind23(it); };
 HOT[2].pick = () => {
   const L = P.inv.map((it, k) => [it, k]), f = id => L.find(([it]) => it.id === id), W = wounds();
   if (W.some(w => w.k === 'frac' && !w.spl) && f('splint')) return f('splint');
@@ -589,17 +594,6 @@ HOT[2].pick = () => {
   if (W.some(needBand)) return f('bandage') || f('rag');
   if ((P.pain || 0) > 35 && !(P.painkT > 0)) return f('painkill') || f('pills');
   return (P.hp < 90 && (f('medkit') || f('pills') || f('painkill'))) || f('bandage');
-};
-const moodleList23 = moodleList;
-moodleList = function () {
-  const m = moodleList23().filter(t => t !== 'Всё в порядке'), W = wounds();
-  if (W.some(w => w.k === 'frac' && !w.spl)) m.push('Перелом: наложи шину (доска + бинт или тряпка)');
-  if (W.some(w => w.sep > 50)) m.push('Воспаление: антисептик, антибиотики или аптечка');
-  if (W.some(dirtyBand)) m.push('Грязная повязка: смени бинт');
-  if ((P.pain || 0) > 35) m.push('Боль: обезболивающее притупит её');
-  if ((P.unh || 0) > 50) m.push('Уныние: книги, музыка, горячая еда и сладкое');
-  if ((P.panic || 0) > 30) m.push('Паника: отойди от мертвецов, иначе будешь промахиваться');
-  return m.length ? m : ['Всё в порядке'];
 };
 function woundMoodles() {
   const m = [], W = wounds();
@@ -611,6 +605,7 @@ function woundMoodles() {
   if ((P.pain || 0) > 65) m.push(['Сильная боль', 'crit']); else if ((P.pain || 0) > 30) m.push(['Боль', 'warn']);
   if ((P.unh || 0) > 80) m.push(['Депрессия', 'crit']); else if ((P.unh || 0) > 50) m.push(['Уныние', 'warn']);
   if (P.grabT > 0) m.push(['Схвачен!', 'crit']);
+  { const o = invOver(); if (o > .45) m.push(['Сильный перегруз', 'crit']); else if (o > 0) m.push(['Перегруз', 'warn']); }
   return m;
 }
 // ---- character tab: wounds with buttons, traits, mood numbers ----
@@ -630,6 +625,15 @@ function woundRow(w) {
   if (!acts.children.length && (needBand(w) || (w.k === 'frac' && !w.spl))) acts.appendChild(mk('span', 'need', w.k === 'frac' ? 'нужна шина' : 'нужен бинт или тряпка'));
   r.appendChild(acts);
   const bar = mk('i', 'wbar'), u = mk('u'); u.style.width = Math.floor(w.h * 100) + '%'; bar.appendChild(u); r.appendChild(bar);
+  if (w.band && w.k !== 'frac') {
+    const acts = r.querySelector('.acts') || r;
+    const b = btn(dirtyBand(w) ? 'Снять грязную' : 'Снять повязку', () => {
+      w.band = 0; w.bT = 0; SFX.rustle();
+      toast(WOUND[w.k].bleed > 0 && w.t < (WOUND[w.k].clot || 1e9) ? 'Повязка снята. Рана снова кровоточит' : 'Повязка снята: ' + w.where);
+      renderPanel();
+    }, 'ghost');
+    acts.appendChild(b);
+  }
   return r;
 }
 onPanel(() => {

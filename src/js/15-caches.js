@@ -144,6 +144,7 @@ function drawGroundRange(gx0, gy0, gx1, gy1) {
   for (const c of corpses) if (c.fall >= 1 && c.x > x0 - 1.5 && c.x < x1 + 2.5 && c.y > y0 - 1.5 && c.y < y1 + 2.5) drawCorpse(c);
 }
 function wallKey(x, y, i, cut) {
+  buildSwitches();
   const t = map[i];
   let k = (cut ? 'c' : 'f') + fogF(i) + '|' + fogAt(x, y + 1) + '|' + fogAt(x + 1, y);
   if (t !== WALL) {
@@ -151,6 +152,7 @@ function wallKey(x, y, i, cut) {
     k += '|' + (o.open ? 1 : 0) + (o.dead ? 1 : 0) + (o.broken ? (o.cleared ? 2 : 1) : 0) + (o.bhp > 0 ? Math.ceil(o.bhp / 45) : 0) + '|' + Math.round((o.ang == null ? (o.open ? 1 : 0) : o.ang) * 12) + (o.mhp > 0 ? 'm' + Math.ceil(o.mhp / 55) : '');
     if (t === WIN) k += ((lightLevel() < .5 && poweredAt(x, y) && winLit(x, y)) ? 'n' : 'd') + (o.cc ? 'c' : '') + (o.cur ? 'u' : '');
   }
+  { const r = SWT.get(i); if (r) k += r.off ? '|s0' : '|s1'; }                // выключатель на стене
   return k;
 }
 function roofBounds(Hs) {

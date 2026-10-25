@@ -76,6 +76,9 @@ function placeBed() {
 }
 function waterSource() { return P.inv.find(i => i.id === 'water') || P.inv.find(i => ITEMS[i.id].kind === 'canteen' && i.w > 0); }
 function updateBeds(gm) {
+  const t = outsideTemp();
+  if (t < -3) { for (const b of beds) if (b.crop && b.g < 1) { b.crop = null; b.g = 0; if (Math.hypot(b.cx - P.x, b.cy - P.y) < 14) toast('Заморозки погубили всходы на грядке'); } return; }
+  if (t < 4) { for (const b of beds) if (rain > .5) b.w = 1; return; }      // холодно: не растёт, но дождь поливает
   for (const b of beds) {
     if (rain > .5) b.w = 1;
     if (!b.crop || b.g >= 1) continue;
