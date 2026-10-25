@@ -125,6 +125,7 @@ function blitObj(name, sx, sy) {
 // ---- characters: palette-keyed frames recoloured on demand (LRU) ----
 const SHADE8 = [.5, .58, .66, .74, .82, .89, .95, 1];
 const frameCache = new Map(); let recolorsThisFrame = 0;
+const FRAME_MAX = 1600;   // кадры персонажей ~35 КБ: 1600 ≈ 55 МБ. При 640 в толпе кадры выкидывались и перекрашивались заново ~45 раз в секунду
 // один пиксель кадра персонажа: R — слот палитры, G — ступень тени; у кадров из tools/mh3d (метка G&31 = 8)
 // точная яркость лежит в B (0..240 -> .3..1.35, 16 уровней), а тени на коже теплее — как в превью рендера
 function keyPx(a, i, pal) {
@@ -153,7 +154,7 @@ function charFrame(name, palKey, pal, force) {
   const f = ART.meta.frames[name]; if (!f) return null;
   recolorsThisFrame++;
   c = recolor8(f, pal); frameCache.set(k, c);
-  if (frameCache.size > 640) { let n = 120; for (const key of frameCache.keys()) { frameCache.delete(key); if (--n <= 0) break; } }
+  if (frameCache.size > FRAME_MAX) { let n = 200; for (const key of frameCache.keys()) { frameCache.delete(key); if (--n <= 0) break; } }
   return c;
 }
 function drawChar(ent, name, palKey, pal, wx, wy, zoff, flash, alpha, force) {

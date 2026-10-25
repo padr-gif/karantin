@@ -3,7 +3,7 @@
 // Если основное не читается или не загружается, игра берёт запасное. Сохранение можно выгрузить файлом и загрузить
 // из файла (перенести игру на другой телефон). Ошибки кадра и скрипта пишутся в журнал; в паузе — «Отчёт об ошибках».
 
-const GAME_VER = '0.60';
+const GAME_VER = '0.61';
 const PKEY = s => LKEY(s) + '-prev';
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } };
@@ -356,3 +356,19 @@ const bump = c => { if (c) { c._v = (c._v || 0) + 1; c._st = true; } };
 { const wc = withChunk; withChunk = function (ch, fn) { bump(ch.c); return wc(ch, fn); }; }
 { const cf = charFrame; charFrame = function () { const r = cf.apply(this, arguments); if (r && r.cv && !r.cv._st) r.cv._st = true; return r; }; }
 { const hf = hdFogged; hdFogged = function () { const c = hf.apply(this, arguments); if (c && !c._st) c._st = true; return c; }; }
+
+// ---- Android: листы спрайтов (≈250 МБ в распакованном виде) — в ImageBitmap. Картинка <img> может быть выгружена
+// браузером из памяти и распакована заново при следующем обращении (лист 4096×1500 — это десятки миллисекунд).
+// ImageBitmap держит пиксели распакованными: перекраска кадров персонажей больше не упирается в повторную распаковку.
+const BIG_SHEETS_BMP = BMP_OK && (/Android/i.test(navigator.userAgent) || /[?&]sheetbmp\b/.test(location.search));
+let sheetsBmp = 0;
+async function sheetsToBitmaps() {
+  for (const n of Object.keys(ART.imgs)) {
+    const im = ART.imgs[n];
+    if (n === 'icons' || !im || typeof HTMLImageElement === 'undefined' || !(im instanceof HTMLImageElement)) continue;
+    try { const b = await createImageBitmap(im); if (ART.imgs[n] === im) { ART.imgs[n] = b; sheetsBmp++; } } catch (e) { logErr(e, 'лист ' + n); }
+    await new Promise(r => setTimeout(r, 30));                          // по одному листу, не мешая кадрам
+  }
+}
+{ const la = loadArt; loadArt = function () { return la.apply(this, arguments).then(r => { if (BIG_SHEETS_BMP) sheetsToBitmaps(); return r; }); }; }
+if (/Android/i.test(navigator.userAgent)) { const cf = charFrame; charFrame = function (name, palKey, pal, force) { if (!force && recolorsThisFrame > 8) return null; return cf(name, palKey, pal, force); }; }
