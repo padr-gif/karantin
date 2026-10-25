@@ -119,10 +119,11 @@ function renderActStack(list) {
     if (alts.length > shown) mkPill('i-menu', 'Ещё ' + (alts.length - shown), 'другие действия', () => { if ($('actMenu').hidden) openActMenu(); else $('actMenu').hidden = true; });
   }
   let k = 0;
-  if (prim) $('bAct').style.bottom = base + step * k++ + 'px'; else $('bAct').style.bottom = base + 'px';
-  for (const el of box.children) el.style.bottom = base + step * k++ + 'px';
-  $('bBar').style.bottom = base + step * k++ + 'px';
-  $('actMenu').style.bottom = `calc(var(--sb) + ${base + step * k + 6}px)`;
+  const sb = (el, v) => { if (el._sb !== v) { el._sb = v; el.style.bottom = v; } };   // не трогаем стиль, если не изменился
+  if (prim) sb($('bAct'), base + step * k++ + 'px'); else sb($('bAct'), base + 'px');
+  for (const el of box.children) sb(el, base + step * k++ + 'px');
+  sb($('bBar'), base + step * k++ + 'px');
+  sb($('actMenu'), `calc(var(--sb) + ${base + step * k + 6}px)`);
 }
 
 // ---- car: steering buttons, gas and brake pedals, speedometer ----

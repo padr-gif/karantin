@@ -6,7 +6,7 @@ function fmtTime(m) { const h = Math.floor(m / 60) % 24, mm = Math.floor(m % 60)
 function updateHud() {
   for (const k of ['hp', 'sat', 'hyd', 'en']) {
     const v = P[k], el = statEls[k];
-    const fg = el.querySelector('.fg'); if (fg) fg.style.strokeDashoffset = (GAUGE_C * (1 - clamp(v, 0, 100) / 100)).toFixed(1);
+    const fg = el.querySelector('.fg'); if (fg) { const o = (GAUGE_C * (1 - clamp(v, 0, 100) / 100)).toFixed(1); if (fg._o !== o) { fg._o = o; fg.style.strokeDashoffset = o; } }
     el.classList.toggle('low', v < 20); el.title = el.getAttribute('aria-label') + ': ' + Math.round(Math.max(0, v)) + '%';
   }
   clockHud();

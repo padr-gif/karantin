@@ -3,7 +3,7 @@
 // Если основное не читается или не загружается, игра берёт запасное. Сохранение можно выгрузить файлом и загрузить
 // из файла (перенести игру на другой телефон). Ошибки кадра и скрипта пишутся в журнал; в паузе — «Отчёт об ошибках».
 
-const GAME_VER = '0.61';
+const GAME_VER = '0.62';
 const PKEY = s => LKEY(s) + '-prev';
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } };
@@ -372,3 +372,29 @@ async function sheetsToBitmaps() {
 }
 { const la = loadArt; loadArt = function () { return la.apply(this, arguments).then(r => { if (BIG_SHEETS_BMP) sheetsToBitmaps(); return r; }); }; }
 if (/Android/i.test(navigator.userAgent)) { const cf = charFrame; charFrame = function (name, palKey, pal, force) { if (!force && recolorsThisFrame > 8) return null; return cf(name, palKey, pal, force); }; }
+
+// ---- интерфейс поверх игры перерисовывался 7–20 раз в секунду: каждые 0.15 с HUD заново писал те же тексты,
+// подсказки и флаги hidden. На планшете каждая такая запись перерисовывала весь слой интерфейса (тест: «без
+// интерфейса» — 60 FPS против 30). Теперь запись пропускается, если значение не изменилось, а кнопки и
+// индикаторы лежат на своих маленьких слоях: изменение одной кнопки не трогает остальной экран.
+function guardEl(el) {
+  if (el._g) return; el._g = 1;
+  const tc = Object.getOwnPropertyDescriptor(Node.prototype, 'textContent'), hd = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'hidden'), ti = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'title');
+  Object.defineProperty(el, 'textContent', {configurable:true, get() { return tc.get.call(this); }, set(v) { if (this.childElementCount || tc.get.call(this) !== String(v)) tc.set.call(this, v); }});
+  Object.defineProperty(el, 'hidden', {configurable:true, get() { return hd.get.call(this); }, set(v) { if (hd.get.call(this) !== !!v) hd.set.call(this, v); }});
+  Object.defineProperty(el, 'title', {configurable:true, get() { return ti.get.call(this); }, set(v) { if (ti.get.call(this) !== String(v)) ti.set.call(this, v); }});
+  const ih = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
+  Object.defineProperty(el, 'innerHTML', {configurable:true, get() { return ih.get.call(this); }, set(v) { v = String(v); if (this._ih !== v || ih.get.call(this) === '') { this._ih = v; ih.set.call(this, v); } }});
+  const sa = el.setAttribute; el.setAttribute = function (k, v) { if (this.getAttribute(k) !== String(v)) sa.call(this, k, v); };
+}
+function guardSvg(el) { if (el._g) return; el._g = 1; const sa = el.setAttribute; el.setAttribute = function (k, v) { if (this.getAttribute(k) !== String(v)) sa.call(this, k, v); }; }
+function guardUI() { for (const id of ['hud', 'ctrl', 'dock', 'pad', 'moodles', 'clockBox', 'vitals', 'taskChip', 'mini']) { const r = $(id); if (!r) continue; guardEl(r); for (const e of r.querySelectorAll('*')) if (e instanceof HTMLElement) guardEl(e); else guardSvg(e); } }
+guardUI();
+{ const bp = beginPlay; beginPlay = function () { bp(); guardUI(); }; }
+setInterval(() => { if (mode === 'play') guardUI(); }, 2000);   // новые элементы (чип дневника и т. п.)
+{ const st = document.createElement('style');
+  st.textContent = '.gauge,.clock,#dock,.ibtn,#bAct,#bAtk,#bRun,#bSneak,#bInv,#bBar,#actAlt,#moodles,#knob,#stick,#mini,#taskChip,#toasts,#events{will-change:transform}'
+    + '.gauge,.clock,#dock,#actAlt,#moodles{contain:layout paint style}'
+    + '@keyframes gpulse{50%{transform:scale(1.08)}}';                     // было box-shadow: перерисовка каждый кадр при низком показателе
+  document.head.appendChild(st);
+}
