@@ -3,7 +3,7 @@
 // Если основное не читается или не загружается, игра берёт запасное. Сохранение можно выгрузить файлом и загрузить
 // из файла (перенести игру на другой телефон). Ошибки кадра и скрипта пишутся в журнал; в паузе — «Отчёт об ошибках».
 
-const GAME_VER = '0.54';
+const GAME_VER = '0.55';
 const PKEY = s => LKEY(s) + '-prev';
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } };
@@ -244,5 +244,39 @@ let procSid = 0;
     if (!p._sid) p._sid = ++procSid;
     const x = Math.floor(p.cx), y = Math.floor(p.cy), fq = Math.round(f * 20) / 20;
     sprite('Q' + p._sid, p.type + '|' + fq + '|' + (p.dug ? 1 : 0) + '|' + (p.sign ? 1 : 0), x, y, -U - 6, -78, U + 6, 2 * hh + 6, () => dp(p, fq));
+  };
+}
+
+// ---- мебель за стеной без clip(): на планшетах с Mali каждый clip по большому контуру стоил кадра.
+// Мебель с вырезанными кусками стен один раз запекается в отдельную картинку (кусок стены стирается из неё),
+// и дальше рисуется как обычный спрайт. Перепекается, только когда меняется вырез (например, стена срезалась рядом с героем).
+function occBox(name, fu, wx, wy) {
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  const add = (a, b, c, d) => { x0 = Math.min(x0, a); y0 = Math.min(y0, b); x1 = Math.max(x1, c); y1 = Math.max(y1, d); };
+  for (const fr of [hdFrame(name), ART.meta.frames[name]]) if (fr) { const s = fr[7] || 1; add(-fr[5] / s, -fr[6] / s, (fr[3] - fr[5]) / s, (fr[4] - fr[6]) / s); }
+  if (fu && fu.r) {                                                        // детальная мебель (v28) рисуется по своей коробке
+    const [a, b, c, d] = fu.r, bx = SX(wx, wy), by = SY(wx, wy, 0);
+    const xs = [SX(a, b), SX(c, b), SX(a, d), SX(c, d)].map(v => v - bx), ys = [SY(a, b, 0), SY(c, b, 0), SY(a, d, 0), SY(c, d, 0)].map(v => v - by);
+    add(Math.min(...xs) - 6, Math.min(...ys) - 80, Math.max(...xs) + 6, Math.max(...ys) + 6);
+  }
+  return x0 < x1 ? [Math.floor(x0) - 4, Math.floor(y0) - 4, Math.ceil(x1) + 4, Math.ceil(y1) + 4] : null;
+}
+{ const objClip = objAt;                                                   // версия v37 (с clip) — запасной путь
+  objAt = function (id, name, wx, wy, f, alpha, offX, tint) {
+    if (typeof id !== 'string' || id.charCodeAt(0) !== 70 /* F */ || baking) return objClip(id, name, wx, wy, f, alpha, offX, tint);
+    const fu = furns[+id.slice(1) - 1];
+    const masks = fu && fu.r ? occMasks(fu) : [];
+    if (!masks.length) return objAt37(id, name, wx, wy, f, alpha, offX, tint);
+    const box = occBox(name, fu, wx, wy); if (!box) return objClip(id, name, wx, wy, f, alpha, offX, tint);
+    const bx = SX(wx, wy), by = SY(wx, wy, 0), q = v => Math.round(v * 2) / 2;
+    const rel = masks.map(m => m.map(p => [q(p[0] - bx), q(p[1] - by)]));
+    const key = 'occ|' + name + '|' + Math.round(f * 40) + '|' + (tint || '') + '|' + (offX || 0) + '|' + (fu.items ? fu.items.length > 0 : 0) + '|' + (fu.v || 0) + '|' + fu.r.map(v => Math.round(v * 100)).join(',') + '|' + rel.map(m => m.join(' ')).join(';');
+    sprite(id + 'o', key, wx, wy, box[0], box[1], box[2], box[3], () => {
+      objAt37(id, name, wx, wy, f, 1, offX, tint);
+      resetT(); ctx.globalCompositeOperation = 'destination-out'; ctx.fillStyle = '#000';
+      const cx = SX(wx, wy), cy = SY(wx, wy, 0);
+      for (const m of rel) { ctx.beginPath(); ctx.moveTo(cx + m[0][0], cy + m[0][1]); for (let k = 1; k < m.length; k++) ctx.lineTo(cx + m[k][0], cy + m[k][1]); ctx.closePath(); ctx.fill(); }
+      ctx.globalCompositeOperation = 'source-over';
+    }, alpha, 0);
   };
 }
