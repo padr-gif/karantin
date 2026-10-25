@@ -53,7 +53,8 @@ function fpsMem() {
   let spr = 0, cache = 0;
   for (const n in ART.imgs) { const im = ART.imgs[n]; spr += (im.naturalWidth || im.width) * (im.naturalHeight || im.height) * 4 / 1048576; }
   for (const ch of CHUNKS.values()) cache += mbOf(ch.c);
-  for (const s of SPR.values()) cache += mbOf(s.c);
+  for (const s of SPR.values()) if (!s.slot) cache += mbOf(s.c);
+  for (const p of ATL.pages) cache += mbOf(p.c);
   for (const c of frameCache.values()) cache += mbOf(c.cv);
   for (const c of HDFOG.values()) cache += mbOf(c);
   const js = performance.memory ? performance.memory.usedJSHeapSize / 1048576 : 0;

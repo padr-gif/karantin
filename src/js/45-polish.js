@@ -19,7 +19,8 @@ function ntfIcon(t) {
   return 'i-hand';
 }
 function ntfBox() { let b = $('toasts'); return b; }
-function dropNtf(el, now) { if (!el || el._gone) return; el._gone = true; clearTimeout(el._tm); if (now) { el.remove(); return; } el.classList.add('out'); setTimeout(() => el.remove(), 320); }
+function dropNtf(el, now) { if (!el) return; if (el._gone && !now) return; el._gone = true;   // now — убрать сразу, даже если уже исчезает (иначе toast зацикливался)
+  clearTimeout(el._tm); if (now) { el.remove(); return; } el.classList.add('out'); setTimeout(() => el.remove(), 320); }
 // ---- special events get their own banner ----
 const EVENTS = [
   [/орда/i, 'Орда', 'danger', 'i-skull'], [/эвакуац/i, 'Эвакуация', 'good', 'i-run'], [/сбросили груз|груз на парашюте/i, 'Груз с неба', 'good', 'i-bag'],

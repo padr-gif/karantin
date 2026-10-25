@@ -3,31 +3,63 @@ let baking = false;
 const SPR = new Map(), CHUNKS = new Map(), CH = 8;
 let sprU = 0, sprDPR = 0, bakes = 0, stampQ = [];
 const SPR_MAX = 1100, CH_MAX = 56, BAKE_BUDGET = 40;
-function clearCaches() { SPR.clear(); CHUNKS.clear(); stampQ.length = 0; }
+function clearCaches() { SPR.clear(); CHUNKS.clear(); stampQ.length = 0; atlasReset(); }
 function cachesValid() { if (sprU !== U) { clearCaches(); sprU = U; sprDPR = DPR; } }
-// спрайт из кэша: рисуется один раз (fn) в свой холст HDQ× крупнее, дальше — готовой картинкой
+// ---- атлас спрайтов: заготовки лежат на нескольких больших холстах, а не на сотне маленьких ----
+// Маленький холст браузер держит в памяти процессора, и на планшетах (Mali) каждая его отрисовка на экран — заливка
+// в видеопамять: 130 заготовок за кадр давали ~30 FPS. Большие страницы атласа живут в видеопамяти.
+const ATL_W = 2048, ATL_PAGES = 4, ATL_PAD = 2;
+const ATL = {pages:[], n:0, resets:0};
+function atlasReset() {
+  for (const p of ATL.pages) { p.x = p.y = p.rowH = 0; p.g.setTransform(1, 0, 0, 1, 0, 0); p.g.clearRect(0, 0, ATL_W, ATL_W); }
+  ATL.n = 0;
+  for (const [k, s] of SPR) if (s.slot) SPR.delete(k);                             // их места больше не принадлежат им
+}
+function atlasAlloc(w, h) {
+  if (w + ATL_PAD > ATL_W || h + ATL_PAD > ATL_W) return null;
+  for (let tries = 0; tries < 2; tries++) {
+    for (let k = Math.max(0, ATL.n - 1); k < ATL_PAGES; k++) {
+      let p = ATL.pages[k];
+      if (!p) { const c = mkCanvas(ATL_W, ATL_W); p = ATL.pages[k] = {c, g:hdCtx(c.getContext('2d')), x:0, y:0, rowH:0}; }
+      if (k >= ATL.n) ATL.n = k + 1;
+      if (p.x + w + ATL_PAD > ATL_W) { p.y += p.rowH + ATL_PAD; p.x = 0; p.rowH = 0; }
+      if (p.y + h + ATL_PAD > ATL_W) continue;                                  // страница полна — следующая
+      const slot = {p, x:p.x, y:p.y, w, h};
+      p.x += w + ATL_PAD; p.rowH = Math.max(p.rowH, h);
+      return slot;
+    }
+    ATL.resets++; atlasReset();                                                 // всё занято: начать атлас заново (заготовки перерисуются)
+  }
+  return null;
+}
+// спрайт из кэша: рисуется один раз (fn) в свой кусок атласа HDQ× крупнее, дальше — готовой картинкой
 function sprite(id, key, wx, wy, bx0, by0, bx1, by1, fn, alpha, offX) {
   let s = SPR.get(id);
   if (s && s.key !== key) bump(s.c);                                            // учёт перерисовок для запекания в ImageBitmap
   const w = Math.max(1, Math.ceil(bx1 - bx0)), h = Math.max(1, Math.ceil(by1 - by0));
   if (!s || s.q !== HDQ || (s.key !== key && bakes < BAKE_BUDGET)) {
-    const cw = w * HDQ, chh = h * HDQ;
-    const c = s && s.c.width === cw && s.c.height === chh ? s.c : mkCanvas(cw, chh);
-    const g = hdCtx(c.getContext('2d'));
-    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cw, chh); g.imageSmoothingEnabled = false;
+    const cw = w * HDQ, chh = h * HDQ, nested = baking;                         // заготовка внутри заготовки — в свой холст
+    let slot = s && s.slot && s.slot.w === cw && s.slot.h === chh ? s.slot : null;
+    if (!slot && !nested) { slot = atlasAlloc(cw, chh); if (slot && !SPR.has(id)) s = null; }   // сброс атласа мог выкинуть s
+    let c, g, sx = 0, sy = 0;
+    if (slot) { c = slot.p.c; g = slot.p.g; sx = slot.x; sy = slot.y; }
+    else { c = s && !s.slot && s.c.width === cw && s.c.height === chh ? s.c : mkCanvas(cw, chh); g = hdCtx(c.getContext('2d')); }
+    g.save();
+    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(sx, sy, cw, chh); g.imageSmoothingEnabled = false;
+    if (slot) { g.beginPath(); g.rect(sx, sy, cw, chh); g.clip(); }            // рисовать только в своём куске
     const sc = ctx, sox = ox, soy = oy, sd = DPR;
-    ctx = g; ox = -bx0 - (wx - wy) * U; oy = -by0 - (wx + wy) * hh; baking = true; DPR = HDQ;
+    ctx = g; ox = -bx0 - (wx - wy) * U + sx / HDQ; oy = -by0 - (wx + wy) * hh + sy / HDQ; baking = true; DPR = HDQ;
     resetT();
-    try { fn(); } finally { ctx = sc; ox = sox; oy = soy; baking = false; DPR = sd; resetT(); ctx.globalAlpha = 1; ctx.imageSmoothingEnabled = false; }
-    if (!s) { s = {c}; SPR.set(id, s); }
-    s.c = c; s.key = key; s.q = HDQ; s.w = w; s.h = h; bakes++;
+    try { fn(); } finally { g.restore(); ctx = sc; ox = sox; oy = soy; baking = nested; DPR = sd; resetT(); ctx.globalAlpha = 1; ctx.imageSmoothingEnabled = false; }
+    if (!s) { s = {}; SPR.set(id, s); }
+    s.c = c; s.slot = slot; s.sx = sx; s.sy = sy; s.key = key; s.q = HDQ; s.w = w; s.h = h; bakes++;
   }
   s.used = frameNo;
   const px = rd(SX(wx, wy) + bx0 + (offX || 0)), py = rd(SY(wx, wy, 0) + by0);
   if (alpha != null && alpha < 1) ctx.globalAlpha = alpha;
-  if (HDQ > 1) ctx.drawImage(s.c, px, py, s.w, s.h); else ctx.drawImage(s.c, px, py);
+  ctx.drawImage(s.c, s.sx, s.sy, s.w * HDQ, s.h * HDQ, px, py, s.w, s.h);
   ctx.globalAlpha = 1;
-  const s2 = SPR.get(id); if (s2 && !s2.c._st) bump(s2.c);
+  if (!s.slot && !s.c._st) bump(s.c);
 }
 // выбросить давно не нужные спрайты и куски земли; в детальной графике — следить за памятью кусков
 function evict() {

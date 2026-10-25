@@ -174,7 +174,7 @@ function layoutRooms(done) {
       if (lost > 0 && list.some(f => FALLBACK[fartType(f.type)])) {
         const snap = new Map(all.map(f => [f, {x:f.x, y:f.y, cx:f.cx, cy:f.cy, sx:f.sx, sy:f.sy, r:f.r.slice(), wd:f.wd, art:f.art, gone:!!f.gone, compact:!!f.compact}]));
         clear();
-        if (attempt(true) >= lost) { clear(); for (const f of all) unregFurn(f); for (const [f, st] of snap) Object.assign(f, st); for (const f of all) if (!f.gone) regFurn(f); }
+        if (attempt(true) >= lost) { clear(); for (const f of all) unregFurn(f); for (const [f, st] of snap) Object.assign(f, st); for (const f of all) if (!f.gone) regFurn(f); else drop(f); }   // убранная вещь — без клеток
       }
       for (const f of all) done.add(f);
     }
