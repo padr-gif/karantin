@@ -70,28 +70,6 @@ function fitPanel() { const body = $('pnBody'); if (!body.classList.contains('fi
 addEventListener('resize', () => { if (panel) fitPanel(); });
 // header: tabs sit in the title row, so the body keeps all the height
 { const head = document.querySelector('#panel .sheet-head'), tabs = $('pnTabs'); if (head && tabs) head.insertBefore(tabs, head.lastElementChild); }
-// paper doll + items + detail, all on one screen
-buildInvDoll = function (body) {
-  body.textContent = ''; body.classList.add('fit');
-  const lay = mk('div', 'lay3 inv'), D = mk('div', 'dollside'), R = mk('div', 'pcol'), Dd = mk('div', 'pdet');
-  const slot = (it, key, label, onTap) => { const c = cell(it, 1, it ? onTap || (() => { panel.sel = panel.sel === key ? null : key; renderPanel(); }) : null, {sel:panel.sel === key, label, size:30}); c.classList.add('dslot'); const w = mk('div', 'dwrap'); w.appendChild(c); if (it) w.appendChild(mk('span', 'dlab', label)); return w; };
-  const cl = P.cloth || {};
-  const colL = mk('div', 'dcol'), colR = mk('div', 'dcol');
-  colL.appendChild(slot(cl.head, 'cl_head', 'Голова')); colL.appendChild(slot(cl.torso, 'cl_torso', 'Тело')); colL.appendChild(slot(cl.wrist, 'cl_wrist', 'Запястье'));
-  colR.appendChild(slot(P.weapon, 'hand', 'В руках')); colR.appendChild(slot(P.armor, 'armor', 'Броня')); colR.appendChild(slot(P.cap > 18 + (P.capB || 0) ? {id:'bag'} : null, 'bagx', 'Рюкзак', () => toast('Большой рюкзак: ' + P.cap + ' мест')));
-  const mid = mk('div', 'dmid'), cv2 = mk('canvas'); cv2.id = 'dollCv'; cv2.width = 192; cv2.height = 240; mid.appendChild(cv2);
-  const st = mk('div', 'dstat'); st.appendChild(mk('span', '', 'Тепло ' + insulation())); st.appendChild(mk('span', '', P.armor ? 'Броня ' + Math.max(0, Math.round(P.armor.dur)) : 'Без брони')); mid.appendChild(st);
-  D.appendChild(colL); D.appendChild(mid); D.appendChild(colR);
-  const hd = mk('div', 'secrow'), t = mk('div', 'sect', 'Вещи'); t.appendChild(mk('small', '', P.inv.length + '/' + P.cap)); hd.appendChild(t);
-  const cap = mk('div', 'capbar'), ci = mk('i'); ci.style.width = Math.round(P.inv.length / P.cap * 100) + '%'; cap.appendChild(ci); hd.appendChild(cap);
-  R.appendChild(hd);
-  const groups = groupItems(P.inv).sort((a, b) => CATS.indexOf(catOf(a.it.id)) - CATS.indexOf(catOf(b.it.id)));
-  R.appendChild(gridOf(groups, g => { panel.sel = panel.sel === g.key ? null : g.key; renderPanel(); }, P.cap, panel.sel));
-  lay.appendChild(D); lay.appendChild(R); lay.appendChild(Dd); body.appendChild(lay);
-  invDetail(Dd);
-  if (!Dd.children.length) Dd.appendChild(pickHint(P.inv.length ? 'Тапни вещь или ячейку одежды, чтобы увидеть описание и действия' : 'Рюкзак пуст. Обыщи дома и машины поблизости'));
-  drawDoll();
-};
 // после каждой перерисовки окна: карточки готовки, раскладка рецептов и «Состояния», размер сеток под окно
 onPanel(() => {
   const body = $('pnBody'); if (!panel) return;

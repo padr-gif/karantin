@@ -361,7 +361,8 @@ function addProp(p, tiles) {
   props.push(p); for (const [x, y] of tiles) propAt[y * MW + x] = props.length; return true;
 }
 let GCFG = {};                                            // настройки генератора для типа района (v51): роли кварталов, плотность, машины
-function generate() {
+// старый город (квартальная сетка ROADS): дома, улицы, особые здания; затем крупная мебель и вещи в комнатах
+function genTown() {
   const G = Object.assign({roles:['police', 'pharmacy', 'hardware', 'gas', 'store', 'store', 'park', 'park'], per:4, gap:2, cars:90, lamp:8, cabins:4, greens:900}, GCFG);
   map.fill(GRASS); furn.fill(0); hAt.fill(0); propAt.fill(0); seen.fill(0); vis.fill(0);
   obs = new Array(NT).fill(null); houses = []; furns = []; props = []; SPECIAL = []; CHECKPOINTS = [];
@@ -503,6 +504,7 @@ function generate() {
   const pool = crates.length ? crates : furns.filter(f => f.type === 'cabinet' || f.type === 'wardrobe');
   if (pool.length && !furns.some(f => f.items.some(it => it.id === 'hammer'))) pick(pool).items.push(mkItem('hammer'));
   if (pool.length) { const c = pick(pool); c.items.push(mkItem('plank'), mkItem('plank')); }
+  growFurniture();
 }
 // exit checkpoint: concrete blocks across the road at the fence, sandbags, a booth, an army truck, a jam of cars
 function checkpoint(side) {

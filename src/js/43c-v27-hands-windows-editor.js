@@ -8,12 +8,6 @@ REGP.armR = '<path d="M45 48 Q37 50 35 60 L27 108 Q26 116 31 117 L37 116 L46 64 
 REGP.armL = '<path d="M95 48 Q103 50 105 60 L113 108 Q114 116 109 117 L103 116 L94 64 Z"/>';
 REGP.handR = '<path d="M25 117 Q24 128 29 132 Q35 133 37 126 L38 117 Z"/>';
 REGP.handL = '<path d="M115 117 Q116 128 111 132 Q105 133 103 126 L102 117 Z"/>';
-const bodySvg27 = bodySvg;
-bodySvg = function (sel) {
-  const g = P.cloth && P.cloth.hands, lk = P.look || look;
-  const col = g ? rgbS(g.id === 'mittens' ? [168, 52, 46] : g.id === 'glovesR' ? [186, 168, 134] : [200, 154, 60]) : rgbS(LOOK.skin[lk.skin]);
-  return bodySvg27(sel).replace(/data-r="(handR|handL)" fill="undefined"/g, `data-r="$1" fill="${col}"`);
-};
 // glass cuts land on the hands
 glassCut = function (chance, what) {
   if (rng() >= chance) return false;
@@ -45,33 +39,6 @@ woundRow = function (w) {
 const winAnim = new Set();
 function winStiff(ob) { if (ob.stiff == null) { const r = rng(); ob.stiff = r < .62 ? 0 : r < .9 ? 1 : 2; } return ob.stiff; }
 function winJiggle(i) { const ob = obs[i]; ob.jig = .5; winAnim.add(i); }
-const winAction27 = winAction;
-winAction = function (a) {
-  if (a.o && a.kind === 'window') {
-    const ob = obs[a.o.i], x = a.o.x + .5, y = a.o.y + .5;
-    if (!ob.open && !ob.broken && !(ob.bhp > 0)) {
-      const st = winStiff(ob);
-      if (st === 2) {
-        if (hasTool('crowbar')) {
-          job(2.6, () => { const o2 = obs[a.o.i]; if (o2.open) return; o2.stiff = 1; o2.tries = 3; o2.open = true; winAnim.add(a.o.i); SFX.wood(x, y); noise(P.x, P.y, 6); fogDirty = true; toast('Поддел ломом: окно открыто'); }, {an:'work', noisy:4});
-          return true;
-        }
-        winJiggle(a.o.i); SFX.wood(x, y); noise(P.x, P.y, 3);
-        toast('Окно заклинило намертво. Нужен лом, или разбей стекло'); return true;
-      }
-      const fail = st === 1 ? Math.max(.15, .6 - .15 * (ob.tries || 0)) : .2;
-      if (rng() < fail) {
-        ob.tries = (ob.tries || 0) + 1; winJiggle(a.o.i); SFX.wood(x, y); noise(P.x, P.y, 2.5);
-        toast(st === 1 ? 'Окно туго идёт. Ещё попытка' : 'Окно не поддалось. Попробуй ещё раз'); return true;
-      }
-      ob.tries = 0;
-    }
-    const was = ob.open, r = winAction27(a);   // closing always works first time
-    if (ob.open !== was) { if (ob.ang == null) ob.ang = was ? 1 : 0; winAnim.add(a.o.i); }
-    return r;
-  }
-  return winAction27(a);
-};
 function tickWindows(dt) {
   for (const i of winAnim) {
     const ob = obs[i]; if (!ob) { winAnim.delete(i); continue; }

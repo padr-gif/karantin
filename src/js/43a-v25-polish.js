@@ -169,8 +169,6 @@ drawDoll = function () {
   g.imageSmoothingEnabled = (fr.s || 1) > 1; g.imageSmoothingQuality = 'high';               // пиксельный герой — без размытия
   g.translate(W / 2, foot); g.scale(k, k * b); g.drawImage(fr.cv, -fr.ax, -fr.ay); g.setTransform(1, 0, 0, 1, 0, 0);
 };
-const buildInvDoll25 = buildInvDoll;
-buildInvDoll = function (body) { buildInvDoll25(body); const c = document.getElementById('dollCv'); if (c) { c.width = 300; c.height = 380; } drawDoll(); };
 
 // ---- recipe detail: what you get and where to find what is missing ----
 const RES_INFO = {'Костёр':'Горит около четырёх часов: на нём готовят и греются. Дождь заливает огонь, в доме разводить нельзя.', 'Бочка для дождевой воды':'Собирает дождевую воду, до 20 литров. Ставь на улице, сырую воду лучше вскипятить.',

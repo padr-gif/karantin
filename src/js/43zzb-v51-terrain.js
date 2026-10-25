@@ -346,23 +346,26 @@ function genIndustrial() {
 }
 
 // ---- генератор по типу района ----
-{ const genTown = generate;
-  generate = function () {
-    const t = curDType();
-    world.dtype = t; world.nofence = false;
-    ROADS.length = 0; ROADS.push(30, 60, 90, 120, 150);
-    if (t === 'town') { GCFG = {}; return genTown(); }
-    if (t === 'downtown') {
-      GCFG = {roles:['police', 'pharmacy', 'clinic', 'hardware', 'gas', 'store', 'store', 'store', 'cafe', 'cafe', 'office', 'office', 'pharmacy', 'office', 'park'], per:5, gap:1, cars:170, lamp:6, cabins:1, greens:250};
-      try { return genTown(); } finally { GCFG = {}; }
-    }
-    ROADS.length = 0; ROADS.push(EXIT_R);
-    genReset();
-    if (t === 'village') genVillage(); else if (t === 'forest') genForest(); else genIndustrial();
-    if (!houses.some(H => H.kind === 'house' && H.rooms)) {                       // подстраховка: хоть один жилой дом для появления героя
-      for (let t2 = 0; t2 < 400; t2++) { const x = ri(30, 144), y = ri(30, 144); if (!rectFree(x, y, 9, 8, 1)) continue; const H = bld(x, y, 9, 8, 'house'); pathFromDoor(H); for (let i = 0; i < NT; i++) if (map[i] === WALL) { const xx = i % MW, yy = (i / MW) | 0; wpC[i] = pieces(xx, yy, HWC); wpV[i] = pieces(xx, yy, HWV); } break; }
-    }
-  };
+// построить карту района по его типу (curDType): город нового вида (world.gen ≥ 2), старый город, деревня, лес, промзона
+function generate() {
+  ROADSX = ROADSY = null; curAct = null;                                    // прежнее действие ссылается на старую карту
+  const t = curDType();
+  if (world.gen >= 2 && (t === 'town' || t === 'downtown')) { world.dtype = t; GCFG = {}; genCity(t); growFurniture(); return; }
+  world.dtype = t; world.nofence = false;
+  ROADS.length = 0; ROADS.push(30, 60, 90, 120, 150);
+  if (t === 'town') { GCFG = {}; genTown(); return; }
+  if (t === 'downtown') {
+    GCFG = {roles:['police', 'pharmacy', 'clinic', 'hardware', 'gas', 'store', 'store', 'store', 'cafe', 'cafe', 'office', 'office', 'pharmacy', 'office', 'park'], per:5, gap:1, cars:170, lamp:6, cabins:1, greens:250};
+    try { genTown(); } finally { GCFG = {}; }
+    return;
+  }
+  ROADS.length = 0; ROADS.push(EXIT_R);
+  genReset();
+  if (t === 'village') genVillage(); else if (t === 'forest') genForest(); else genIndustrial();
+  if (!houses.some(H => H.kind === 'house' && H.rooms)) {                       // подстраховка: хоть один жилой дом для появления героя
+    for (let t2 = 0; t2 < 400; t2++) { const x = ri(30, 144), y = ri(30, 144); if (!rectFree(x, y, 9, 8, 1)) continue; const H = bld(x, y, 9, 8, 'house'); pathFromDoor(H); for (let i = 0; i < NT; i++) if (map[i] === WALL) { const xx = i % MW, yy = (i / MW) | 0; wpC[i] = pieces(xx, yy, HWC); wpV[i] = pieces(xx, yy, HWV); } break; }
+  }
+  if (world.gen >= 2) growFurniture();                                          // деревня, лес, промзона: крупная мебель и вещи в комнатах, как в городе
 }
 // после постройки нового района: дождевые бочки в деревне, мусор и т. п. (только при первом заходе)
 function postGen(t) {

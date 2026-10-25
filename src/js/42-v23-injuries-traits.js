@@ -109,7 +109,12 @@ function bleedRate() { let s = 0; for (const w of wounds()) if (bleeding(w)) s +
 const fracAt = part => wounds().find(w => w.k === 'frac' && w.part === part);
 const dirtyBand = w => w.band && w.bT > 720;
 function needBand(w) { return w.k !== 'frac' && (!w.band || dirtyBand(w)) && (bleeding(w) || w.k !== 'scratch' || w.t < 240); }
-function moveK() { let k = 1; const lf = fracAt('leg'); if (lf) k *= lf.spl ? .78 : .55; if (P.grabT > 0) k *= .25; if ((P.pain || 0) > 60) k *= .9; return k; }
+// множитель скорости ходьбы: перелом, захват, боль, обувь и одежда, бег, перегруз
+function moveK() {
+  let k = 1; const lf = fracAt('leg'); if (lf) k *= lf.spl ? .78 : .55; if (P.grabT > 0) k *= .25; if ((P.pain || 0) > 60) k *= .9;
+  const o = invOver();
+  return k * wornK('spd') * (barefoot() ? .9 : 1) * (P && P.running ? .88 : 1) * (o > 0 ? Math.max(.5, 1 - o * .55) : 1);
+}
 function canRun() { return !fracAt('leg') && !(P.grabT > 0); }
 function healK() { return (P.prof === 'medic' ? 1.5 : 1) * (1 + .1 * skillLv('med')) * (hasTr('fastheal') ? 1.5 : 1) * (hasTr('slowheal') ? .66 : 1); }
 function tickWounds(gm) {
@@ -292,8 +297,6 @@ function missChance() { let m = Math.max(0, ((P.panic || 0) - 30) / 200); if ((P
 function dmgK() { let k = 1; if (hasTr('strong')) k *= 1.2; if (hasTr('weak')) k *= .8; const af = fracAt('arm'); if (af) k *= af.spl ? .75 : .5; if ((P.unh || 0) > 80) k *= .85; if ((P.pain || 0) > 50) k *= .9; return k; }
 let stepNoiseK = () => (hasTr('quiet') ? .5 : 1) * (hasTr('clumsy') ? 1.5 : 1);
 let enDrainK = () => (1 - .05 * skillLv('fit')) * (hasTr('wakeful') ? .7 : 1) * (hasTr('sleepy') ? 1.3 : 1) * ((P.unh || 0) > 50 ? 1.2 : 1);
-const addXp23 = addXp;
-addXp = function (k, n) { let m = 1; if (hasTr('fastlearn')) m *= 1.3; if (hasTr('slowlearn')) m *= .7; if ((P.unh || 0) > 50) m *= .75; addXp23(k, n * m); };
 const updateClimate23 = updateClimate;
 updateClimate = function (gm) { const c0 = P.cold || 0; updateClimate23(gm); const dc = (P.cold || 0) - c0; if (dc > 0) P.cold = clamp(c0 + dc * (hasTr('cold') ? 1.45 : 1) * (hasTr('hardy') ? .7 : 1), 0, 100); };
 const tickFlu23 = tickFlu;
@@ -338,15 +341,6 @@ function selItem() {
   if (sel === 'armor') return [P.armor, true];
   const g = groupItems(P.inv).find(g => g.key === sel); return [g ? g.it : null, false];
 }
-const invDetail23 = invDetail;
-invDetail = function (body) {
-  invDetail23(body);
-  const [it, worn] = selItem(); if (!it || !ITEMS[it.id]) return;
-  const dets = body.querySelectorAll('.detail'), acts = dets.length && dets[dets.length - 1].querySelector('.acts'); if (!acts) return;
-  for (const b of tailorButtons(it, worn)) acts.appendChild(b);
-  const d = ITEMS[it.id];
-  if (d.gun && it === P.weapon && it.mag < d.mag) { const b = btn(ammoFor(it).length ? 'Перезарядить' : 'Нет патронов', () => { closePanel(); startReload(); }, 'ghost'); b.disabled = !ammoFor(it).length; acts.appendChild(b); }
-};
 
 // ================= firearms =================
 let gunFx = [];
@@ -753,19 +747,6 @@ HOT[2].pick = () => {
   if (W.some(needBand)) return f('bandage') || f('rag');
   if ((P.pain || 0) > 35 && !(P.painkT > 0)) return f('painkill') || f('pills');
   return (P.hp < 90 && (f('medkit') || f('pills') || f('painkill'))) || f('bandage');
-};
-const itemInfo23 = itemInfo;
-itemInfo = function (it) {
-  const d = ITEMS[it.id]; if (!d) return '';
-  if (d.kind === 'weapon' && d.gun) return `урон ${d.dmg} · патронов ${it.mag || 0}/${d.mag} · прочность ${it.dur}/${d.dur} · очень громко`;
-  if (d.kind === 'ammo') return `патронов: ${it.uses} · для оружия «${ITEMS[d.gun].sh}»`;
-  if (it.id === 'sewkit') return `ниток на ${it.uses} раз · зашить, утеплить`;
-  if (it.id === 'antisep') return 'обеззараживает все раны · +4 здоровье';
-  if (it.id === 'rag') return 'временная повязка · материал для бинтов и шитья';
-  if (it.id === 'lure') return `заводов: ${it.ch != null ? it.ch : 3}/3 · гремит ~15 секунд`;
-  let s = itemInfo23(it);
-  if (d.kind === 'cloth' && d.slot !== 'wrist') s += ` · целость ${Math.round(cdur(it))}%` + (it.pad ? ' · утеплено' : '');
-  return s;
 };
 const cell23 = cell;
 cell = function (it, n, onTap, opt) {

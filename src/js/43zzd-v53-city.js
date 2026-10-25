@@ -310,12 +310,3 @@ DIST_FIELDS.push('x53v');
 }); }
 { onLoad((d) => { for (const k of (d && d.x53v && d.x53v.dug) || []) if (props[k] && props[k].type === 'veg') props[k].dug = true;
 }, d => { world.gen = (d && d.x53 && d.x53.gen) || 1; }); }
-{ const gen = generate;
-  generate = function () {
-    ROADSX = ROADSY = null; curAct = null;                                    // прежнее действие ссылается на старую карту
-    const t = curDType();
-    if (world.gen >= 2 && (t === 'town' || t === 'downtown')) { world.dtype = t; GCFG = {}; genCity(t); growFurniture(); return; }
-    gen();
-    if (world.gen >= 2 && t !== 'town' && t !== 'downtown') growFurniture();   // деревня, лес, промзона: крупная мебель и вещи в комнатах, как в городе
-  };
-}

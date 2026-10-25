@@ -31,19 +31,6 @@ windowActions = function (o) {
   else if (countItem('curtain')) c.push({kind:'hangcur', label:'Повесить шторы', o, tk:'cu' + o.i});
   return c;
 };
-const winAction0 = winAction;
-winAction = function (a) {
-  if (a.o && a.kind === 'takecur') {
-    const ob = obs[a.o.i]; if (invFull()) { toast('Слишком тяжело — не унести'); return true; }
-    P.inv.push({id:'curtain', col:ob.cur}); ob.cur = null; ob.cc = false; SFX.rustle(); fogDirty = true; toast('Шторы сняты и сложены в рюкзак'); renderInv(); return true;
-  }
-  if (a.o && a.kind === 'hangcur') {
-    const ob = obs[a.o.i], k = P.inv.findIndex(i => i.id === 'curtain'); if (k < 0) return true;
-    const it = P.inv.splice(k, 1)[0]; ob.cur = it.col || [150, 60, 56]; ob.cc = true; SFX.rustle(); fogDirty = true; toast('Шторы повешены и задёрнуты'); renderInv(); return true;
-  }
-  if (a.o && a.kind === 'vault') { const r = winAction0(a); if (P.act && P.act.kind === 'vault') { P.act.dur = 1.15; P.face = P.fd = Math.atan2(P.act.ty - P.act.fy, P.act.tx - P.act.fx); } return r; }
-  return winAction0(a);
-};
 function vaultZ() { const A = P.act; if (!A || A.kind !== 'vault') return 0; const k = Math.min(1, A.t / A.dur); return Math.sin(Math.PI * Math.min(1, k * 1.15)) * U * .62; }
 function vaultAnim() {
   const A = P.act, k = Math.min(1, A.t / A.dur);

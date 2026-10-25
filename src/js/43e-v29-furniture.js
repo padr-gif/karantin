@@ -215,8 +215,6 @@ function growFurniture() {
     }
   }
 }
-const generate29 = generate;
-generate = function () { generate29(); growFurniture(); };
 // saves: moved pieces come back by their stored rect; re-register every big one
 function reRegisterAll() {
   for (let i = 0; i < furn.length; i++) if (furn[i]) { const f = furns[furn[i] - 1]; if (!f || f.gone || f.big) furn[i] = 0; }

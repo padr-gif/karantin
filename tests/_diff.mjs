@@ -13,4 +13,4 @@ async function run(file) {
 const ra = await run(A), rb = await run(B);
 const la = ra.split('\n'), lb = rb.split('\n'); let bad = 0;
 for (let i = 0; i < Math.max(la.length, lb.length); i++) if (la[i] !== lb[i]) { bad++; if (bad < 15) console.log('✗', i, '\n  старое:', (la[i] || '').slice(0, 300), '\n  новое: ', (lb[i] || '').slice(0, 300)); }
-console.log(bad ? 'различий: ' + bad : 'совпало, строк ' + la.length); await b.close();
+if (process.env.SHOW) console.log(ra.slice(0, 600)); console.log(bad ? 'различий: ' + bad : 'совпало, строк ' + la.length); await b.close();

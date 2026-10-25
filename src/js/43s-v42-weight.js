@@ -128,17 +128,8 @@ takeOffCloth = function (slot) {
   const it = P.cloth && P.cloth[slot]; if (!it) return;
   P.inv.push(it); P.cloth[slot] = null; SFX.rustle(); invPlace(); renderInv(); updateHud();
 };
-{ const ii = itemInfo;
-  itemInfo = function (it) {
-    const d = ITEMS[it.id], s = ii(it) || '';
-    const kg = fmtKg(itemKg(it)) + ' кг';
-    if (d && d.kind === 'bag') return 'вместимость ' + d.bcap + ' кг · весит ' + kg;
-    return (s ? s.replace(/ · карманы \+(\d+)/, (m, n) => ' · карманы +' + fmtKg(n * .7) + ' кг') + ' · ' : '') + kg;
-  };
-}
 
 // ---- перегруз: медленнее и тяжелее ----
-{ const mk = moveK; moveK = function () { const o = invOver(); return mk() * (o > 0 ? Math.max(.5, 1 - o * .55) : 1); }; }
 { const ed = enDrainK; enDrainK = function () { return ed() * (1 + invOver() * 1.4); }; }
 { const wm = woundMoodles;
   woundMoodles = function () { const m = wm(), o = invOver(); if (o > .45) m.push(['Сильный перегруз', 'crit']); else if (o > 0) m.push(['Перегруз', 'warn']); return m; };
@@ -177,46 +168,6 @@ function invSection(title, sub, frac, list, onlyBag) {
   const groups = groupItems(P.inv).filter(g => !!g.it.bp === onlyBag).sort((a, b) => CATS.indexOf(catOf(a.it.id)) - CATS.indexOf(catOf(b.it.id)));
   box.appendChild(gridOf(groups, g => { panel.sel = panel.sel === g.key ? null : g.key; renderPanel(); }, Math.max(4, groups.length + (4 - groups.length % 4) % 4), panel.sel));
   return box;
-}
-{ const bd = buildInvDoll;
-  buildInvDoll = function (body) {
-    invPlace();
-    bd(body);
-    const R = body.querySelector('.pcol'); if (!R) return;
-    R.textContent = '';
-    const tot = mk('div', 'kgline' + (invOver() > 0 ? ' over' : ''));
-    tot.appendChild(mk('b', '', 'Несёшь ' + fmtKg(invKg()) + ' кг')); tot.appendChild(mk('span', '', 'из ' + fmtKg(invCapKg()) + (invOver() > 0 ? ' · перегруз' : '')));
-    R.appendChild(tot);
-    const pk = pocketKgUsed(), pc = pocketKg() * strK();
-    R.appendChild(invSection('Карманы', fmtKg(pk) + ' / ' + fmtKg(pc) + ' кг', pk / pc, P.inv, false));
-    if (P.bag) { const bk = bagKgUsed(), bc = bagCapKg(); R.appendChild(invSection(ITEMS[P.bag.id].name, fmtKg(bk) + ' / ' + fmtKg(bc) + ' кг', bk / bc, P.inv, true)); }
-    else R.appendChild(mk('div', 'nobag', 'Рюкзака нет. Найди его в шкафах, машинах и на вешалках'));
-    // слот рюкзака на кукле
-    const colR = body.querySelectorAll('.dollside .dcol')[1];
-    if (colR) {
-      const c = cell(P.bag, 1, P.bag ? () => { panel.sel = panel.sel === 'bagslot' ? null : 'bagslot'; renderPanel(); } : null, {sel:panel.sel === 'bagslot', label:'Рюкзак', size:30});
-      c.classList.add('dslot'); const w = mk('div', 'dwrap'); w.appendChild(c); if (P.bag) w.appendChild(mk('span', 'dlab', 'Рюкзак'));
-      colR.insertBefore(w, colR.children[2] || null);
-    }
-    const Dd = body.querySelector('.pdet');
-    if (Dd && panel.sel === 'bagslot' && P.bag) { Dd.textContent = ''; const dc = detailCard(P.bag, 1, [btn('Снять', () => { takeOffBag(); panel.sel = null; renderPanel(); }, 'ghost')]); dc.classList.add('lootdet'); dc.replaceChild(iconEl(P.bag.id, 40), dc.firstChild); Dd.appendChild(dc); }
-  };
-}
-// переложить: из карманов в рюкзак и обратно
-{ const idt = invDetail;
-  invDetail = function (body) {
-    idt(body);
-    const sel = panel && panel.sel; if (!sel || sel === 'bagslot' || sel.startsWith('cl_') || sel === 'hand' || sel === 'armor') return;
-    const g = groupItems(P.inv).find(g => g.key === sel); if (!g) return;
-    const dets = body.querySelectorAll('.detail'), acts = dets.length && dets[dets.length - 1].querySelector('.acts'); if (!acts) return;
-    if (!P.bag) return;
-    const it = g.it, toBag = !it.bp;
-    acts.appendChild(btn(toBag ? 'В рюкзак' : 'В карманы', () => {
-      const w = itemKg(it);
-      if (toBag && bagKgUsed() + w > bagCapKg() + 1e-6) { toast('В рюкзак не влезет: свободно ' + fmtKg(bagCapKg() - bagKgUsed()) + ' кг'); return; }
-      it.bp = toBag ? 1 : 0; SFX.rustle(); panel.sel = null; renderPanel(); updateHud();
-    }, 'ghost'));
-  };
 }
 // подзаголовок окна рюкзака — вес
 { onPanel(() => { if (panel && panel.kind === 'inv' && $('pnSub')) $('pnSub').textContent = invCapTxt(); });

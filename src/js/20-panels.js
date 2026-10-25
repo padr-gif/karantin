@@ -165,40 +165,10 @@ function renderPanelCore() {
   if (panel.kind === 'inv') {
     $('pnTitle').textContent = 'Рюкзак'; $('pnSub').textContent = invCapTxt();
     for (const [k, label] of [['items', 'Вещи'], ['craft', 'Создать'], ['self', 'Состояние']]) tabs.appendChild(btn(label, () => { panel.tab = k; renderPanel(); }, panel.tab === k ? 'on' : ''));
-    if (panel.tab === 'items') {
-      const top = mk('div', 'hands');
-      const hc = cell(P.weapon, 1, P.weapon ? () => { panel.sel = 'hand'; renderPanel(); } : null, {sel:panel.sel === 'hand', label:'руки', cls:'hand', size:52});
-      top.appendChild(hc);
-      const hl = mk('div', 'nm'); hl.appendChild(mk('b', '', P.weapon ? ITEMS[P.weapon.id].name : 'Пустые руки'));
-      hl.appendChild(mk('small', '', P.weapon ? 'Оружие в руках' : 'Выбери оружие в рюкзаке')); top.appendChild(hl);
-      for (const [slot, lab] of [['torso', 'Тело'], ['head', 'Голова']]) {
-        const it = P.cloth && P.cloth[slot]; if (!it) continue;
-        top.appendChild(cell(it, 1, () => { panel.sel = 'cl_' + slot; renderPanel(); }, {sel:panel.sel === 'cl_' + slot, size:52, cls:'hand'}));
-        const l = mk('div', 'nm'); l.appendChild(mk('b', '', ITEMS[it.id].name)); l.appendChild(mk('small', '', 'Надето · ' + lab.toLowerCase())); top.appendChild(l);
-      }
-      if (P.armor) {
-        const ac = cell(P.armor, 1, () => { panel.sel = 'armor'; renderPanel(); }, {sel:panel.sel === 'armor', size:52, cls:'hand'});
-        top.appendChild(ac); const al = mk('div', 'nm'); al.appendChild(mk('b', '', 'Бронежилет')); al.appendChild(mk('small', '', 'Надет · ' + Math.max(0, Math.round(P.armor.dur)) + '/60')); top.appendChild(al);
-      }
-      const cap = mk('div', 'capbar'), ci = mk('i'); ci.style.width = Math.round(P.inv.length / P.cap * 100) + '%'; cap.appendChild(ci); top.appendChild(cap);
-      body.appendChild(top);
-      const groups = groupItems(P.inv).sort((a, b) => CATS.indexOf(catOf(a.it.id)) - CATS.indexOf(catOf(b.it.id)));
-      if (panel.sel && panel.sel !== 'hand' && panel.sel !== 'armor' && !panel.sel.startsWith('cl_') && !groups.find(g => g.key === panel.sel)) panel.sel = null;
-      body.appendChild(gridOf(groups, g => { panel.sel = panel.sel === g.key ? null : g.key; renderPanel(); }, P.cap, panel.sel));
-      if (!P.inv.length) empty('Пусто. Обыщи дома и машины поблизости.');
-      if (panel.sel && panel.sel.startsWith('cl_') && P.cloth && P.cloth[panel.sel.slice(3)]) { const sl = panel.sel.slice(3); body.appendChild(detailCard(P.cloth[sl], 1, [btn('Снять', () => { takeOffCloth(sl); panel.sel = null; renderPanel(); }, 'ghost')])); }
-      else if (panel.sel === 'armor' && P.armor) body.appendChild(detailCard(P.armor, 1, [btn('Снять', () => { if (invFull()) { toast('Слишком тяжело — не унести'); return; } P.inv.push(P.armor); P.armor = null; panel.sel = null; renderPanel(); }, 'ghost')]));
-      else if (panel.sel === 'hand' && P.weapon) body.appendChild(detailCard(P.weapon, 1, [btn('Убрать в рюкзак', () => { unequip(); panel.sel = null; renderPanel(); }, 'ghost')], true));
-      else if (panel.sel) {
-        const g = groups.find(g => g.key === panel.sel);
-        if (g) {
-          const d = ITEMS[g.it.id], bs = [];
-          if (d.kind === 'light') bs.push(btn(g.it.on ? 'Выключить' : 'Включить', () => useItem(null, g.idx)));
-          else if (d.verb) bs.push(btn(d.verb, () => beginUse(g.idx)));
-          bs.push(btn('Положить на землю', () => dropItemGround(g.idx), 'ghost'));
-          const dc = detailCard(g.it, g.n, bs); body.appendChild(dc); requestAnimationFrame(() => { try { dc.scrollIntoView({block:'nearest', behavior:'smooth'}); } catch (e) {} });
-        }
-      } else if (P.inv.length) empty('Нажми на ячейку, чтобы увидеть вещь и действия.');
+    if (panel.tab === 'items') {                                                   // кукла, карманы и рюкзак, карточка вещи
+      const groups = groupItems(P.inv);
+      if (panel.sel && panel.sel !== 'hand' && panel.sel !== 'armor' && !panel.sel.startsWith('cl_') && !(panel.sel === 'bagslot' && P.bag) && !groups.find(g => g.key === panel.sel)) panel.sel = null;
+      buildInvDoll(body);
     } else if (panel.tab === 'craft') {
       RECIPES.forEach(rc => {
         const b = btn('Создать', () => { if (rc.can()) { const ok = rc.make(); if (ok !== false) { SFX.craft(); addXp('carp', rc.xp != null ? rc.xp : 2); } renderPanel(); } }); b.disabled = !rc.can();

@@ -28,10 +28,13 @@ SPRA.airdrop = 'crate';
 const SKILLS = {fight:{name:'Ближний бой', per:'+6% урона за уровень'}, carp:{name:'Плотничество', per:'быстрее и прочнее баррикады'}, cook:{name:'Кулинария', per:'+10% сытости готовой еды'}, farm:{name:'Огородничество', per:'больше урожай, быстрее растёт'}};
 const XPL = [0, 4, 12, 26, 48, 80];
 function skillLv(k) { const xp = (P.skills && P.skills[k]) || 0; let l = 0; while (l < 5 && xp >= XPL[l + 1]) l++; return l; }
+// опыт в навыке: черты, уныние, журналы (P.boost) и скука меняют скорость; новый уровень — в сообщение и дневник
 function addXp(k, n) {
+  let m = 1; if (hasTr('fastlearn')) m *= 1.3; if (hasTr('slowlearn')) m *= .7; if ((P.unh || 0) > 50) m *= .75; n *= m;
+  const bst = P.boost && P.boost[k]; if (bst && skillLv(k) <= bst.max) n *= bst.mult; else if (bst) delete P.boost[k];
   if ((P.bored || 0) > 60) n *= .5;
   P.skills = P.skills || {}; const b = skillLv(k); P.skills[k] = (P.skills[k] || 0) + n;
-  const a = skillLv(k); if (a > b) { toast(`Навык «${SKILLS[k].name}» вырос до ${a}`); SFX.equip(); }
+  const a = skillLv(k); if (a > b) { toast(`Навык «${SKILLS[k].name}» вырос до ${a}`); SFX.equip(); logEv('Навык «' + SKILLS[k].name + '» вырос до ' + a); }
 }
 // ---- generators ----
 let gens = [], beds = [], airdrops = [], heli = null;

@@ -114,8 +114,6 @@ insulation = function () {
   if (P.sleep && (!P.bed || P.bed.type === 'bed' || P.bed.type === 'sofa')) s += 6;
   return Math.round(s);
 };
-const moveK34 = moveK;
-moveK = function () { return moveK34() * wornK('spd') * (barefoot() ? .9 : 1); };
 const stepNoiseK34 = stepNoiseK;
 stepNoiseK = () => stepNoiseK34() * wornK('noise') * (barefoot() ? .7 : 1);
 const enDrainK34 = enDrainK;
@@ -143,19 +141,6 @@ takeOffCloth = function (slot) {
 };
 
 // ---- описание вещи ----
-const itemInfo34 = itemInfo;
-itemInfo = function (it) {
-  const d = ITEMS[it.id];
-  if (!d || d.kind !== 'cloth' || d.slot === 'wrist') return itemInfo34(it);
-  const pc = (k, more, less) => { const v = d[k]; if (!v || v === 1) return null; const n = Math.round(Math.abs(1 - v) * 100); return (v > 1 ? more : less) + ' ' + n + '%'; };
-  const s = [SLOT_WHERE[d.slot], 'тепло ' + (d.ins >= 0 ? '+' : '') + (d.ins || 0)];
-  if (d.prot) s.push('защита от укусов ' + Math.round(d.prot * 100) + '%');
-  if (d.cap) s.push('карманы +' + d.cap);
-  if (d.dry) s.push(d.slot === 'feet' ? 'ноги не промокают' : 'не промокаешь');
-  if (d.glass) s.push('стекло не режет руки');
-  for (const x of [pc('spd', 'быстрее', 'медленнее'), pc('noise', 'громче шаги', 'тише шаги'), pc('tire', 'устаёшь сильнее', 'устаёшь меньше')]) if (x) s.push(x);
-  return s.join(' · ') + ` · целость ${Math.round(cdur(it))}%` + (it.pad ? ' · утеплено' : '');
-};
 
 // ---- стартовая одежда: на герое футболка, джинсы и кроссовки; всё снимается ----
 function starterClothes() {
@@ -226,39 +211,8 @@ playerLookPal = function (lk) {
   return {pal, key:'PF|' + lk.skin + lk.hair + '|' + outfitKey()};
 };
 
-// ---- кукла в инвентаре: все слоты одежды ----
-buildInvDoll = function (body) {
-  body.textContent = ''; body.classList.add('fit');
-  const lay = mk('div', 'lay3 inv'), D = mk('div', 'dollside'), R = mk('div', 'pcol'), Dd = mk('div', 'pdet');
-  const slot = (it, key, label, onTap) => { const c = cell(it, 1, it ? onTap || (() => { panel.sel = panel.sel === key ? null : key; renderPanel(); }) : null, {sel:panel.sel === key, label, size:30}); c.classList.add('dslot'); const w = mk('div', 'dwrap'); w.appendChild(c); if (it) w.appendChild(mk('span', 'dlab', label)); return w; };
-  const cl = P.cloth || {}, colL = mk('div', 'dcol'), colR = mk('div', 'dcol');
-  for (const s of ['head', 'torso', 'shirt', 'hands']) colL.appendChild(slot(cl[s], 'cl_' + s, SLOT_NAME[s]));
-  colR.appendChild(slot(P.weapon, 'hand', 'В руках')); colR.appendChild(slot(P.armor, 'armor', 'Броня'));
-  for (const s of ['legs', 'feet', 'wrist']) colR.appendChild(slot(cl[s], 'cl_' + s, SLOT_NAME[s]));
-  const mid = mk('div', 'dmid'), cv2 = mk('canvas'); cv2.id = 'dollCv'; cv2.width = 300; cv2.height = 380; mid.appendChild(cv2);
-  const st = mk('div', 'dstat'); st.appendChild(mk('span', '', 'Тепло ' + insulation()));
-  const pr = Math.round(partProt('torso') * 100); st.appendChild(mk('span', '', P.armor ? 'Броня ' + Math.max(0, Math.round(P.armor.dur)) : pr ? 'Защита ' + pr + '%' : 'Без защиты'));
-  mid.appendChild(st);
-  D.appendChild(colL); D.appendChild(mid); D.appendChild(colR);
-  const hd = mk('div', 'secrow'), t = mk('div', 'sect', 'Вещи'); t.appendChild(mk('small', '', P.inv.length + '/' + P.cap)); hd.appendChild(t);
-  const cap = mk('div', 'capbar'), ci = mk('i'); ci.style.width = Math.round(P.inv.length / P.cap * 100) + '%'; cap.appendChild(ci); hd.appendChild(cap);
-  R.appendChild(hd);
-  const groups = groupItems(P.inv).sort((a, b) => CATS.indexOf(catOf(a.it.id)) - CATS.indexOf(catOf(b.it.id)));
-  R.appendChild(gridOf(groups, g => { panel.sel = panel.sel === g.key ? null : g.key; renderPanel(); }, P.cap, panel.sel));
-  lay.appendChild(D); lay.appendChild(R); lay.appendChild(Dd); body.appendChild(lay);
-  invDetail(Dd);
-  if (!Dd.children.length) Dd.appendChild(pickHint(P.inv.length ? 'Тапни вещь или ячейку одежды, чтобы увидеть описание и действия' : 'Рюкзак пуст. Обыщи дома и машины поблизости'));
-  drawDoll();
-};
 
 // ---- схема тела: цвета по надетому ----
-const bodySvg34 = bodySvg;
-bodySvg = function (sel) {
-  const lk = P.look || look, skin = rgbS(LOOK.skin[lk.skin]), reg = outfitRegs();
-  const at = r => reg[r] ? rgbS(reg[r].d.col) : null;
-  const fill = {chest:at(1) || skin, belly:at(1) || skin, armR:at(3) || at(2) || skin, armL:at(3) || at(2) || skin, legR:at(8) || skin, legL:at(8) || skin, head:at(12)};
-  return bodySvg34(sel).replace(/data-r="(\w+)" fill="[^"]*"/g, (m, r) => fill[r] ? `data-r="${r}" fill="${fill[r]}"` : m);
-};
 
 // ---- пиксельный вайб по умолчанию: мир без сглаживания (детальный режим остаётся в настройках) ----
 SETTINGS_DEF.smooth = false;

@@ -163,10 +163,9 @@ const SCAR_AT = {head:[70, 18], neck:[70, 40], chest:[70, 62], belly:[70, 93], a
     }
   };
 }
-{ const bs = bodySvg;
-  bodySvg = function (sel) {
-    let s = bs(sel);
-    const sc = (P && P.scars) || []; if (!sc.length) return s;
+// шрамы на схеме тела
+function bodyScarsSvg() {
+    const sc = (P && P.scars) || []; if (!sc.length) return '';
     let d = '', st = '';
     for (const c of sc) {
       const r = SCAR_REG[c.where], at = r && SCAR_AT[r]; if (!at) continue;
@@ -176,9 +175,7 @@ const SCAR_AT = {head:[70, 18], neck:[70, 40], chest:[70, 62], belly:[70, 93], a
       else { d += `M${x0} ${y0} L${x1} ${y1} `; for (let q = -1; q <= 1; q++) { const mx = at[0] + ox + Math.cos(a) * q * 3.5, my = at[1] + oy + Math.sin(a) * q * 3.5; st += `M${mx - Math.sin(a) * 1.6} ${my + Math.cos(a) * 1.6} L${mx + Math.sin(a) * 1.6} ${my - Math.cos(a) * 1.6} `; } }
     }
     const g = `<g class="scars" pointer-events="none"><path d="${d}" fill="none" stroke="#2a1410" stroke-width="2.2" stroke-linecap="round" opacity=".5"/><path d="${d}" fill="none" stroke="#e0a090" stroke-width="1.2" stroke-linecap="round"/><path d="${st}" stroke="#7a3a30" stroke-width=".7" stroke-linecap="round"/></g>`;
-    const k = s.indexOf('<g pointer-events="none">');
-    return k > 0 ? s.slice(0, k) + g + s.slice(k) : s.replace('</svg>', g + '</svg>');
-  };
+    return g;
 }
 { const bs = buildSelf;
   buildSelf = function (body) {

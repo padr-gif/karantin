@@ -55,17 +55,6 @@ function moveAll(toBag) {
   const its = P.inv.filter(it => !!it.bp !== toBag).sort((a, b) => itemKg(a) - itemKg(b));   // сначала лёгкое — влезет больше вещей
   moveItems(its, toBag);
 }
-// в карточке вещи: перенести всю стопку
-{ const idt = invDetail;
-  invDetail = function (body) {
-    idt(body);
-    const sel = panel && panel.sel; if (!sel || !P.bag || sel === 'bagslot' || sel.startsWith('cl_') || sel === 'hand' || sel === 'armor') return;
-    const g = groupItems(P.inv).find(g => g.key === sel); if (!g || g.n < 2) return;
-    const dets = body.querySelectorAll('.detail'), acts = dets.length && dets[dets.length - 1].querySelector('.acts'); if (!acts) return;
-    const same = P.inv.filter(it => it.id === g.it.id && !!it.bp === !!g.it.bp && isRotten(it) === isRotten(g.it));
-    acts.appendChild(btn((g.it.bp ? 'В карманы' : 'В рюкзак') + ' все ×' + same.length, () => moveItems(same, !g.it.bp), 'ghost'));
-  };
-}
 // ---- обыск: в заголовке видно, сколько ещё унесёшь ----
 { onPanel(() => {
     if (panel && panel.kind === 'loot' && $('pnSub') && !xferQ.length) $('pnSub').textContent = 'унесёшь ещё ' + fmtKg(Math.max(0, invHardKg() - invKg())) + ' кг · ' + (invOver() > 0 ? 'уже перегруз' : 'без перегруза ещё ' + fmtKg(Math.max(0, invCapKg() - invKg())) + ' кг');

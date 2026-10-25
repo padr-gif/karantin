@@ -5,8 +5,6 @@ function logEv(t) { if (!P) return; P.log = P.log || []; P.log.push([Math.round(
 const KILL_MS = [1, 10, 25, 50, 100, 200, 300, 500];
 const ach24 = ach;
 ach = function (id) { const had = achDone[id]; ach24(id); if (!had) { const a = ACH.find(a => a[0] === id); if (a) logEv('Достижение: «' + a[1] + '»'); } };
-const addXp24 = addXp;
-addXp = function (k, n) { const b = skillLv(k); addXp24(k, n); const a = skillLv(k); if (a > b) logEv('Навык «' + SKILLS[k].name + '» вырос до ' + a); };
 const startHorde24 = startHorde;
 startHorde = function () { startHorde24(); logEv('Через город пошла орда'); };
 onStartNew(() => { if (P && !P.log) { P.log = []; logEv('Город закрыли на карантин. Я дома, один. Нужно продержаться'); }
@@ -70,9 +68,11 @@ function woundSvg(w, x, y, k) {
   return s;
 }
 function bodySvg(sel) {
-  const lk = P.look || look, skin = rgbS(LOOK.skin[lk.skin]), ct = P.cloth && P.cloth.torso, ch = P.cloth && P.cloth.head;
-  const shirt = rgbS(ct ? ITEMS[ct.id].col : LOOK.shirt[lk.shirt]), pants = rgbS(LOOK.pants[lk.pants]);
-  const fill = {head:ch ? rgbS(ITEMS[ch.id].col) : skin, neck:skin, chest:shirt, belly:shirt, armR:shirt, armL:shirt, legR:pants, legL:pants};
+  const lk = P.look || look, skin = rgbS(LOOK.skin[lk.skin]), ch = P.cloth && P.cloth.head;
+  const reg = outfitRegs(), at = r => reg[r] ? rgbS(reg[r].d.col) : null;          // цвет одежды на слое (1 — тело, 2/3 — рукава, 8 — ноги, 12 — голова)
+  const g = P.cloth && P.cloth.hands, hand = g ? rgbS(g.id === 'mittens' ? [168, 52, 46] : g.id === 'glovesR' ? [186, 168, 134] : [200, 154, 60]) : skin;
+  const fill = {head:at(12) || (ch ? rgbS(ITEMS[ch.id].col) : skin), neck:skin, chest:at(1) || skin, belly:at(1) || skin, armR:at(3) || at(2) || skin, armL:at(3) || at(2) || skin,
+    legR:at(8) || skin, legL:at(8) || skin, handR:hand, handL:hand};
   const W = wounds(), byReg = {};
   for (const w of W) { const r = WHERE2REG[w.where] || 'chest'; (byReg[r] = byReg[r] || []).push(w); }
   let s = '<svg viewBox="0 0 140 206" class="bodysvg" role="img" aria-label="Схема тела">';
@@ -81,6 +81,7 @@ function bodySvg(sel) {
     const ws = byReg[r] || [], hurt = ws.length, bad = ws.some(bleeding) ? 'bleed' : ws.some(w => w.sep > 50) ? 'sep' : hurt ? 'hurt' : '';
     s += `<g class="reg ${bad}${sel === r ? ' sel' : ''}" data-r="${r}" fill="${fill[r]}">${REGP[r]}</g>`;
   }
+  s += bodyAnatSvg(fill, skin) + bodyScarsSvg();                                   // мышцы и вены на открытой коже, шрамы
   s += `<g pointer-events="none"><path d="M64 20 h2 M74 20 h2" stroke="#1a1410" stroke-width="2" stroke-linecap="round"/><path d="M66 29 q4 2 8 0" stroke="#1a1410" stroke-width="1.2" fill="none"/></g>`;
   if (!(P.cloth && P.cloth.head)) s += `<path d="M57 17 Q58 5 70 6 Q82 5 83 17 Q76 11 70 12 Q63 11 57 17 Z" pointer-events="none" fill="${lk.hair < 0 ? skin : rgbS(LOOK.hair[lk.hair])}"/>`;
   s += '<g pointer-events="none">';

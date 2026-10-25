@@ -32,20 +32,68 @@ function windowActions(o) {
   else if (countItem('curtain')) c.push({kind:'hangcur', label:'Повесить шторы', o, tk:'cu' + o.i});
   return c;
 }
+// окна и шторы: открыть/закрыть, перелезть, убрать осколки, снять/повесить шторы
 function winAction(a) {
-  if (!a.o || !['window', 'vault', 'curtain', 'hangcur'].includes(a.kind)) return false;
+  if (!a.o) return false;
+  if (a.kind === 'window') {                                         // тугие и заклинившие окна открываются не с первого раза
+    const ob = obs[a.o.i], x = a.o.x + .5, y = a.o.y + .5;
+    if (!ob.open && !ob.broken && !(ob.bhp > 0)) {
+      const st = winStiff(ob);
+      if (st === 2) {
+        if (hasTool('crowbar')) {
+          job(2.6, () => { const o2 = obs[a.o.i]; if (o2.open) return; o2.stiff = 1; o2.tries = 3; o2.open = true; winAnim.add(a.o.i); SFX.wood(x, y); noise(P.x, P.y, 6); fogDirty = true; toast('Поддел ломом: окно открыто'); }, {an:'work', noisy:4});
+          return true;
+        }
+        winJiggle(a.o.i); SFX.wood(x, y); noise(P.x, P.y, 3);
+        toast('Окно заклинило намертво. Нужен лом, или разбей стекло'); return true;
+      }
+      const fail = st === 1 ? Math.max(.15, .6 - .15 * (ob.tries || 0)) : .2;
+      if (rng() < fail) {
+        ob.tries = (ob.tries || 0) + 1; winJiggle(a.o.i); SFX.wood(x, y); noise(P.x, P.y, 2.5);
+        toast(st === 1 ? 'Окно туго идёт. Ещё попытка' : 'Окно не поддалось. Попробуй ещё раз'); return true;
+      }
+      ob.tries = 0;
+    }
+  }
+  if (a.kind === 'clearglass') {
+    const ob = obs[a.o.i]; if (!winGlass(ob)) return true;
+    const gl = !!gloveItem();
+    if (!gl) toast('Без перчаток можно порезать руки');
+    job(gl ? 2.2 : 2.8, () => {
+      const o2 = obs[a.o.i]; if (!winGlass(o2)) return;
+      o2.cleared = true; fogDirty = true; SFX.glass(a.o.x + .5, a.o.y + .5); noise(P.x, P.y, 3);
+      emit('glass', a.o.x + .5, a.o.y + .5, .5, 6, null, 0, 1);
+      glassCut(.45, 'Порезал руку об осколок');
+      const n = 1 + (rng() < .5 ? 1 : 0);
+      for (let k = 0; k < n; k++) { const s = mkItem('glass'); if (!invFull()) P.inv.push(s); else addToPile(P.x, P.y, s); }
+      toast('Осколки убраны: через окно можно лезть без порезов'); renderInv();
+    }, {an:'pickup'});
+    return true;
+  }
+  if ((a.kind === 'curtain' || a.kind === 'takecur' || a.kind === 'hangcur') && !insideHouse(P.x, P.y)) { toast('До штор не дотянуться: они в доме'); return true; }
+  if (a.kind === 'takecur') {
+    const ob = obs[a.o.i]; if (invFull()) { toast('Слишком тяжело — не унести'); return true; }
+    P.inv.push({id:'curtain', col:ob.cur}); ob.cur = null; ob.cc = false; SFX.rustle(); fogDirty = true; toast('Шторы сняты и сложены в рюкзак'); renderInv(); return true;
+  }
+  if (a.kind === 'hangcur') {
+    const ob = obs[a.o.i], k = P.inv.findIndex(i => i.id === 'curtain'); if (k < 0) return true;
+    const it = P.inv.splice(k, 1)[0]; ob.cur = it.col || [150, 60, 56]; ob.cc = true; SFX.rustle(); fogDirty = true; toast('Шторы повешены и задёрнуты'); renderInv(); return true;
+  }
+  if (!['window', 'vault', 'curtain'].includes(a.kind)) return false;
   const ob = obs[a.o.i], x = a.o.x, y = a.o.y;
   if (a.kind === 'window') {
     if (ob.open && cellOccupied(x, y)) { toast('Что-то мешает закрыть'); return true; }
+    const was = ob.open;
     ob.open = !ob.open; SFX.window ? SFX.window(ob.open) : SFX.wood(x + .5, y + .5); noise(P.x, P.y, 2); fogDirty = true;
     if (ob.open) toast('Окно открыто: можно перелезть. Мертвецы тоже пролезут');
+    if (ob.open !== was) { if (ob.ang == null) ob.ang = was ? 1 : 0; winAnim.add(a.o.i); }   // створка поворачивается плавно
   } else if (a.kind === 'curtain') { ob.cc = !ob.cc; SFX.rustle(); fogDirty = true; }
-  else if (a.kind === 'hangcur') { removeItem('curtain'); ob.cur = [150, 60, 56]; ob.cc = true; SFX.rustle(); toast('Шторы повешены и задёрнуты'); renderInv(); }
   else if (a.kind === 'vault') {
     const ax = alongX(x, y), side = ax ? (P.y < y + .5 ? 1 : -1) : (P.x < x + .5 ? 1 : -1);
     const tx = ax ? clamp(P.x, x + .25, x + .75) : x + .5 + side * .78, ty = ax ? y + .5 + side * .78 : clamp(P.y, y + .25, y + .75);
     if (blocked(tx, ty, P.r)) { toast('С той стороны не пролезть'); return true; }
-    P.act = {kind:'vault', t:0, dur:.85, o:a.o, fx:P.x, fy:P.y, tx, ty, br:ob.broken && !ob.open};
+    P.act = {kind:'vault', t:0, dur:1.15, o:a.o, fx:P.x, fy:P.y, tx, ty, br:ob.broken && !ob.open};
+    P.face = P.fd = Math.atan2(ty - P.y, tx - P.x);
     noise(P.x, P.y, 3); SFX.rustle();
   }
   return true;
@@ -79,14 +127,16 @@ function drawDoll() {
   const PS = 2 / ((fr && fr.s) || ART.meta.charScale || 1);
   if (fr) { g.imageSmoothingEnabled = PS < 1; g.drawImage(fr.cv, 96 - fr.ax * PS, 206 - fr.ay * PS, fr.w * PS, fr.h * PS); }
 }
+// карточка выбранной вещи или ячейки куклы: описание и кнопки (надеть/снять, зашить, перезарядить, переложить)
 function invDetail(body) {
   const sel = panel.sel, groups = groupItems(P.inv);
-  let dc = null, it = null;
-  if (sel && sel.startsWith('cl_') && P.cloth && P.cloth[sel.slice(3)]) { const sl = sel.slice(3); it = P.cloth[sl]; dc = detailCard(it, 1, [btn('Снять', () => { takeOffCloth(sl); panel.sel = null; renderPanel(); updateHud(); }, 'ghost')]); }
+  let dc = null, it = null, g = null;
+  if (sel === 'bagslot' && P.bag) { it = P.bag; dc = detailCard(it, 1, [btn('Снять', () => { takeOffBag(); panel.sel = null; renderPanel(); }, 'ghost')]); }
+  else if (sel && sel.startsWith('cl_') && P.cloth && P.cloth[sel.slice(3)]) { const sl = sel.slice(3); it = P.cloth[sl]; dc = detailCard(it, 1, [btn('Снять', () => { takeOffCloth(sl); panel.sel = null; renderPanel(); updateHud(); }, 'ghost')]); }
   else if (sel === 'armor' && P.armor) { it = P.armor; dc = detailCard(it, 1, [btn('Снять', () => { if (invFull()) { toast('Слишком тяжело — не унести'); return; } P.inv.push(P.armor); P.armor = null; panel.sel = null; renderPanel(); }, 'ghost')]); }
   else if (sel === 'hand' && P.weapon) { it = P.weapon; dc = detailCard(it, 1, [btn('Убрать в рюкзак', () => { unequip(); panel.sel = null; renderPanel(); }, 'ghost')], true); }
-  else if (sel) {
-    const g = groups.find(g => g.key === sel);
+  else if (sel && sel !== 'bagslot') {
+    g = groups.find(g => g.key === sel);
     if (g) {
       const d = ITEMS[g.it.id], bs = []; it = g.it;
       if (d.kind === 'light') bs.push(btn(g.it.on ? 'Выключить' : 'Включить', () => useItem(null, g.idx)));
@@ -95,31 +145,49 @@ function invDetail(body) {
       dc = detailCard(g.it, g.n, bs);
     } else panel.sel = null;
   }
-  if (dc) { dc.classList.add('lootdet'); dc.replaceChild(iconEl(it.id, 40), dc.firstChild); body.appendChild(dc); }
+  if (!dc) return;
+  dc.classList.add('lootdet'); dc.replaceChild(iconEl(it.id, 40), dc.firstChild); body.appendChild(dc);
+  if (sel === 'bagslot') return;
+  const acts = dc.querySelector('.acts'), d = ITEMS[it.id]; if (!acts || !d) return;
+  for (const b of tailorButtons(it, !g)) acts.appendChild(b);                     // зашить, утеплить
+  if (d.gun && it === P.weapon && it.mag < d.mag) { const b = btn(ammoFor(it).length ? 'Перезарядить' : 'Нет патронов', () => { closePanel(); startReload(); }, 'ghost'); b.disabled = !ammoFor(it).length; acts.appendChild(b); }
+  if (!g || !P.bag) return;
+  const toBag = !it.bp;                                                            // переложить между карманами и рюкзаком
+  acts.appendChild(btn(toBag ? 'В рюкзак' : 'В карманы', () => {
+    const w = itemKg(it);
+    if (toBag && bagKgUsed() + w > bagCapKg() + 1e-6) { toast('В рюкзак не влезет: свободно ' + fmtKg(bagCapKg() - bagKgUsed()) + ' кг'); return; }
+    it.bp = toBag ? 1 : 0; SFX.rustle(); panel.sel = null; renderPanel(); updateHud();
+  }, 'ghost'));
+  if (g.n >= 2) {                                                                  // и всю стопку сразу
+    const same = P.inv.filter(x => x.id === it.id && !!x.bp === !!it.bp && isRotten(x) === isRotten(it));
+    acts.appendChild(btn((it.bp ? 'В карманы' : 'В рюкзак') + ' все ×' + same.length, () => moveItems(same, !it.bp), 'ghost'));
+  }
 }
+// окно рюкзака: кукла со слотами одежды, вещи по карманам и рюкзаку, карточка выбранного
 function buildInvDoll(body) {
-  body.textContent = '';
-  const lay = mk('div', 'invdoll'), D = mk('div', 'dollside'), R = mk('div', 'invside');
-  const slot = (it, key, label, onTap) => { const c = cell(it, 1, it ? onTap || (() => { panel.sel = panel.sel === key ? null : key; renderPanel(); }) : null, {sel:panel.sel === key, label}); c.classList.add('dslot'); const w = mk('div', 'dwrap'); w.appendChild(c); if (it) w.appendChild(mk('span', 'dlab', label)); return w; };
-  const cl = P.cloth || {};
-  const colL = mk('div', 'dcol'), colR = mk('div', 'dcol');
-  colL.appendChild(slot(cl.head, 'cl_head', 'Голова'));
-  colL.appendChild(slot(cl.torso, 'cl_torso', 'Тело'));
-  colL.appendChild(slot(cl.wrist, 'cl_wrist', 'Запястье'));
-  colR.appendChild(slot(P.weapon, 'hand', 'В руках'));
-  colR.appendChild(slot(P.armor, 'armor', 'Броня'));
-  colR.appendChild(slot(P.cap > 18 + (P.capB || 0) ? {id:'bag'} : null, 'bagx', 'Рюкзак', () => toast('Большой рюкзак: ' + P.cap + ' мест')));
-  const mid = mk('div', 'dmid'), cv2 = mk('canvas'); cv2.id = 'dollCv'; cv2.width = 192; cv2.height = 240; mid.appendChild(cv2);
-  const st = mk('div', 'dstat'); st.appendChild(mk('span', '', 'Тепло ' + insulation())); st.appendChild(mk('span', '', P.armor ? 'Броня ' + Math.max(0, Math.round(P.armor.dur)) : 'Без брони')); mid.appendChild(st);
+  invPlace();
+  body.textContent = ''; body.classList.add('fit');
+  const lay = mk('div', 'lay3 inv'), D = mk('div', 'dollside'), R = mk('div', 'pcol'), Dd = mk('div', 'pdet');
+  const slot = (it, key, label, onTap) => { const c = cell(it, 1, it ? onTap || (() => { panel.sel = panel.sel === key ? null : key; renderPanel(); }) : null, {sel:panel.sel === key, label, size:30}); c.classList.add('dslot'); const w = mk('div', 'dwrap'); w.appendChild(c); if (it) w.appendChild(mk('span', 'dlab', label)); return w; };
+  const cl = P.cloth || {}, colL = mk('div', 'dcol'), colR = mk('div', 'dcol');
+  for (const s of ['head', 'torso', 'shirt', 'hands']) colL.appendChild(slot(cl[s], 'cl_' + s, SLOT_NAME[s]));
+  colR.appendChild(slot(P.weapon, 'hand', 'В руках')); colR.appendChild(slot(P.armor, 'armor', 'Броня'));
+  colR.appendChild(slot(P.bag, 'bagslot', 'Рюкзак'));
+  for (const s of ['legs', 'feet', 'wrist']) colR.appendChild(slot(cl[s], 'cl_' + s, SLOT_NAME[s]));
+  const mid = mk('div', 'dmid'), cv2 = mk('canvas'); cv2.id = 'dollCv'; cv2.width = 300; cv2.height = 380; mid.appendChild(cv2);
+  const st = mk('div', 'dstat'); st.appendChild(mk('span', '', 'Тепло ' + insulation()));
+  const pr = Math.round(partProt('torso') * 100); st.appendChild(mk('span', '', P.armor ? 'Броня ' + Math.max(0, Math.round(P.armor.dur)) : pr ? 'Защита ' + pr + '%' : 'Без защиты'));
+  mid.appendChild(st);
   D.appendChild(colL); D.appendChild(mid); D.appendChild(colR);
-  // right: items
-  const hd = mk('div', 'secrow'), t = mk('div', 'sect', 'Вещи'); t.appendChild(mk('small', '', P.inv.length + '/' + P.cap)); hd.appendChild(t);
-  const cap = mk('div', 'capbar'), ci = mk('i'); ci.style.width = Math.round(P.inv.length / P.cap * 100) + '%'; cap.appendChild(ci); hd.appendChild(cap);
-  R.appendChild(hd);
-  const groups = groupItems(P.inv).sort((a, b) => CATS.indexOf(catOf(a.it.id)) - CATS.indexOf(catOf(b.it.id)));
-  R.appendChild(gridOf(groups, g => { panel.sel = panel.sel === g.key ? null : g.key; renderPanel(); }, P.cap, panel.sel));
-  if (!P.inv.length) R.appendChild(mk('p', 'empty', 'Пусто. Обыщи дома и машины поблизости.'));
-  lay.appendChild(D); lay.appendChild(R); body.appendChild(lay);
-  invDetail(body);
+  const tot = mk('div', 'kgline' + (invOver() > 0 ? ' over' : ''));
+  tot.appendChild(mk('b', '', 'Несёшь ' + fmtKg(invKg()) + ' кг')); tot.appendChild(mk('span', '', 'из ' + fmtKg(invCapKg()) + (invOver() > 0 ? ' · перегруз' : '')));
+  R.appendChild(tot);
+  const pk = pocketKgUsed(), pc = pocketKg() * strK();
+  R.appendChild(invSection('Карманы', fmtKg(pk) + ' / ' + fmtKg(pc) + ' кг', pk / pc, P.inv, false));
+  if (P.bag) { const bk = bagKgUsed(), bc = bagCapKg(); R.appendChild(invSection(ITEMS[P.bag.id].name, fmtKg(bk) + ' / ' + fmtKg(bc) + ' кг', bk / bc, P.inv, true)); }
+  else R.appendChild(mk('div', 'nobag', 'Рюкзака нет. Найди его в шкафах, машинах и на вешалках'));
+  lay.appendChild(D); lay.appendChild(R); lay.appendChild(Dd); body.appendChild(lay);
+  invDetail(Dd);
+  if (!Dd.children.length) Dd.appendChild(pickHint(P.inv.length ? 'Тапни вещь или ячейку одежды, чтобы увидеть описание и действия' : 'Рюкзак пуст. Обыщи дома и машины поблизости'));
   drawDoll();
 }

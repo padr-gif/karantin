@@ -39,16 +39,6 @@ function glassCut(chance, what) {
 const insulation26 = insulation;
 insulation = function () { const g = P.cloth && P.cloth.hands; return insulation26() + (g ? Math.round(clothIns(g)) : 0); };
 
-// paper doll: a "Руки" cell under "Тело"
-const buildInvDoll26 = buildInvDoll;
-buildInvDoll = function (body) {
-  buildInvDoll26(body);
-  const col = body.querySelector('.dollside .dcol'); if (!col) return;
-  const it = P.cloth && P.cloth.hands, key = 'cl_hands';
-  const c = cell(it, 1, it ? () => { panel.sel = panel.sel === key ? null : key; renderPanel(); } : null, {sel:panel.sel === key, label:'Руки', size:30});
-  c.classList.add('dslot'); const w = mk('div', 'dwrap'); w.appendChild(c); if (it) w.appendChild(mk('span', 'dlab', 'Руки'));
-  const after = col.children[1]; if (after) after.after(w); else col.appendChild(w);
-};
 
 // ---- windows ----
 const winGlass = ob => ob && ob.broken && !ob.open && !ob.cleared;
@@ -60,26 +50,6 @@ windowActions = function (o) {
   if (!indoors) c = c.filter(a => a.kind !== 'curtain' && a.kind !== 'takecur' && a.kind !== 'hangcur');
   if (winGlass(ob) && !(ob.bhp > 0)) c.splice(1, 0, {kind:'clearglass', label:'Убрать осколки', o, tk:'cg' + o.i});
   return c;
-};
-const winAction26 = winAction;
-winAction = function (a) {
-  if (a.o && a.kind === 'clearglass') {
-    const ob = obs[a.o.i]; if (!winGlass(ob)) return true;
-    const gl = !!gloveItem();
-    if (!gl) toast('Без перчаток можно порезать руки');
-    job(gl ? 2.2 : 2.8, () => {
-      const o2 = obs[a.o.i]; if (!winGlass(o2)) return;
-      o2.cleared = true; fogDirty = true; SFX.glass(a.o.x + .5, a.o.y + .5); noise(P.x, P.y, 3);
-      emit('glass', a.o.x + .5, a.o.y + .5, .5, 6, null, 0, 1);
-      glassCut(.45, 'Порезал руку об осколок');
-      const n = 1 + (rng() < .5 ? 1 : 0);
-      for (let k = 0; k < n; k++) { const s = mkItem('glass'); if (!invFull()) P.inv.push(s); else addToPile(P.x, P.y, s); }
-      toast('Осколки убраны: через окно можно лезть без порезов'); renderInv();
-    }, {an:'pickup'});
-    return true;
-  }
-  if (a.o && (a.kind === 'curtain' || a.kind === 'takecur' || a.kind === 'hangcur') && !insideHouse(P.x, P.y)) { toast('До штор не дотянуться: они в доме'); return true; }
-  return winAction26(a);
 };
 // climbing through: a cleared frame doesn't cut, gloves usually save your hands
 const finishVault26 = finishVault;

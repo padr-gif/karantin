@@ -31,5 +31,3 @@ function readMag(k) {
   toast('Прочитано: ' + d.name + '. До уровня ' + (hi + 1) + ' навык «' + SKILLS[d.skill].name + '» растёт втрое быстрее');
   SFX.rustle(); P.bored = Math.max(0, (P.bored || 0) - 20); renderInv();
 }
-const addXp0 = addXp;
-addXp = function (k, n) { const b = P.boost && P.boost[k]; if (b && skillLv(k) <= b.max) n *= b.mult; else if (b) delete P.boost[k]; addXp0(k, n); };

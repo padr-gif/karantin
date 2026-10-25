@@ -99,17 +99,12 @@ const ANAT_VEIN = {
   legR:'M61 112 Q58 138 59 160 Q58 178 57 192 M52 150 Q53 170 55 189', legL:'M79 112 Q82 138 81 160 Q82 178 83 192 M88 150 Q87 170 85 189',
   chest:'M58 52 Q62 58 60 64 M82 52 Q78 58 80 64', belly:'M54 100 Q58 104 62 106 M86 100 Q82 104 78 106',
 };
-{ const bs = bodySvg;
-  bodySvg = function (sel) {
-    let s = bs(sel);
-    const lk = P.look || look, skin = rgbS(LOOK.skin[lk.skin]);
-    // вены — только там, где кожа не закрыта одеждой
-    const open = {}; for (const m of s.matchAll(/data-r="(\w+)" fill="([^"]*)"/g)) open[m[1]] = m[2] === skin;
+// мышцы и вены на схеме тела; вены — только там, где кожа не закрыта одеждой
+function bodyAnatSvg(fill, skin) {
+    const open = {}; for (const r in REGP) open[r] = String(fill[r]) === skin;
     let ov = '<g class="anat" pointer-events="none"><path d="' + ANAT_MUSCLE + '" fill="none" stroke="rgba(40,22,16,.28)" stroke-width=".7" stroke-linecap="round"/>';
     let vd = ''; for (const r in ANAT_VEIN) if (open[r]) vd += ANAT_VEIN[r] + ' ';
     if (vd) ov += '<path d="' + vd + '" fill="none" stroke="#5b7fc4" stroke-opacity=".55" stroke-width=".8" stroke-linecap="round"/>';
     ov += '</g>';
-    const k = s.indexOf('<g pointer-events="none">');
-    return k > 0 ? s.slice(0, k) + ov + s.slice(k) : s;
-  };
+    return ov;
 }

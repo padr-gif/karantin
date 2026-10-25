@@ -68,15 +68,9 @@ function cycleWeapon() {
 }
 function setAtk(car) { document.body.classList.toggle('incar', !!car); if ($('carPad')) $('carPad').hidden = !car; for (const k in CARB) CARB[k] = 0; const b = $('bAtk'); b.innerHTML = '<svg class="ic"><use href="#' + (car ? 'i-horn' : 'i-strike') + '"/></svg>'; b.setAttribute('aria-label', car ? 'Гудок' : 'Удар'); }
 const HOTIC = {food:'i-food', drink:'i-drop', med:'i-cross', throw:'i-bottle', light:'i-light'};
-// после перерисовки окна: иконки вкладок и кукла в рюкзаке
+// после перерисовки окна: иконки вкладок
 onPanel(() => {
   if (!panel) return;
-  const body = $('pnBody'), tabs = $('pnTabs');
-  // tab icons
   const TI = {'Вещи':'i-bag', 'Создать':'i-tool', 'Состояние':'i-user'};
-  for (const b of tabs.querySelectorAll('button')) { const t = b.textContent; if (TI[t] && !b.querySelector('svg')) b.prepend(svgIc(TI[t])); }
-  if (panel.kind === 'inv' && panel.tab === 'items') {
-    buildInvDoll(body);
-
-  }
+  for (const b of $('pnTabs').querySelectorAll('button')) { const t = b.textContent; if (TI[t] && !b.querySelector('svg')) b.prepend(svgIc(TI[t])); }
 });

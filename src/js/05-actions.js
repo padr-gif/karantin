@@ -470,8 +470,31 @@ function unequip() {
   if (invFull()) { toast('Слишком тяжело — не унести'); return; }
   P.inv.push(P.weapon); P.weapon = null; renderInv(); updateHud();
 }
+// подпись вещи в рюкзаке: свойства и вес
 function itemInfo(it) {
-  const d = ITEMS[it.id], parts = [];
+  const d = ITEMS[it.id], s = itemText(it) || '';
+  const kg = fmtKg(itemKg(it)) + ' кг';
+  if (d && d.kind === 'bag') return 'вместимость ' + d.bcap + ' кг · весит ' + kg;
+  return (s ? s.replace(/ · карманы \+(\d+)/, (m, n) => ' · карманы +' + fmtKg(n * .7) + ' кг') + ' · ' : '') + kg;
+}
+function itemText(it) {
+  const d = ITEMS[it.id], parts = []; if (!d) return '';
+  if (d.kind === 'cloth' && d.slot !== 'wrist') {                                  // одежда: слот, тепло, защита, особенности, целость
+    const pc = (k, more, less) => { const v = d[k]; if (!v || v === 1) return null; const n = Math.round(Math.abs(1 - v) * 100); return (v > 1 ? more : less) + ' ' + n + '%'; };
+    const s = [SLOT_WHERE[d.slot], 'тепло ' + (d.ins >= 0 ? '+' : '') + (d.ins || 0)];
+    if (d.prot) s.push('защита от укусов ' + Math.round(d.prot * 100) + '%');
+    if (d.cap) s.push('карманы +' + d.cap);
+    if (d.dry) s.push(d.slot === 'feet' ? 'ноги не промокают' : 'не промокаешь');
+    if (d.glass) s.push('стекло не режет руки');
+    for (const x of [pc('spd', 'быстрее', 'медленнее'), pc('noise', 'громче шаги', 'тише шаги'), pc('tire', 'устаёшь сильнее', 'устаёшь меньше')]) if (x) s.push(x);
+    return s.join(' · ') + ` · целость ${Math.round(cdur(it))}%` + (it.pad ? ' · утеплено' : '');
+  }
+  if (d.kind === 'weapon' && d.gun) return `урон ${d.dmg} · патронов ${it.mag || 0}/${d.mag} · прочность ${it.dur}/${d.dur} · очень громко`;
+  if (d.kind === 'ammo') return `патронов: ${it.uses} · для оружия «${ITEMS[d.gun].sh}»`;
+  if (it.id === 'sewkit') return `ниток на ${it.uses} раз · зашить, утеплить`;
+  if (it.id === 'antisep') return 'обеззараживает все раны · +4 здоровье';
+  if (it.id === 'rag') return 'временная повязка · материал для бинтов и шитья';
+  if (it.id === 'lure') return `заводов: ${it.ch != null ? it.ch : 3}/3 · гремит ~15 секунд`;
   if (d.kind === 'weapon') return `урон ${d.dmg} · прочность ${it.dur}/${d.dur}` + (it.id === 'hammer' ? ' · для баррикад' : it.id === 'knife' ? ' · открывает консервы' : '');
   if (d.kind === 'light') return `заряд ${Math.round(it.ch)}%` + (it.on ? ' · включён' : '');
   if (d.kind === 'canteen') return `воды ${it.w || 0}/${wcap(it)} · +30 вода за глоток`;
