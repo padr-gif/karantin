@@ -3,7 +3,7 @@
 // Если основное не читается или не загружается, игра берёт запасное. Сохранение можно выгрузить файлом и загрузить
 // из файла (перенести игру на другой телефон). Ошибки кадра и скрипта пишутся в журнал; в паузе — «Отчёт об ошибках».
 
-const GAME_VER = '0.57';
+const GAME_VER = '0.58';
 const PKEY = s => LKEY(s) + '-prev';
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } };
@@ -316,3 +316,37 @@ function occBox(name, fu, wx, wy) {
   st.textContent = '#verTag{position:absolute;right:calc(12px + env(safe-area-inset-right,0px));bottom:calc(8px + env(safe-area-inset-bottom,0px));font:600 11px "PT Mono",monospace;color:rgba(239,231,210,.55);pointer-events:none}';
   document.head.appendChild(st);
 }
+
+// ---- готовые картинки — в ImageBitmap. На Android (Mali) каждая отрисовка холста-источника стоила дорого:
+// 100–200 заготовок за кадр (спрайты, куски пола, кадры персонажей) давали ~20 FPS при любом разрешении.
+// Неизменную заготовку один раз превращаем в ImageBitmap (готовая текстура) и рисуем её. Если заготовку
+// перерисовали (_v вырос), до готовности новой копии рисуется сам холст.
+const BMP_OK = typeof createImageBitmap === 'function' && !/[?&]nobmp\b/.test(location.search);
+const bmpStat = {made:0, used:0};
+function bmpOf(c) {
+  if (!BMP_OK || !c || !c._st) return null;
+  if (c._bmp && c._bv === (c._v || 0)) { bmpStat.used++; return c._bmp; }
+  if (!c._bp && c.width && c.height) {
+    c._bp = true; const v = c._v || 0;
+    createImageBitmap(c).then(b => { c._bp = false; if ((c._v || 0) !== v) { b.close && b.close(); return; } if (c._bmp && c._bmp.close) c._bmp.close(); c._bmp = b; c._bv = v; bmpStat.made++; })
+      .catch(() => { c._bp = false; c._st = false; });
+  }
+  return null;
+}
+const bump = c => { if (c) { c._v = (c._v || 0) + 1; c._st = true; } };
+{ const di = mainCtx.drawImage;                                           // поверх обёртки v28 (куски пола в HD)
+  mainCtx.drawImage = function (img, a, b, c, d, e, f, g, h) {
+    const bm = img && img._st ? bmpOf(img) : null;
+    if (!bm) return di.apply(this, arguments);
+    const n = arguments.length;
+    if (n === 3) { const q = img._chq > 1 ? img._chq : 1; return di.call(this, bm, a, b, img.width / q, img.height / q); }
+    if (n === 5) return di.call(this, bm, a, b, c, d);
+    return di.call(this, bm, a, b, c, d, e, f, g, h);
+  };
+}
+{ const sp = sprite;
+  sprite = function (id, key) { const s = SPR.get(id); if (s && s.key !== key) bump(s.c); sp.apply(this, arguments); const s2 = SPR.get(id); if (s2 && !s2.c._st) bump(s2.c); };
+}
+{ const wc = withChunk; withChunk = function (ch, fn) { bump(ch.c); return wc(ch, fn); }; }
+{ const cf = charFrame; charFrame = function () { const r = cf.apply(this, arguments); if (r && r.cv && !r.cv._st) r.cv._st = true; return r; }; }
+{ const hf = hdFogged; hdFogged = function () { const c = hf.apply(this, arguments); if (c && !c._st) c._st = true; return c; }; }
