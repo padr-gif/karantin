@@ -71,12 +71,21 @@ function diaryChip() {
   c.hidden = mode !== 'play'; c.classList.toggle('all', done === T.list.length);
   c.innerHTML = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 3h11a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H6z"/><path d="M6 3v18M9 8h6M9 12h6M9 16h4"/></svg><span>Дневник ' + done + '/' + T.list.length + '</span>';
 }
+// дневник: «Дела на сегодня» или прочитанные записки; переключатель сверху
 function buildDiary(body) {
+  const page = (panel && panel.dpage) || 'day';
+  if (page === 'day') diaryDay(body); else { body.textContent = ''; body.appendChild(storyPage()); }
+  const sw = mk('div', 'dswitch');
+  for (const [k, t] of [['day', 'Дела на сегодня'], ['notes', 'Записки ' + ((world.story || []).length) + '/' + STORY_NOTES.length]]) sw.appendChild(btn(t, () => { panel.dpage = k; renderPanel(); }, page === k ? 'on' : 'ghost'));
+  body.insertBefore(sw, body.firstChild);
+}
+function diaryDay(body) {
   const T = tasksToday(); body.textContent = '';
   const pg = mk('div', 'diary');
   const d0 = dayNo() - Math.floor(startMin / 1440) + 1;
   pg.appendChild(mk('div', 'dhead', 'День ' + d0 + ', ' + fmtTime(gameMin)));
   pg.appendChild(mk('p', 'dline', T.head || DAY_HEAD[0]));
+  { const m = weekMod(); if (m) pg.appendChild(mk('p', 'dline dsub', 'Неделя ' + (world.week.n + 1) + ': ' + WEEK_MODS[m].name.toLowerCase() + '.')); }   // особенность недели
   pg.appendChild(mk('p', 'dline dsub', 'Сегодня надо:'));
   for (const t of T.list) {
     const d = taskDef(t), p = taskProg(t), r = mk('div', 'ditem' + (t.done ? ' done' : ''));

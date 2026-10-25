@@ -3,8 +3,6 @@ SKILLS.fit = {name:'Физподготовка', per:'сильнее бьёшь,
 // ---- diary ----
 function logEv(t) { if (!P) return; P.log = P.log || []; P.log.push([Math.round(gameMin), t]); if (P.log.length > 80) P.log.splice(0, P.log.length - 80); }
 const KILL_MS = [1, 10, 25, 50, 100, 200, 300, 500];
-const ach24 = ach;
-ach = function (id) { const had = achDone[id]; ach24(id); if (!had) { const a = ACH.find(a => a[0] === id); if (a) logEv('Достижение: «' + a[1] + '»'); } };
 onStartNew(() => { if (P && !P.log) { P.log = []; logEv('Город закрыли на карантин. Я дома, один. Нужно продержаться'); }
 });
 function tickDiary() {
@@ -164,6 +162,10 @@ function buildSelf(body) {
   }
   wrap.appendChild(tabs); wrap.appendChild(host); body.appendChild(wrap);
   if (sub === 'skills') buildSkillsTab(host); else if (sub === 'info') buildInfoTab(host); else buildBodyTab(host);
+  const sc = (P && P.scars) || []; if (!sc.length) return;                      // шрамы
+  const box = mk('div', 'scarlist'); box.appendChild(mk('div', 'sect', 'Шрамы · ' + sc.length));
+  for (const c of sc.slice(-8).reverse()) box.appendChild(mk('p', '', (WOUND[c.k] ? WOUND[c.k].name : 'Рана') + ', ' + c.where + ' — день ' + c.day + (c.ctx ? ', ' + c.ctx : '')));
+  body.appendChild(box);
 }
 // the character tab always opens on the body map
 // ---- keep scroll positions when a panel re-renders (recipe lists, columns) ----

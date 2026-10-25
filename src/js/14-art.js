@@ -119,6 +119,13 @@ const ZPALS = [];
 const rd = v => Math.round(v * DPR) / DPR;
 function frameOf(name) { return ART.meta.frames[name]; }
 function blitObj(name, sx, sy) {
+  const h = HDQ > 1 && ART.meta.frames['hd_' + name];                          // детальный кадр, если есть
+  if (h) {
+    const s = h[7] || 1, sm = ctx.imageSmoothingEnabled;
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(ART.imgs[h[0]], h[1], h[2], h[3], h[4], sx - h[5] / s, sy - h[6] / s, h[3] / s, h[4] / s);
+    ctx.imageSmoothingEnabled = sm; return;
+  }
   const f = ART.meta.frames[name]; if (!f) return;
   ctx.drawImage(ART.imgs[f[0]], f[1], f[2], f[3], f[4], rd(sx - f[5]), rd(sy - f[6]), f[3], f[4]);
 }
@@ -147,14 +154,17 @@ function recolor8(f, pal) {
   g.putImageData(d, 0, 0);
   return {cv:c, ax:f[5], ay:f[6], w:f[3], h:f[4], s:f[7] || ART.meta.charScale || 1};   // s: пикселей кадра на игровой пиксель
 }
+// кадр персонажа в его цветах (перекраска палитры, LRU-кэш); холст помечен _st — для запекания в ImageBitmap
+const RECOLOR_MAX = /Android/i.test(navigator.userAgent) ? 8 : 16;          // перекрасок за кадр: толпа появляется за пару кадров, без рывка
 function charFrame(name, palKey, pal, force) {
   const k = palKey + '|' + name; let c = frameCache.get(k);
-  if (c) { frameCache.delete(k); frameCache.set(k, c); return c; }
-  if (!force && recolorsThisFrame > 16) return null;                       // не больше 16 перекрасок за кадр: толпа появляется за пару кадров, без рывка
+  if (c) { frameCache.delete(k); frameCache.set(k, c); c.cv._st = true; return c; }
+  if (!force && recolorsThisFrame > RECOLOR_MAX) return null;
   const f = ART.meta.frames[name]; if (!f) return null;
   recolorsThisFrame++;
   c = recolor8(f, pal); frameCache.set(k, c);
   if (frameCache.size > FRAME_MAX) { let n = 200; for (const key of frameCache.keys()) { frameCache.delete(key); if (--n <= 0) break; } }
+  if (c && c.cv) c.cv._st = true;
   return c;
 }
 function drawChar(ent, name, palKey, pal, wx, wy, zoff, flash, alpha, force) {
@@ -181,6 +191,14 @@ const WSPEC = {
   baton:{segs:[[0, 3, 1, '#2a2a2e'], [3, 9.5, .95, '#1c1c20']]},
 };
 function drawWeapon(name, wid, wx, wy, zoff) {
+  { const wm = ART.meta.wpn && ART.meta.wpn[name];                              // свободная рука (WPN_LOOSE): оружие смотрит туда, куда герой
+    if (wm && WPN_LOOSE.test(name)) {
+      const f = P.fd != null ? P.fd : P.face, fx = Math.cos(f), fy = Math.sin(f), long = TWO_H.has(wid);
+      let x = fx * (long ? .84 : .6), y = fy * (long ? .84 : .6), z = -1;      // длинное — наклонено сильнее, чтобы не чиркать по земле
+      const l = Math.hypot(x, y, z); x /= l; y /= l; z /= l;
+      ART.meta.wpn.__w = [wm[0], wm[1], (x - y) * 32 * .08, ((x + y) * 16 - z * 31) * .08, wm[4]];
+      name = '__w';
+    } }
   const wm = ART.meta.wpn && ART.meta.wpn[name], sp = WSPEC[wid]; if (!wm || !sp) return;
   const hx = SX(wx, wy) + wm[0], hy = SY(wx, wy, zoff || 0) + wm[1], dx = wm[2], dy = wm[3];
   const L = Math.hypot(dx, dy) || 1, px = -dy / L, py = dx / L;
@@ -225,7 +243,13 @@ function drawHeroSprite(an, fi, zoff) {
   if (showW && front) drawWeapon(name, w, P.x, P.y, zoff);
   if ((an === 'eat' || an === 'drink') && P.act && P.act.kind === 'use' && P.act.it && wm) drawIcon(P.act.it.id, SX(P.x, P.y) + wm[0], SY(P.x, P.y, zoff || 0) + wm[1] - 1, 7);
 }
+// мертвец: поза (наклон, отдача); ползущий разворачивается головой вперёд
 function drawZombie(z, an, fi, alpha, force) {
+  if (force) return drawZombieSprite(z, an, fi, alpha, force);
+  const f0 = z.face; if (z.crawl) z.face = f0 + Math.PI;
+  try { withPose(z.x, z.y, zombiePose(z, an), () => drawZombieSprite(z, an, fi, alpha, force)); } finally { z.face = f0; }
+}
+function drawZombieSprite(z, an, fi, alpha, force) {
   const pal = z.pal;
   drawChar(z, 'z' + (pal.b || 'm') + '_' + an + '_' + dirOf(z.face) + '_' + fi, 'z' + pal.pi, ZPALS[pal.pi], z.x, z.y, 0, !force && z.stun > .3, alpha, force);
 }
@@ -238,7 +262,8 @@ let playerLookPal = function (lk) {
   return {pal, key:'P' + lk.g + lk.skin + lk.hair + lk.shirt + lk.pants + (ct ? ct.id : '') + (ch ? ch.id : '')};
 };
 const dirOf = a => ((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8;
-function AN(k, a) { return (ART.meta.anims && ART.meta.anims[k] && ART.meta.anims[k][a]) || 1; }
+// число кадров в анимации (у мужского героя — свои клипы pm)
+function AN(k, a) { if (k === 'p' && heroMale() && ART.meta.anims.pm[a]) return ART.meta.anims.pm[a]; return (ART.meta.anims && ART.meta.anims[k] && ART.meta.anims[k][a]) || 1; }
 // object sprite with fog darkening (fogged variants cached)
 // предмет мира из атласа (пиксельный кадр); с туманом f<1 или оттенком — через кэш спрайтов
 function objAtPix(id, name, wx, wy, f, alpha, offX, tint) {

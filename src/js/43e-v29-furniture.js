@@ -182,7 +182,9 @@ function layoutRooms(done) {
 }
 // стол посреди кухни и прочие отдельно стоящие — их планировка не трогает
 const isFreeGen = f => Math.abs(f.cx - (f.x + .5)) < .01 && Math.abs(f.cy - (f.y + .5)) < .01 && f.wd && f.wd[0] === 0 && f.wd[1] === -1 && !isWallT9(get(f.x, f.y - 1));
+// мебель в реальный размер: дополнительные вещи в комнаты, раскладка, рост до полного размера, логика комнат
 function growFurniture() {
+  addExtraFurniture();
   const laid = new Set(); layoutRooms(laid);
   for (const f of furns) {
     if (laid.has(f)) continue;
@@ -214,6 +216,7 @@ function growFurniture() {
       if (R && Math.max(...fsizeOf(f.type)) <= 1.06) { Object.assign(f, {cx:R.cx, cy:R.cy, sx:R.sx, sy:R.sy, r:R.r, compact:false}); unregFurn(f); regFurn(f); f.big = false; f.dt = null; }
     }
   }
+  roomLogic();
 }
 // saves: moved pieces come back by their stored rect; re-register every big one
 function reRegisterAll() {
@@ -226,7 +229,5 @@ onLoad((d) => { try { for (const f of furns) if (f.moved && !f.gone) f.tiles = t
 // ---- drawing ----
 
 // ---- furniture editor: whole footprint, any size ----
-const finishDismantle29 = finishDismantle;
-finishDismantle = function (a) { const f = a.f; unregFurn(f); f.tiles = [f.y * MW + f.x]; furn[f.y * MW + f.x] = furnIdx(f); finishDismantle29(a); f.tiles = []; f.big = false; f.dt = null; };
 const moveFurn29 = moveFurn;
 moveFurn = function (f) { if (f.big) { toast('Слишком большое: двигай в режиме обустройства'); return false; } return moveFurn29(f); };

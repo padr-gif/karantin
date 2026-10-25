@@ -187,5 +187,3 @@ function roomLogic() {
   } finally { rng = keep; }
 }
 function roomFurnAll(Hs) { const hi = houses.indexOf(Hs) + 1; return furns.filter(f => !f.gone && hAt[f.y * MW + f.x] === hi); }
-const growFurniture33 = growFurniture;
-growFurniture = function () { growFurniture33(); roomLogic(); };

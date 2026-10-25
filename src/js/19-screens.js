@@ -47,6 +47,7 @@ function beginPlay() {
   lastUse = ''; lastBar = null; autoT = 0; hud3Key = '';
   updateHud();
   try { navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => {}); } catch (e) {}
+  setTimeout(fitDock, 50); guardUI();                                         // кнопки по размеру экрана, защита HUD от лишних перерисовок
 }
 function startNew() {
   if (typeof traitPts === 'function' && traitPts() < 0) { toast('Не хватает очков на черты'); return; }   // черты (v23)

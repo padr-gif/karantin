@@ -92,6 +92,7 @@ Object.assign(CONT, {pile:{name:'На земле'}});
 // ---- ground piles ----
 let piles = [], thrown = [], rings = [];
 function addToPile(x, y, it) {
+  if (it) delete it.bp;                                                       // вещь, ушедшая из инвентаря, забывает, где лежала (карман/рюкзак)
   let p = piles.find(p => Math.hypot(p.x - x, p.y - y) < .7);
   if (!p) { p = {type:'pile', x, y, cx:x, cy:y, items:[]}; piles.push(p); }
   p.items.push(it); return p;
@@ -162,7 +163,20 @@ function beginUse(k) {
   P.act = {kind:'use', t:0, dur:u[1], it, an:u[0], reopen:re};
   if (u[0] === 'work') SFX.rustle();
 }
-function finishUse(a) { const k = P.inv.indexOf(a.it); if (k >= 0) useItem(null, k); }
+// применение закончилось: вещь из инвентаря или прямо из ящика (a.from); вернуться в окно обыска
+function finishUse(a) {
+  if (a.from) {
+    const c = a.from, k = c.items.indexOf(a.it); if (k < 0) return;
+    c.items.splice(k, 1); P.inv.push(a.it); const n0 = P.inv.length;
+    useItem(null, P.inv.length - 1);
+    if (invKg() > invHardKg()) { const left = P.inv.pop(); if (c.items.length < capOf(c)) c.items.push(left); else addToPile(P.x, P.y, left); }
+    if (!P.act && !paused && mode === 'play' && Math.hypot(P.x - (c.cx != null ? c.cx : c.x), P.y - (c.cy != null ? c.cy : c.y)) < 2.2) openPanel('loot', {src:c});
+    return;
+  }
+  const re = a.reopen;
+  { const k = P.inv.indexOf(a.it); if (k >= 0) useItem(null, k); }
+  if (re && !P.act && mode === 'play' && !paused) openPanel('loot', {src:re});
+}
 // ---- radio ----
 function radioNews() {
   const hrs = m => Math.max(1, Math.round(m / 60)), out = [];

@@ -51,8 +51,6 @@ function addExtraFurniture() {
     });
   } finally { rng = keep; }
 }
-const growFurniture32 = growFurniture;
-growFurniture = function () { addExtraFurniture(); growFurniture32(); };
 
 // ---- декор на стенах внутри домов: картины, фото, часы, календари, постеры ----
 // Рисуется прямо на внутренней грани стены (в её плоскости), примерно на каждой седьмой клетке стены.

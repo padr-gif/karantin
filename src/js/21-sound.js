@@ -151,7 +151,33 @@ function drawFence(p, f) {
     if (f > .3) planeText(sx0, sy0, ax, .64, 27, ['КАРАНТИН'], C([24, 20, 16], f), 7.5);
   }
 }
+// процедурная вещь мира (забор, генератор, грядка…); готовые — из кэша спрайтов (PROC_CACHE)
 function drawProc(p, f) {
+  if (baking || !PROC_CACHE.has(p.type)) return drawProcRaw(p, f);
+  if (!p._sid) p._sid = ++procSid;
+  const x = Math.floor(p.cx), y = Math.floor(p.cy), fq = Math.round(f * 20) / 20;
+  sprite('Q' + p._sid, p.type + '|' + fq + '|' + (p.dug ? 1 : 0) + '|' + (p.sign ? 1 : 0), x, y, -U - 6, -78, U + 6, 2 * hh + 6, () => drawProcRaw(p, fq));
+}
+function drawProcRaw(p, f) {
+  if (p.type === 'pfence') {
+    const x = Math.floor(p.cx), y = Math.floor(p.cy), c = PF_COL[p.st || 0], X = p.ax === 'x';
+    const a0 = X ? [x, y + .5] : [x + .5, y], d = X ? [1, 0] : [0, 1], t = .035;
+    if (p.st === 3) {                                                       // профлист
+      box(X ? x : x + .5 - t, X ? y + .5 - t : y, X ? x + 1 : x + .5 + t, X ? y + .5 + t : y + 1, 0, 22, c, f);
+      return;
+    }
+    box(a0[0] - .05, a0[1] - .05, a0[0] + .05, a0[1] + .05, 0, 17, [c[0] * .8, c[1] * .8, c[2] * .8], f);
+    for (const z of [5, 12]) box(X ? x : x + .5 - t, X ? y + .5 - t : y, X ? x + 1 : x + .5 + t, X ? y + .5 + t : y + 1, z, z + 1.6, c, f);
+    for (let k = 1; k < 5; k++) { const u = k / 5, px = a0[0] + d[0] * u, py = a0[1] + d[1] * u; box(px - .045, py - .045, px + .045, py + .045, 0, 15 + (k % 2) * 1.5, c, f); }
+    return;
+  }
+  if (p.type === 'veg') {
+    const x = Math.floor(p.cx), y = Math.floor(p.cy);
+    box(x + .06, y + .06, x + .94, y + .94, 0, 1.5, [86, 64, 44], f);
+    if (!p.dug) for (let k = 0; k < 3; k++) { const yy = y + .22 + k * .28, g = p.v === 2 ? [96, 140, 70] : p.v === 1 ? [70, 128, 64] : [84, 120, 58]; for (let q = 0; q < 3; q++) { const xx = x + .22 + q * .28; box(xx - .07, yy - .05, xx + .07, yy + .05, 1.5, p.v === 2 ? 5 : 4, g, f); } }
+    else for (let k = 0; k < 3; k++) { const yy = y + .22 + k * .28; box(x + .15, yy - .04, x + .85, yy + .04, 1.5, 2, [64, 46, 32], f); }
+    return;
+  }
   const [x0, y0, x1, y1] = p.r;
   switch (p.type) {
     case 'fence': return drawFence(p, f);

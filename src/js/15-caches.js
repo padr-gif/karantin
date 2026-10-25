@@ -248,6 +248,15 @@ function playerAnimBase(pAtk) {
   return ['idle', Math.floor(animT * 2.6) % AN('p', 'idle')];
 }
 function zombieAnim(z) {
+  {                                                                          // тянется за героем через проём, лежит сбитый и встаёт
+    const n = AN('z', 'death');
+    if (z.vt) { const k = z.vt.t / z.vt.dur, m = AN('z', 'hit'); return k < .55 ? ['attack', Math.min(AN('z', 'attack') - 1, 3)] : ['hit', Math.min(m - 1, Math.floor((k - .55) / .45 * m))]; }
+    if (z.down > 0) {
+      const up = .45;   // last part of the time on the ground: getting back up
+      if (z.down < up) return ['death', Math.max(0, Math.min(n - 1, Math.floor(z.down / up * n)))];
+      return ['death', Math.min(n - 1, Math.floor(Math.min(1, z.downT * 3) * n))];
+    }
+  }
   if (z.crawl) { const n = AN('z', 'death'); return ['death', (z.mv || 0) > .05 || z.wind > 0 ? n - 1 - (Math.floor(z.walk * .9) % 2) : n - 1]; }
   if (z.stun > 0) { const n = AN('z', 'hit'); return ['hit', Math.min(n - 1, Math.floor((1 - z.stun / .45) * n))]; }
   if (z.wind > 0) { const n = AN('z', 'attack'); return ['attack', Math.min(n - 1, Math.floor((1 - z.wind / .35) * n))]; }

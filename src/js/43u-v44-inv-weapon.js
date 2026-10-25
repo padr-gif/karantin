@@ -3,17 +3,6 @@
 
 // ---- оружие в покое и на ходу: висит в руке вниз и чуть вперёд, а не торчит палкой вбок ----
 const WPN_LOOSE = /_(idle|walk|run|sneak|sneakidle|hit|vault)_\d_\d+$/;
-{ const dw = drawWeapon;
-  drawWeapon = function (name, wid, wx, wy, zoff) {
-    const wm = ART.meta.wpn && ART.meta.wpn[name];
-    if (!wm || !WPN_LOOSE.test(name)) return dw(name, wid, wx, wy, zoff);
-    const f = P.fd != null ? P.fd : P.face, fx = Math.cos(f), fy = Math.sin(f), long = TWO_H.has(wid);
-    let x = fx * (long ? .84 : .6), y = fy * (long ? .84 : .6), z = -1;   // длинное — наклонено сильнее, чтобы не чиркать по земле
-    const l = Math.hypot(x, y, z); x /= l; y /= l; z /= l;
-    ART.meta.wpn.__w = [wm[0], wm[1], (x - y) * 32 * .08, ((x + y) * 16 - z * 31) * .08, wm[4]];
-    return dw('__w', wid, wx, wy, zoff);
-  };
-}
 
 // ---- рюкзак: ровно 4 ячейки в ряд, список прокручивается ----
 { const fg = fitGrid;

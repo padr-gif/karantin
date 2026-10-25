@@ -51,8 +51,17 @@ function hurtPlayer(z) {
   if (brute && rng() < .28) { const fp = rng() < .5 ? 'arm' : 'leg', f = addWound('frac', fp); if (f) { toast('Громила сломал тебе ' + (fp === 'leg' ? 'ногу' : 'руку') + '! Нужна шина'); SFX.wood(P.x, P.y); } }
   P.bleed = wounds().some(bleeding);
 }
+// мертвецы ломают проём: лист металла, доски, дверь, окно
 function damageOpening(i, dmg) {
   const o = obs[i]; if (!o) return;
+  { const ex = (i % MW) + .5, ey = ((i / MW) | 0) + .5;
+    world.bash = {x:ex, y:ey, t:gameMin};                                       // где ломятся — для ночных звуков и подсказок
+    if (o.mhp > 0) {                                                            // лист металла принимает удары первым
+      if (o.alarm) rattle(i);
+      o.mhp = Math.max(0, o.mhp - dmg * .45); SFX.clang(ex, ey);
+      if (o.mhp <= 0 && Math.hypot(ex - P.x, ey - P.y) < 12) toast('Мертвецы сорвали лист металла');
+      return;
+    } }
   if (o.alarm) rattle(i);
   const near = Math.hypot((i % MW) + .5 - P.x, ((i / MW) | 0) + .5 - P.y) < 12;
   const ex = (i % MW) + .5, ey = ((i / MW) | 0) + .5;

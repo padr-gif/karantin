@@ -119,14 +119,6 @@ function decayDay() {
 // ---- 5. шрамы: зажившая рана оставляет след на теле и строчку в истории ----
 const SCAR_REG = {'левая рука':'armL', 'правая рука':'armR', 'левая нога':'legL', 'правая нога':'legR', 'грудь':'chest', 'спина':'chest', 'живот':'belly', 'голова':'head', 'шея':'neck'};
 const SCAR_AT = {head:[70, 18], neck:[70, 40], chest:[70, 62], belly:[70, 93], armR:[37, 86], armL:[103, 86], legR:[58, 148], legL:[82, 148]};
-{ const aw = addWound;
-  addWound = function (k, part, where) {
-    const w = aw(k, part, where); if (!w) return w;
-    w.day = Math.floor((gameMin - startMin) / 1440) + 1;
-    w.ctx = P.act && P.act.kind === 'vault' ? 'когда лез через окно' : zs.some(z => Math.hypot(z.x - P.x, z.y - P.y) < 1.6) ? 'в драке с мертвецом' : insideHouse(P.x, P.y) ? 'в доме' : 'на улице';
-    return w;
-  };
-}
 { const tw = tickWounds;
   tickWounds = function (gm) {
     const before = wounds().slice();
@@ -153,15 +145,6 @@ function bodyScarsSvg() {
     }
     const g = `<g class="scars" pointer-events="none"><path d="${d}" fill="none" stroke="#2a1410" stroke-width="2.2" stroke-linecap="round" opacity=".5"/><path d="${d}" fill="none" stroke="#e0a090" stroke-width="1.2" stroke-linecap="round"/><path d="${st}" stroke="#7a3a30" stroke-width=".7" stroke-linecap="round"/></g>`;
     return g;
-}
-{ const bs = buildSelf;
-  buildSelf = function (body) {
-    bs(body);
-    const sc = (P && P.scars) || []; if (!sc.length) return;
-    const box = mk('div', 'scarlist'); box.appendChild(mk('div', 'sect', 'Шрамы · ' + sc.length));
-    for (const c of sc.slice(-8).reverse()) box.appendChild(mk('p', '', (WOUND[c.k] ? WOUND[c.k].name : 'Рана') + ', ' + c.where + ' — день ' + c.day + (c.ctx ? ', ' + c.ctx : '')));
-    body.appendChild(box);
-  };
 }
 
 // ---- 6. кошка: живёт в чьём-то доме. Прикорми — переедет к тебе: спит на кровати, мурчит, снимает тоску, просит есть ----
@@ -287,12 +270,6 @@ function drawCat(c) {
   ctx.save(); ctx.translate(sx, sy - fr.height + 2); if (left) ctx.scale(-1, 1); ctx.drawImage(fr, -Math.floor(fr.width / 2), 0); ctx.restore();
 }
 { const ex = typeof extraDl === 'function' ? extraDl : null;
-  extraDl = function (dl) {
-    if (ex) ex(dl);
-    if (mode === 'menu') return;
-    for (const c of cats) dl.push({d:c.x + c.y + (c.onBed ? .6 : .01), k:99, fn:() => drawCat(c)});
-    for (const c of world.caches || []) if (c.read) dl.push({d:c.x + c.y - .6, k:99, fn:() => drawCache(c)});
-  };
 }
 
 // ---- сохранение ----

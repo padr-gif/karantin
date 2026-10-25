@@ -85,8 +85,6 @@ function invPlace() {
   for (let k = P.inv.length - 1; k >= 0 && used > cap + 1e-6; k--) { const it = P.inv[k]; if (it.bp) { it.bp = 0; used -= itemKg(it); } }   // рюкзак стал меньше
   for (const it of P.inv) if (it.bp == null) { const w = itemKg(it); if (used + w <= cap + 1e-6) { it.bp = 1; used += w; } else it.bp = 0; }
 }
-// вещь, ушедшая из инвентаря (в ящик, на землю), забывает, где лежала
-{ const ap = addToPile; addToPile = function (x, y, it) { if (it) delete it.bp; return ap(x, y, it); }; }
 // в группах инвентаря вещи из карманов и из рюкзака — отдельно
 { const gi = groupItems;
   groupItems = function (list) {

@@ -52,19 +52,6 @@ function useFromCont(c, it) {
   P.act = {kind:'use', t:0, dur:u ? u[1] : .5, it, an:u ? u[0] : 'work', from:c};
 }
 // finishing a use that started from a container: take the item at the last moment, put leftovers back, reopen the container
-const finishUse0 = finishUse;
-finishUse = function (a) {
-  if (a.from) {
-    const c = a.from, k = c.items.indexOf(a.it); if (k < 0) return;
-    c.items.splice(k, 1); P.inv.push(a.it); const n0 = P.inv.length;
-    useItem(null, P.inv.length - 1);
-    if (invKg() > invHardKg()) { const left = P.inv.pop(); if (c.items.length < capOf(c)) c.items.push(left); else addToPile(P.x, P.y, left); }
-    if (!P.act && !paused && mode === 'play' && Math.hypot(P.x - (c.cx != null ? c.cx : c.x), P.y - (c.cy != null ? c.cy : c.y)) < 2.2) openPanel('loot', {src:c});
-    return;
-  }
-  const re = a.reopen; finishUse0(a);
-  if (re && !P.act && mode === 'play' && !paused) openPanel('loot', {src:re});
-};
 // houses fully searched
 function houseOf(f) { const h = hAt[f.y * MW + f.x]; return h ? houses[h - 1] : null; }
 function houseSearched(H) {

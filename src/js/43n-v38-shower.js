@@ -1,5 +1,5 @@
 // ================= v38: душ вместо «ванны в один куб»; помыться в ванне или в душе =================
-const isShower = f => f && f.type === 'bath' && (f.compact || f.art === 'bath1');
+function isShower(f) { return f && f.type === 'bath' && (f.compact || f.art === 'bath1'); }
 // ---- помыться: пока есть вода. Снимает стресс и уныние, но ты мокрый — в холодном доме замёрзнешь ----
 function washTarget() {
   let best = null, bd = 1.25;

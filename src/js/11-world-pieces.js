@@ -20,7 +20,7 @@ function wallPiece(x0, y0, x1, y1, z0, z1, Hs) {
 function drawWallTile(x, y, i, cut) {
   const t = map[i], Hs = houses[hAt[i] - 1];
   const top = cut ? U * .32 : WH;
-  if (t === WALL) { for (const r of wpV[i]) wallPiece(x + r[0], y + r[1], x + r[2], y + r[3], 0, top, Hs); return; }
+  if (t === WALL) { for (const r of wpV[i]) wallPiece(x + r[0], y + r[1], x + r[2], y + r[3], 0, top, Hs); drawWallSwitch(x, y, i, cut); return; }
   const ax = alongX(x, y), o = obs[i], h = HWV;
   const f = Math.max(fogAt(x + (ax ? 0 : 1), y + (ax ? 1 : 0)), fogF(i));
   const band = (z0, z1) => ax ? wallPiece(x, y + .5 - h, x + 1, y + .5 + h, z0, z1, Hs) : wallPiece(x + .5 - h, y, x + .5 + h, y + 1, z0, z1, Hs);

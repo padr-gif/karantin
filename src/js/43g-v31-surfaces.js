@@ -5,15 +5,6 @@
 // Единицы текстуры: TP = 32 px на метр; на стене y = 0 у пола, высота стены ~77.
 
 // ---- плитки: детальный кадр, если он есть ----
-const blitObj30 = blitObj;
-blitObj = function (name, sx, sy) {
-  const f = HDQ > 1 && ART.meta.frames['hd_' + name];
-  if (!f) return blitObj30(name, sx, sy);
-  const s = f[7] || 1, sm = ctx.imageSmoothingEnabled;
-  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(ART.imgs[f[0]], f[1], f[2], f[3], f[4], sx - f[5] / s, sy - f[6] / s, f[3] / s, f[4] / s);
-  ctx.imageSmoothingEnabled = sm;
-};
 
 // ---- плавные текстуры стен ----
 const smo = (x, a, b) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };

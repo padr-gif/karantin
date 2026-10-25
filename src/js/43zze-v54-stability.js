@@ -241,7 +241,6 @@ function fitDock() {
 }
 addEventListener('resize', () => setTimeout(fitDock, 60));
 setInterval(() => { if (mode === 'play') fitDock(); }, 1500);
-{ const bp = beginPlay; beginPlay = function () { bp(); setTimeout(fitDock, 50); }; }
 { const st = document.createElement('style');
   st.textContent = '#dock.tight{gap:3px!important;padding:3px!important}#dock.tight .hslot{width:40px!important}#dock.tight .wslot{width:48px!important}#dock.tight .hslot small,#dock.tight .wslot small{font-size:9px!important}'
     + '#zoomBox .ibtn.sm{width:38px!important;height:38px!important}#zoomBox .ibtn.sm .ic{width:18px;height:18px}';
@@ -252,14 +251,6 @@ setInterval(() => { if (mode === 'play') fitDock(); }, 1500);
 // раньше каждый штакетник собирался из десятков граней каждый кадр; на слабом планшете это заметная доля кадра
 const PROC_CACHE = new Set(['pfence', 'veg', 'jersey', 'sandbag', 'pump', 'fence']);
 let procSid = 0;
-{ const dp = drawProc;
-  drawProc = function (p, f) {
-    if (baking || !PROC_CACHE.has(p.type)) return dp(p, f);
-    if (!p._sid) p._sid = ++procSid;
-    const x = Math.floor(p.cx), y = Math.floor(p.cy), fq = Math.round(f * 20) / 20;
-    sprite('Q' + p._sid, p.type + '|' + fq + '|' + (p.dug ? 1 : 0) + '|' + (p.sign ? 1 : 0), x, y, -U - 6, -78, U + 6, 2 * hh + 6, () => dp(p, fq));
-  };
-}
 
 // ---- мебель за стеной без clip(): на планшетах с Mali каждый clip по большому контуру стоил кадра.
 // Мебель с вырезанными кусками стен один раз запекается в отдельную картинку (кусок стены стирается из неё),
@@ -334,7 +325,6 @@ const bump = c => { if (c) { c._v = (c._v || 0) + 1; c._st = true; } };
     return di.call(this, bm, a, b, c, d, e, f, g, h);
   };
 }
-{ const cf = charFrame; charFrame = function () { const r = cf.apply(this, arguments); if (r && r.cv && !r.cv._st) r.cv._st = true; return r; }; }
 { const hf = hdFogged; hdFogged = function () { const c = hf.apply(this, arguments); if (c && !c._st) c._st = true; return c; }; }
 
 // ---- Android: листы спрайтов (≈250 МБ в распакованном виде) — в ImageBitmap. Картинка <img> может быть выгружена
@@ -351,7 +341,6 @@ async function sheetsToBitmaps() {
   }
 }
 { const la = loadArt; loadArt = function () { return la.apply(this, arguments).then(r => { if (BIG_SHEETS_BMP) sheetsToBitmaps(); return r; }); }; }
-if (/Android/i.test(navigator.userAgent)) { const cf = charFrame; charFrame = function (name, palKey, pal, force) { if (!force && recolorsThisFrame > 8) return null; return cf(name, palKey, pal, force); }; }
 
 // ---- интерфейс поверх игры перерисовывался 7–20 раз в секунду: каждые 0.15 с HUD заново писал те же тексты,
 // подсказки и флаги hidden. На планшете каждая такая запись перерисовывала весь слой интерфейса (тест: «без
@@ -370,7 +359,6 @@ function guardEl(el) {
 function guardSvg(el) { if (el._g) return; el._g = 1; const sa = el.setAttribute; el.setAttribute = function (k, v) { if (this.getAttribute(k) !== String(v)) sa.call(this, k, v); }; }
 function guardUI() { for (const id of ['hud', 'ctrl', 'dock', 'pad', 'moodles', 'clockBox', 'vitals', 'taskChip', 'mini']) { const r = $(id); if (!r) continue; guardEl(r); for (const e of r.querySelectorAll('*')) if (e instanceof HTMLElement) guardEl(e); else guardSvg(e); } }
 guardUI();
-{ const bp = beginPlay; beginPlay = function () { bp(); guardUI(); }; }
 setInterval(() => { if (mode === 'play') guardUI(); }, 2000);   // новые элементы (чип дневника и т. п.)
 { const st = document.createElement('style');
   st.textContent = '.gauge,.clock,#dock,.ibtn,#bAct,#bAtk,#bRun,#bSneak,#bInv,#bBar,#actAlt,#moodles,#knob,#stick,#mini,#taskChip,#toasts,#events{will-change:transform}'

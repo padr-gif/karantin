@@ -67,6 +67,7 @@ function ach(id) {
   const a = ACH.find(a => a[0] === id); if (!a) return;
   eventBanner('Достижение: ' + a[1], a[2], 'gold', 'i-star');
   SFX.equip();
+  logEv('Достижение: «' + a[1] + '»');
 }
 function checkAch() {
   const st = P.stats || {}, days = (gameMin - startMin) / 1440;

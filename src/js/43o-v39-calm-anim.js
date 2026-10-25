@@ -1,9 +1,7 @@
 // ================= v39: спокойные анимации героя, зарядка «прыжки руки в стороны», душ — заходишь в кабину =================
 // У героя (tools/glbchar/bake_hero.py) свои числа кадров: anims.pm, и длительности клипов: anims.pmdur (секунды).
 // Циклы (стойка, обыск, работа, чтение, зарядка) идут с настоящей скоростью клипа — плавно, без рывков.
-const heroMale = () => ((P && P.look) || look).g === 'm' && ART.meta && ART.meta.anims && ART.meta.anims.pm;
-const AN39 = AN;
-AN = function (k, a) { if (k === 'p' && heroMale() && ART.meta.anims.pm[a]) return ART.meta.anims.pm[a]; return AN39(k, a); };
+function heroMale() { return ((P && P.look) || look).g === 'm' && ART.meta && ART.meta.anims && ART.meta.anims.pm; }
 const pmLoop = (an, speed) => { const n = AN('p', an), d = (ART.meta.anims.pmdur && ART.meta.anims.pmdur[an]) || 2; return [an, Math.floor(animT * (speed || 1) / d * n) % n]; };
 
 // ---- зарядка: прыжки «ноги врозь — руки в стороны», дольше и полезнее ----

@@ -70,15 +70,6 @@ function readStory(it) {
   });
 }
 // в дневнике — страница «Записки»: по линиям, ненайденные — пропуски
-{ const bd = buildDiary;
-  buildDiary = function (body) {
-    const page = (panel && panel.dpage) || 'day';
-    if (page === 'day') bd(body); else { body.textContent = ''; body.appendChild(storyPage()); }
-    const sw = mk('div', 'dswitch');
-    for (const [k, t] of [['day', 'Дела на сегодня'], ['notes', 'Записки ' + ((world.story || []).length) + '/' + STORY_NOTES.length]]) sw.appendChild(btn(t, () => { panel.dpage = k; renderPanel(); }, page === k ? 'on' : 'ghost'));
-    body.insertBefore(sw, body.firstChild);
-  };
-}
 function storyPage() {
   const pg = mk('div', 'diary'), got = world.story || [];
   pg.appendChild(mk('div', 'dhead', 'Что я нашёл'));
@@ -170,4 +161,10 @@ function drawNightMarks() {
     ctx.fillStyle = '#d8d0bc'; ctx.font = 'bold 8px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('?', sx, sy + .5); ctx.globalAlpha = 1;
   }
 }
-function extraDl(dl) { if (nightMarks.length && mode === 'play') dl.push({d:1e9, k:99, fn:drawNightMarks}); }
+// что ещё рисовать в общем списке (по глубине): ночные метки, кошки, тайники с приметами
+function extraDl(dl) {
+  if (nightMarks.length && mode === 'play') dl.push({d:1e9, k:99, fn:drawNightMarks});
+  if (mode === 'menu') return;
+  for (const c of cats) dl.push({d:c.x + c.y + (c.onBed ? .6 : .01), k:99, fn:() => drawCat(c)});
+  for (const c of world.caches || []) if (c.read) dl.push({d:c.x + c.y - .6, k:99, fn:() => drawCache(c)});
+}

@@ -127,6 +127,7 @@ function dismantleSel() {
 }
 function finishDismantle(a) {
   const f = a.f, n = PLANKS[f.type] || 1;
+  unregFurn(f); f.tiles = [f.y * MW + f.x]; furn[f.y * MW + f.x] = furnIdx(f);   // большая мебель: освободить все клетки
   if (f.items && f.items.length) for (const it of f.items) addToPile(f.cx, f.cy, it);
   const oi = f.y * MW + f.x; if (furns[furn[oi] - 1] === f) furn[oi] = 0;
   for (const ch of chunksNear(f.x + .5, f.y + .5, 2)) for (const [k, v] of CHUNKS) if (v === ch) CHUNKS.delete(k);
@@ -134,6 +135,7 @@ function finishDismantle(a) {
   Object.assign(f, {gone:true, moved:true, items:[], searched:true, cx:-999, cy:-999, r:[-999, -999, -999, -999]});
   buildFlow(); noise(P.x, P.y, 9); P.en = Math.max(0, P.en - 5); SFX.wood(P.x, P.y); emit('wood', a.f.x + .5, a.f.y + .5, .6, 10, null, 0, 2);
   toast('Разобрано: +' + n + ' ' + (n === 1 ? 'доска' : 'доски')); stat('dism'); ach('dism'); EDIT.sel = null; editUI(); renderInv();
+  f.tiles = []; f.big = false; f.dt = null;
 }
 
 // ---- ragout: a cooking recipe with several ingredients ----

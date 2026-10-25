@@ -14,7 +14,7 @@ const UNIQ = [
   {u:'medkit', id:'medkit', name:'Аптечка скорой', text:'Укладка фельдшера. Лечит заметно сильнее обычной.', where:'Шкафчик в ванной', at:['medcab']},
   {u:'flash', id:'flashlight', name:'Фонарь сторожа', text:'Тяжёлый, на четырёх батарейках. Светит вдвое дольше.', where:'Магазин', at:['store']},
 ];
-const uniqOf = it => it && it.u && UNIQ.find(q => q.u === it.u);
+function uniqOf(it) { return it && it.u && UNIQ.find(q => q.u === it.u); }
 function mkUniq(q) { const it = mkItem(q.id); it.u = q.u; if (q.u === 'flask') it.w = 6; if (q.u === 'flash') it.ch = 100; if (q.u === 'radio') it.ch = 100; if (q.u === 'lighter') it.uses = 99; return it; }
 function placeUniques() {
   const kindOf = f => { const H = houses[hAt[f.y * MW + f.x] - 1]; return H ? H.kind : null; };

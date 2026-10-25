@@ -66,17 +66,6 @@ function tickZVault(z, dt) {
     if (v.glass) { emit('glass', z.x, z.y, .4, 6, null, 0, 1.2); z.hp -= 4; z.pal.blood = Math.min(5, z.pal.blood + 1); }
   }
 }
-const zombieAnim25 = zombieAnim;
-zombieAnim = function (z) {
-  const n = AN('z', 'death');
-  if (z.vt) { const k = z.vt.t / z.vt.dur, m = AN('z', 'hit'); return k < .55 ? ['attack', Math.min(AN('z', 'attack') - 1, 3)] : ['hit', Math.min(m - 1, Math.floor((k - .55) / .45 * m))]; }
-  if (z.down > 0) {
-    const up = .45;   // last part of the time on the ground: getting back up
-    if (z.down < up) return ['death', Math.max(0, Math.min(n - 1, Math.floor(z.down / up * n)))];
-    return ['death', Math.min(n - 1, Math.floor(Math.min(1, z.downT * 3) * n))];
-  }
-  return zombieAnim25(z);
-};
 
 // ---- livelier animation: step bob, lean, breathing, lunges, stagger, shambling sway ----
 function withPose(x, y, pose, fn) {
@@ -106,13 +95,6 @@ function zombiePose(z, an) {
   if (z.stun > 0) p.r -= vx * Math.min(.3, z.stun) * .5;
   return p;
 }
-const drawZombie25 = drawZombie;
-drawZombie = function (z, an, fi, alpha, force) {
-  if (force) return drawZombie25(z, an, fi, alpha, force);
-  // a crawler lies in the death pose, whose head points away from its facing: turn it so it drags itself head first
-  const f0 = z.face; if (z.crawl) z.face = f0 + Math.PI;
-  try { withPose(z.x, z.y, zombiePose(z, an), () => drawZombie25(z, an, fi, alpha, force)); } finally { z.face = f0; }
-};
 
 // ---- doorways: closing a door you stand in steps you out to your side ----
 function clearDoorway(o) {

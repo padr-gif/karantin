@@ -100,5 +100,26 @@ function extraCookCards(src) {
     const bs = btn('Подкинуть', () => { removeItem('sticks'); src.t = Math.max(src.t, 0) + 60; src.out = false; SFX.fireUp(); renderPanel(); }); bs.disabled = !countItem('sticks');
     out.push(recipeCard('Подкинуть хворост', [{id:'sticks', ok:countItem('sticks') > 0, badge:'×' + countItem('sticks')}], 'campfire', [bs], '+60 минут горения'));
   }
+  // заготовки: варенье, тушёнка, консервы, квашеная капуста, сушёные грибы
+  { const heat = heatOk(src), pot = hasTool('pot'), water = waterOk(), jar = countItem('jar') > 0;
+    const heatPart = {id:src.type === 'fire' ? 'campfire' : src.type === 'burner' ? 'burner' : null, label:'Электричество', ok:heat};
+    const useWater = () => { if (!nearTap()) { const w = P.inv.find(i => i.id === 'water'); if (w) w.id = 'bottle'; } };
+    const can = (title, ing, n, result, note) => out.push(cookCard(title, [{id:'jar', ok:jar}, {id:ing, ok:countItem(ing) >= n, badge:String(n)}, {id:'pot', ok:pot}, {id:'water', ok:water}, heatPart], result, jar && countItem(ing) >= n && pot && water && heat, 5, () => {
+      if (!countItem('jar') || countItem(ing) < n || !heatOk(src) || !hasTool('pot')) { toast('Не вышло: чего-то не хватило'); return; }
+      removeItem('jar'); for (let q = 0; q < n; q++) removeItem(ing); useWater();
+      P.inv.push(mkItem(result)); addXp('cook', 2); ach('canning'); toast('Закатано: ' + ITEMS[result].name.toLowerCase() + '. Не испортится');
+    }, note));
+    can('Варенье', 'berries', 3, 'jam', '3 горсти ягод и пустая банка · не портится, поднимает настроение');
+    can('Домашняя тушёнка', 'meat', 2, 'stewH', '2 куска сырого мяса и пустая банка · не портится');
+    can('Рыбные консервы', 'fish', 2, 'fishJ', '2 сырые рыбы и пустая банка · не портится');
+    out.push(cookCard('Квашеная капуста', [{id:'jar', ok:jar}, {id:'cabbage', ok:countItem('cabbage') > 0}], 'kraut', jar && countItem('cabbage') > 0, 3, () => {
+      if (!countItem('jar') || !countItem('cabbage')) { toast('Не вышло'); return; }
+      removeItem('jar'); removeItem('cabbage'); P.inv.push(mkItem('kraut')); addXp('cook', 1); ach('canning'); toast('Капуста заквашена в банке. Не испортится');
+    }, 'кочан капусты и банка · огонь не нужен'));
+    if (src.type === 'fire') out.push(cookCard('Сушёные грибы ×2', [{id:'mushroom', ok:countItem('mushroom') >= 2, badge:'2'}, {id:'campfire', ok:heat}], 'mushD', countItem('mushroom') >= 2 && heat, 5, () => {
+      if (countItem('mushroom') < 2 || !heatOk(src)) { toast('Не вышло'); return; }
+      removeItem('mushroom'); removeItem('mushroom'); P.inv.push(mkItem('mushD'), mkItem('mushD')); addXp('cook', 1); toast('Грибы высушены над огнём. Не испортятся');
+    }, '2 сырых гриба над костром · безопасны и не портятся'));
+  }
   return out;
 }

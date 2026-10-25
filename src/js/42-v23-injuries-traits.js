@@ -77,8 +77,6 @@ Object.assign(WSPEC, {
   pistol:{segs:[[0, 2.2, 1.6, '#2b2a2c'], [2.2, 5.2, 1.25, '#3b3e44']]},
   shotgun:{segs:[[0, 4, 1.7, '#7a5232'], [4, 6, 1.2, '#2e3034'], [6, 14.5, .85, '#45484e']]},
 });
-const catOf23 = catOf;
-catOf = function (id) { const d = ITEMS[id]; if (!d) return 'Материалы'; if (d.kind === 'ammo') return 'Оружие'; if (id === 'splint') return 'Медицина'; if (id === 'sewkit' || id === 'lure') return 'Снаряжение'; return catOf23(id); };
 
 // ---- timed jobs: anything that takes a few seconds and then runs a function ----
 function job(dur, fn, extra) { closePanel(); P.act = Object.assign({kind:'job', t:0, dur, fn, an:'work'}, extra || {}); SFX.rustle(); }
@@ -99,6 +97,8 @@ function addWound(k, part, where) {
   const W = wounds(); part = part || rollPart(); where = where || pick(WPART[part]);
   if (k === 'frac' && W.some(w => w.k === 'frac' && w.where === where)) return null;
   const w = {k, part, where, t:0, band:0, bT:0, cl:0, sep:0, h:0, spl:0};
+  w.day = Math.floor((gameMin - startMin) / 1440) + 1;                          // для шрама: когда и при каких обстоятельствах
+  w.ctx = P.act && P.act.kind === 'vault' ? 'когда лез через окно' : zs.some(z => Math.hypot(z.x - P.x, z.y - P.y) < 1.6) ? 'в драке с мертвецом' : insideHouse(P.x, P.y) ? 'в доме' : 'на улице';
   W.push(w);
   if (k !== 'scratch') logEv(WOUND[k].name + ': ' + where);
   while (W.length > 9) { const j = W.findIndex(x => x.k === 'scratch'); W.splice(j >= 0 ? j : 0, 1); }
@@ -525,19 +525,6 @@ const XACT = {
   },
 };
 // metal sheets take the hits first; bashing zombies set off lures
-const damageOpening23 = damageOpening;
-damageOpening = function (i, dmg) {
-  const o = obs[i]; if (!o) return;
-  const ex = (i % MW) + .5, ey = ((i / MW) | 0) + .5;
-  world.bash = {x:ex, y:ey, t:gameMin};
-  if (o.mhp > 0) {
-    if (o.alarm) rattle(i);
-    o.mhp = Math.max(0, o.mhp - dmg * .45); SFX.clang(ex, ey);
-    if (o.mhp <= 0 && Math.hypot(ex - P.x, ey - P.y) < 12) toast('Мертвецы сорвали лист металла');
-    return;
-  }
-  damageOpening23(i, dmg);
-};
 // horde heads for the nearest wound-up lure
 
 // ================= stealth & special zombies =================
@@ -569,29 +556,6 @@ function runnerMsg(z) {
 }
 
 // ================= canning =================
-const extraCookCards23 = extraCookCards;
-extraCookCards = function (src) {
-  const out = extraCookCards23(src), heat = heatOk(src), pot = hasTool('pot'), water = waterOk(), jar = countItem('jar') > 0;
-  const heatPart = {id:src.type === 'fire' ? 'campfire' : src.type === 'burner' ? 'burner' : null, label:'Электричество', ok:heat};
-  const useWater = () => { if (!nearTap()) { const w = P.inv.find(i => i.id === 'water'); if (w) w.id = 'bottle'; } };
-  const can = (title, ing, n, result, note) => out.push(cookCard(title, [{id:'jar', ok:jar}, {id:ing, ok:countItem(ing) >= n, badge:String(n)}, {id:'pot', ok:pot}, {id:'water', ok:water}, heatPart], result, jar && countItem(ing) >= n && pot && water && heat, 5, () => {
-    if (!countItem('jar') || countItem(ing) < n || !heatOk(src) || !hasTool('pot')) { toast('Не вышло: чего-то не хватило'); return; }
-    removeItem('jar'); for (let q = 0; q < n; q++) removeItem(ing); useWater();
-    P.inv.push(mkItem(result)); addXp('cook', 2); ach('canning'); toast('Закатано: ' + ITEMS[result].name.toLowerCase() + '. Не испортится');
-  }, note));
-  can('Варенье', 'berries', 3, 'jam', '3 горсти ягод и пустая банка · не портится, поднимает настроение');
-  can('Домашняя тушёнка', 'meat', 2, 'stewH', '2 куска сырого мяса и пустая банка · не портится');
-  can('Рыбные консервы', 'fish', 2, 'fishJ', '2 сырые рыбы и пустая банка · не портится');
-  out.push(cookCard('Квашеная капуста', [{id:'jar', ok:jar}, {id:'cabbage', ok:countItem('cabbage') > 0}], 'kraut', jar && countItem('cabbage') > 0, 3, () => {
-    if (!countItem('jar') || !countItem('cabbage')) { toast('Не вышло'); return; }
-    removeItem('jar'); removeItem('cabbage'); P.inv.push(mkItem('kraut')); addXp('cook', 1); ach('canning'); toast('Капуста заквашена в банке. Не испортится');
-  }, 'кочан капусты и банка · огонь не нужен'));
-  if (src.type === 'fire') out.push(cookCard('Сушёные грибы ×2', [{id:'mushroom', ok:countItem('mushroom') >= 2, badge:'2'}, {id:'campfire', ok:heat}], 'mushD', countItem('mushroom') >= 2 && heat, 5, () => {
-    if (countItem('mushroom') < 2 || !heatOk(src)) { toast('Не вышло'); return; }
-    removeItem('mushroom'); removeItem('mushroom'); P.inv.push(mkItem('mushD'), mkItem('mushD')); addXp('cook', 1); toast('Грибы высушены над огнём. Не испортятся');
-  }, '2 сырых гриба над костром · безопасны и не портятся'));
-  return out;
-};
 
 // ================= recipes =================
 RECIPES.push(

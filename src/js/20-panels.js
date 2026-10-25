@@ -2,7 +2,10 @@
 let panel = null;
 const CATS = ['Еда', 'Питьё', 'Медицина', 'Оружие', 'Одежда', 'Снаряжение', 'Книги', 'Материалы'];
 function catOf(id) {
-  const d = ITEMS[id];
+  const d = ITEMS[id]; if (!d) return 'Материалы';
+  if (d.kind === 'ammo') return 'Оружие';
+  if (id === 'splint') return 'Медицина';
+  if (id === 'sewkit' || id === 'lure') return 'Снаряжение';
   if (d.kind === 'weapon') return 'Оружие';
   if (d.kind === 'food' || d.raw) return 'Еда';
   if (d.kind === 'drink') return 'Питьё';

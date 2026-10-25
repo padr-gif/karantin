@@ -45,18 +45,7 @@ function buildSwitches() {
   }
 }
 function swPoint(r) { const s = r.sw; return s.ax === 'y' ? [s.x + .5, s.f + .35] : [s.f + .35, s.y + .5]; }
-{ const dw = drawWallTile;
-  drawWallTile = function (x, y, i, cut) {
-    dw(x, y, i, cut);
-    const r = SWT.get(i); if (!r || !r.sw || map[i] !== WALL) return;
-    const s = r.sw, top = cut ? U * .32 : WH, zc = cut ? top * .55 : WH * .42, hz = U * .1, hw = .1, k = .012;
-    const q = (u0, u1, z0, z1, fill) => s.ax === 'y'
-      ? poly4(x + u0, s.f + k, z0, x + u1, s.f + k, z0, x + u1, s.f + k, z1, x + u0, s.f + k, z1, fill)
-      : poly4(s.f + k, y + u0, z0, s.f + k, y + u1, z0, s.f + k, y + u1, z1, s.f + k, y + u0, z1, fill);
-    q(.5 - hw - .012, .5 + hw + .012, zc - hz - 1, zc + hz + 1, 'rgba(30,26,22,.75)');
-    q(.5 - hw, .5 + hw, zc - hz, zc + hz, '#ddd6c6');
-    q(.5 - hw * .45, .5 + hw * .45, r.off ? zc - hz * .7 : zc + hz * .05, r.off ? zc - hz * .05 : zc + hz * .7, '#8f877a');   // клавиша: вверх — вкл
-  };
+{ 
   const wk = wallKey;
   wallKey = function (x, y, i, cut) { buildSwitches(); const k = wk(x, y, i, cut); const r = SWT.get(i); return r ? k + (r.off ? '|s0' : '|s1') : k; };
 }
@@ -162,4 +151,15 @@ function winLit(x, y) {
       told = true; toast('Свет в окнах видно с улицы — мертвецы идут на него. Выключи свет или задёрни шторы');
     }
   });
+}
+// выключатель на стене (рисуется вместе со стеной, drawWallTile)
+function drawWallSwitch(x, y, i, cut) {
+  const r = SWT.get(i); if (!r || !r.sw) return;
+  const s = r.sw, top = cut ? U * .32 : WH, zc = cut ? top * .55 : WH * .42, hz = U * .1, hw = .1, k = .012;
+  const q = (u0, u1, z0, z1, fill) => s.ax === 'y'
+    ? poly4(x + u0, s.f + k, z0, x + u1, s.f + k, z0, x + u1, s.f + k, z1, x + u0, s.f + k, z1, fill)
+    : poly4(s.f + k, y + u0, z0, s.f + k, y + u1, z0, s.f + k, y + u1, z1, s.f + k, y + u0, z1, fill);
+  q(.5 - hw - .012, .5 + hw + .012, zc - hz - 1, zc + hz + 1, 'rgba(30,26,22,.75)');
+  q(.5 - hw, .5 + hw, zc - hz, zc + hz, '#ddd6c6');
+  q(.5 - hw * .45, .5 + hw * .45, r.off ? zc - hz * .7 : zc + hz * .05, r.off ? zc - hz * .05 : zc + hz * .7, '#8f877a');   // клавиша: вверх — вкл
 }

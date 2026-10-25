@@ -156,11 +156,3 @@ const weekMod = () => mode === 'play' && world.week && world.week.mod;
   });
 }
 // в дневнике — что за неделя
-{ const bd = buildDiary;
-  buildDiary = function (body) {
-    bd(body);
-    const m = weekMod(); if (!m) return;
-    const pg = body.querySelector('.diary'), first = pg && pg.querySelectorAll('.dline')[0];
-    if (first) first.insertAdjacentElement('afterend', mk('p', 'dline dsub', 'Неделя ' + (world.week.n + 1) + ': ' + WEEK_MODS[m].name.toLowerCase() + '.'));
-  };
-}
