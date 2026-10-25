@@ -3,7 +3,7 @@
 // Если основное не читается или не загружается, игра берёт запасное. Сохранение можно выгрузить файлом и загрузить
 // из файла (перенести игру на другой телефон). Ошибки кадра и скрипта пишутся в журнал; в паузе — «Отчёт об ошибках».
 
-const GAME_VER = '0.63';
+const GAME_VER = '0.64';
 const PKEY = s => LKEY(s) + '-prev';
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } };
@@ -154,7 +154,7 @@ async function copyReport() {
 
 // ---- тест скорости: из главного меню, ~25 секунд, четыре сцены. Результат — в отчёт и на экран ----
 let BENCH = null; try { BENCH = JSON.parse(localStorage.getItem('karantin-bench') || 'null'); } catch (e) {}
-function perfStat() { return BENCH ? 'тест скорости: ' + BENCH.rows.map(r => r.n + ' ' + r.fps + ' FPS (худшие ' + r.low + ', код ' + r.js + ' мс)').join('; ') + ', качество ' + BENCH.res + (BENCH.diag && BENCH.diag.length ? '\nдиагностика (улица): ' + BENCH.diag.map(r => r.n + ' ' + r.fps + (r.j != null ? ' (' + r.u + '+' + (r.j - r.u).toFixed(1) + ' мс)' : '')).join(' · ') : '') : 'тест скорости не запускался'; }
+function perfStat() { return BENCH ? 'тест скорости: ' + BENCH.rows.map(r => r.n + ' ' + r.fps + ' FPS (худшие ' + r.low + ', код ' + r.js + ' мс)').join('; ') + ', качество ' + BENCH.res + (BENCH.diag && BENCH.diag.length ? '\nдиагностика (улица): ' + BENCH.diag.map(r => r.n + ' ' + r.fps + (r.j != null ? ' (' + r.u + '+' + (r.j - r.u).toFixed(1) + ' мс)' : '')).join(' · ') + (BENCH.draws ? '\nкадр: ' + BENCH.draws : '') : '') : 'тест скорости не запускался'; }
 const BENCH_SCENES = [
   ['Улица днём', () => { const H = houses.find(h => h.kind === 'store') || houses[0]; P.x = H.x + H.w / 2; P.y = H.y + H.h + 2.5; gameMin = 12 * 60; rain = rainTarget = 0; }],
   ['Ночь и дождь', () => { gameMin = 23 * 60; rain = rainTarget = 1; P.inv.push(mkItem('flashlight')); }],
@@ -183,13 +183,15 @@ async function runBench() {
     }
     // диагностика: одна и та же сцена (улица днём), каждый раз выключаем что-то одно — видно, что съедает кадр на этом устройстве
     BENCH_SCENES[0][1](); camX = P.x; camY = P.y; computeVis(); fogDirty = true;
-    const keepQ = resQ, keepV = settings.vol; let keepZ = null;
+    const keepQ = resQ, keepV = settings.vol; let keepZ = null, keepB = bmpOff;
     const DIAG = [
       ['как есть', () => {}, () => {}],
-      ['стоя', () => keys.clear(), () => keys.add('KeyD')],
       ['без мертвецов', () => { keepZ = zs; zs = []; }, () => { zs = keepZ; }],
-      ['без звука', () => { settings.vol = 0; SFX.mute(true); }, () => { settings.vol = keepV; SFX.mute(false); }],
       ['без логики', () => { logicOff = true; }, () => { logicOff = false; }],
+      ['без земли', () => { RD.ground = false; }, () => { RD.ground = true; }],
+      ['без стен и вещей', () => { RD.objects = false; }, () => { RD.objects = true; }],
+      ['без тьмы', () => { RD.light = false; }, () => { RD.light = true; }],
+      ['с ImageBitmap', () => { keepB = bmpOff; bmpOff = false; }, () => { bmpOff = keepB; }],
       ['без интерфейса', () => { document.body.classList.add('benchnoui'); uiOff = true; }, () => { document.body.classList.remove('benchnoui'); uiOff = false; }],
       ['пол-разрешения', () => { resQ = keepQ * .5; resize(); clearCaches(); }, () => { resQ = keepQ; resize(); clearCaches(); }],
       ['пустой кадр', () => { renderOff = true; }, () => { renderOff = false; }],
@@ -199,15 +201,17 @@ async function runBench() {
       const [n, on1, off1] = DIAG[k];
       ov.textContent = 'Диагностика · ' + (k + 1) + ' из ' + DIAG.length + ': ' + n + '…';
       on1(); await wait(1500);
+      DRAWS.n = DRAWS.bm = DRAWS.px = 0;
       const f = await measure(3000); off1();
       const sum = f.reduce((a, b) => a + b, 0) || 1, nf = f.length || 1;
+      if (k === 0) rows.draws = Math.round(DRAWS.n / nf) + ' рисований за кадр, из них ImageBitmap ' + Math.round(DRAWS.bm / nf) + ', источников ' + (DRAWS.px / nf / 1e6).toFixed(1) + ' Мпикс';
       diag.push({n, fps:Math.round(1000 * nf / sum), u:+(upd / nf).toFixed(1), j:+(js / nf).toFixed(1)});
     }
     rows.diag = diag;
   } catch (e) { logErr(e, 'тест скорости'); }
   finally {
     godMode = false; resLock = false; logicOff = false; renderOff = false; uiOff = false; keys.clear(); ov.remove();
-    BENCH = {t:Date.now(), rows, diag:rows.diag || [], res:+resQ.toFixed(2), dpr:devicePixelRatio || 1, gfx:settings.gfx};
+    BENCH = {t:Date.now(), rows, diag:rows.diag || [], draws:rows.draws || '', res:+resQ.toFixed(2), dpr:devicePixelRatio || 1, gfx:settings.gfx};
     try { localStorage.setItem('karantin-bench', JSON.stringify(BENCH)); } catch (e) {}
     newGame(); for (let i = 0; i < NT; i++) seen[i] = 1; toMenu();
     showBench();
@@ -297,10 +301,14 @@ function objAt(id, name, wx, wy, f, alpha, offX, tint) {
 // 100–200 заготовок за кадр (спрайты, куски пола, кадры персонажей) давали ~20 FPS при любом разрешении.
 // Неизменную заготовку один раз превращаем в ImageBitmap (готовая текстура) и рисуем её. Если заготовку
 // перерисовали (_v вырос), до готовности новой копии рисуется сам холст.
+const DRAWS = {n:0, bm:0, px:0};                                          // счёт рисований на экран (для отчёта теста скорости)
+// 0.63: на планшете (Mali) с ImageBitmap стало медленнее, чем без него (без интерфейса 60 → 28 FPS), — по умолчанию выключено,
+// включается адресом ?bmp; тест скорости меряет оба варианта («с ImageBitmap»)
+let bmpOff = !/[?&]bmp\b/.test(location.search);
 const BMP_OK = typeof createImageBitmap === 'function' && !/[?&]nobmp\b/.test(location.search);
 const bmpStat = {made:0, used:0}, bmpBudget = {f:-1, n:3};
 function bmpOf(c) {
-  if (!BMP_OK || !c || !c._st) return null;
+  if (!BMP_OK || bmpOff || !c || !c._st) return null;
   const v0 = c._v || 0;
   if (c._bmp && c._bv === v0) { bmpStat.used++; return c._bmp; }
   // в текстуру — только то, что рисуется кадр за кадром (≥ 8 раз в этой версии), и не больше 3 штук за кадр:
@@ -319,7 +327,8 @@ const bump = c => { if (c) { c._v = (c._v || 0) + 1; c._st = true; } };
 // готовый холст — его ImageBitmap; кусок земли в детальной графике (HDQ× крупнее, _chq) — уменьшить до 1×
 { const di = CanvasRenderingContext2D.prototype.drawImage;
   mainCtx.drawImage = function (img, a, b, c, d, e, f, g, h) {
-    const bm = img && img._st ? bmpOf(img) : null, n = arguments.length;
+    const bm = img && img._st && !bmpOff ? bmpOf(img) : null, n = arguments.length;
+    DRAWS.n++; if (bm) DRAWS.bm++; if (img) DRAWS.px += (img.width || 0) * (img.height || 0);
     if (n === 3) {
       const q = img && img._chq > 1 ? img._chq : 1;
       if (bm || q > 1) return di.call(this, bm || img, a, b, img.width / q, img.height / q);
@@ -334,7 +343,7 @@ const bump = c => { if (c) { c._v = (c._v || 0) + 1; c._st = true; } };
 // ---- Android: листы спрайтов (≈250 МБ в распакованном виде) — в ImageBitmap. Картинка <img> может быть выгружена
 // браузером из памяти и распакована заново при следующем обращении (лист 4096×1500 — это десятки миллисекунд).
 // ImageBitmap держит пиксели распакованными: перекраска кадров персонажей больше не упирается в повторную распаковку.
-const BIG_SHEETS_BMP = BMP_OK && (/Android/i.test(navigator.userAgent) || /[?&]sheetbmp\b/.test(location.search));
+const BIG_SHEETS_BMP = BMP_OK && /[?&]sheetbmp\b/.test(location.search);   // листы атласа в ImageBitmap — только по ?sheetbmp (см. выше)
 let sheetsBmp = 0;
 async function sheetsToBitmaps() {
   for (const n of Object.keys(ART.imgs)) {
@@ -364,8 +373,8 @@ function guardUI() { for (const id of ['hud', 'ctrl', 'dock', 'pad', 'moodles', 
 guardUI();
 setInterval(() => { if (mode === 'play') guardUI(); }, 2000);   // новые элементы (чип дневника и т. п.)
 { const st = document.createElement('style');
-  st.textContent = '.gauge,.clock,#dock,.ibtn,#bAct,#bAtk,#bRun,#bSneak,#bInv,#bBar,#actAlt,#moodles,#knob,#stick,#mini,#taskChip,#toasts,#events{will-change:transform}'
-    + '.gauge,.clock,#dock,#actAlt,#moodles{contain:layout paint style}'
+  st.textContent = '.gauge,.clock,#dock,.ibtn,#bAct,#bAtk,#bRun,#bSneak,#bInv,#bBar,#moodles,#knob,#stick,#mini,#taskChip,#toasts,#events{will-change:transform}'
+    + '.gauge,.clock,#dock,#moodles{contain:layout paint style}'
     + '@keyframes gpulse{50%{transform:scale(1.08)}}';                     // было box-shadow: перерисовка каждый кадр при низком показателе
   document.head.appendChild(st);
 }

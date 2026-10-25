@@ -1,5 +1,6 @@
 // ================= frame render =================
 let drops = [], animT = 0, fogDirty = true;
+const RD = {ground:true, objects:true, light:true};                          // слои кадра (тест скорости выключает по одному)
 function render(dt) {
   mainCtx.setTransform(1, 0, 0, 1, 0, 0);
   mainCtx.fillStyle = '#0c0f12'; mainCtx.fillRect(0, 0, cv.width, cv.height);
@@ -32,6 +33,7 @@ function render(dt) {
   for (let cy = -3; cy < ncy + 3; cy++) for (let cx = -3; cx < ncx + 3; cx++) {
     const ax = cx * CH, ay = cy * CH, sx = SX(ax, ay), sy = SY(ax, ay, 0);
     if (sx + CH * U < 0 || sx - CH * U > W || sy > H || sy + CH * U < 0) continue;
+    if (!RD.ground) continue;
     const ch = getChunk(cx, cy);
     ctx.drawImage(ch.c, sx - CH * U, sy);
   }
@@ -92,7 +94,7 @@ function render(dt) {
 
   const tgtF = curAct && curAct.f, leafTint = seasonTint();
   const pAtk = P.atkT != null && P.atkT < P.atkDur ? P.atkT / P.atkDur : -1;
-  for (const e of dl) {
+  for (const e of RD.objects ? dl : []) {
     if (e.k === 99) { e.fn(); continue; }
     if (e.k === 1) {
       const cut = mode !== 'menu' && ((inside && hAt[e.i] === inside && e.d > pD - .3) ||
@@ -185,7 +187,7 @@ function render(dt) {
 
   // darkness & lights
   const fl = mode === 'play' ? flashlight() : null;
-  if (!(mode === 'play' && L >= .999 && !P.sleep)) {
+  if (RD.light && !(mode === 'play' && L >= .999 && !P.sleep)) {
     const alpha = mode === 'menu' ? .5 : (P.sleep ? .25 : .1) + .74 * (1 - L) + .08 * wet;
     let rTiles = mode === 'menu' ? 9 : 3.4 + 9 * L + (hasTr('eagle') ? 1.2 : 0) - (hasTr('short') ? 1 : 0);
     if (inside && poweredAt(P.x, P.y) && roomLitAt(P.x, P.y) && L < .6 && mode === 'play') rTiles = Math.max(rTiles, 7);

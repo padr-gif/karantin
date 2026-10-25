@@ -1,4 +1,4 @@
-const cv = document.getElementById('game'), mainCtx = cv.getContext('2d');
+const cv = document.getElementById('game'), mainCtx = cv.getContext('2d', {alpha:false});   // холст закрашивается целиком каждый кадр: непрозрачный дешевле для экрана
 let ctx = mainCtx;
 const lc = document.createElement('canvas'), lx = lc.getContext('2d');
 const $ = id => document.getElementById(id);
