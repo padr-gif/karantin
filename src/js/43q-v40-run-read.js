@@ -51,12 +51,10 @@ function drawBook(name, zoff) {
   };
 }
 // ---- одышка: пробежал долго или устал — слышно, как герой переводит дух ----
-{ const up = update;
-  update = function (dt) {
-    up(dt);
+{ onUpdate(dt => {
     if (!P || mode !== 'play') return;
     if (P.running && P.moving) { P._runSec = (P._runSec || 0) + dt; return; }
     const ran = P._runSec || 0; P._runSec = 0;
     if ((ran > 5 || (ran > 1 && P.en < 30)) && (P._breathT || 0) < animT && SFX.ac) { P._breathT = animT + 9; smp(P.en < 30 ? 'breathh' : 'breathl', .3); }
-  };
+  });
 }

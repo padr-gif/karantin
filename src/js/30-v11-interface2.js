@@ -143,7 +143,8 @@ function useHot(i) {
 // ---- minimap ----
 let miniT = 0;
 function drawMinimap(dt) {
-  const c = $('mini'); if (!c || mode !== 'play' || settings.mini === false) { if (c) c.hidden = true; return; }
+  const c = $('mini'); if (uiOff) return;
+  if (!c || mode !== 'play' || settings.mini === false) { if (c) c.hidden = true; return; }
   c.hidden = false; miniT -= dt; if (miniT > 0) return; miniT = .2;
   const dpr = Math.min(2, devicePixelRatio || 1), S = 100; if (c.width !== S * dpr) { c.width = c.height = S * dpr; }
   const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, S, S);

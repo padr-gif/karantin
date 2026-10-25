@@ -39,6 +39,7 @@ addEventListener('keydown', e => {
 document.addEventListener('visibilitychange', () => { if (document.hidden && mode === 'play' && settings.autosave) writeSave('auto'); });
 let autoT = 0;
 function die() {
+  if (godMode) { P.hp = 100; return; }
   closePanel();
   mode = 'dead'; P.fall = 0; P.act = null; atkHeld = false; joy.id = null; $('stick').hidden = true;
   if (P.sleep) { P.sleep = false; $('sleep').hidden = true; }
@@ -68,6 +69,8 @@ function startLoad() { const r = $('bootRetry'); if (r) r.hidden = true; loadArt
 startLoad();
 let menuDrift = 0, last = performance.now();
 let frameErr = 0;
+let logicOff = false, renderOff = false, resLock = false;          // для теста скорости: без логики, пустой кадр, качество не трогать
+const FT = {u:0, r:0};                                               // время последнего кадра: логика и отрисовка, мс
 function frame(t) {
   requestAnimationFrame(frame);
   try { frameBody(t); } catch (err) { console.error(err); logErr(err, 'кадр'); if (!frameErr++) toast('Ошибка отрисовки, игра продолжает работать'); }
@@ -78,13 +81,14 @@ function frameBody(t) {
   frameNo++; animT += dt;
   if (!$('create').hidden && ART.ready) drawPreview();
   if (panel && panel.kind === 'inv' && panel.tab === 'items' && ART.ready && frameNo % 2 === 0) drawDoll();
-  if (mode === 'play' && !paused) { update(dt); updateParts(dt); }
+  if (mode === 'play' && !paused) { const t0 = performance.now(); if (!logicOff) update(dt); FT.u = performance.now() - t0; updateParts(dt); } else FT.u = 0;
   if (mode === 'dead') { P.fall = (P.fall || 0) + dt * 2.2; updateParts(dt); camX += (P.x - camX) * .05; camY += (P.y - camY) * .05; }
   else if (mode === 'menu') { menuDrift += dt * .2; camX = P.x + Math.cos(menuDrift) * 4; camY = P.y + Math.sin(menuDrift * .7) * 3; }
   else if (mode === 'dead') { camX += (P.x - camX) * .05; camY += (P.y - camY) * .05; }
-  render(dt);
+  { const t0 = performance.now(); if (renderOff) { mainCtx.setTransform(1, 0, 0, 1, 0, 0); mainCtx.fillStyle = '#0c0f12'; mainCtx.fillRect(0, 0, cv.width, cv.height); } else render(dt); FT.r = performance.now() - t0; }
+  FPS.rt += FT.r; FPS.ut += FT.u;
   // adaptive resolution: drop the backing-store density if the device can't keep up
-  if (mode === 'play' && !paused && raw > 0 && raw < .5) {
+  if (mode === 'play' && !paused && !resLock && raw > 0 && raw < .5) {
     if (raw > 1 / 38) { slowT += raw; fastT = 0; } else { fastT += raw; if (fastT > 4) slowT = 0; }
     if (slowT > 2.5 && Math.min(gfxCap, devicePixelRatio || 1) * resQ > devMin() + .05) { resQ *= .75; slowT = 0; resize(); }
   }

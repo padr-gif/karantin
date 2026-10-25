@@ -130,14 +130,12 @@ function decayDay() {
   clearCaches(); fogDirty = true;
 }
 { let lastD = null;
-  const up = update;
-  update = function (dt) {
-    up(dt);
+  onUpdate(dt => {
     if (mode !== 'play' || !P) return;
     const d = Math.floor(gameMin / 1440);
     if (lastD == null) lastD = world.decayDay != null ? world.decayDay : d;
     if (d > lastD) { for (let k = lastD; k < d && k < lastD + 3; k++) decayDay(); lastD = d; world.decayDay = d; }
-  };
+  });
   const sn = startNew; startNew = function () { sn(); lastD = null; world.decayDay = null; };
   const as = applySave; applySave = function (d) { as(d); lastD = null; };
 }
@@ -216,9 +214,7 @@ function catMove(c, tx, ty, sp, dt) {
   c.face = Math.atan2(dy, dx); c.mv = moved ? s / dt : 0; c.step += s * 12; return !moved;
 }
 { let catFx = 0;
-  const up = update;
-  update = function (dt) {
-    up(dt);
+  onUpdate(dt => {
     if (mode !== 'play' || !P || paused) return;
     const pHouse = hAt[Math.floor(P.y) * MW + Math.floor(P.x)] - 1, inHouse = pHouse >= 0 && insideHouse(P.x, P.y);
     if (P.sleep && inHouse) for (const c of cats) if (c.st === 'friend') c.base = pHouse;                     // где спишь — там и дом
@@ -246,7 +242,7 @@ function catMove(c, tx, ty, sp, dt) {
       if (hungry > 1440 && near && gameMin - c.askT > 180) { c.askT = gameMin; toast(c.name + ' трётся о ноги и требует еды'); }
       if (hungry > 2880) { c.st = 'wild'; c.trust = 0; const p = houseFloor(houses[c.home]); if (p) { c.x = p[0]; c.y = p[1]; c.tx = p[0]; c.ty = p[1]; } toast(c.name + ' ушла: два дня без еды'); logEv(c.name + ' ушла из дома — я её не кормил'); }
     }
-  };
+  });
 }
 function catNear() { return cats.find(c => Math.hypot(c.x - P.x, c.y - P.y) < 1.8 && vis[Math.floor(c.y) * MW + Math.floor(c.x)]); }
 { const ga = getActions;

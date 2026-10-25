@@ -150,15 +150,13 @@ const weekMod = () => mode === 'play' && world.week && world.week.mod;
 { const mz = mkZombie; mkZombie = function (x, y, pal, hp, spd) { return mz(x, y, pal, hp, spd * (weekMod() === 'restless' ? 1.15 : 1)); }; }
 { const sz = spawnZombie; spawnZombie = function (minD, init) { if (!init && weekMod() === 'calm' && rng() < .45) return; return sz(minD, init); }; }
 { let t = 0, sw = 0;
-  const up = update;
-  update = function (dt) {
-    up(dt);
+  onUpdate(dt => {
     if (mode !== 'play' || !P) return;
     t += dt; if (t > 2) { t = 0; weekTick(); }
     const m = weekMod();
     if (m === 'rain' && rainTarget < .6) rainTarget = .75;
     if (m === 'swarm') { sw += dt; if (sw > 18) { sw = 0; spawnZombie(16, false); } }
-  };
+  });
 }
 // в дневнике — что за неделя
 { const bd = buildDiary;

@@ -1,6 +1,7 @@
 // ================= state =================
 let P, zs, decals, corpses, kills, gameMin, startMin, powerOffAt, waterOffAt, powerMsg, waterMsg;
 let mode = 'menu', paused = false, spawnHouse = 0;
+let godMode = false, uiOff = false;                                    // тест скорости: герой неуязвим / без миникарты
 let spawnTimer = 0, flowTimer = 0, visTimer = 0, noiseTimer = 0, hudTimer = 0, weatherTimer = 0;
 let shake = 0, camX = 0, camY = 0, lastCause = 'Загрызли', curAct = null, curBar = null;
 let rain = 0, rainTarget = 0;

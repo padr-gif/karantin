@@ -173,9 +173,7 @@ function winLit(x, y) {
 }
 // ---- свет в окнах ночью видно с улицы: мертвецы подтягиваются к горящим окнам (шторы спасают) ----
 { let tW = 0, told = false;
-  const up = update;
-  update = function (dt) {
-    up(dt);
+  onUpdate(dt => {
     if (mode !== 'play' || !P || paused) return;
     tW += dt; if (tW < 5) return; tW = 0;
     if (lightLevel() >= .5) return;
@@ -195,5 +193,5 @@ function winLit(x, y) {
     if (lure && !told && zs.some(z => z.state === 'investigate' && Math.hypot(z.x - P.x, z.y - P.y) < 16)) {
       told = true; toast('Свет в окнах видно с улицы — мертвецы идут на него. Выключи свет или задёрни шторы');
     }
-  };
+  });
 }

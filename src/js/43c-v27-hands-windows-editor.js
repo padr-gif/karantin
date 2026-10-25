@@ -84,8 +84,8 @@ function tickWindows(dt) {
     if (!(ob.jig > 0) && Math.abs(ob.ang - tg) < .001) { ob.ang = tg; winAnim.delete(i); }
   }
 }
-const update27 = update;
-update = function (dt) { update27(dt); if (winAnim.size) tickWindows(dt); };
+onUpdate(dt => { if (winAnim.size) tickWindows(dt);
+});
 
 // ---- furniture moving: pick only what you can reach (not through a wall), preview the spot, then confirm ----
 // A tap on the floor shows a ghost of the furniture there (green: fits, red: says why not); a second tap on the

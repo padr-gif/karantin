@@ -54,10 +54,7 @@ function placeUniques() {
 { const uf = useFireTool; useFireTool = function () { const t = fireTool(); if (t && t.u === 'lighter') return; uf(); }; }
 { const dk = dmgK; dmgK = function () { return dk() * (P.weapon && P.weapon.u === 'bat' ? 1.2 : 1); }; }
 { let g0 = null;
-  const up = update;
-  update = function (dt) {
-    const s0 = P && P.stress;
-    up(dt);
+  onUpdate((dt, {s0}) => {
     if (mode !== 'play' || !P) return;
     const gm = g0 == null ? 0 : Math.max(0, gameMin - g0); g0 = gameMin;
     const w = P.weapon; if (w && (w.u === 'bat' || w.u === 'knife') && ITEMS[w.id].dur) w.dur = ITEMS[w.id].dur;     // не ломаются
@@ -75,7 +72,7 @@ function placeUniques() {
       eventBanner('Особая находка: ' + q.name, q.text + ' Находок: ' + world.uniq.length + ' из ' + UNIQ.length + '.', 'gold', 'i-star');
       logEv('Особая находка: ' + q.name);
     }
-  };
+  }, dt => { const s0 = P && P.stress; return {s0}; });
 }
 // дневник врача: читать можно снова и снова; колода — отмечает тайники; аптечка скорой — лечит сильнее
 { const ui = useItem;

@@ -164,12 +164,11 @@ const BENCH_SCENES = [
 async function runBench() {
   if (mode !== 'menu' || !ART.ready) { toast('Тест скорости запускается из главного меню'); return; }
   const ov = mk('div'); ov.id = 'benchov'; document.body.appendChild(ov);
-  const keepU = update, keepR = render, keepHurt = hurtPlayer, keepDie = die, wait = ms => new Promise(r => setTimeout(r, ms));
-  hurtPlayer = function () {}; die = function () { P.hp = 100; };            // герой неуязвим: укусы, кровь и смерть портили замер
-  let js = 0, frames = [], lastT = 0, on = false;
-  update = function (dt) { slowT = 0; const t = performance.now(); try { return keepU(dt); } finally { if (on) js += performance.now() - t; } };   // качество не меняется посреди теста: иначе сцены мерятся в разных условиях
-  render = function (dt) { const t = performance.now(); try { return keepR(dt); } finally { if (on) js += performance.now() - t; } };
-  const tick = t => { if (!on) return; if (lastT) frames.push(t - lastT); lastT = t; requestAnimationFrame(tick); };
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  godMode = true; resLock = true;                                         // герой неуязвим, качество не меняется посреди замера
+  let js = 0, upd = 0, frames = [], lastT = 0, on = false;
+  const tick = t => { if (!on) return; if (lastT) frames.push(t - lastT); lastT = t; js += FT.u + FT.r; upd += FT.u; requestAnimationFrame(tick); };
+  const measure = async ms => { js = 0; upd = 0; frames = []; lastT = 0; on = true; requestAnimationFrame(tick); await wait(ms); on = false; return frames.slice(); };
   const rows = [];
   try {
     newGame(); beginPlay(); P.hp = 1e9; P.inf = false;
@@ -178,43 +177,36 @@ async function runBench() {
       ov.textContent = 'Тест скорости · ' + (k + 1) + ' из ' + BENCH_SCENES.length + ': ' + n.toLowerCase() + '…';
       setup(); camX = P.x; camY = P.y; computeVis(); fogDirty = true; keys.clear(); keys.add('KeyD');
       await wait(2500);
-      js = 0; frames = []; lastT = 0; on = true; requestAnimationFrame(tick);
-      await wait(5000); on = false;
-      const f = frames.slice().sort((a, b) => a - b), sum = f.reduce((a, b) => a + b, 0) || 1, n2 = f.length || 1;
+      const f = (await measure(5000)).sort((a, b) => a - b), sum = f.reduce((a, b) => a + b, 0) || 1, n2 = f.length || 1;
       rows.push({n, fps:Math.round(1000 * n2 / sum), low:Math.round(1000 / (f[Math.floor(n2 * .95)] || 1000)), js:+(js / n2).toFixed(1)});
       P.hp = 1e9;
     }
     // диагностика: одна и та же сцена (улица днём), каждый раз выключаем что-то одно — видно, что съедает кадр на этом устройстве
     BENCH_SCENES[0][1](); camX = P.x; camY = P.y; computeVis(); fogDirty = true;
-    const keepM = drawMinimap, keepQ = resQ;
-    let upd = 0, keepZ = null, keepV = settings.vol;
-    const uWrap = function (dt) { slowT = 0; const t = performance.now(); try { return keepU(dt); } finally { if (on) { const d = performance.now() - t; js += d; upd += d; } } };
-    const rWrap = function (dt) { const t = performance.now(); try { return keepR(dt); } finally { if (on) js += performance.now() - t; } };
-    update = uWrap;
+    const keepQ = resQ, keepV = settings.vol; let keepZ = null;
     const DIAG = [
       ['как есть', () => {}, () => {}],
       ['стоя', () => keys.clear(), () => keys.add('KeyD')],
       ['без мертвецов', () => { keepZ = zs; zs = []; }, () => { zs = keepZ; }],
-      ['без звука', () => { settings.vol = 0; SFX.mute && SFX.mute(true); }, () => { settings.vol = keepV; SFX.mute && SFX.mute(false); }],
-      ['без логики', () => { update = function () { slowT = 0; }; }, () => { update = uWrap; }],
-      ['без интерфейса', () => { document.body.classList.add('benchnoui'); drawMinimap = () => {}; }, () => { document.body.classList.remove('benchnoui'); drawMinimap = keepM; }],
+      ['без звука', () => { settings.vol = 0; SFX.mute(true); }, () => { settings.vol = keepV; SFX.mute(false); }],
+      ['без логики', () => { logicOff = true; }, () => { logicOff = false; }],
+      ['без интерфейса', () => { document.body.classList.add('benchnoui'); uiOff = true; }, () => { document.body.classList.remove('benchnoui'); uiOff = false; }],
       ['пол-разрешения', () => { resQ = keepQ * .5; resize(); clearCaches(); }, () => { resQ = keepQ; resize(); clearCaches(); }],
-      ['пустой кадр', () => { render = function () { mainCtx.setTransform(1, 0, 0, 1, 0, 0); mainCtx.fillStyle = '#0c0f12'; mainCtx.fillRect(0, 0, cv.width, cv.height); }; }, () => { render = rWrap; }],
+      ['пустой кадр', () => { renderOff = true; }, () => { renderOff = false; }],
     ];
     const diag = [];
     for (let k = 0; k < DIAG.length; k++) {
       const [n, on1, off1] = DIAG[k];
       ov.textContent = 'Диагностика · ' + (k + 1) + ' из ' + DIAG.length + ': ' + n + '…';
       on1(); await wait(1500);
-      js = 0; upd = 0; frames = []; lastT = 0; on = true; requestAnimationFrame(tick);
-      await wait(3000); on = false; off1();
-      const f = frames, sum = f.reduce((a, b) => a + b, 0) || 1, nf = f.length || 1;
+      const f = await measure(3000); off1();
+      const sum = f.reduce((a, b) => a + b, 0) || 1, nf = f.length || 1;
       diag.push({n, fps:Math.round(1000 * nf / sum), u:+(upd / nf).toFixed(1), j:+(js / nf).toFixed(1)});
     }
     rows.diag = diag;
   } catch (e) { logErr(e, 'тест скорости'); }
   finally {
-    update = keepU; render = keepR; hurtPlayer = keepHurt; die = keepDie; keys.clear(); ov.remove();
+    godMode = false; resLock = false; logicOff = false; renderOff = false; uiOff = false; keys.clear(); ov.remove();
     BENCH = {t:Date.now(), rows, diag:rows.diag || [], res:+resQ.toFixed(2), dpr:devicePixelRatio || 1, gfx:settings.gfx};
     try { localStorage.setItem('karantin-bench', JSON.stringify(BENCH)); } catch (e) {}
     newGame(); for (let i = 0; i < NT; i++) seen[i] = 1; toMenu();

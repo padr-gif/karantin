@@ -31,11 +31,9 @@ workout = function () {
 };
 // шаги в такт прыжкам
 { let lastJ = -1;
-  const upd39 = update;
-  update = function (dt) {
-    upd39(dt);
+  onUpdate(dt => {
     if (P && P.act && P.act.kind === 'job' && P.act.an === 'jacks') { const k = Math.floor(animT * 2); if (k !== lastJ) { lastJ = k; SFX.step(true, false); } }
-  };
+  });
 }
 
 // ---- душ: заходишь в кабину, моешься ~30 секунд, выходишь ----
@@ -48,10 +46,7 @@ doAction = function (a0) {
   const A = P.act; if (!A || A.kind !== 'job') return;
   A.dur = SHOWER_S * (isShower(f) ? 1 : 1.3); A.shower = {f, x0, y0, cx:(f.r[0] + f.r[2]) / 2, cy:(f.r[1] + f.r[3]) / 2};
 };
-{ const upd = update;
-  update = function (dt) {
-    const A = P && P.act, sh = A && A.kind === 'job' && A.shower;
-    upd(dt);
+{ onUpdate((dt, {A, sh}) => {
     if (!sh) { if (P && P._inShower) { P._inShower = false; } return; }
     if (P.act !== A) {                                                           // прервали (мертвец, кнопка) — выходим из кабины
       P.x = sh.x0; P.y = sh.y0; P._inShower = false; return;
@@ -63,7 +58,7 @@ doAction = function (a0) {
     if (into < 1 || out > 0) P.face = P.fd = Math.atan2(out > 0 ? sh.y0 - sh.cy : sh.cy - sh.y0, out > 0 ? sh.x0 - sh.cx : sh.cx - sh.x0);
     P._inShower = w > .5;
     if (k > .99) { P.x = sh.x0; P.y = sh.y0; }
-  };
+  }, dt => { const A = P && P.act, sh = A && A.kind === 'job' && A.shower; return {A, sh}; });
   // вода шумит (как дождь за окном), пока моешься
   const amb39 = SFX.ambient;
   SFX.ambient = function (rainV, night, inside) { amb39(P && P._inShower ? Math.max(rainV, 1) : rainV, night, inside); };

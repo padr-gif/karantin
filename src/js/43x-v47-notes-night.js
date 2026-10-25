@@ -142,9 +142,7 @@ function spawnNear(x, y) {
     const z = mkZombie(zx, zy, zPal(), ri(48, 70), .9); z.state = 'investigate'; z.tx = P.x; z.ty = P.y; return;
   }
 }
-{ const up = update;
-  update = function (dt) {
-    up(dt);
+{ onUpdate(dt => {
     if (mode !== 'play' || !P || P.car) return;
     const night = lightLevel() < .4;
     if (!settings.nightSnd || !night) { nightNext = null; }
@@ -159,7 +157,7 @@ function spawnNear(x, y) {
       if (m.ambig && !m.checked && gameMin - m.at > 60) { m.checked = true; P.stress = Math.min(100, (P.stress || 0) + 5); }
     }
     nightMarks = nightMarks.filter(m => m.t < 6 || (m.ambig && !m.checked));
-  };
+  });
 }
 // откуда был звук — бледный «?» на несколько секунд
 function drawNightMarks() {

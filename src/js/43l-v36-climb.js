@@ -34,10 +34,7 @@ function startClimb(pl) {
   if (run && rng() < .06) { P.en = Math.max(0, P.en - 3); toast('Задел ногой — чуть не упал'); }
 }
 // упёрся и толкаешь — лезем
-const update36 = update;
-update = function (dt) {
-  const x0 = P && P.x, y0 = P && P.y;
-  update36(dt);
+onUpdate((dt, {x0, y0}) => {
   if (!P || mode !== 'play' || paused || P.car || P.act || P.sleep || !P.moving) { if (P) P._pushT = 0; return; }
   const moved = Math.hypot(P.x - x0, P.y - y0);
   if (moved > dt * .5) { P._pushT = 0; return; }
@@ -51,7 +48,7 @@ update = function (dt) {
     if (map[i] === WIN && !openingBlocks(i)) { winAction({kind:'vault', o:{i, x:tx, y:ty}}); return; }
   }
   else if (pl && pl.no && !LOW_FURN.has(pl.no.type) && (P._noClimbT || 0) < gameMin) { P._noClimbT = gameMin + 30; toast('Слишком высоко — не перелезть'); }
-};
+}, dt => { const x0 = P && P.x, y0 = P && P.y; return {x0, y0}; });
 // в списке действий: «Перелезть» через то, к чему стоишь лицом
 const getActions36 = getActions;
 getActions = function () {

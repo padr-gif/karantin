@@ -153,16 +153,14 @@ takeOffCloth = function (slot) {
   woundMoodles = function () { const m = wm(), o = invOver(); if (o > .45) m.push(['Сильный перегруз', 'crit']); else if (o > 0) m.push(['Перегруз', 'warn']); return m; };
 }
 { let t42 = 0, was = false;
-  const up = update;
-  update = function (dt) {
-    up(dt);
+  onUpdate(dt => {
     if (mode !== 'play' || !P) return;
     t42 += dt; if (t42 < .3) return; t42 = 0;
     invPlace();
     const o = invOver() > 0;
     if (o && !was) toast('Перегруз: вещей больше, чем помещается. Идёшь медленнее и быстрее устаёшь');
     was = o;
-  };
+  });
 }
 
 // ---- старт: базовый школьный рюкзак; старые сохранения — по прежнему числу мест ----

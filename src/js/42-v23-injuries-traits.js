@@ -189,6 +189,7 @@ function tearCloth(c, k) {
   else if (before >= 50 && c.cd < 50) toast(ITEMS[c.id].name + ': порвано. Зашей, пока не развалилось');
 }
 hurtPlayer = function (z) {
+  if (godMode) return;
   if (P.car && P.car.hp > 0) { P.car.hp = Math.max(0, P.car.hp - 4); if ((P.carMsgT || 0) < gameMin) { P.carMsgT = gameMin + 20; toast(P.car.hp > 0 ? 'Мертвецы ломятся в машину! Корпус ' + Math.round(P.car.hp) + '%' : 'Стекло выбито!'); } SFX.knock(P.x, P.y); return; }
   if (panel && panel.kind === 'loot') { closePanel(); toast('На тебя напали! Обыск прерван'); }
   const brute = !!(z && z.brute), crawl = !!(z && z.crawl), part = crawl ? 'leg' : rollPart();

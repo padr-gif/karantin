@@ -72,8 +72,7 @@ function fpsMem() {
   const js = performance.memory ? performance.memory.usedJSHeapSize / 1048576 : 0;
   return {spr, cache, js};
 }
-{ const timed = (fn, key) => function () { const t = performance.now(); try { return fn.apply(this, arguments); } finally { FPS[key] += performance.now() - t; } };
-  render = timed(render, 'rt'); update = timed(update, 'ut'); }
+// время логики и отрисовки копит главный цикл (frameBody): FPS.ut, FPS.rt
 function fpsTick() {
   requestAnimationFrame(fpsTick);
   if (!fpsOn()) { if (FPS.el) FPS.el.hidden = true; return; }

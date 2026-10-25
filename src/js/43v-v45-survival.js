@@ -2,10 +2,7 @@
 
 // ---- счётчики законченных дел: что бы ни делал герой, доделанное считается (для заданий) ----
 { let lastA = null;
-  const up = update;
-  update = function (dt) {
-    const A0 = P && P.act;
-    up(dt);
+  onUpdate((dt, {A0}) => {
     if (!P) return;
     if (lastA && P.act !== lastA && lastA.t >= (lastA.dur || 0) - .06) {
       const k = lastA.kind; stat('f_' + k);
@@ -14,7 +11,7 @@
       if (lastA.an === 'read') stat('f_read');
     }
     lastA = P.act || null; void A0;
-  };
+  }, dt => { const A0 = P && P.act; return {A0}; });
 }
 
 
@@ -108,8 +105,8 @@ function buildDiary(body) {
   };
 }
 { let tc = 0;
-  const up = update;
-  update = function (dt) { up(dt); if (mode !== 'play' || !P) return; tc += dt; if (tc > .5) { tc = 0; diaryTick(); diaryChip(); } };
+  onUpdate(dt => { if (mode !== 'play' || !P) return; tc += dt; if (tc > .5) { tc = 0; diaryTick(); diaryChip(); }
+  });
 }
 { const ser = serialize; serialize = function () { const d = ser(); d.x45 = {tasks:P.tasks || null}; return d; }; }
 { const as = applySave; applySave = function (d) { as(d); if (d && d.x45 && d.x45.tasks) P.tasks = d.x45.tasks; diaryChip(); }; }

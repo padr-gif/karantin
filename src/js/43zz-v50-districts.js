@@ -92,10 +92,7 @@ function blockClimbPlan(dx, dy) {
   if (blocked(tx, ty, P.r)) return null;
   return {p, tx, ty};
 }
-{ const up = update;
-  update = function (dt) {
-    const x0 = P && P.x, y0 = P && P.y;
-    up(dt);
+{ onUpdate((dt, {x0, y0}) => {
     if (!P || mode !== 'play' || paused || P.car || P.act || P.sleep || !P.moving) { if (P) P._pushJ = 0; return; }
     if (Math.hypot(P.x - x0, P.y - y0) > dt * .5) { P._pushJ = 0; return; }
     P._pushJ = (P._pushJ || 0) + dt;
@@ -103,7 +100,7 @@ function blockClimbPlan(dx, dy) {
     P._pushJ = 0;
     const pl = blockClimbPlan(Math.cos(P.face), Math.sin(P.face));
     if (pl) startClimb(pl);
-  };
+  }, dt => { const x0 = P && P.x, y0 = P && P.y; return {x0, y0}; });
 }
 { const ga = getActions;
   getActions = function () {
@@ -150,16 +147,14 @@ function askTravel(side) {
   row.appendChild(stay); row.appendChild(go); card.appendChild(row); box.appendChild(card);
   document.body.appendChild(box);
 }
-{ const up = update;
-  update = function (dt) {
-    up(dt);
+{ onUpdate(dt => {
     if (!P || mode !== 'play' || paused || P.sleep || traveling) return;
     const side = edgeSide();
     if (!side) { if (P.x > 2 && P.y > 2 && P.x < MW - 2 && P.y < MH - 2) P._edgeHold = false; return; }
     if (P._edgeHold || P.act) return;
     if (P.car) { if ((P._edgeMsgT || 0) < gameMin) { P._edgeMsgT = gameMin + 30; toast('Дальше дороги нет — машину придётся бросить'); } return; }
     askTravel(side);
-  };
+  });
 }
 
 // куда встать в новом районе: на противоположном краю, ближе к той же линии

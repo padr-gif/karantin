@@ -13,7 +13,8 @@ function screenToWorld(sx, sy) { const a = (sx - ox) / U, b = (sy - oy) / hh; re
 const doorList = {src:null, t:0, L:[]};
 const sepHead = new Int32Array(NT); let sepNext = new Int32Array(256);
 const sepCell = z => clamp(Math.floor(z.y), 0, MH - 1) * MW + clamp(Math.floor(z.x), 0, MW - 1);
-function update(dt) {
+function update(dt) { runHooked('update', updateCore, dt); }
+function updateCore(dt) {
   const gm = dt * settings.dayLen * (P.sleep ? 40 : 1);
   autoT += gm; if (settings.autosave && autoT >= 120) { autoT = 0; writeSave('auto').then(flashSaved); }
   gameMin += gm;
