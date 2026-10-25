@@ -3,7 +3,7 @@
 // Если основное не читается или не загружается, игра берёт запасное. Сохранение можно выгрузить файлом и загрузить
 // из файла (перенести игру на другой телефон). Ошибки кадра и скрипта пишутся в журнал; в паузе — «Отчёт об ошибках».
 
-const GAME_VER = '0.59';
+const GAME_VER = '0.60';
 const PKEY = s => LKEY(s) + '-prev';
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } };
@@ -164,7 +164,8 @@ const BENCH_SCENES = [
 async function runBench() {
   if (mode !== 'menu' || !ART.ready) { toast('Тест скорости запускается из главного меню'); return; }
   const ov = mk('div'); ov.id = 'benchov'; document.body.appendChild(ov);
-  const keepU = update, keepR = render, wait = ms => new Promise(r => setTimeout(r, ms));
+  const keepU = update, keepR = render, keepHurt = hurtPlayer, keepDie = die, wait = ms => new Promise(r => setTimeout(r, ms));
+  hurtPlayer = function () {}; die = function () { P.hp = 100; };            // герой неуязвим: укусы, кровь и смерть портили замер
   let js = 0, frames = [], lastT = 0, on = false;
   update = function (dt) { slowT = 0; const t = performance.now(); try { return keepU(dt); } finally { if (on) js += performance.now() - t; } };   // качество не меняется посреди теста: иначе сцены мерятся в разных условиях
   render = function (dt) { const t = performance.now(); try { return keepR(dt); } finally { if (on) js += performance.now() - t; } };
@@ -176,7 +177,7 @@ async function runBench() {
       const [n, setup] = BENCH_SCENES[k];
       ov.textContent = 'Тест скорости · ' + (k + 1) + ' из ' + BENCH_SCENES.length + ': ' + n.toLowerCase() + '…';
       setup(); camX = P.x; camY = P.y; computeVis(); fogDirty = true; keys.clear(); keys.add('KeyD');
-      await wait(1200);
+      await wait(2500);
       js = 0; frames = []; lastT = 0; on = true; requestAnimationFrame(tick);
       await wait(5000); on = false;
       const f = frames.slice().sort((a, b) => a - b), sum = f.reduce((a, b) => a + b, 0) || 1, n2 = f.length || 1;
@@ -204,7 +205,7 @@ async function runBench() {
     for (let k = 0; k < DIAG.length; k++) {
       const [n, on1, off1] = DIAG[k];
       ov.textContent = 'Диагностика · ' + (k + 1) + ' из ' + DIAG.length + ': ' + n + '…';
-      on1(); await wait(900);
+      on1(); await wait(1500);
       js = 0; upd = 0; frames = []; lastT = 0; on = true; requestAnimationFrame(tick);
       await wait(3000); on = false; off1();
       const f = frames, sum = f.reduce((a, b) => a + b, 0) || 1, nf = f.length || 1;
@@ -213,7 +214,7 @@ async function runBench() {
     rows.diag = diag;
   } catch (e) { logErr(e, 'тест скорости'); }
   finally {
-    update = keepU; render = keepR; keys.clear(); ov.remove();
+    update = keepU; render = keepR; hurtPlayer = keepHurt; die = keepDie; keys.clear(); ov.remove();
     BENCH = {t:Date.now(), rows, diag:rows.diag || [], res:+resQ.toFixed(2), dpr:devicePixelRatio || 1, gfx:settings.gfx};
     try { localStorage.setItem('karantin-bench', JSON.stringify(BENCH)); } catch (e) {}
     newGame(); for (let i = 0; i < NT; i++) seen[i] = 1; toMenu();
@@ -230,7 +231,7 @@ function showBench() {
 { const list = document.querySelector('#settings .setlist');
   if (list && !$('sBench')) {
     const row = mk('div', 'set'), info = mk('div');
-    info.appendChild(mk('b', '', 'Тест скорости')); info.appendChild(mk('small', '', 'Около минуты. Результат попадёт в отчёт об ошибках'));
+    info.appendChild(mk('b', '', 'Тест скорости')); info.appendChild(mk('small', '', 'Около полутора минут. Результат попадёт в отчёт об ошибках'));
     const b = mk('button', 'mbtn', 'Проверить'); b.type = 'button'; b.id = 'sBench';
     b.addEventListener('click', () => { if (backTo !== 'menu') { toast('Запусти тест из главного меню'); return; } SFX.ui(); show(null); runBench(); });
     row.appendChild(info); row.appendChild(b); list.appendChild(row);
@@ -322,12 +323,17 @@ function occBox(name, fu, wx, wy) {
 // Неизменную заготовку один раз превращаем в ImageBitmap (готовая текстура) и рисуем её. Если заготовку
 // перерисовали (_v вырос), до готовности новой копии рисуется сам холст.
 const BMP_OK = typeof createImageBitmap === 'function' && !/[?&]nobmp\b/.test(location.search);
-const bmpStat = {made:0, used:0};
+const bmpStat = {made:0, used:0}, bmpBudget = {f:-1, n:3};
 function bmpOf(c) {
   if (!BMP_OK || !c || !c._st) return null;
-  if (c._bmp && c._bv === (c._v || 0)) { bmpStat.used++; return c._bmp; }
-  if (!c._bp && c.width && c.height) {
-    c._bp = true; const v = c._v || 0;
+  const v0 = c._v || 0;
+  if (c._bmp && c._bv === v0) { bmpStat.used++; return c._bmp; }
+  // в текстуру — только то, что рисуется кадр за кадром (≥ 8 раз в этой версии), и не больше 3 штук за кадр:
+  // иначе после перехода в новую сцену десятки преобразований разом тормозили первые секунды
+  if (c._nv !== v0) { c._nv = v0; c._n = 0; }
+  if (++c._n < 8 || bmpBudget.f !== frameNo) { if (bmpBudget.f !== frameNo) { bmpBudget.f = frameNo; bmpBudget.n = 3; } if (c._n < 8) return null; }
+  if (!c._bp && c.width && c.height && bmpBudget.n > 0) {
+    bmpBudget.n--; c._bp = true; const v = v0;
     createImageBitmap(c).then(b => { c._bp = false; if ((c._v || 0) !== v) { b.close && b.close(); return; } if (c._bmp && c._bmp.close) c._bmp.close(); c._bmp = b; c._bv = v; bmpStat.made++; })
       .catch(() => { c._bp = false; c._st = false; });
   }
