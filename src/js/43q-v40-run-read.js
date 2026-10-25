@@ -26,20 +26,6 @@ function drawBook(name, zoff) {
     P4(p0, [q0[0], q0[1] - lift], [q1[0], q1[1] - lift], p1, '#f6f1e4');
   }
 }
-{ const dp = drawPlayer, BOOKS = new Set();
-  drawPlayer = function (an, fi, zoff) {
-    const it = P.act && P.act.it, bk = it && ITEMS[it.id] && (ITEMS[it.id].kind === 'book' || it.id === 'novel' || it.id === 'newspaper');
-    const reading = bk && P.act.kind === 'use' && P.act.an === 'read' && heroMale() && AN('p', 'read') > 1;
-    if (!reading) return dp(an, fi, zoff);
-    const name = 'pm' + heroVar(P.look || look) + '_read_' + dirOf(P.fd != null ? P.fd : P.face) + '_' + fi, w = ART.meta.wpn && ART.meta.wpn[name];
-    const front = ![4, 5, 6].includes(dirOf(P.fd != null ? P.fd : P.face));   // со спины книгу не видно
-    if (!front) drawBook(name, zoff);
-    dp(an, fi, zoff);
-    if (front) drawBook(name, zoff);
-    const n = AN('p', 'read'), cyc = Math.floor(animT / ((ART.meta.anims.pmdur && ART.meta.anims.pmdur.read) || 3.2));
-    if (P._pageCyc !== cyc) { P._pageCyc = cyc; if (SFX.ac) smp('paper', .22, 1.05); }   // шелест страницы
-  };
-}
 // ---- одышка: пробежал долго или устал — слышно, как герой переводит дух ----
 { onUpdate(dt => {
     if (!P || mode !== 'play') return;

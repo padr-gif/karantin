@@ -157,6 +157,8 @@ function openCreate() {
     seg($('oMut'), [[false, 'Обычные и бегуны'], [true, '+ громилы и крикуны']], () => NEWCFG.mut, v => { NEWCFG.mut = v; });
   }
   openCreateFields();
+  renderTraitsUI();
+  showCTab('look');
 }
 // character preview: recolour single frames
 const prevCache = new Map();

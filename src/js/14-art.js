@@ -195,7 +195,24 @@ function drawWeapon(name, wid, wx, wy, zoff) {
   if (sp.blade) { const c = pt(sp.blade.at), e = pt(sp.blade.at + 2); ctx.fillStyle = sp.blade.col; ctx.strokeStyle = 'rgba(16,14,12,.85)'; ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(c[0], c[1]); ctx.lineTo(e[0], e[1]); ctx.lineTo(e[0] + px * 3, e[1] + py * 3); ctx.lineTo(c[0] + px * 2.2, c[1] + py * 2.2); ctx.closePath(); ctx.fill(); ctx.stroke(); }
   if (sp.disc) { const c = pt(sp.disc.at); ctx.fillStyle = sp.disc.col; ctx.strokeStyle = 'rgba(16,14,12,.9)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.ellipse(c[0], c[1], sp.disc.r * 1.3, sp.disc.r * .75, Math.atan2(dy, dx) * .3, 0, 6.283); ctx.fill(); ctx.stroke(); ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.beginPath(); ctx.ellipse(c[0] - .6, c[1] - .4, sp.disc.r * .6, sp.disc.r * .3, 0, 0, 6.283); ctx.fill(); }
 }
+// герой на экране: поза (наклон, отдача), полупрозрачный за стеклом душа, книга в руках при чтении
 function drawPlayer(an, fi, zoff) {
+  const it = P.act && P.act.it, bk = it && ITEMS[it.id] && (ITEMS[it.id].kind === 'book' || it.id === 'novel' || it.id === 'newspaper');
+  const reading = bk && P.act.kind === 'use' && P.act.an === 'read' && heroMale() && AN('p', 'read') > 1;
+  const bname = reading ? 'pm' + heroVar(P.look || look) + '_read_' + dirOf(P.fd != null ? P.fd : P.face) + '_' + fi : '';
+  const front = reading && ![4, 5, 6].includes(dirOf(P.fd != null ? P.fd : P.face));   // со спины книгу не видно
+  if (reading && !front) drawBook(bname, zoff);
+  if (P._inShower) {
+    const a = ctx.globalAlpha; ctx.globalAlpha = .5; try { withPose(P.x, P.y, playerPose(an), () => drawHeroSprite(an, fi, zoff)); } finally { ctx.globalAlpha = a; }
+    if (Math.random() < .5) emit('glass', P.x + (Math.random() - .5) * .3, P.y + (Math.random() - .5) * .3, .3, 1, null, 0, .6);
+  } else withPose(P.x, P.y, playerPose(an), () => drawHeroSprite(an, fi, zoff));
+  if (reading) {
+    if (front) drawBook(bname, zoff);
+    const cyc = Math.floor(animT / ((ART.meta.anims.pmdur && ART.meta.anims.pmdur.read) || 3.2));
+    if (P._pageCyc !== cyc) { P._pageCyc = cyc; if (SFX.ac) smp('paper', .22, 1.05); }   // шелест страницы
+  }
+}
+function drawHeroSprite(an, fi, zoff) {
   const lk = P.look || look, w = P.weapon && P.weapon.id;
   const name = 'p' + lk.g + heroVar(lk) + '_' + an + '_' + dirOf(P.fd != null ? P.fd : P.face) + '_' + fi;
   const wm = ART.meta.wpn && ART.meta.wpn[name];
@@ -223,7 +240,8 @@ let playerLookPal = function (lk) {
 const dirOf = a => ((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8;
 function AN(k, a) { return (ART.meta.anims && ART.meta.anims[k] && ART.meta.anims[k][a]) || 1; }
 // object sprite with fog darkening (fogged variants cached)
-function objAt(id, name, wx, wy, f, alpha, offX, tint) {
+// предмет мира из атласа (пиксельный кадр); с туманом f<1 или оттенком — через кэш спрайтов
+function objAtPix(id, name, wx, wy, f, alpha, offX, tint) {
   const fr = ART.meta.frames[name]; if (!fr) return;
   if (f >= .99 && !tint) {
     if (alpha != null && alpha < 1) ctx.globalAlpha = alpha;

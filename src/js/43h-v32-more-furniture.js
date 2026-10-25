@@ -23,20 +23,7 @@ for (const k of ['washer', 'coffeetab', 'endtable', 'wdesk', 'laundry', 'kbin', 
 Object.assign(FSZ, {armchair:[.88, .7], coffeetab:[.9, .5], floorlamp:[.4, .4], plant:[.5, .5], endtable:[.45, .45], wdesk:[.96, .55], chair:[.45, .45],
   mirror:[.6, .25], laundry:[.45, .4], washer:[.6, .6], kbin:[.34, .34], pantry:[.6, .58], bsink:[.55, .45], towels:[.5, .15], shoerack:[.8, .32], boxes:[.6, .6], radiator:[.8, .15]});
 
-// раковина в ванной — тоже вода (у неё нет добычи, и базовый поиск действий её пропускает)
-{ // getAction ничего не предлагает для вещи без добычи: раковину делаем «контейнером без вещей», чтобы её находило
-  const base = getAction;
-  getAction = function (excl) {
-    const a = base(excl); if (a) return a;
-    let best = null, bd = 1.15;
-    for (const f of furns) {
-      if (f.gone || f.type !== 'bsink' || (excl && excl.has(f))) continue;
-      const qx = clamp(P.x, f.r[0], f.r[2]), qy = clamp(P.y, f.r[1], f.r[3]), d = Math.hypot(qx - P.x, qy - P.y) + .42;
-      if (d < bd && reachOK(qx, qy)) { best = {kind:'sink', label:'Попить', f}; bd = d; }
-    }
-    return best;
-  };
-}
+// (раковина в ванной — тоже вода: её находит getAction в 05-actions)
 
 // что ещё ставить в комнату (после основного списка), по площади; без rng генератора здесь нельзя — вызывается из него
 function extraFurn(type, area, rnd) {

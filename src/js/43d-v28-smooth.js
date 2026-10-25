@@ -181,8 +181,8 @@ const FV = {
   crate(fu, f) { const F = fvFrame(fu), c = COL.crate; FBOX(fu, 0, 26, c, f, .04); resetT(); fvLine(F, .1, 4, .9, 22, shade(c, .7), f, 2); fvLine(F, .1, 13, .9, 13, shade(c, .7), f, 2); },
 };
 const FV_ALIAS = {locker:'wardrobe', desk:'cabinet', medshelf:'shelf', toolrack:'shelf', counter:'cabinet', armybox:'crate'};
-const objAt28 = objAt;
-objAt = function (id, name, wx, wy, f, alpha, offX, tint) {
+// гладкая графика: мебель рисуется векторно (FV), иначе — пиксельный кадр
+function objAtVec(id, name, wx, wy, f, alpha, offX, tint) {
   if (HDQ > 1 && id[0] === 'F' && name.startsWith('f_')) {
     const fu = furns[(+id.slice(1)) - 1], t = fu && (FV[fu.type] ? fu.type : FV_ALIAS[fu.type]);
     if (fu && FV[t]) {
@@ -199,8 +199,8 @@ objAt = function (id, name, wx, wy, f, alpha, offX, tint) {
       return;
     }
   }
-  objAt28(id, name, wx, wy, f, alpha, offX, tint);
-};
+  objAtPix(id, name, wx, wy, f, alpha, offX, tint);
+}
 
 // ---- finishing touches for smooth mode: soft edge lines on boxes, textures without blocky noise ----
 const box28 = box;

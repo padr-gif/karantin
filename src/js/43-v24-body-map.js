@@ -5,8 +5,6 @@ function logEv(t) { if (!P) return; P.log = P.log || []; P.log.push([Math.round(
 const KILL_MS = [1, 10, 25, 50, 100, 200, 300, 500];
 const ach24 = ach;
 ach = function (id) { const had = achDone[id]; ach24(id); if (!had) { const a = ACH.find(a => a[0] === id); if (a) logEv('Достижение: «' + a[1] + '»'); } };
-const startHorde24 = startHorde;
-startHorde = function () { startHorde24(); logEv('Через город пошла орда'); };
 onStartNew(() => { if (P && !P.log) { P.log = []; logEv('Город закрыли на карантин. Я дома, один. Нужно продержаться'); }
 });
 function tickDiary() {
@@ -37,7 +35,7 @@ function workout() {
     toast('Зарядка сделана: отжимания, приседания, пресс. Голова прояснилась');
   }, {reopen:'self', sub:'skills', noisy:2});
 }
-const dmgK24 = dmgK; dmgK = function () { return dmgK24() * (1 + .03 * fitLv()); };
+
 const panicK24 = panicK; panicK = function () { return panicK24() * (1 - .06 * fitLv()); };
 // ---- body map ----
 const WHERE2REG = {'голова':'head', 'шея':'neck', 'грудь':'chest', 'спина':'chest', 'живот':'belly', 'левая рука':'armL', 'правая рука':'armR', 'левая нога':'legL', 'правая нога':'legR'};

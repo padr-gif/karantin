@@ -118,8 +118,6 @@ function zombiePose(z, an) {
   if (z.stun > 0) p.r -= vx * Math.min(.3, z.stun) * .5;
   return p;
 }
-const drawPlayer25 = drawPlayer;
-drawPlayer = function (an, fi, zoff) { withPose(P.x, P.y, playerPose(an), () => drawPlayer25(an, fi, zoff)); };
 const drawZombie25 = drawZombie;
 drawZombie = function (z, an, fi, alpha, force) {
   if (force) return drawZombie25(z, an, fi, alpha, force);
@@ -140,11 +138,6 @@ function clearDoorway(o) {
   }
   return 'stuck';
 }
-const finishAct25 = finishAct;
-finishAct = function (a) {
-  if (a.kind === 'bar' && a.o && obs[a.o.i].t === 'door' && obs[a.o.i].open) { const r = clearDoorway(a.o); if (r === 'z') { toast('В проёме мертвец'); return; } }
-  finishAct25(a);
-};
 // never stay stuck inside something (a door shut on you, a car parked on you, furniture moved)
 function unstick() {
   if (P.car || (P.act && P.act.kind === 'vault') || !blocked(P.x, P.y, P.r * .85)) { P._stuckT = 0; return; }

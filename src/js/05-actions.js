@@ -60,11 +60,20 @@ const waterOn = () => gameMin < waterOffAt;
 const isRotten = it => it.rot != null && gameMin > it.rot;
 const flashlight = () => P.inv.find(i => (i.id === 'flashlight' || i.id === 'candle') && i.on && i.ch > 0);
 
-function attack() {
+// удар (или выстрел); кулаки чередуются — правой, левой
+function attack() { const t0 = P.atkT; attackSwing(); if (P.atkT === 0 && t0 !== 0) P._altHand = !P._altHand; }
+function attackSwing() {
   if (P.car) { honk(); return; }
   if (mode !== 'play' || paused || panel || P.sleep || P.cd > 0) return;
-  const w = P.weapon ? ITEMS[P.weapon.id] : FISTS;
-  P.cd = w.cd * (P.en < 15 ? 1.3 : 1); P.swing = .2; P.act = null; P.atkT = 0; P.atkDur = Math.max(.28, w.cd * .75);
+  if (P.act && P.act.kind === 'reload') return;
+  const W0 = P.weapon ? ITEMS[P.weapon.id] : FISTS;
+  if (W0.gun) {
+    if (P.weapon.mag > 0) { shoot(W0); return; }
+    if (ammoFor(P.weapon).length) { startReload(); return; }
+    if ((P._clickT || 0) < animT) { P._clickT = animT + 3; SFX.click(); toast('Патронов нет: остаётся бить прикладом'); }
+  }
+  const w = W0.gun ? {dmg:W0.melee, range:.95, cd:.6, cleave:1} : W0;
+  P.cd = w.cd * (P.en < 15 ? 1.3 : 1) * (1 + (P.panic || 0) / 300) * (fracAt('arm') ? 1.25 : 1); P.swing = .2; P.act = null; P.atkT = 0; P.atkDur = Math.max(.28, w.cd * .75);
   SFX.swing(w.dmg > 30);
   if (!mouseAim) {
     let near = null, nd = w.range + .9;
@@ -79,14 +88,20 @@ function attack() {
     if (Math.abs(a) < 1.0 && los(P.x, P.y, z.x, z.y)) hits.push([d, z]);
   }
   hits.sort((a, b) => a[0] - b[0]);
-  const n = Math.min(w.cleave, hits.length);
+  let n = Math.min(w.cleave, hits.length), quiet = n > 0;
+  if (n && rng() < missChance()) { n = 0; quiet = false; if ((P._missT || 0) < animT) { P._missT = animT + 4; toast((P.panic || 0) > 50 ? 'Мимо! Руки трясутся от страха' : 'Мимо!'); } }
   for (let i = 0; i < n; i++) {
-    const z = hits[i][1];
-    let dmg = w.dmg * (.85 + rng() * .3) * (P.en < 15 ? .7 : 1) * (1 + .06 * skillLv('fight')) * ((P.stress || 0) > 60 ? .85 : 1);
+    const z = hits[i][1], dx = z.x - P.x, dy = z.y - P.y;
+    const unaware = z.state !== 'chase' && !((z.aw || 0) > .7);
+    const behind = Math.abs(wrapA(Math.atan2(P.y - z.y, P.x - z.x) - z.face)) > 1.9;
+    const sneakHit = unaware && (P.sneak || behind);
+    let dmg = w.dmg * (.85 + rng() * .3) * (P.en < 15 ? .7 : 1) * (1 + .06 * skillLv('fight')) * ((P.stress || 0) > 60 ? .85 : 1) * dmgK();
     if (rng() < .12) dmg *= 2;
+    if (sneakHit) { dmg *= z.brute ? 2.2 : P.sneak ? 4 : 2.5; if (!world.snkMsg) { world.snkMsg = true; toast('Удар со спины! Мертвецы, которые тебя не видят, получают в разы больше урона'); } }
+    else quiet = false;
     z.hp -= dmg; SFX.hit(w.dmg > 30, z.x, z.y);
-    const dx = z.x - P.x, dy = z.y - P.y, l = Math.hypot(dx, dy) || 1;
-    z.kx = dx / l * 3.2; z.ky = dy / l * 3.2; z.stun = .45; z.state = 'chase'; z.lost = 0;
+    const l = Math.hypot(dx, dy) || 1;
+    z.kx = dx / l * 3.2; z.ky = dy / l * 3.2; z.stun = .45; z.state = 'chase'; z.lost = 0; z.aw = 0;
     z.pal.blood = Math.min(5, z.pal.blood + 1);
     addBlood(z.x, z.y, .45); emit('blood', z.x, z.y, 1.2, 7, Math.atan2(dy, dx), 1.3, 2.4);
     if (z.hp <= 0) {
@@ -94,13 +109,14 @@ function attack() {
       if (corpses.length > 120) corpses.shift();
       addBlood(z.x, z.y, .9);
       zs.splice(zs.indexOf(z), 1); kills++; SFX.splat(z.x, z.y); addXp('fight', 1); onZDeath(z);
-    }
+      if (sneakHit) { stat('sneakk'); if (((P.stats && P.stats.sneakk) || 0) >= 5) ach('ninja'); }
+    } else quiet = false;
   }
-  if (!n) {
+  if (!n && !hits.length) {
     const tx = Math.floor(P.x + Math.cos(P.face) * .8), ty = Math.floor(P.y + Math.sin(P.face) * .8), i = ty * MW + tx;
     if (get(tx, ty) === WIN && !obs[i].broken && !obs[i].bhp) {
       obs[i].broken = true; noise(P.x, P.y, 9); toast('Окно разбито'); SFX.glass(tx + .5, ty + .5); emit('glass', tx + .5, ty + .5, 1.2, 16, P.face, 1.6, 2.2);
-      if (!P.weapon && rng() < .5) { P.bleed = true; toast('Порезался о стекло'); }
+      if (!P.weapon) glassCut(.5, 'Разбил стекло кулаком и порезался');
     }
   }
   if (n && P.weapon) {
@@ -108,7 +124,7 @@ function attack() {
     if (P.weapon.dur <= 0) { toast('Сломалось: ' + ITEMS[P.weapon.id].name); P.weapon = null; }
   }
   P.en = Math.max(0, P.en - .7);
-  noise(P.x, P.y, 6.5); scareCrows(P.x, P.y, 7);
+  noise(P.x, P.y, quiet ? 2.2 : 6.5); if (!quiet) scareCrows(P.x, P.y, 7);
 }
 
 function nearOpenings() {
@@ -190,6 +206,15 @@ function getAction(excl) {
   if (!best && excl && excl.size && !excl.has('w')) excl.add('w');
   else if (!best && nearWater()) best = hasTool('rod') ? {kind:'fish', label:'рыбачить', f:{type:'pond', cx:P.x, cy:P.y}} : {kind:'pond', label:'попить из пруда', f:{type:'pond', cx:P.x, cy:P.y}};
   if (!best && (world.snow || 0) > .3 && !insideHouse(P.x, P.y) && P.inv.some(i => i.id === 'bottle')) best = {kind:'snow', label:'набрать снега в бутылки', f:{type:'snow', cx:P.x, cy:P.y}};
+  if (best && best.kind === 'unbar' && best.o && obs[best.o.i].mhp > 0) best = {kind:'unmetal', label:'снять лист металла', o:best.o};
+  if (best || P.car) return best;
+  best = extraAction(excl); if (best) return best;                            // машины, приманки, таблички… (XACT)
+  best = null; bd = 1.15;                                                     // раковина в ванной
+  for (const f of furns) {
+    if (f.gone || f.type !== 'bsink' || (excl && excl.has(f))) continue;
+    const qx = clamp(P.x, f.r[0], f.r[2]), qy = clamp(P.y, f.r[1], f.r[3]), d = Math.hypot(qx - P.x, qy - P.y) + .42;
+    if (d < bd && reachOK(qx, qy)) { best = {kind:'sink', label:'Попить', f}; bd = d; }
+  }
   return best;
 }
 function getBarricade() {
@@ -318,7 +343,20 @@ function cook(src) {
   if (miss.size) toast('Не хватает: ' + [...miss].join(', '));
   renderInv();
 }
+// действие дошло до конца (полоска заполнилась)
 function finishAct(a) {
+  if (a.kind === 'bar' && a.o && obs[a.o.i].t === 'door' && obs[a.o.i].open) { const r = clearDoorway(a.o); if (r === 'z') { toast('В проёме мертвец'); return; } }
+  if (a.kind === 'job') {
+    a.fn();
+    if (a.reopen && mode === 'play' && !P.act && !paused && !P.sleep) { openPanel('inv', a.sub ? {sub:a.sub} : null); panel.tab = a.reopen; if (a.sel !== undefined) panel.sel = a.sel; if (a.part !== undefined) panel.part = a.part; renderPanel(); }
+    return;
+  }
+  if (a.kind === 'reload') { finishReload(a); return; }
+  if (a.kind === 'hotwire') {
+    if (rng() < .38 + .12 * skillLv('mech') + .03 * skillLv('carp')) { a.f.key = true; toast('Провода соединены: машина заведётся'); addXp('mech', 2); }
+    else { noise(P.x, P.y, 6); addXp('mech', .5); toast('Не вышло. Попробуй ещё раз'); }
+    return;
+  }
   if (a.kind === 'vault') { finishVault(a); return; }
   if (a.kind === 'forage') { finishForage(a); return; }
   if (a.kind === 'dismantle') { finishDismantle(a); return; }
@@ -326,7 +364,6 @@ function finishAct(a) {
   if (a.kind === 'furn') { finishFurn(a); return; }
   if (a.kind === 'fish') { if (rng() < .5 + .05 * skillLv('farm')) { if (!invFull()) P.inv.push(mkItem('fish')); else addToPile(P.x, P.y, mkItem('fish')); stat('fish'); ach('fish'); toast('Клюёт! Поймал карася'); addXp('farm', 1); } else toast('Сорвалась. Попробуй ещё'); SFX.rustle(); return; }
   if (a.kind === 'pry') { const ob = obs[a.o.i]; ob.locked = false; ob.open = true; ob.ang = 1; noise(P.x, P.y, 9); SFX.wood(a.o.x, a.o.y); toast('Дверь взломана'); addXp('carp', 1); return; }
-  if (a.kind === 'hotwire') { if (rng() < .45 + .1 * skillLv('carp')) { a.f.key = true; toast('Провода соединены: машина заведётся'); addXp('carp', 2); } else { noise(P.x, P.y, 6); toast('Не вышло. Попробуй ещё раз'); } return; }
   if (a.kind === 'use') { finishUse(a); return; }
   if (a.kind === 'pickup') { pickFromPile(a.f); return; }
   if (a.kind === 'search') { if (a.f.air) ach('drop'); a.f.searched = true; { const H = furns.includes(a.f) && houseOf(a.f); if (H && !H._done && houseSearched(H)) toast('✓ Дом обыскан полностью. Отмечено на карте'); } noise(P.x, P.y, a.f.type === 'car' ? 4 : 2.5); openPanel('loot', {src:a.f}); if (a.f.type === 'car') toast(a.f.key ? 'В замке зажигания торчат ключи! Бензин: ' + Math.round(a.f.fuel) + '%' : 'Ключей нет. Бензин: ' + Math.round(a.f.fuel) + '%'); }

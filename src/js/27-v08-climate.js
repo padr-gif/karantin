@@ -27,8 +27,17 @@ function airTemp(x, y) {
   if (P.car && P.car.engine) t += 6;
   return t;
 }
-function insulation() { let s = 3; for (const k of ['torso', 'head']) { const c = P.cloth && P.cloth[k]; if (c) s += ITEMS[c.id].ins; } if (P.sleep && (!P.bed || P.bed.type === 'bed' || P.bed.type === 'sofa')) s += 6; return s; }
+// тепло одежды: бельё, всё надетое (с учётом износа и утепления), босиком холоднее, в кровати теплее
+function insulation() {
+  let s = 1;
+  for (const c of worn()) s += clothIns(c);
+  if (barefoot()) s -= 1;
+  if (P.sleep && (!P.bed || P.bed.type === 'bed' || P.bed.type === 'sofa')) s += 6;
+  return Math.round(s);
+}
+// холод и сырость: дождь, укрытие, огонь, одежда; черты «мерзляк»/«закалённый»; сапоги — ноги сухие
 function updateClimate(gm) {
+  const w0 = P.wet || 0, c0 = P.cold || 0;
   P.cold = P.cold || 0; P.wet = P.wet || 0;
   const inside = insideHouse(P.x, P.y) || !!P.car, dryCoat = P.cloth && P.cloth.torso && ITEMS[P.cloth.torso.id].dry;
   let nearFire = false; for (const f of fires) if (!f.out && f.t > 0 && Math.hypot(f.x - P.x, f.y - P.y) < 3) nearFire = true;
@@ -39,6 +48,8 @@ function updateClimate(gm) {
   else P.cold = Math.max(0, P.cold - gm * (feels - 15) * .06);
   if (P.cold > 85) { P.hp -= gm * .06; lastCause = 'Переохлаждение'; }
   if (P.cold > 55) P.en -= gm * .05;
+  const dc = (P.cold || 0) - c0; if (dc > 0) P.cold = clamp(c0 + dc * (hasTr('cold') ? 1.45 : 1) * (hasTr('hardy') ? .7 : 1), 0, 100);
+  const f = P.cloth && P.cloth.feet; if (f && ITEMS[f.id].dry && (P.wet || 0) > w0) P.wet = w0 + (P.wet - w0) * .7;
 }
 function wearCloth(k) {
   const it = P.inv[k], d = ITEMS[it.id]; P.cloth = P.cloth || {};
@@ -60,7 +71,9 @@ function updateStorm(dt) {
 }
 // ---- hordes on the move ----
 function scheduleHorde(from) { world.hordeAt = from + 1440 * ri(2, 3) + ri(-300, 300); }
+// орда: толпа с дальнего края идёт к герою (или к шумовой приманке)
 function startHorde() {
+  const before = new Set(zs);
   scheduleHorde(gameMin);
   const sides = [[FEN + 3, ri(CITY0, CITY1)], [MW - FEN - 4, ri(CITY0, CITY1)], [ri(CITY0, CITY1), FEN + 3], [ri(CITY0, CITY1), MH - FEN - 4]];
   sides.sort((a, b) => Math.hypot(b[0] - P.x, b[1] - P.y) - Math.hypot(a[0] - P.x, a[1] - P.y));
@@ -75,5 +88,9 @@ function startHorde() {
   const dir = Math.abs(sx - P.x) > Math.abs(sy - P.y) ? (sx < P.x ? 'запада' : 'востока') : (sy < P.y ? 'севера' : 'юга');
   toast('Издалека доносится гул сотен ног: орда идёт с ' + dir);
   P.hordeSurv = gameMin + 720;
+  const fresh = zs.filter(z => !before.has(z)); for (const z of fresh) z.horde = true;
+  const lu = lures.filter(p => !p.dead && p.ch > 0 && Math.hypot(p.cx - P.x, p.cy - P.y) > 7 && Math.hypot(p.cx - P.x, p.cy - P.y) < 50).sort((a, b) => Math.hypot(a.cx - P.x, a.cy - P.y) - Math.hypot(b.cx - P.x, b.cy - P.y))[0];
+  if (lu) { lu.horde = true; for (const z of fresh) { z.tx = lu.cx + (rng() - .5) * 5; z.ty = lu.cy + (rng() - .5) * 5; } toast('Орда учуяла шумовую приманку и идёт к ней'); }
+  logEv('Через город пошла орда');
 }
 function updateHorde() { if (world.hordeAt != null && gameMin >= world.hordeAt) startHorde(); }

@@ -19,18 +19,6 @@ recipeCard = function (title, parts, result, buttons, note) {
   const a = mk('div', 'acts'); for (const b of buttons) { if (b.disabled && /Создать|Приготовить/.test(b.textContent)) b.textContent = 'Не хватает'; a.appendChild(b); } r.appendChild(a);
   return r;
 };
-// ---- curtains: take down and hang back ----
-windowActions = function (o) {
-  const ob = obs[o.i], c = [];
-  if (ob.bhp > 0) c.push({kind:'unbar', label:'Оторвать доску', o});
-  else {
-    if (ob.open || ob.broken) c.push({kind:'vault', label:'Перелезть', o});
-    if (!ob.broken) c.push({kind:'window', label:ob.open ? 'Закрыть окно' : 'Открыть окно', o, tk:ob.open ? 'wc' + o.i : null});
-  }
-  if (ob.cur) { c.push({kind:'curtain', label:ob.cc ? 'Раздвинуть шторы' : 'Задёрнуть шторы', o, tk:'cu' + o.i}); c.push({kind:'takecur', label:'Снять шторы', o, tk:'ct' + o.i}); }
-  else if (countItem('curtain')) c.push({kind:'hangcur', label:'Повесить шторы', o, tk:'cu' + o.i});
-  return c;
-};
 function vaultZ() { const A = P.act; if (!A || A.kind !== 'vault') return 0; const k = Math.min(1, A.t / A.dur); return Math.sin(Math.PI * Math.min(1, k * 1.15)) * U * .62; }
 function vaultAnim() {
   const A = P.act, k = Math.min(1, A.t / A.dur);

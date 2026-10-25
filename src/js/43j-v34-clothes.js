@@ -107,22 +107,10 @@ function regClothText(sel) {
   const p = Math.round(partProt(part) * 100);
   return 'Прикрывает: ' + cs.map(c => ITEMS[c.id].name.toLowerCase() + ' ' + Math.round(cdur(c)) + '%').join(', ') + (p ? ' · защита ' + p + '%' : '');
 }
-insulation = function () {
-  let s = 1;                                                                        // одно бельё
-  for (const c of worn()) s += clothIns(c);
-  if (barefoot()) s -= 1;
-  if (P.sleep && (!P.bed || P.bed.type === 'bed' || P.bed.type === 'sofa')) s += 6;
-  return Math.round(s);
-};
 const stepNoiseK34 = stepNoiseK;
 stepNoiseK = () => stepNoiseK34() * wornK('noise') * (barefoot() ? .7 : 1);
 const enDrainK34 = enDrainK;
 enDrainK = () => enDrainK34() * wornK('tire');
-const updateClimate34 = updateClimate;
-updateClimate = function (gm) {                                                   // резиновые сапоги: ноги сухие — промокаешь медленнее
-  const w0 = P.wet || 0; updateClimate34(gm);
-  const f = P.cloth && P.cloth.feet; if (f && ITEMS[f.id].dry && (P.wet || 0) > w0) P.wet = w0 + (P.wet - w0) * .7;
-};
 
 // ---- надеть / снять (карманы меняют вместимость) ----
 const pockets = it => (it && ITEMS[it.id].cap) || 0;

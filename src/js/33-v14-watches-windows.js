@@ -21,6 +21,7 @@ function clockHud() {
   $('day').textContent = 'День ' + (Math.floor(gameMin / 1440) + 1) + ' · ' + dateStr(gameMin, true);
 }
 // ---- windows ----
+// действия у окна: доска, перелезть, открыть/закрыть, осколки; шторы — только изнутри дома
 function windowActions(o) {
   const ob = obs[o.i], c = [];
   if (ob.bhp > 0) c.push({kind:'unbar', label:'Оторвать доску', o});
@@ -28,8 +29,11 @@ function windowActions(o) {
     if (ob.open || ob.broken) c.push({kind:'vault', label:'Перелезть', o});
     if (!ob.broken) c.push({kind:'window', label:ob.open ? 'Закрыть окно' : 'Открыть окно', o, tk:ob.open ? 'wc' + o.i : null});
   }
-  if (ob.cur) c.push({kind:'curtain', label:ob.cc ? 'Раздвинуть шторы' : 'Задёрнуть шторы', o, tk:'cu' + o.i});
-  else if (countItem('curtain')) c.push({kind:'hangcur', label:'Повесить шторы', o, tk:'cu' + o.i});
+  if (insideHouse(P.x, P.y)) {
+    if (ob.cur) { c.push({kind:'curtain', label:ob.cc ? 'Раздвинуть шторы' : 'Задёрнуть шторы', o, tk:'cu' + o.i}); c.push({kind:'takecur', label:'Снять шторы', o, tk:'ct' + o.i}); }
+    else if (countItem('curtain')) c.push({kind:'hangcur', label:'Повесить шторы', o, tk:'cu' + o.i});
+  }
+  if (winGlass(ob) && !(ob.bhp > 0)) c.splice(1, 0, {kind:'clearglass', label:'Убрать осколки', o, tk:'cg' + o.i});
   return c;
 }
 // окна и шторы: открыть/закрыть, перелезть, убрать осколки, снять/повесить шторы

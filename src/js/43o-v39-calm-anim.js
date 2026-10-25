@@ -47,13 +47,7 @@ defAction('wash', {run: a0 => {                                                 
   // вода шумит (как дождь за окном), пока моешься
   const amb39 = SFX.ambient;
   SFX.ambient = function (rainV, night, inside) { amb39(P && P._inShower ? Math.max(rainV, 1) : rainV, night, inside); };
-  // в кабине тебя видно сквозь матовое стекло
-  const dp39 = drawPlayer;
-  drawPlayer = function (an, fi, zoff) {
-    if (!P._inShower) return dp39(an, fi, zoff);
-    const a = ctx.globalAlpha; ctx.globalAlpha = .5; try { dp39(an, fi, zoff); } finally { ctx.globalAlpha = a; }
-    if (Math.random() < .5) emit('glass', P.x + (Math.random() - .5) * .3, P.y + (Math.random() - .5) * .3, .3, 1, null, 0, .6);
-  };
+
 }
 // в душе — без одежды (в белье): одежда «висит» снаружи
 { const regs = outfitRegs, key = outfitKey;

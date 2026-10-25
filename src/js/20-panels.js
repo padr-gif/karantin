@@ -122,6 +122,10 @@ function cell(it, n, onTap, opt) {
   if (opt.badge) c.appendChild(mk('span', 'badge', opt.badge));
   if (!opt.size && ITEMS[it.id]) { c.classList.add('lbl'); c.appendChild(mk('span', 'nmL', d.sh || d.name)); }
   if (onTap) c.addEventListener('click', () => { SFX.ui(); onTap(); });
+  if (d.kind === 'cloth' && it.cd != null && it.cd < 100 && !c.querySelector('.bar')) { const b = mk('span', 'bar'), f = mk('i'); f.style.width = Math.max(4, Math.round(it.cd)) + '%'; if (it.cd < 30) f.className = 'lo'; b.appendChild(f); c.appendChild(b); }   // целость одежды
+  if (d.kind === 'weapon' && d.gun) c.appendChild(mk('span', 'cnt', (it.mag || 0) + '/' + d.mag));                  // патроны в магазине
+  const q = uniqOf(it);                                                                                              // уникальная вещь — своё имя
+  if (q) { c.classList.add('uniq'); c.title = q.name; c.setAttribute('aria-label', q.name); const l = c.querySelector('.nmL'); if (l) l.textContent = q.name.split(' ')[0]; }
   return c;
 }
 function gridOf(groups, onTap, slots, selKey) {

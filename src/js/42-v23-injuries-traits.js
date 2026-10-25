@@ -269,8 +269,6 @@ function renderTraitsUI() {
   const pts = $('oTraitPts'); if (pts) { pts.textContent = 'Очки: ' + left; pts.classList.toggle('neg', left < 0); }
   if (info && !info.textContent) info.textContent = 'Хорошие черты стоят очков, плохие их дают. Можно ничего не выбирать.';
 }
-const openCreate23 = openCreate;
-openCreate = function () { openCreate23(); renderTraitsUI(); };
 onStartNew(() => {
   P.traits = newTraits.slice();
   if (hasTr('organized')) { P.capB = 4; P.cap += 4; }
@@ -294,18 +292,16 @@ function tickMind(dt, gm) {
   if (hasTr('smoker')) { P.smokeT = (P.smokeT || 0) + gm; if (P.smokeT > 720) { P.stress = Math.min(100, (P.stress || 0) + gm * .05); if (!P._smokeMsg) { P._smokeMsg = 1; toast('Хочется курить. Нервы шалят'); } } }
 }
 function missChance() { let m = Math.max(0, ((P.panic || 0) - 30) / 200); if ((P.pain || 0) > 40) m += (P.pain - 40) / 300; if (fracAt('arm')) m += .1; if (P.en < 10) m += .05; return Math.min(.45, m); }
-function dmgK() { let k = 1; if (hasTr('strong')) k *= 1.2; if (hasTr('weak')) k *= .8; const af = fracAt('arm'); if (af) k *= af.spl ? .75 : .5; if ((P.unh || 0) > 80) k *= .85; if ((P.pain || 0) > 50) k *= .9; return k; }
+// множитель урона: черты, перелом руки, уныние, боль, физподготовка, счастливая бита
+function dmgK() { let k = 1; if (hasTr('strong')) k *= 1.2; if (hasTr('weak')) k *= .8; const af = fracAt('arm'); if (af) k *= af.spl ? .75 : .5; if ((P.unh || 0) > 80) k *= .85; if ((P.pain || 0) > 50) k *= .9; return k * (1 + .03 * fitLv()) * (P.weapon && P.weapon.u === 'bat' ? 1.2 : 1); }
 let stepNoiseK = () => (hasTr('quiet') ? .5 : 1) * (hasTr('clumsy') ? 1.5 : 1);
 let enDrainK = () => (1 - .05 * skillLv('fit')) * (hasTr('wakeful') ? .7 : 1) * (hasTr('sleepy') ? 1.3 : 1) * ((P.unh || 0) > 50 ? 1.2 : 1);
-const updateClimate23 = updateClimate;
-updateClimate = function (gm) { const c0 = P.cold || 0; updateClimate23(gm); const dc = (P.cold || 0) - c0; if (dc > 0) P.cold = clamp(c0 + dc * (hasTr('cold') ? 1.45 : 1) * (hasTr('hardy') ? .7 : 1), 0, 100); };
 const tickFlu23 = tickFlu;
 tickFlu = function (gm) { const f0 = P.fluR || 0; tickFlu23(gm); const d = (P.fluR || 0) - f0; if (d > 0) P.fluR = f0 + d * (hasTr('hardy') ? .5 : 1) * (hasTr('cold') ? 1.3 : 1); };
 
 // ================= tailoring =================
 const TEXTILE = new Set(['jacket', 'sweater', 'raincoat', 'hat', 'leather', 'parka', 'ushanka']);
 function clothIns(c) { const d = ITEMS[c.id]; return (d.ins || 0) * (.4 + .6 * cdur(c) / 100) + (c.pad ? 2 : 0); }
-insulation = function () { let s = 3; for (const k of ['torso', 'head']) { const c = P.cloth && P.cloth[k]; if (c) s += clothIns(c); } if (P.sleep && (!P.bed || P.bed.type === 'bed' || P.bed.type === 'sofa')) s += 6; return Math.round(s); };
 const sewkit = () => P.inv.find(i => i.id === 'sewkit' && i.uses > 0);
 const cutTool = () => ['knife', 'cleaver', 'machete', 'hatchet', 'axe'].find(hasTool);
 function useSew() { const s = sewkit(); s.uses--; if (s.uses <= 0) { P.inv.splice(P.inv.indexOf(s), 1); toast('Нитки закончились'); } }
@@ -393,70 +389,6 @@ function shoot(w) {
   if (it.dur <= 0) { toast('Сломалось: ' + w.name); P.weapon = null; }
   else if (it.mag <= 0) toast(ammoFor(it).length ? 'Патроны кончились. Удар — перезарядка' : 'Патроны кончились');
 }
-attack = function () {
-  if (P.car) { honk(); return; }
-  if (mode !== 'play' || paused || panel || P.sleep || P.cd > 0) return;
-  if (P.act && P.act.kind === 'reload') return;
-  const W0 = P.weapon ? ITEMS[P.weapon.id] : FISTS;
-  if (W0.gun) {
-    if (P.weapon.mag > 0) { shoot(W0); return; }
-    if (ammoFor(P.weapon).length) { startReload(); return; }
-    if ((P._clickT || 0) < animT) { P._clickT = animT + 3; SFX.click(); toast('Патронов нет: остаётся бить прикладом'); }
-  }
-  const w = W0.gun ? {dmg:W0.melee, range:.95, cd:.6, cleave:1} : W0;
-  P.cd = w.cd * (P.en < 15 ? 1.3 : 1) * (1 + (P.panic || 0) / 300) * (fracAt('arm') ? 1.25 : 1); P.swing = .2; P.act = null; P.atkT = 0; P.atkDur = Math.max(.28, w.cd * .75);
-  SFX.swing(w.dmg > 30);
-  if (!mouseAim) {
-    let near = null, nd = w.range + .9;
-    for (const z of zs) { const d = Math.hypot(z.x - P.x, z.y - P.y); if (d < nd && los(P.x, P.y, z.x, z.y)) { nd = d; near = z; } }
-    if (near) P.face = Math.atan2(near.y - P.y, near.x - P.x);
-  }
-  const hits = [];
-  for (const z of zs) {
-    const dx = z.x - P.x, dy = z.y - P.y, d = Math.hypot(dx, dy);
-    if (d > w.range + z.r) continue;
-    let a = Math.atan2(dy, dx) - P.face; a = Math.atan2(Math.sin(a), Math.cos(a));
-    if (Math.abs(a) < 1.0 && los(P.x, P.y, z.x, z.y)) hits.push([d, z]);
-  }
-  hits.sort((a, b) => a[0] - b[0]);
-  let n = Math.min(w.cleave, hits.length), quiet = n > 0;
-  if (n && rng() < missChance()) { n = 0; quiet = false; if ((P._missT || 0) < animT) { P._missT = animT + 4; toast((P.panic || 0) > 50 ? 'Мимо! Руки трясутся от страха' : 'Мимо!'); } }
-  for (let i = 0; i < n; i++) {
-    const z = hits[i][1], dx = z.x - P.x, dy = z.y - P.y;
-    const unaware = z.state !== 'chase' && !((z.aw || 0) > .7);
-    const behind = Math.abs(wrapA(Math.atan2(P.y - z.y, P.x - z.x) - z.face)) > 1.9;
-    const sneakHit = unaware && (P.sneak || behind);
-    let dmg = w.dmg * (.85 + rng() * .3) * (P.en < 15 ? .7 : 1) * (1 + .06 * skillLv('fight')) * ((P.stress || 0) > 60 ? .85 : 1) * dmgK();
-    if (rng() < .12) dmg *= 2;
-    if (sneakHit) { dmg *= z.brute ? 2.2 : P.sneak ? 4 : 2.5; if (!world.snkMsg) { world.snkMsg = true; toast('Удар со спины! Мертвецы, которые тебя не видят, получают в разы больше урона'); } }
-    else quiet = false;
-    z.hp -= dmg; SFX.hit(w.dmg > 30, z.x, z.y);
-    const l = Math.hypot(dx, dy) || 1;
-    z.kx = dx / l * 3.2; z.ky = dy / l * 3.2; z.stun = .45; z.state = 'chase'; z.lost = 0; z.aw = 0;
-    z.pal.blood = Math.min(5, z.pal.blood + 1);
-    addBlood(z.x, z.y, .45); emit('blood', z.x, z.y, 1.2, 7, Math.atan2(dy, dx), 1.3, 2.4);
-    if (z.hp <= 0) {
-      corpses.push({x:z.x, y:z.y, face:z.face, pal:z.pal, fall:0, dir:-1, seed:z.seed}); emit('blood', z.x, z.y, 1, 10, Math.atan2(dy, dx), 1.6, 2.8);
-      if (corpses.length > 120) corpses.shift();
-      addBlood(z.x, z.y, .9);
-      zs.splice(zs.indexOf(z), 1); kills++; SFX.splat(z.x, z.y); addXp('fight', 1); onZDeath(z);
-      if (sneakHit) { stat('sneakk'); if (((P.stats && P.stats.sneakk) || 0) >= 5) ach('ninja'); }
-    } else quiet = false;
-  }
-  if (!n && !hits.length) {
-    const tx = Math.floor(P.x + Math.cos(P.face) * .8), ty = Math.floor(P.y + Math.sin(P.face) * .8), i = ty * MW + tx;
-    if (get(tx, ty) === WIN && !obs[i].broken && !obs[i].bhp) {
-      obs[i].broken = true; noise(P.x, P.y, 9); toast('Окно разбито'); SFX.glass(tx + .5, ty + .5); emit('glass', tx + .5, ty + .5, 1.2, 16, P.face, 1.6, 2.2);
-      if (!P.weapon) glassCut(.5, 'Разбил стекло кулаком и порезался');
-    }
-  }
-  if (n && P.weapon) {
-    P.weapon.dur--;
-    if (P.weapon.dur <= 0) { toast('Сломалось: ' + ITEMS[P.weapon.id].name); P.weapon = null; }
-  }
-  P.en = Math.max(0, P.en - .7);
-  noise(P.x, P.y, quiet ? 2.2 : 6.5); if (!quiet) scareCrows(P.x, P.y, 7);
-};
 
 // ================= mechanics, base defence, lures, storage: world actions =================
 let lures = [], stashes = [];
@@ -565,13 +497,6 @@ function extraAction(excl) {
   for (const [, a] of cand) if (!(excl && excl.has(a.tk))) return a;
   return null;
 }
-const getAction23 = getAction;
-getAction = function (excl) {
-  let a = getAction23(excl);
-  if (a && a.kind === 'unbar' && a.o && obs[a.o.i].mhp > 0) a = {kind:'unmetal', label:'снять лист металла', o:a.o};
-  if (a || P.car) return a;
-  return extraAction(excl);
-};
 const XACT = {
   carfix(a) {
     const p = a.f, lv = skillLv('mech');
@@ -624,21 +549,6 @@ const XACT = {
     f.label = nx; SFX.rustle(); toast(nx ? 'Табличка: ' + LABELS[nx].name : 'Табличка снята');
   },
 };
-const finishAct23 = finishAct;
-finishAct = function (a) {
-  if (a.kind === 'job') {
-    a.fn();
-    if (a.reopen && mode === 'play' && !P.act && !paused && !P.sleep) { openPanel('inv', a.sub ? {sub:a.sub} : null); panel.tab = a.reopen; if (a.sel !== undefined) panel.sel = a.sel; if (a.part !== undefined) panel.part = a.part; renderPanel(); }
-    return;
-  }
-  if (a.kind === 'reload') { finishReload(a); return; }
-  if (a.kind === 'hotwire') {
-    if (rng() < .38 + .12 * skillLv('mech') + .03 * skillLv('carp')) { a.f.key = true; toast('Провода соединены: машина заведётся'); addXp('mech', 2); }
-    else { noise(P.x, P.y, 6); addXp('mech', .5); toast('Не вышло. Попробуй ещё раз'); }
-    return;
-  }
-  finishAct23(a);
-};
 // metal sheets take the hits first; bashing zombies set off lures
 const damageOpening23 = damageOpening;
 damageOpening = function (i, dmg) {
@@ -654,13 +564,6 @@ damageOpening = function (i, dmg) {
   damageOpening23(i, dmg);
 };
 // horde heads for the nearest wound-up lure
-const startHorde23 = startHorde;
-startHorde = function () {
-  const before = new Set(zs); startHorde23();
-  const fresh = zs.filter(z => !before.has(z)); for (const z of fresh) z.horde = true;
-  const lu = lures.filter(p => !p.dead && p.ch > 0 && Math.hypot(p.cx - P.x, p.cy - P.y) > 7 && Math.hypot(p.cx - P.x, p.cy - P.y) < 50).sort((a, b) => Math.hypot(a.cx - P.x, a.cy - P.y) - Math.hypot(b.cx - P.x, b.cy - P.y))[0];
-  if (lu) { lu.horde = true; for (const z of fresh) { z.tx = lu.cx + (rng() - .5) * 5; z.ty = lu.cy + (rng() - .5) * 5; } toast('Орда учуяла шумовую приманку и идёт к ней'); }
-};
 
 // ================= stealth & special zombies =================
 // how hard you are to see this frame (cached once per frame, used for every zombie)
@@ -747,13 +650,6 @@ HOT[2].pick = () => {
   if (W.some(needBand)) return f('bandage') || f('rag');
   if ((P.pain || 0) > 35 && !(P.painkT > 0)) return f('painkill') || f('pills');
   return (P.hp < 90 && (f('medkit') || f('pills') || f('painkill'))) || f('bandage');
-};
-const cell23 = cell;
-cell = function (it, n, onTap, opt) {
-  const c = cell23(it, n, onTap, opt), d = it && ITEMS[it.id];
-  if (d && d.kind === 'cloth' && it.cd != null && it.cd < 100 && !c.querySelector('.bar')) { const b = mk('span', 'bar'), f = mk('i'); f.style.width = Math.max(4, Math.round(it.cd)) + '%'; if (it.cd < 30) f.className = 'lo'; b.appendChild(f); c.appendChild(b); }
-  if (d && d.kind === 'weapon' && d.gun) c.appendChild(mk('span', 'cnt', (it.mag || 0) + '/' + d.mag));
-  return c;
 };
 const moodleList23 = moodleList;
 moodleList = function () {

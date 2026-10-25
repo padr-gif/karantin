@@ -36,24 +36,10 @@ function placeUniques() {
 }); }
 
 // ---- как выглядит: своё имя, золотая рамка, своя история в карточке ----
-{ const ce = cell;
-  cell = function (it, n, onTap, opt) {
-    const c = ce(it, n, onTap, opt), q = uniqOf(it);
-    if (q) { c.classList.add('uniq'); c.title = q.name; c.setAttribute('aria-label', q.name); const l = c.querySelector('.nmL'); if (l) l.textContent = q.name.split(' ')[0]; }
-    return c;
-  };
-  const dc = detailCard;
-  detailCard = function (it, n, buttons, eq) {
-    const r = dc(it, n, buttons, eq), q = uniqOf(it);
-    if (q) { r.classList.add('uniq'); const b = r.querySelector('.nm b'); if (b) b.textContent = q.name; const c = r.querySelector('.cat'); if (c) c.textContent = 'Особая находка'; const p = r.querySelector('.desc'); if (p) p.textContent = q.text; else r.insertBefore(mk('p', 'desc', q.text), r.querySelector('.acts')); }
-    return r;
-  };
-}
 
 // ---- свойства ----
 { const ft = fireTool; fireTool = function () { return P.inv.find(i => i.u === 'lighter') || ft(); }; }
 { const uf = useFireTool; useFireTool = function () { const t = fireTool(); if (t && t.u === 'lighter') return; uf(); }; }
-{ const dk = dmgK; dmgK = function () { return dk() * (P.weapon && P.weapon.u === 'bat' ? 1.2 : 1); }; }
 { let g0 = null;
   onUpdate((dt, {s0}) => {
     if (mode !== 'play' || !P) return;

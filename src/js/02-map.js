@@ -96,6 +96,7 @@ function mkItem(id) {
   if (d && d.gun) it.mag = rng() < .5 ? 0 : ri(1, d.mag);
   if (d && d.kind === 'cloth' && d.slot !== 'wrist' && rng() < .35) it.cd = ri(45, 95);
   if (id === 'lure') it.ch = 3;
+  if (id === 'filter') it.uses = FILTER_USES;
   return it;
 }
 function houseOk(Hs) {

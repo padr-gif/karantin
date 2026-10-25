@@ -20,10 +20,10 @@ function hdFogged(fr, f, tint) {
   if (HDFOG.size > 140) { let n = 30; for (const key of HDFOG.keys()) { HDFOG.delete(key); if (--n <= 0) break; } }
   return c;
 }
-const objAt29 = objAt;
-objAt = function (id, name, wx, wy, f, alpha, offX, tint) {
+// детальная графика: кадр высокого разрешения, если есть
+function objAtDraw(id, name, wx, wy, f, alpha, offX, tint) {
   const fr = hdFrame(name);
-  if (!fr) return objAt29(id, name, wx, wy, f, alpha, offX, tint);
+  if (!fr) return objAtVec(id, name, wx, wy, f, alpha, offX, tint);
   const s = fr[7] || 1, src = f >= .99 && !tint ? null : hdFogged(fr, f, tint);
   // к пикселю экрана, а не мира: иначе при движении кадр дрожит на долю мирового пикселя
   const q = DPR || 1, x = Math.round((SX(wx, wy) - fr[5] / s + (offX || 0)) * q) / q, y = Math.round((SY(wx, wy, 0) - fr[6] / s) * q) / q;
@@ -32,7 +32,7 @@ objAt = function (id, name, wx, wy, f, alpha, offX, tint) {
   if (src) ctx.drawImage(src, x, y, fr[3] / s, fr[4] / s);
   else ctx.drawImage(ART.imgs[fr[0]], fr[1], fr[2], fr[3], fr[4], x, y, fr[3] / s, fr[4] / s);
   ctx.globalAlpha = 1; ctx.imageSmoothingEnabled = false;
-};
+}
 const hdReset30 = hdReset;
 hdReset = function () { hdReset30(); HDFOG.clear(); };
 

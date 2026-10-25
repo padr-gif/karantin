@@ -9,10 +9,7 @@ heroVar = function (lk) {
   return v && ART.meta.frames['pm' + v + '_idle_0_0'] ? v : '';
 };
 
-// ---- удары: кулаки по очереди (правой — левой), в движении ноги продолжают идти ----
-{ const at = attack;
-  attack = function () { const t0 = P.atkT; at(); if (P.atkT === 0 && t0 !== 0) P._altHand = !P._altHand; };
-}
+// (удары по очереди правой — левой: attack в 05-actions, клипы — playerAnim)
 
 // ---- настройки: «Готово» всегда под рукой — список прокручивается внутри карточки ----
 // (стили — в styles.css: #settings .setlist)

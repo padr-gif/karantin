@@ -165,5 +165,3 @@ function cSummary() {
 }
 $('cTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; SFX.ui(); showCTab(b.dataset.t); });
 document.getElementById('create').addEventListener('click', () => setTimeout(cSummary, 0));
-const openCreate27 = openCreate;
-openCreate = function () { openCreate27(); showCTab('look'); };

@@ -22,7 +22,6 @@ Object.assign(WSPEC, {shiv:{segs:[[0, 2.2, 1, '#c4ae86'], [2.2, 4.8, .9, '#bcd8e
   add('wardrobe', 'mittens'); add('dresser', 'mittens'); add('hanger', 'mittens'); add('armybox', 'gloves'); }
 
 const FILTER_USES = 6;
-const mkItem26 = mkItem; mkItem = function (id) { const it = mkItem26(id); if (id === 'filter') it.uses = FILTER_USES; return it; };
 
 // ---- hands slot ----
 const gloveItem = () => { const g = P && P.cloth && P.cloth.hands; return g && cdur(g) > 0 ? g : null; };
@@ -36,21 +35,11 @@ function glassCut(chance, what) {
   toast((what || 'Порезался о стекло') + (w ? ': ' + w.where : '') + '. Перевяжи');
   return true;
 }
-const insulation26 = insulation;
-insulation = function () { const g = P.cloth && P.cloth.hands; return insulation26() + (g ? Math.round(clothIns(g)) : 0); };
 
 
 // ---- windows ----
 const winGlass = ob => ob && ob.broken && !ob.open && !ob.cleared;
 // curtains belong to the room: from the street you can't reach them
-const windowActions26 = windowActions;
-windowActions = function (o) {
-  const ob = obs[o.i], indoors = insideHouse(P.x, P.y);
-  let c = windowActions26(o);
-  if (!indoors) c = c.filter(a => a.kind !== 'curtain' && a.kind !== 'takecur' && a.kind !== 'hangcur');
-  if (winGlass(ob) && !(ob.bhp > 0)) c.splice(1, 0, {kind:'clearglass', label:'Убрать осколки', o, tk:'cg' + o.i});
-  return c;
-};
 // climbing through: a cleared frame doesn't cut, gloves usually save your hands
 const finishVault26 = finishVault;
 finishVault = function (a) {

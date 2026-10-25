@@ -52,12 +52,12 @@ function occMasks(f) {
   }
   return out;
 }
-const objAt37 = objAt;
-objAt = function (id, name, wx, wy, f, alpha, offX, tint) {
-  if (typeof id !== 'string' || id.charCodeAt(0) !== 70 /* F */) return objAt37(id, name, wx, wy, f, alpha, offX, tint);
+// мебель, заслонённая стеной перед ней: рисуем с вырезом (clip)
+function objAtClip(id, name, wx, wy, f, alpha, offX, tint) {
+  if (typeof id !== 'string' || id.charCodeAt(0) !== 70 /* F */) return objAtDraw(id, name, wx, wy, f, alpha, offX, tint);
   const fu = furns[+id.slice(1) - 1];
   const masks = fu && fu.r ? occMasks(fu) : [];
-  if (!masks.length) return objAt37(id, name, wx, wy, f, alpha, offX, tint);
+  if (!masks.length) return objAtDraw(id, name, wx, wy, f, alpha, offX, tint);
   ctx.save();
   const big = 1e5;
   for (const m of masks) {                                  // каждый clip — «всё, кроме этого куска»; вместе — минус их объединение
@@ -65,8 +65,8 @@ objAt = function (id, name, wx, wy, f, alpha, offX, tint) {
     ctx.moveTo(m[0][0], m[0][1]); for (let k = 1; k < m.length; k++) ctx.lineTo(m[k][0], m[k][1]); ctx.closePath();
     ctx.clip('evenodd');
   }
-  try { return objAt37(id, name, wx, wy, f, alpha, offX, tint); } finally { ctx.restore(); }
-};
+  try { return objAtDraw(id, name, wx, wy, f, alpha, offX, tint); } finally { ctx.restore(); }
+}
 
 // ---- глубина мебели: мебель, задвинутая к стене, стоит своей частью в клетке этой стены. Стена такой клетки
 // рисуется по её номеру клетки (x + y + 1), а мебель — по своему центру (меньше), и стена ложилась поверх стола.
