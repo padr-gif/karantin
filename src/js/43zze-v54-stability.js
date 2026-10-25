@@ -280,3 +280,11 @@ function occBox(name, fu, wx, wy) {
     }, alpha, 0);
   };
 }
+
+// ---- номер версии в углу главного меню: видно, обновилась ли игра ----
+{ const m = $('menu');
+  if (m && !$('verTag')) { const v = mk('div', '', 'версия ' + GAME_VER); v.id = 'verTag'; m.appendChild(v); }
+  const st = document.createElement('style');
+  st.textContent = '#verTag{position:absolute;right:calc(12px + env(safe-area-inset-right,0px));bottom:calc(8px + env(safe-area-inset-bottom,0px));font:600 11px "PT Mono",monospace;color:rgba(239,231,210,.55);pointer-events:none}';
+  document.head.appendChild(st);
+}
