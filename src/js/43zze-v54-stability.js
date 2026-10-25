@@ -3,7 +3,7 @@
 // Если основное не читается или не загружается, игра берёт запасное. Сохранение можно выгрузить файлом и загрузить
 // из файла (перенести игру на другой телефон). Ошибки кадра и скрипта пишутся в журнал; в паузе — «Отчёт об ошибках».
 
-const GAME_VER = '0.55';
+const GAME_VER = '0.56';
 const PKEY = s => LKEY(s) + '-prev';
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } };
@@ -154,7 +154,7 @@ async function copyReport() {
 
 // ---- тест скорости: из главного меню, ~25 секунд, четыре сцены. Результат — в отчёт и на экран ----
 let BENCH = null; try { BENCH = JSON.parse(localStorage.getItem('karantin-bench') || 'null'); } catch (e) {}
-function perfStat() { return BENCH ? 'тест скорости: ' + BENCH.rows.map(r => r.n + ' ' + r.fps + ' FPS (худшие ' + r.low + ', код ' + r.js + ' мс)').join('; ') + ', качество ' + BENCH.res : 'тест скорости не запускался'; }
+function perfStat() { return BENCH ? 'тест скорости: ' + BENCH.rows.map(r => r.n + ' ' + r.fps + ' FPS (худшие ' + r.low + ', код ' + r.js + ' мс)').join('; ') + ', качество ' + BENCH.res + (BENCH.diag && BENCH.diag.length ? '\nдиагностика (улица): ' + BENCH.diag.map(r => r.n + ' ' + r.fps).join(' · ') : '') : 'тест скорости не запускался'; }
 const BENCH_SCENES = [
   ['Улица днём', () => { const H = houses.find(h => h.kind === 'store') || houses[0]; P.x = H.x + H.w / 2; P.y = H.y + H.h + 2.5; gameMin = 12 * 60; rain = rainTarget = 0; }],
   ['Ночь и дождь', () => { gameMin = 23 * 60; rain = rainTarget = 1; P.inv.push(mkItem('flashlight')); }],
@@ -183,10 +183,32 @@ async function runBench() {
       rows.push({n, fps:Math.round(1000 * n2 / sum), low:Math.round(1000 / (f[Math.floor(n2 * .95)] || 1000)), js:+(js / n2).toFixed(1)});
       P.hp = 1e9;
     }
+    // диагностика: одна и та же сцена (улица днём), каждый раз выключаем что-то одно — видно, что съедает кадр на этом устройстве
+    BENCH_SCENES[0][1](); camX = P.x; camY = P.y; computeVis(); fogDirty = true;
+    const keepM = drawMinimap, keepQ = resQ;
+    const DIAG = [
+      ['как есть', () => {}, () => {}],
+      ['без интерфейса', () => document.body.classList.add('benchnoui'), () => document.body.classList.remove('benchnoui')],
+      ['без миникарты', () => { drawMinimap = () => {}; }, () => { drawMinimap = keepM; }],
+      ['пол-разрешения', () => { resQ = keepQ * .5; resize(); clearCaches(); }, () => { resQ = keepQ; resize(); clearCaches(); }],
+      ['без логики', () => { update = function () { slowT = 0; }; }, () => { update = function (dt) { slowT = 0; const t = performance.now(); try { return keepU(dt); } finally { if (on) js += performance.now() - t; } }; }],
+      ['пустой кадр', () => { render = function () { mainCtx.setTransform(1, 0, 0, 1, 0, 0); mainCtx.fillStyle = '#0c0f12'; mainCtx.fillRect(0, 0, cv.width, cv.height); }; }, () => { render = function (dt) { const t = performance.now(); try { return keepR(dt); } finally { if (on) js += performance.now() - t; } }; }],
+    ];
+    const diag = [];
+    for (let k = 0; k < DIAG.length; k++) {
+      const [n, on1, off1] = DIAG[k];
+      ov.textContent = 'Диагностика · ' + (k + 1) + ' из ' + DIAG.length + ': ' + n + '…';
+      on1(); await wait(900);
+      js = 0; frames = []; lastT = 0; on = true; requestAnimationFrame(tick);
+      await wait(3000); on = false; off1();
+      const f = frames, sum = f.reduce((a, b) => a + b, 0) || 1;
+      diag.push({n, fps:Math.round(1000 * (f.length || 1) / sum)});
+    }
+    rows.diag = diag;
   } catch (e) { logErr(e, 'тест скорости'); }
   finally {
     update = keepU; render = keepR; keys.clear(); ov.remove();
-    BENCH = {t:Date.now(), rows, res:+resQ.toFixed(2), dpr:devicePixelRatio || 1, gfx:settings.gfx};
+    BENCH = {t:Date.now(), rows, diag:rows.diag || [], res:+resQ.toFixed(2), dpr:devicePixelRatio || 1, gfx:settings.gfx};
     try { localStorage.setItem('karantin-bench', JSON.stringify(BENCH)); } catch (e) {}
     newGame(); for (let i = 0; i < NT; i++) seen[i] = 1; toMenu();
     showBench();
@@ -202,13 +224,13 @@ function showBench() {
 { const list = document.querySelector('#settings .setlist');
   if (list && !$('sBench')) {
     const row = mk('div', 'set'), info = mk('div');
-    info.appendChild(mk('b', '', 'Тест скорости')); info.appendChild(mk('small', '', 'Около 25 секунд. Результат попадёт в отчёт об ошибках'));
+    info.appendChild(mk('b', '', 'Тест скорости')); info.appendChild(mk('small', '', 'Около 50 секунд. Результат попадёт в отчёт об ошибках'));
     const b = mk('button', 'mbtn', 'Проверить'); b.type = 'button'; b.id = 'sBench';
     b.addEventListener('click', () => { if (backTo !== 'menu') { toast('Запусти тест из главного меню'); return; } SFX.ui(); show(null); runBench(); });
     row.appendChild(info); row.appendChild(b); list.appendChild(row);
   }
   const st = document.createElement('style');
-  st.textContent = '#benchov{position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:80;background:rgba(12,16,18,.9);color:#efe7d2;font:600 14px "PT Sans",sans-serif;padding:8px 14px;border-radius:8px;border:1px solid #2c343a;pointer-events:none}';
+  st.textContent = 'body.benchnoui #hud,body.benchnoui #ctrl,body.benchnoui #dock,body.benchnoui #mini,body.benchnoui #toasts,body.benchnoui #events{visibility:hidden!important}#benchov{position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:80;background:rgba(12,16,18,.9);color:#efe7d2;font:600 14px "PT Sans",sans-serif;padding:8px 14px;border-radius:8px;border:1px solid #2c343a;pointer-events:none}';
   document.head.appendChild(st);
 }
 
