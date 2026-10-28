@@ -152,3 +152,25 @@ if (typeof BUILD !== 'undefined' && typeof BK !== 'undefined' && typeof defProc 
     box(r[0], r[1], r[2], r[3], 0, 50, BLD.last.ok ? [130, 220, 120] : [230, 120, 100], 1, .28);
   });
 }
+
+// ---- 4. мебель не торчит за стены: выступающую за внутренние границы дома сдвигаем внутрь, не влезает — убираем.
+//         Делается одинаково при постройке и при загрузке мира, поэтому номера мебели в сохранении не сбиваются. ----
+if (typeof reRegisterAll === 'function' && typeof onNewWorld === 'function') {
+  onNewWorld(() => {
+    let n = 0;
+    for (const f of furns) {
+      if (f.gone || !f.r || f.moved) continue;
+      const H = houses[hAt[f.y * MW + f.x] - 1]; if (!H || H.ix0 == null) continue;
+      const [x0, y0, x1, y1] = f.r, e = .02;
+      let dx = 0, dy = 0;
+      if (x0 < H.ix0 + e) dx = H.ix0 + e - x0; else if (x1 > H.ix1 - e) dx = H.ix1 - e - x1;
+      if (y0 < H.iy0 + e) dy = H.iy0 + e - y0; else if (y1 > H.iy1 - e) dy = H.iy1 - e - y1;
+      if (!dx && !dy) continue;
+      if (x1 - x0 > H.ix1 - H.ix0 - 2 * e || y1 - y0 > H.iy1 - H.iy0 - 2 * e || Math.abs(dx) > .9 || Math.abs(dy) > .9) { f.gone = true; n++; continue; }
+      f.r = [x0 + dx, y0 + dy, x1 + dx, y1 + dy]; f.cx += dx; f.cy += dy;
+      if (f.tiles && typeof tilesOfRect === 'function') f.tiles = tilesOfRect(f.r, f.x, f.y);
+      n++;
+    }
+    if (n) { reRegisterAll(); if (typeof clearCaches === 'function') clearCaches(); }
+  });
+}

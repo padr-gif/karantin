@@ -127,9 +127,11 @@ if (typeof getActions === 'function' && typeof onDraw === 'function') {
     document.addEventListener('pointerdown', e => { if (!p.hidden && !p.contains(e.target) && e.target !== AU.btn) popClose(); }, true);
     return (AU.pop = p);
   }
+  // одна цель — один проём (у окна свои ключи на каждое действие: шторы, закрыть…) или один предмет
+  const tgtKey = a => a.o ? 'o' + a.o.i : a.f && a.f.type !== 'pond' && a.f.type !== 'snow' ? a.f : 'k' + a.kind;
   function actionsFor(a) {
-    const t = actTarget(a), [ax, ay] = actPos(a), all = getActions();
-    const same = all.filter(b => (t && actTarget(b) === t) || (!t && Math.hypot(actPos(b)[0] - ax, actPos(b)[1] - ay) < .3));
+    const t = tgtKey(a), all = getActions();
+    const same = all.filter(b => tgtKey(b) === t);
     const list = same.length ? same : [a];
     // дополнительно: заколотить этот проём, переставить эту мебель
     if (a.o && typeof curBar !== 'undefined' && curBar && curBar.i === a.o.i) list.push({kind:'_bar', label:'заколотить доской', o:a.o});
@@ -146,7 +148,7 @@ if (typeof getActions === 'function' && typeof onDraw === 'function') {
     const p = popEl(), list = actionsFor(a); p.textContent = '';
     p.appendChild(mk('div', 'ttl', actName(a) || 'Действия'));
     for (const b of list) { const it = btn('', () => { popClose(); runIt(b); }); it.setAttribute('role', 'menuitem'); it.appendChild(svgIc(iconOf(b))); it.appendChild(document.createTextNode(verb(b))); p.appendChild(it); }
-    AU.popFor = actTarget(a) || a; p.hidden = false;
+    AU.popFor = tgtKey(a); p.hidden = false;
     const [x, y, z] = topOf(a), [px, py] = cssXY(SX(x, y), SY(x, y, z)), r = p.getBoundingClientRect();
     p.style.left = Math.round(Math.max(8, Math.min(innerWidth - r.width - 8, px - r.width / 2))) + 'px';
     let top = py - r.height - 14; if (top < 8) top = Math.min(innerHeight - r.height - 8, py + 20);
@@ -158,10 +160,16 @@ if (typeof getActions === 'function' && typeof onDraw === 'function') {
   // тап по предмету рядом — меню его действий
   onTap((cx, cy) => {
     if (mode !== 'play' || paused || panel || P.car) return false;
-    const [wx, wy] = worldFromScreen(cx, cy);
-    let best = null, bd = 1.25;
-    for (const a of getActions()) { const [x, y] = actPos(a); const d = Math.hypot(x - wx, y - wy); if (d < bd) { bd = d; best = a; } }
+    let best = null, bd = 1e9;
+    const k = SCALE / DEV, r = cv.getBoundingClientRect();
+    for (const a of getActions()) {
+      const [x, y, z] = topOf(a), bx = r.left + SX(x, y) * k, by = r.top + SY(x, y, -U * .25) * k, ty = r.top + SY(x, y, z) * k;
+      const hw = U * (a.o ? .7 : a.f && a.f.type === 'car' ? 1.6 : .95) * k;
+      if (cx < bx - hw || cx > bx + hw || cy < ty - 12 || cy > by + 10) continue;   // мимо силуэта
+      const d = Math.abs(cx - bx) + Math.abs(cy - (by + ty) / 2) * .5; if (d < bd) { bd = d; best = a; }
+    }
     if (!best) { popClose(); return false; }
+    // окно, дверь и предмет рядом: тап по нему — сразу меню, а не удар по стеклу
     popOpen(best); return true;
   });
 
@@ -171,9 +179,34 @@ if (typeof getActions === 'function' && typeof onDraw === 'function') {
     const a = curAct;
     if (a && !P.car && !P.sleep) outline(a);
     if (AU.btn) AU.btn.hidden = true;                                           // главное действие — обычной кнопкой справа внизу
-    if (AU.pop && !AU.pop.hidden && (!a || panel || paused) && !getActions().some(b => (actTarget(b) || b) === AU.popFor)) popClose();
+    if (AU.pop && !AU.pop.hidden && (panel || paused || !getActions().some(b => tgtKey(b) === AU.popFor))) popClose();
   });
   { const f = toMenu; toMenu = function () { popClose(); if (AU.btn) AU.btn.hidden = true; return f.apply(this, arguments); }; }
+  // кнопка действия и E делают ровно то, что подсвечено (а не «ближайшее» заново)
+  { const f = doAction; doAction = function (a0) { return f.call(this, a0 || (mode === 'play' && curAct) || undefined); }; }
+  { let t0 = 0, keep = null;
+    const f = updateHud;
+    updateHud = function () {
+      const r = f.apply(this, arguments);
+      if (mode !== 'play' || !P || P.car || !curAct) return r;
+      const now = performance.now();
+      if (now - t0 > 150) {
+        t0 = now; const list = getActions(); keep = curAct;
+        if (list.length > 1) {
+          const seen = new Set(); let best = null, bs = 1e9;
+          for (const a of list) {
+            if (!a.f && !a.o) continue;                                          // кнопка справа и метка игры ждут предмет или проём
+            const key = tgtKey(a); if (seen.has(key)) continue; seen.add(key);   // у каждой цели — её главное действие
+            const [x, y] = actPos(a), d = Math.hypot(x - P.x, y - P.y), ang = Math.abs(((Math.atan2(y - P.y, x - P.x) - (P.face || 0)) % 6.2832 + 9.4248) % 6.2832 - 3.1416);
+            const sc = d + ang * .55; if (sc < bs) { bs = sc; best = a; }
+          }
+          if (best) keep = best;
+        }
+      }
+      if (keep && keep !== curAct) { curAct = keep; if (typeof setActButton === 'function') setActButton(curAct); }
+      return r;
+    };
+  }
   addEventListener('keydown', e => { if (e.key === 'Escape' && AU.pop && !AU.pop.hidden) { popClose(); e.stopImmediatePropagation(); } }, true);
   window.__actUI = AU;
 

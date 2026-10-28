@@ -3,7 +3,7 @@
 // Батарея садится, пока экран включён; заряжается сама, когда герой в доме со светом или работающим генератором.
 // Тексты — история последней недели глазами родных; концовок у веток нет, как и у игры.
 const PH = {open:false, app:'lock', arg:null, back:[], acc:0, lastGM:null, chMsg:false};
-const phNew = () => ({bat:6 + Math.floor(Math.random() * 9), read:{}, sent:{}, newsSeen:false});
+const phNew = () => ({bat:62 + Math.floor(Math.random() * 30), read:{}, sent:{}, newsSeen:false});
 const phG = s => s.replace(/\{([^|}]*)\|([^}]*)\}/g, (_, m, f) => (P && P.look && P.look.g === 'f' ? f : m));   // {поел|поела}
 
 // ---- переписки: [день от начала игры, время, 'in'|'out', текст] ----
@@ -166,6 +166,7 @@ const phUnreadAll = () => P && P.phone ? PH_THREADS.reduce((a, t) => a + Math.ma
 #phone .off .bigbat:after{content:'';position:absolute;right:-9px;top:9px;width:5px;height:10px;background:#ff5a4a;border-radius:0 2px 2px 0}
 #phone .off .bigbat b{position:absolute;left:3px;top:3px;bottom:3px;width:6px;background:#ff5a4a;border-radius:2px}
 #bPhone{position:relative}
+#bMap,#taskChip{display:none!important}
 #bPhone .pdot{position:absolute;top:2px;right:4px;width:9px;height:9px;border-radius:50%;background:#e5483b;box-shadow:0 0 0 2px rgba(0,0,0,.5)}
 #bPhone .pdot[hidden]{display:none}
 #bPhone .pch{position:absolute;top:1px;left:5px;font-size:11px;color:#f0c477}`;
@@ -179,8 +180,12 @@ const PH_ICON = {
   news:'<svg viewBox="0 0 24 24"><path d="M4 5h13v14H6a2 2 0 0 1-2-2zM17 9h3v8a2 2 0 0 1-2 2M7 9h7M7 13h7M7 16h5"/></svg>',
   photos:'<svg viewBox="0 0 24 24"><path d="M3 6h18v13H3zM3 16l5-5 4 4 3-3 6 6"/><circle cx="16" cy="9.5" r="1.5"/></svg>',
   notes:'<svg viewBox="0 0 24 24"><path d="M6 3h12v18H6zM9 8h6M9 12h6M9 16h4"/></svg>',
+  map:'<svg viewBox="0 0 24 24"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14"/></svg>',
+  diary:'<svg viewBox="0 0 24 24"><path d="M6 3h11a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H6zM6 3v18M9 8h6M9 12h6M9 16h4"/></svg>',
+  self:'<svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>',
+  craft:'<svg viewBox="0 0 24 24"><path d="M14 4l6 6-3 3-6-6zM11 7l-7 7 3 3 7-7M4 20l3-3"/></svg>',
 };
-const PH_APPS = [['msgs', 'Сообщения', '#2fbf5a'], ['calls', 'Телефон', '#2f9e44'], ['news', 'Новости', '#d9534f'], ['photos', 'Фото', '#e8a33a'], ['notes', 'Заметки', '#c9a14a']];
+const PH_APPS = [['map', 'Карта', '#3d7fd6'], ['diary', 'Дневник', '#8a6a3a'], ['self', 'Состояние', '#c8473d'], ['craft', 'Создать', '#6f7f8f'], ['msgs', 'Сообщения', '#2fbf5a'], ['calls', 'Телефон', '#2f9e44'], ['news', 'Новости', '#d9534f'], ['photos', 'Фото', '#e8a33a'], ['notes', 'Заметки', '#c9a14a']];
 
 // ---- фото: простые картинки на холсте ----
 function phPhoto(kind) {
@@ -269,9 +274,9 @@ const PH_VIEWS = {
   home(bd) {
     const h = mk('div', 'home');
     for (const [id, name, col] of PH_APPS) {
-      const a = btn('', () => { SFX.ui(); phShow(id); }, 'app');
+      const a = btn('', () => { SFX.ui(); if (PH_GAME[id]) { phClose(); PH_GAME[id](); } else phShow(id); }, 'app');
       const ic = mk('span', 'pic'); ic.style.background = col; ic.innerHTML = PH_ICON[id]; a.appendChild(ic); a.appendChild(mk('span', '', name));
-      const n = id === 'msgs' ? phUnreadAll() : id === 'calls' ? PH_CALLS.filter(c => c[3] === 'miss').length : id === 'news' && !P.phone.newsSeen ? 1 : 0;
+      const n = id === 'msgs' ? phUnreadAll() : id === 'calls' ? PH_CALLS.filter(c => c[3] === 'miss').length : id === 'news' && !P.phone.newsSeen ? 1 : id === 'diary' && P.tasks ? P.tasks.list.filter(t => !t.done).length : 0;
       if (n) a.appendChild(mk('span', 'dot', String(n)));
       h.appendChild(a);
     }
@@ -355,6 +360,9 @@ const PH_VIEWS = {
   },
 };
 
+// ---- приложения-окна игры: карта, дневник, состояние, создать ----
+const phInv = tab => { openPanel('inv'); if (panel) { panel.tab = tab; renderPanel(); } };
+const PH_GAME = {map:() => openMap(), diary:() => phInv('tasks'), self:() => phInv('self'), craft:() => phInv('craft')};
 // ---- открыть, закрыть, батарея ----
 function phCharging() { return !!(P && P.phone && P.phone.bat < 100 && insideHouse(P.x, P.y) && ((typeof powerOn === 'function' && powerOn()) || (typeof gens !== 'undefined' && gens.some(g => g.on)))); }
 function phOpen() {
@@ -363,7 +371,7 @@ function phOpen() {
   if (typeof closePanel === 'function' && panel) closePanel();
   PH.open = true; PH.back = []; PH.acc = 0; paused = true; atkHeld = false; joy.id = null; joy.x = joy.y = 0; if ($('stick')) $('stick').hidden = true;
   phEl().hidden = false;
-  phShow(P.phone.bat < 1 ? 'off' : 'lock', null, true);
+  phShow(phUnreadAll() ? 'lock' : 'home', null, true);                          // есть новые сообщения — сначала экран с уведомлениями
   SFX.select && SFX.select();
 }
 function phClose() {
@@ -385,15 +393,9 @@ setInterval(() => {
   const gm = Math.max(0, Math.min(240, gameMin - PH.lastGM)); PH.lastGM = gameMin;
   if (phCharging()) {
     const was = P.phone.bat; P.phone.bat = Math.min(100, P.phone.bat + gm / 2);
-    if (was < 100 && P.phone.bat >= 100 && mode === 'play' && !PH.open) toast('Телефон заряжен');
-    if (!PH.chMsg && gm > 0 && mode === 'play') { PH.chMsg = true; toast('Телефон заряжается от розетки'); }
   }
-  // разряд, пока экран включён: 1% за 8 секунд
-  if (PH.open && PH.app !== 'off') {
-    PH.acc += 1; if (PH.acc >= 8) { PH.acc = 0; if (!phCharging()) P.phone.bat = Math.max(0, P.phone.bat - 1); }
-    if (P.phone.bat < 1) { phShow('off', null, true); setTimeout(phClose, 2500); }
-    else phBar();
-  }
+  // пока экран включён, батарея садится медленно и никогда не до нуля: телефон — это меню, он не должен отключаться
+  if (PH.open) { PH.acc += 1; if (PH.acc >= 30) { PH.acc = 0; if (!phCharging()) P.phone.bat = Math.max(18, P.phone.bat - 1); } phBar(); }
   phBadge();
 }, 1000);
 
