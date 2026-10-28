@@ -4,7 +4,7 @@
 // справа внизу не показываются. Клавиша E работает как раньше. Здесь же: компактная нижняя панель и телефон под «−/+».
 if (typeof getActions === 'function' && typeof onDraw === 'function') {
   const css = `
-#bAct,#bMore,#actAlt{display:none!important}
+#bMore,#actAlt{display:none!important}
 #actBtn{position:fixed;left:0;top:0;z-index:9;display:flex;align-items:center;gap:7px;height:40px;padding:0 14px 0 10px;border-radius:20px;
   background:rgba(16,20,22,.9);border:2px solid #f0c477;color:#f6e7c4;font:700 14px system-ui,sans-serif;white-space:nowrap;cursor:pointer;
   box-shadow:0 4px 14px rgba(0,0,0,.45);transform:translate(-50%,-100%);touch-action:manipulation;transition:opacity .15s}
@@ -170,7 +170,7 @@ if (typeof getActions === 'function' && typeof onDraw === 'function') {
     if (mode !== 'play' || !P) { if (AU.btn) AU.btn.hidden = true; return; }
     const a = curAct;
     if (a && !P.car && !P.sleep) outline(a);
-    btnShow(a);
+    if (AU.btn) AU.btn.hidden = true;                                           // главное действие — обычной кнопкой справа внизу
     if (AU.pop && !AU.pop.hidden && (!a || panel || paused) && !getActions().some(b => (actTarget(b) || b) === AU.popFor)) popClose();
   });
   { const f = toMenu; toMenu = function () { popClose(); if (AU.btn) AU.btn.hidden = true; return f.apply(this, arguments); }; }
