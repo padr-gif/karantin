@@ -134,7 +134,7 @@ node tests/run.mjs                              # все автотесты
 ```bash
 npm run site      # собрать сайт в site/ (страница, манифест, service worker, иконки)
 npm run deploy    # собрать и опубликовать в ветку gh-pages
-npm run appicon   # перерисовать иконку приложения (tools/icons/appicon.py)
+npm run appicon   # перерисовать иконку приложения (рисунок: tools/icons/appicon.svg)
 ```
 
 ## Шрифты

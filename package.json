@@ -8,7 +8,7 @@
     "build": "node build.mjs",
     "site": "node build.mjs --site",
     "deploy": "node build.mjs --site && sh tools/deploy.sh",
-    "appicon": "python3 tools/icons/appicon.py pwa",
+    "appicon": "node tools/icons/appicon.mjs pwa",
     "dev": "node serve.mjs",
     "test": "node build.mjs --dev && node tests/run.mjs",
     "icons": "python3 tools/icons/gen.py assets/sprites/icons.png assets/icons.json",
