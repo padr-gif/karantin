@@ -8,19 +8,28 @@ const TUT = {on:false, dead:false, step:-1, wait:false, t0:0, d:{}, iv:0, ui:nul
 // ---- оформление (своё, чтобы не трогать styles.css) ----
 {
   const css = `
-#tutCard{position:fixed;top:calc(var(--st,0px) + 10px);left:50%;transform:translateX(-50%);z-index:40;width:min(460px,calc(100% - 24px));
-  background:rgba(16,20,22,.94);border:1px solid rgba(240,196,119,.45);border-radius:8px;padding:12px 14px 12px;color:#e9e3d6;
-  box-shadow:0 8px 24px rgba(0,0,0,.45);font:15px/1.35 system-ui,sans-serif;display:grid;gap:6px;transition:opacity .25s}
+#tutCard{position:fixed;top:calc(var(--st,0px) + 8px);left:50%;transform:translateX(-50%);z-index:40;width:min(380px,calc(100vw - 500px));min-width:250px;
+  color:#e9e3d6;font:14px/1.3 system-ui,sans-serif;display:grid;gap:4px;pointer-events:none}
 #tutCard[hidden]{display:none}
-#tutCard .tst{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#f0c477}
-#tutCard h3{margin:0;font-size:17px;font-weight:700;color:#fff}
-#tutCard p{margin:0;color:#cfc8b8}
-#tutCard .trow{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-top:4px}
-#tutCard button{min-height:40px;padding:8px 14px;border-radius:5px;font:600 14px system-ui,sans-serif;cursor:pointer}
-#tutCard .tgo{background:#f0c477;color:#1a1408;border:0}
-#tutCard .tskip{background:transparent;color:#a9a294;border:1px solid rgba(233,227,214,.25)}
-#tutCard.ok{border-color:#9fd58a}
-#tutCard.ok .tst{color:#9fd58a}
+#tutCard .tbar{pointer-events:auto;display:flex;align-items:center;gap:8px;background:rgba(14,18,20,.86);border:1px solid rgba(240,196,119,.4);
+  border-radius:20px;padding:4px 4px 4px 6px;box-shadow:0 4px 14px rgba(0,0,0,.35);transition:border-color .2s}
+#tutCard .tn{flex:none;min-width:34px;height:26px;border-radius:13px;background:#f0c477;color:#1a1408;font:700 12px/26px system-ui,sans-serif;text-align:center;padding:0 6px}
+#tutCard .tt{flex:1;min-width:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#tutCard .tb{flex:none;width:30px;height:30px;border-radius:15px;border:0;background:rgba(233,227,214,.1);color:#e9e3d6;font:700 15px/30px system-ui,sans-serif;cursor:pointer;padding:0}
+#tutCard .tdet{pointer-events:auto;background:rgba(14,18,20,.82);border-radius:10px;padding:7px 11px;color:#d8d2c4;font-size:13px;line-height:1.35;transition:opacity .3s}
+#tutCard .tdet[hidden]{display:none}
+#tutCard.ok .tbar{border-color:#9fd58a}
+#tutCard.ok .tn{background:#9fd58a}
+#tutIntro{position:fixed;inset:0;z-index:41;display:grid;place-items:center;background:rgba(6,8,8,.45)}
+#tutIntro[hidden]{display:none}
+#tutIntro .ti{width:min(400px,calc(100% - 32px));background:rgba(16,20,22,.96);border:1px solid rgba(240,196,119,.45);border-radius:10px;padding:16px 18px;display:grid;gap:8px;color:#e9e3d6;font:14px/1.4 system-ui,sans-serif}
+#tutIntro .tst{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#f0c477}
+#tutIntro h3{margin:0;font-size:18px;color:#fff}
+#tutIntro p{margin:0;color:#cfc8b8}
+#tutIntro .trow{display:flex;gap:8px;justify-content:flex-end;margin-top:4px}
+#tutIntro button{min-height:42px;padding:8px 16px;border-radius:6px;font:600 14px system-ui,sans-serif;cursor:pointer}
+#tutIntro .tgo{background:#f0c477;color:#1a1408;border:0}
+#tutIntro .tskip{background:transparent;color:#a9a294;border:1px solid rgba(233,227,214,.25)}
 .tutHi{animation:tutHi 1.1s ease-in-out infinite;position:relative;z-index:6}
 @keyframes tutHi{0%,100%{box-shadow:0 0 0 0 rgba(240,196,119,.0)}50%{box-shadow:0 0 0 6px rgba(240,196,119,.55)}}
 #tutLoad{position:fixed;inset:0;z-index:85;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 40%,#1a2024,#0c0f12 70%);color:#e9e3d6;transition:opacity .35s}
@@ -33,7 +42,8 @@ const TUT = {on:false, dead:false, step:-1, wait:false, t0:0, d:{}, iv:0, ui:nul
 #tutLoad .tlb i{display:block;height:100%;width:0;background:#f0c477;transition:width .25s}
 #tutLoad .tls{font-size:13px;color:#a9a294;min-height:2.6em}
 #mTut small{display:inline-block;margin-left:10px;font-size:11px;letter-spacing:.08em;color:#f0c477;text-transform:none;font-family:system-ui,sans-serif}
-#tutDeadMsg{margin:0;color:#cfc8b8;line-height:1.45}`;
+#tutDeadMsg{margin:0;color:#cfc8b8;line-height:1.45}
+#tutTips{margin:0;padding-left:18px;color:#f0c477;font-size:14px;line-height:1.45}`;
   const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
 }
 
@@ -56,30 +66,35 @@ function tutZombie(dmin, dmax, hp, spd) {
 
 // ---- шаги ----
 const TUT_STEPS = [
-  {title:'Иди', text:() => isTouch ? 'Левая половина экрана — джойстик: прижми палец и веди туда, куда идти.' : 'WASD или стрелки — идти. Shift — бежать, C — красться.',
+  {title:'Пройдись', text:() => isTouch ? 'Левая половина экрана — джойстик: прижми палец и веди.' : 'WASD или стрелки — идти, Shift — бежать.',
    enter() { TUT.d.sx = P.x; TUT.d.sy = P.y; },
    check:() => Math.hypot(P.x - TUT.d.sx, P.y - TUT.d.sy) > 2.5},
-  {title:'Обыщи мебель', text:() => 'Подойди к отмеченной мебели и нажми кнопку действия справа внизу' + (isTouch ? '' : ' (или E)') + '. Так обыскиваются шкафы, холодильники, машины.',
+  {title:'Обыщи отмеченную мебель', text:() => 'Подойди к кольцу и нажми кнопку действия справа внизу' + (isTouch ? '.' : ' (или E).'),
    hi:['bAct'], target:() => TUT.d.box && [TUT.d.box.x + .5, TUT.d.box.y + .5],
    check:() => panel && panel.kind === 'loot'},
-  {title:'Забери находки', text:() => 'Перенеси в рюкзак чипсы и биту: нажми на вещь, потом «Взять». Двойной тап переносит сразу.',
+  {title:'Забери чипсы и биту', text:() => 'Нажми на вещь и «Взять». Двойной тап переносит сразу.',
    target:() => TUT.d.box && [TUT.d.box.x + .5, TUT.d.box.y + .5],
    check:() => tutHas('bat') && (tutHas('chips') || !((TUT.d.box && TUT.d.box.items) || []).some(i => i && i.id === 'chips'))},
-  {title:'Поешь', text:() => 'Голод — значок слева вверху. Закрой ящик, открой рюкзак' + (isTouch ? '' : ' (I)') + ', выбери чипсы и нажми «Съесть». Еда и вода — первое, о чём думать.',
+  {title:'Поешь', text:() => 'Ты голоден — значок слева вверху. Открой рюкзак' + (isTouch ? '' : ' (I)') + ', выбери чипсы, «Съесть».',
    hi:['bInv'], enter() { P.sat = Math.min(P.sat, 28); TUT.d.sat = P.sat; TUT.d.chips = tutCount('chips'); },
    check:() => !TUT.d.chips || tutCount('chips') < TUT.d.chips || P.sat > TUT.d.sat + 6},
-  {title:'Возьми биту в руки', text:() => 'В рюкзаке выбери биту и нажми «Взять в руки». Голыми руками от мертвеца не отбиться.',
+  {title:'Возьми биту в руки', text:() => 'В рюкзаке выбери биту и нажми «Взять в руки».',
    hi:['bInv'], check:() => P.weapon && P.weapon.id === 'bat'},
-  {title:'Выйди на улицу', text:() => 'Подойди к двери — она открывается той же кнопкой действия. Сейчас день и тихо — самое время.',
+  {title:'Крадись', text:() => 'Шаги слышно далеко. Включи «Красться»' + (isTouch ? '' : ' (C)') + ' — мертвецы услышат только вблизи.',
+   hi:['bSneak'], check:() => !!P.sneak},
+  {title:'Выйди на улицу', text:() => 'Дверь открывается той же кнопкой действия.',
    hi:['bAct'], target:() => TUT.d.door && [TUT.d.door.x + .5, TUT.d.door.y + .5],
    check:() => !tutHome() && !panel},
-  {title:'Убей мертвеца', text:() => 'Он заметил тебя и идёт. Бей кнопкой «Удар»' + (isTouch ? ' или тапом справа' : ' — мышь или Пробел') + '. Ударил — отступи, дождись, пока подойдёт, и снова.',
+  {title:'Убей мертвеца', text:() => 'Бей кнопкой «Удар»' + (isTouch ? ' или тапом справа' : ', мышью или Пробелом') + '. Ударил — отступи и снова.',
    hi:['bAtk'], enter() { TUT.d.k0 = kills; TUT.d.z = tutZombie(6, 8, 40, .72); },
    target:() => TUT.d.z && zs.includes(TUT.d.z) && [TUT.d.z.x, TUT.d.z.y],
    tick() { if (!TUT.d.z || !zs.includes(TUT.d.z)) { if (kills <= TUT.d.k0) TUT.d.z = tutZombie(6, 8, 40, .72); } },
    check:() => kills > TUT.d.k0},
-  {title:'Шум привлёк остальных', text:() => 'Их слишком много, и они со всех сторон. Бей, отступай, ищи проход — держись, сколько сможешь. В этом городе так заканчивается любая история.',
-   enter() { TUT.t0 = performance.now(); for (let k = 0; k < 24; k++) tutZombie(6, 12, 55, .85 + Math.random() * .2); SFX.scream && SFX.scream(); },
+  {title:'Шум привлёк остальных', text:() => 'Они со всех сторон. Держись, сколько сможешь — так кончается любая история.',
+   enter() {
+     TUT.t0 = performance.now(); for (let k = 0; k < 24; k++) tutZombie(6, 12, 55, .85 + Math.random() * .2);
+     SFX.scream && SFX.scream(); if (typeof logEv === 'function') logEv('Их слишком много. Если кто-то найдёт этот дневник — не шумите');
+   },
    tick() {
      const s = (performance.now() - TUT.t0) / 1000, mine = zs.filter(z => z.tut);
      if (mine.length < 14) for (let k = 0; k < 4; k++) tutZombie(7, 11, 55, 1);                          // толпа не кончается
@@ -88,19 +103,40 @@ const TUT_STEPS = [
    }},
 ];
 
-// ---- карточка с заданием ----
+// ---- плашка с заданием: одна строка сверху, подробности — на 7 секунд при новом шаге или по кнопке «?» ----
 function tutCard() {
   if (TUT.ui) return TUT.ui;
   const c = mk('div'); c.id = 'tutCard'; c.hidden = true; c.setAttribute('role', 'status'); c.setAttribute('aria-live', 'polite');
-  c.innerHTML = '<div class="tst"></div><h3></h3><p></p><div class="trow"><button type="button" class="tskip">Выйти из обучения</button><button type="button" class="tgo" hidden>Начать</button></div>';
-  c.querySelector('.tskip').addEventListener('click', () => { SFX.ui(); toMenu(); });
-  c.querySelector('.tgo').addEventListener('click', () => { SFX.ui(); c.querySelector('.tgo').hidden = true; paused = false; tutGo(0); });
+  c.innerHTML = '<div class="tbar"><span class="tn"></span><span class="tt"></span><button type="button" class="tb tq" aria-label="Подсказка">?</button><button type="button" class="tb tx" aria-label="Выйти из обучения">✕</button></div><div class="tdet" hidden></div>';
+  c.querySelector('.tq').addEventListener('click', () => { SFX.ui(); tutDet(c.querySelector('.tdet').hidden); });
+  c.querySelector('.tx').addEventListener('click', () => {                     // второй тап за 3 с — выйти
+    const x = c.querySelector('.tx');
+    if (x._arm && Date.now() - x._arm < 3000) { SFX.ui(); toMenu(); return; }
+    x._arm = Date.now(); c.querySelector('.tt').textContent = 'Ещё раз ✕ — выйти из обучения';
+    setTimeout(() => { x._arm = 0; if (TUT.on && TUT_STEPS[TUT.step]) c.querySelector('.tt').textContent = TUT_STEPS[TUT.step].title; }, 3000);
+  });
   document.body.appendChild(c); return (TUT.ui = c);
 }
-function tutSay(stamp, title, text, go) {
+function tutDet(on, ms) {
+  const d = tutCard().querySelector('.tdet'); clearTimeout(TUT.detT);
+  d.hidden = !on || !!panel;                                                    // в открытом окне (ящик, рюкзак, карта) не мешает
+  if (on && ms) TUT.detT = setTimeout(() => { d.hidden = true; }, ms);
+}
+function tutSay(n, title, text) {
   const c = tutCard(); c.hidden = false; c.classList.remove('ok');
-  c.querySelector('.tst').textContent = stamp; c.querySelector('h3').textContent = title; c.querySelector('p').textContent = text;
-  const g = c.querySelector('.tgo'); g.hidden = !go; if (go) g.textContent = go;
+  c.querySelector('.tn').textContent = n; c.querySelector('.tt').textContent = title; c.querySelector('.tdet').textContent = text;
+  tutDet(true, 7000);
+}
+function tutIntro() {
+  let o = $('tutIntro');
+  if (!o) {
+    o = mk('div'); o.id = 'tutIntro';
+    o.innerHTML = '<div class="ti" role="dialog" aria-modal="true"><div class="tst">Обучение</div><h3>Добро пожаловать в Dead Line</h3><p>Город закрыт, на улицах мертвецы, помощи не будет. Покажу самое нужное: ходить, обыскивать, есть, прятаться и драться. Пара минут.</p><p>Задание будет висеть сверху одной строкой. Нажми «?», чтобы перечитать подсказку.</p><div class="trow"><button type="button" class="tskip">В меню</button><button type="button" class="tgo">Начать</button></div></div>';
+    o.querySelector('.tskip').addEventListener('click', () => { SFX.ui(); o.hidden = true; toMenu(); });
+    o.querySelector('.tgo').addEventListener('click', () => { SFX.ui(); o.hidden = true; paused = false; tutGo(0); });
+    document.body.appendChild(o);
+  }
+  o.hidden = false;
 }
 function tutHi(ids) {
   for (const e of document.querySelectorAll('.tutHi')) e.classList.remove('tutHi');
@@ -110,19 +146,20 @@ function tutGo(i) {
   TUT.step = i; TUT.wait = false;
   const st = TUT_STEPS[i]; if (!st) return;
   if (st.enter) st.enter();
-  tutSay('Обучение · шаг ' + (i + 1) + ' из ' + TUT_STEPS.length, st.title, st.text(), null);
+  tutSay((i + 1) + '/' + TUT_STEPS.length, st.title, st.text());
   tutHi(st.hi);
   if (i === TUT_STEPS.length - 1) { tutHi([]); buzzTut([60, 60, 120]); }
 }
 const buzzTut = p => { try { settings.vib !== false && navigator.vibrate && navigator.vibrate(p); } catch (e) {} };
 function tutDone() {
-  const c = tutCard(); c.classList.add('ok'); c.querySelector('.tst').textContent = 'Готово';
+  const c = tutCard(); c.classList.add('ok'); c.querySelector('.tn').textContent = '✓'; tutDet(false);
   SFX.select && SFX.select(); buzzTut(15);
   setTimeout(() => { if (TUT.on) tutGo(TUT.step + 1); }, 900);
 }
 function tutTick() {
   if (!TUT.on || mode !== 'play') return;
   for (let i = zs.length - 1; i >= 0; i--) if (!zs[i].tut) zs.splice(i, 1);      // в обучении только свои мертвецы
+  if (panel && TUT.ui) TUT.ui.querySelector('.tdet').hidden = true;
   const st = TUT_STEPS[TUT.step]; if (!st || TUT.wait) return;
   if (st.tick) st.tick();
   if (st.check && st.check()) { TUT.wait = true; tutDone(); }
@@ -166,7 +203,7 @@ function tutStart() {
     setTimeout(() => {
       o.classList.add('out'); setTimeout(() => { o.hidden = true; }, 380);
       beginPlay(); paused = true;
-      tutSay('Обучение', 'Добро пожаловать в Dead Line', 'Город закрыт, на улицах мертвецы, помощи не будет. Покажу самое нужное: как ходить, обыскивать, есть и драться. Это займёт пару минут.', 'Начать');
+      tutIntro();
       clearInterval(TUT.iv); TUT.iv = setInterval(tutTick, 200);
     }, 450);
   })), 900);
@@ -210,9 +247,12 @@ function tutEnd() {
     if (keep.stamp) keep.stamp.textContent = 'Обучение пройдено';
     if (keep.h2) keep.h2.textContent = 'Так заканчивается любая история';
     if (!$('tutDeadMsg')) { const msg = mk('p', '', 'В Dead Line нельзя победить — можно только продержаться дольше. Основы ты знаешь. Теперь создай свой мир: выбери героя, профессию и сложность.');
-    msg.id = 'tutDeadMsg'; const facts = D.querySelector('.facts'); if (facts) facts.before(msg); }
+    msg.id = 'tutDeadMsg'; const facts = D.querySelector('.facts'); if (facts) facts.before(msg);
+    const tips = mk('ul'); tips.id = 'tutTips';
+    for (const t of ['Первый день: обыщи свой дом и соседние, пока светло.', 'Набери воды во всё, пока она течёт из крана.', 'Ночью сиди дома за закрытой дверью и не включай свет у окон.']) tips.appendChild(mk('li', '', t));
+    msg.after(tips); }
     for (const e of D.querySelectorAll('.row-btns button')) if (e.id !== 'dMenu' && e.id !== 'tutCreate' && !e.hidden) { e.hidden = true; keep.hid.push(e); }   // «Новая игра», «Загрузить», «Ещё одна жизнь»…
-    for (const id of ['dRec', 'dLast']) { const dd = $(id); if (dd) { dd.hidden = true; if (dd.previousElementSibling) dd.previousElementSibling.hidden = true; } }
+    for (const id of ['dRec']) { const dd = $(id); if (dd) { dd.hidden = true; if (dd.previousElementSibling) dd.previousElementSibling.hidden = true; } }
     const row = D.querySelector('.row-btns');
     if (row && !$('tutCreate')) { const b = btn('Создать мир', () => { SFX.ui(); toMenu(); openCreate(); }, 'go'); b.id = 'tutCreate'; row.prepend(b); }
   };
@@ -222,13 +262,14 @@ function tutCleanup() {
   clearInterval(TUT.iv); TUT.on = false; tutHi([]);
   if (TUT.ui) TUT.ui.hidden = true;
   const lo = $('tutLoad'); if (lo) lo.hidden = true;
+  const ti = $('tutIntro'); if (ti) ti.hidden = true;
   if (!TUT.dead) return;
   TUT.dead = false;
   const k = TUT.deadKeep || {};
   if (k.stamp) k.stamp.textContent = k.stampT; if (k.h2) k.h2.textContent = k.h2T;
-  for (const id of ['tutDeadMsg', 'tutCreate']) { const e = $(id); if (e) e.remove(); }
+  for (const id of ['tutDeadMsg', 'tutTips', 'tutCreate']) { const e = $(id); if (e) e.remove(); }
   for (const e of k.hid || []) e.hidden = false;
-  for (const id of ['dRec', 'dLast']) { const dd = $(id); if (dd) { dd.hidden = false; if (dd.previousElementSibling) dd.previousElementSibling.hidden = false; } }
+  for (const id of ['dRec']) { const dd = $(id); if (dd) { dd.hidden = false; if (dd.previousElementSibling) dd.previousElementSibling.hidden = false; } }
 }
 
 // ---- обучение ничего не сохраняет и не ставит рекордов ----

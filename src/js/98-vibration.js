@@ -15,6 +15,7 @@ const nearHero = (x, y, r) => x == null || !P || Math.hypot(x - P.x, y - P.y) < 
   wrap('wood', (x, y) => { if (nearHero(x, y)) buzz(30, 'wood', 120); });                                // доска, дверь, лом
   wrap('pickup', () => buzz(12, 'pickup', 120));                                                          // взял вещь
   wrap('equip', () => buzz(15, 'equip', 120));                                                            // взял в руки
+  wrap('heart', k => { if (k > .15) buzz([28, 120, 22], 'heart', 700); });                                  // мало здоровья — телефон бьётся вместе с сердцем
 }
 // смерть — длинный тяжёлый толчок
 { const _die = die; die = function () { const was = mode; _die.apply(this, arguments); if (was === 'play' && mode === 'dead') try { settings.vib !== false && navigator.vibrate && navigator.vibrate([120, 80, 300]); } catch (e) {} }; }
