@@ -1,0 +1,190 @@
+// ================= действия у предмета: контур по силуэту, кнопка над предметом, меню по тапу =================
+// Подошёл к мебели, двери, машине — предмет обводится светящейся линией точно по силуэту, над ним кнопка главного
+// действия («Обыскать», «Открыть»). Тап по самому предмету — меню со всеми действиями с ним. Старые плашки действий
+// справа внизу не показываются. Клавиша E работает как раньше. Здесь же: компактная нижняя панель и телефон под «−/+».
+if (typeof getActions === 'function' && typeof onDraw === 'function') {
+  const css = `
+#bAct,#bMore,#actAlt{display:none!important}
+#actBtn{position:fixed;left:0;top:0;z-index:9;display:flex;align-items:center;gap:7px;height:40px;padding:0 14px 0 10px;border-radius:20px;
+  background:rgba(16,20,22,.9);border:2px solid #f0c477;color:#f6e7c4;font:700 14px system-ui,sans-serif;white-space:nowrap;cursor:pointer;
+  box-shadow:0 4px 14px rgba(0,0,0,.45);transform:translate(-50%,-100%);touch-action:manipulation;transition:opacity .15s}
+#actBtn[hidden]{display:none}
+#actBtn .ic{width:20px;height:20px;color:#f0c477}
+#actBtn small{font:600 11.5px system-ui;color:#b9b2a2}
+#actBtn:after{content:'';position:absolute;left:50%;bottom:-7px;margin-left:-6px;width:10px;height:10px;background:rgba(16,20,22,.9);border-right:2px solid #f0c477;border-bottom:2px solid #f0c477;transform:rotate(45deg)}
+#actBtn:active{background:#2a2418}
+#actPop{position:fixed;z-index:12;min-width:180px;max-width:min(280px,70vw);background:rgba(16,20,22,.97);border:1px solid rgba(240,196,119,.5);border-radius:12px;
+  box-shadow:0 10px 26px rgba(0,0,0,.55);padding:5px;font:600 14px system-ui,sans-serif;color:#e9e3d6}
+#actPop[hidden]{display:none}
+#actPop .ttl{padding:5px 10px 7px;color:#f0c477;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+#actPop button{display:flex;align-items:center;gap:10px;width:100%;min-height:42px;padding:8px 10px;border:0;border-radius:8px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+#actPop button:first-of-type{background:rgba(240,196,119,.15)}
+#actPop button:active{background:rgba(240,196,119,.28)}
+#actPop .ic{width:19px;height:19px;color:#f0c477;flex:none}
+/* компактная нижняя панель: только иконки, пустые слоты спрятаны */
+#dock .hslot.empty{display:none!important}
+#dock .hslot .hl,#dock .hslot .hk,#dock .wslot strong{display:none!important}
+#dock{gap:4px!important;padding:4px!important}
+#dock .hslot{width:42px!important;min-width:42px!important;height:42px!important;padding:0!important;place-items:center!important;align-content:center!important}
+#dock .wslot{width:46px!important;min-width:46px!important;height:42px!important;padding:0!important;place-items:center!important;align-content:center!important}
+#dock .hslot .ic,#dock .hslot img,#dock .hslot canvas{width:24px!important;height:24px!important}
+#dock .hslot .cnt{font-size:9px!important}
+/* телефон — под кнопками масштаба */
+#bPhone.top{position:fixed;z-index:6;padding:0}
+#bPhone.top .hl,#bPhone.top .hk{display:none}
+#bPhone.top .ic{width:20px;height:20px}`;
+  const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+
+  const AU = {btn:null, pop:null, key:'', popT:null, lpT:0, outl:null, opened:0};
+  const cssXY = (gx, gy) => { const r = cv.getBoundingClientRect(), k = SCALE / DEV; return [r.left + gx * k, r.top + gy * k]; };
+  const TALL = new Set(['wardrobe', 'fridge', 'shelf', 'bookshelf', 'hanger', 'locker', 'toolrack', 'medshelf', 'pantry', 'floorlamp']);
+  // где над предметом встаёт кнопка (высота предмета в игровых единицах)
+  function topOf(a) {
+    const [x, y] = actPos(a);
+    let z = U * 1.15;
+    if (a.o) z = U * 2.3;
+    else if (a.f && a.f.type === 'car') z = U * 1.6;
+    else if (a.f && TALL.has(SPRA && SPRA[a.f.type] || a.f.type)) z = U * 2.2;
+    else if (a.f && (a.f.type === 'bed' || a.f.type === 'sofa' || a.f.type === 'bath')) z = U * 1.1;
+    else if (!a.f) return [x, y, U * 2.4];                                         // действие без предмета — над героем
+    return [x, y, z];
+  }
+  const verb = a => a.label.charAt(0).toUpperCase() + a.label.slice(1);
+
+  // ---- контур: предмет рисуется один в запасной холст, вокруг силуэта — светящаяся линия ----
+  const O = {a:null, b:null, c:null};
+  const cvOf = (k, w, h) => { let c = O[k]; if (!c) { c = O[k] = document.createElement('canvas'); c._g = c.getContext('2d'); } if (c.width !== w || c.height !== h) { c.width = w; c.height = h; } return c; };
+  function drawAlone(a) {                                                         // нарисовать только цель, в текущий ctx
+    if (a.o) { const i = a.o.y * MW + a.o.x; drawWallTile(a.o.x, a.o.y, i, false); return true; }
+    const f = a.f; if (!f) return false;
+    if (f.wd && furns.includes(f)) { if (f._fi == null || furns[f._fi] !== f) f._fi = furns.indexOf(f); objAtDraw('F' + (f._fi + 1), furnName(f), f.cx, f.cy, 1, 1); return true; }
+    if (typeof dynCars !== 'undefined' && dynCars.includes(f)) { drawCarDyn(f, 1); return true; }
+    if (props.includes(f)) { if (f.proc) drawProc(f, 1); else { if (f._pi == null || props[f._pi] !== f) f._pi = props.indexOf(f); objAt('P' + (f._pi + 1), propName(f, false), f.cx, f.cy, 1, null, 0, null); } return true; }
+    return false;
+  }
+  function outline(a) {
+    const W0 = cv.width, H0 = cv.height, [x, y, zt] = topOf(a);
+    const k = DPR, cx = SX(x, y) * k, by = SY(x, y, -U * .9) * k, ty = SY(x, y, zt + U * .9) * k, hw = U * (a.f && a.f.type === 'car' ? 2.6 : 1.9) * k;
+    const rx = Math.max(0, Math.floor(cx - hw)), ry = Math.max(0, Math.floor(ty)), rw = Math.min(W0, Math.ceil(cx + hw)) - rx, rh = Math.min(H0, Math.ceil(by)) - ry;
+    if (rw < 4 || rh < 4) return;
+    const A = cvOf('a', rw, rh), B = cvOf('b', rw, rh), C = cvOf('c', rw, rh), ga = A._g, gb = B._g, gc = C._g;
+    // 1) силуэт цели
+    ga.setTransform(1, 0, 0, 1, 0, 0); ga.clearRect(0, 0, rw, rh);
+    const sc = ctx, sox = ox, soy = oy; let ok = false;
+    ctx = ga; ox = sox - rx / k; oy = soy - ry / k; resetT();
+    try { ok = drawAlone(a); } catch (e) { ok = false; } finally { ctx = sc; ox = sox; oy = soy; resetT(); }
+    if (!ok) return;
+    // 2) залить силуэт цветом
+    gb.setTransform(1, 0, 0, 1, 0, 0); gb.globalCompositeOperation = 'source-over'; gb.clearRect(0, 0, rw, rh); gb.drawImage(A, 0, 0);
+    gb.globalCompositeOperation = 'source-in'; gb.fillStyle = '#ffd88a'; gb.fillRect(0, 0, rw, rh); gb.globalCompositeOperation = 'source-over';
+    // 3) кольцо: силуэт, раздвинутый во все стороны, минус сам силуэт
+    const d = Math.max(1.5, k * 1.1);
+    gc.setTransform(1, 0, 0, 1, 0, 0); gc.globalCompositeOperation = 'source-over'; gc.clearRect(0, 0, rw, rh);
+    for (let n = 0; n < 12; n++) { const t = n / 12 * Math.PI * 2; gc.drawImage(B, Math.cos(t) * d, Math.sin(t) * d); }
+    gc.globalCompositeOperation = 'destination-out'; gc.drawImage(A, 0, 0); gc.globalCompositeOperation = 'source-over';
+    // 4) на экран: мягкое свечение и чёткая линия
+    const pulse = .75 + Math.sin(performance.now() / 380) * .25;
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = .55 * pulse; ctx.shadowColor = 'rgba(240,196,119,.9)'; ctx.shadowBlur = 10 * k / 2; ctx.drawImage(C, rx, ry);
+    ctx.shadowBlur = 0; ctx.globalAlpha = .95; ctx.drawImage(C, rx, ry);
+    ctx.restore(); resetT();
+  }
+  // старая прямоугольная рамка под целью больше не нужна
+  drawHi = function () {};
+
+  // ---- кнопка над предметом ----
+  function btnEl() {
+    if (AU.btn) return AU.btn;
+    const b = mk('button'); b.id = 'actBtn'; b.type = 'button'; b.hidden = true; b.setAttribute('aria-label', 'Действие');
+    b.addEventListener('pointerdown', e => {
+      e.preventDefault(); e.stopPropagation();
+      AU.lpT = setTimeout(() => { AU.lpT = 0; if (curAct) popOpen(curAct); }, 450);   // зажать — меню всех действий
+    });
+    const up = e => { if (!AU.lpT) return; clearTimeout(AU.lpT); AU.lpT = 0; e.preventDefault(); e.stopPropagation(); if (curAct) { popClose(); doAction(curAct); } };
+    b.addEventListener('pointerup', up); b.addEventListener('pointercancel', () => { clearTimeout(AU.lpT); AU.lpT = 0; }); b.addEventListener('pointerleave', () => { clearTimeout(AU.lpT); AU.lpT = 0; });
+    b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); });
+    document.body.appendChild(b); return (AU.btn = b);
+  }
+  function btnShow(a) {
+    const b = btnEl();
+    if (!a || (AU.pop && !AU.pop.hidden) || mode !== 'play' || paused || panel || P.sleep || (typeof BLD !== 'undefined' && BLD.on) || (typeof EDIT !== 'undefined' && EDIT.on)) { b.hidden = true; return; }
+    const key = a.kind + '|' + a.label + '|' + actName(a);
+    if (key !== AU.key) {
+      AU.key = key; b.textContent = '';
+      b.appendChild(svgIc(actIcon(a))); b.appendChild(document.createTextNode(verb(a)));
+      const n = actName(a); if (n && !a.label.toLowerCase().includes(n.toLowerCase())) b.appendChild(mk('small', '', n.toLowerCase()));
+    }
+    const [x, y, z] = topOf(a), [px, py] = cssXY(SX(x, y), SY(x, y, z));
+    const vx = Math.max(70, Math.min(innerWidth - 70, px)), vy = Math.max(56, Math.min(innerHeight - 12, py - 8));
+    b.style.left = Math.round(vx) + 'px'; b.style.top = Math.round(vy) + 'px'; b.hidden = false;
+  }
+
+  // ---- меню у предмета ----
+  function popEl() {
+    if (AU.pop) return AU.pop;
+    const p = mk('div'); p.id = 'actPop'; p.hidden = true; p.setAttribute('role', 'menu');
+    document.body.appendChild(p);
+    document.addEventListener('pointerdown', e => { if (!p.hidden && !p.contains(e.target) && e.target !== AU.btn) popClose(); }, true);
+    return (AU.pop = p);
+  }
+  function actionsFor(a) {
+    const t = actTarget(a), [ax, ay] = actPos(a), all = getActions();
+    const same = all.filter(b => (t && actTarget(b) === t) || (!t && Math.hypot(actPos(b)[0] - ax, actPos(b)[1] - ay) < .3));
+    const list = same.length ? same : [a];
+    // дополнительно: заколотить этот проём, переставить эту мебель
+    if (a.o && typeof curBar !== 'undefined' && curBar && curBar.i === a.o.i) list.push({kind:'_bar', label:'заколотить доской', o:a.o});
+    if (a.f && a.f.wd && furns.includes(a.f) && typeof toggleEditor === 'function') list.push({kind:'_move', label:'переставить или разобрать', f:a.f});
+    return list;
+  }
+  function runIt(b) {
+    if (b.kind === '_bar') { doBarricade(); return; }
+    if (b.kind === '_move') { toggleEditor(true); EDIT.sel = b.f; EDIT.tgt = null; editUI(); return; }
+    doAction(b);
+  }
+  const iconOf = b => b.kind === '_bar' ? 'i-hammer' : b.kind === '_move' ? 'i-sofa' : actIcon(b);
+  function popOpen(a) {
+    const p = popEl(), list = actionsFor(a); p.textContent = '';
+    p.appendChild(mk('div', 'ttl', actName(a) || 'Действия'));
+    for (const b of list) { const it = btn('', () => { popClose(); runIt(b); }); it.setAttribute('role', 'menuitem'); it.appendChild(svgIc(iconOf(b))); it.appendChild(document.createTextNode(verb(b))); p.appendChild(it); }
+    AU.popFor = actTarget(a) || a; p.hidden = false;
+    const [x, y, z] = topOf(a), [px, py] = cssXY(SX(x, y), SY(x, y, z)), r = p.getBoundingClientRect();
+    p.style.left = Math.round(Math.max(8, Math.min(innerWidth - r.width - 8, px - r.width / 2))) + 'px';
+    let top = py - r.height - 14; if (top < 8) top = Math.min(innerHeight - r.height - 8, py + 20);
+    p.style.top = Math.round(top) + 'px';
+    SFX.select && SFX.select(); AU.opened = (AU.opened || 0) + 1;
+  }
+  function popClose() { if (AU.pop) AU.pop.hidden = true; AU.popFor = null; }
+
+  // тап по предмету рядом — меню его действий
+  onTap((cx, cy) => {
+    if (mode !== 'play' || paused || panel || P.car) return false;
+    const [wx, wy] = worldFromScreen(cx, cy);
+    let best = null, bd = 1.25;
+    for (const a of getActions()) { const [x, y] = actPos(a); const d = Math.hypot(x - wx, y - wy); if (d < bd) { bd = d; best = a; } }
+    if (!best) { popClose(); return false; }
+    popOpen(best); return true;
+  });
+
+  // каждый кадр: контур и кнопка над текущей целью
+  onDraw(() => {
+    if (mode !== 'play' || !P) { if (AU.btn) AU.btn.hidden = true; return; }
+    const a = curAct;
+    if (a && !P.car && !P.sleep) outline(a);
+    btnShow(a);
+    if (AU.pop && !AU.pop.hidden && (!a || panel || paused) && !getActions().some(b => (actTarget(b) || b) === AU.popFor)) popClose();
+  });
+  { const f = toMenu; toMenu = function () { popClose(); if (AU.btn) AU.btn.hidden = true; return f.apply(this, arguments); }; }
+  addEventListener('keydown', e => { if (e.key === 'Escape' && AU.pop && !AU.pop.hidden) { popClose(); e.stopImmediatePropagation(); } }, true);
+  window.__actUI = AU;
+
+  // ---- телефон под кнопками масштаба ----
+  const placePhone = () => {
+    const b = $('bPhone'), z = $('zoomBox'); if (!b || !z) return;
+    if (!b.classList.contains('top')) { b.className = 'ibtn sm top'; document.body.appendChild(b); }
+    const r = z.getBoundingClientRect(); if (!r.width) return;
+    const s = Math.round(r.height) || 38; b.style.width = b.style.height = s + 'px';
+    b.style.left = Math.round(r.right - s) + 'px'; b.style.top = Math.round(r.bottom + 8) + 'px';
+    b.hidden = mode !== 'play' || $('hud').hidden;
+  };
+  addEventListener('resize', () => setTimeout(placePhone, 80)); setInterval(placePhone, 700); setTimeout(placePhone, 50);
+}
