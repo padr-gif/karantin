@@ -97,8 +97,12 @@ const phUnreadAll = () => P && P.phone ? PH_THREADS.reduce((a, t) => a + Math.ma
 #phone .pdev{position:relative;width:min(700px,94vw);height:min(390px,calc(100vh - 20px));background:#0b0d0f;border-radius:30px;padding:10px 14px 10px 26px;box-shadow:0 18px 50px rgba(0,0,0,.6),inset 0 0 0 2px #2a2e33}
 #phone .pdev:before{content:'';position:absolute;left:10px;top:50%;width:6px;height:6px;margin-top:-3px;border-radius:50%;background:#1d232a;box-shadow:0 0 0 2px #111}
 #phone .scr{position:relative;width:100%;height:100%;border-radius:20px;overflow:hidden;background:#101418;color:#eef0f2;font:14px/1.35 system-ui,-apple-system,sans-serif;display:flex;flex-direction:column}
-#phone .sb{flex:none;height:24px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:12px;font-weight:600;color:#e8eaec;background:rgba(0,0,0,.25)}
+#phone .sb{flex:none;height:30px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:12px;font-weight:600;color:#e8eaec;background:rgba(0,0,0,.25)}
 #phone .sb .net{color:#ff8a7a;font-weight:500}
+#phone .sbl{display:flex;align-items:center;gap:6px;min-width:90px}
+#phone .nback{width:38px;height:26px;margin-left:-8px;border:0;border-radius:6px;background:rgba(255,255,255,.1);color:#fff;font:700 20px/20px system-ui;cursor:pointer;padding:0 0 2px}
+#phone .nback:active{background:rgba(255,255,255,.22)}
+#phone .nback[hidden]{display:none}
 #phone .bat{display:inline-flex;align-items:center;gap:5px}
 #phone .bat i{position:relative;width:22px;height:11px;border:1.5px solid currentColor;border-radius:3px;display:inline-block}
 #phone .bat i:after{content:'';position:absolute;right:-4px;top:2px;width:2px;height:4px;background:currentColor;border-radius:0 1px 1px 0}
@@ -215,9 +219,10 @@ function phPhoto(kind) {
 function phEl() {
   let o = $('phone'); if (o) return o;
   o = mk('div'); o.id = 'phone'; o.hidden = true; o.setAttribute('role', 'dialog'); o.setAttribute('aria-label', 'Телефон');
-  o.innerHTML = '<div class="pdev"><div class="scr"><div class="sb"><span class="tm"></span><span class="net">Нет сети</span><span class="bat"><span class="pc"></span><i><b></b></i></span></div><div class="bd"></div><div class="nav"><button type="button" class="nb" aria-label="Назад">◀</button><button type="button" class="nh" aria-label="Домой">●</button><button type="button" class="nx" aria-label="Убрать телефон">✕</button></div></div></div>';
+  o.innerHTML = '<div class="pdev"><div class="scr"><div class="sb"><span class="sbl"><button type="button" class="nback" aria-label="Назад">‹</button><span class="tm"></span></span><span class="net">Нет сети</span><span class="bat"><span class="pc"></span><i><b></b></i></span></div><div class="bd"></div><div class="nav"><button type="button" class="nb" aria-label="Назад">◀</button><button type="button" class="nh" aria-label="Домой">●</button><button type="button" class="nx" aria-label="Убрать телефон">✕</button></div></div></div>';
   o.addEventListener('click', e => { if (e.target === o) phClose(); });
   o.querySelector('.nb').addEventListener('click', () => { SFX.ui(); phBack(); });
+  o.querySelector('.nback').addEventListener('click', () => { SFX.ui(); phBack(); });
   o.querySelector('.nh').addEventListener('click', () => { SFX.ui(); if (PH.app !== 'lock' && PH.app !== 'off') { PH.back = []; phShow('home'); } });
   o.querySelector('.nx').addEventListener('click', () => { SFX.ui(); phClose(); });
   document.body.appendChild(o); return o;
@@ -234,6 +239,7 @@ function phShow(app, arg, noPush) {
   PH.app = app; PH.arg = arg;
   const bd = phEl().querySelector('.bd'); bd.textContent = ''; bd.scrollTop = 0;
   (PH_VIEWS[app] || PH_VIEWS.home)(bd, arg); phBar(); phBadge();
+  phEl().querySelector('.nback').hidden = app === 'lock' || app === 'off';
 }
 function phBack() {
   if (PH.app === 'lock' || PH.app === 'off') return phClose();
