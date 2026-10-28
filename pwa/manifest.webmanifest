@@ -1,14 +1,14 @@
 {
   "id": "./",
-  "name": "Карантин",
-  "short_name": "Карантин",
+  "name": "Нулевой день",
+  "short_name": "Нулевой день",
   "description": "Зомби-выживалка: город закрыт на карантин, помощи не будет",
   "lang": "ru",
   "start_url": "./",
   "scope": "./",
   "display": "fullscreen",
   "orientation": "landscape",
-  "background_color": "#0c0f12",
+  "background_color": "#3d1414",
   "theme_color": "#0c0f12",
   "icons": [
     {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},

@@ -1,27 +1,25 @@
-# Иконка приложения: голова мертвеца за карантинной лентой, пиксель-арт 32x32.
+# Иконка приложения «Нулевой день»: листок календаря с нулём и кровавыми подтёками, пиксель-арт 64x64.
 #   python3 tools/icons/appicon.py pwa
 import sys, os
 from PIL import Image, ImageDraw
 out = sys.argv[1] if len(sys.argv) > 1 else 'pwa'
+BG, PAGE, INK, RED = '#3d1414', '#efe8da', '#1f1a17', '#c8322b'
+RECTS = [  # x, y, w, h, цвет
+    (0, 0, 64, 64, BG), (14, 12, 40, 46, '#2a0d0d'),                               # фон, тень листка
+    (12, 10, 40, 46, PAGE), (12, 10, 40, 11, RED),                                 # листок и красная шапка
+    (19, 7, 3, 6, '#1f0a0a'), (42, 7, 3, 6, '#1f0a0a'),                             # кольца
+    (17, 21, 2, 3, RED), (17, 24, 1, 2, RED), (38, 21, 2, 5, RED), (38, 26, 1, 2, RED), (47, 21, 1, 2, RED),  # подтёки
+    (24, 27, 16, 25, INK),                                                          # цифра 0
+    (24, 27, 2, 2, PAGE), (38, 27, 2, 2, PAGE), (24, 50, 2, 2, PAGE), (38, 50, 2, 2, PAGE),
+    (29, 31, 6, 17, PAGE), (33, 33, 2, 3, INK), (31, 36, 2, 4, INK), (29, 40, 2, 4, INK),
+    (12, 55, 40, 1, '#cfc6b4'),
+]
 def art():
-    im = Image.new('RGBA', (32, 32), (12, 15, 18, 255)); d = ImageDraw.Draw(im)
-    for y in range(32):  # night sky
-        d.line([(0, y), (31, y)], fill=(14 + y // 3, 20 + y // 4, 26 + y // 3, 255))
-    d.ellipse([3, 2, 7, 6], fill=(220, 214, 190, 255)); d.ellipse([4, 2, 8, 6], fill=(14, 20, 27, 255))  # moon
-    skin, dk = (128, 156, 104, 255), (88, 112, 70, 255)
-    d.ellipse([8, 5, 24, 25], fill=dk); d.ellipse([8, 5, 23, 24], fill=skin)            # head
-    d.rectangle([12, 22, 20, 28], fill=dk); d.rectangle([12, 22, 19, 27], fill=skin)    # jaw / neck
-    d.polygon([(8, 11), (11, 5), (16, 4), (21, 5), (24, 10), (20, 8), (15, 9), (11, 8)], fill=(52, 40, 30, 255))  # hair
-    for x in (11, 18): d.rectangle([x, 13, x + 3, 16], fill=(20, 14, 12, 255)); d.point((x + 1, 14), fill=(230, 60, 40, 255))  # eyes
-    d.line([(12, 21), (20, 21)], fill=(40, 20, 18, 255)); [d.point((x, 20), fill=(40, 20, 18, 255)) for x in (13, 15, 17, 19)]  # mouth
-    d.line([(9, 17), (12, 19)], fill=(150, 30, 26, 255)); d.point((22, 18), fill=(150, 30, 26, 255))  # blood
-    for x in range(32):  # quarantine tape across the bottom
-        for y in range(32):
-            t = y + x * .3
-            if 27 <= t < 32: d.point((x, y), fill=(232, 196, 52, 255) if ((x + y) // 3) % 2 == 0 else (24, 22, 20, 255))
+    im = Image.new('RGBA', (64, 64)); d = ImageDraw.Draw(im)
+    for x, y, w, h, c in RECTS: d.rectangle([x, y, x + w - 1, y + h - 1], fill=c)
     return im
 a = art(); os.makedirs(out, exist_ok=True)
 for s in (192, 512): a.resize((s, s), Image.NEAREST).save(f'{out}/icon-{s}.png')
-bg = Image.new('RGBA', (40, 40), (12, 15, 18, 255)); bg.paste(a, (4, 4)); bg.resize((512, 512), Image.NEAREST).save(f'{out}/icon-maskable.png')
+bg = Image.new('RGBA', (80, 80), BG); bg.paste(a, (8, 8)); bg.resize((512, 512), Image.NEAREST).save(f'{out}/icon-maskable.png')  # запас под маску Android
 a.resize((180, 180), Image.NEAREST).save(f'{out}/apple-touch-icon.png')
 print('ok')

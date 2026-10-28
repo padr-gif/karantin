@@ -1,4 +1,4 @@
-# Pixel-art item icons for «Карантин»: 32x32 art pixels, outlined, light from the top-left.
+# Pixel-art item icons for «Нулевой день»: 32x32 art pixels, outlined, light from the top-left.
 # Output: icons.png (8 columns of 96x96 cells, nearest-neighbour x3) + icons.json (rects).
 import json, math, sys
 from PIL import Image, ImageDraw

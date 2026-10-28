@@ -92,7 +92,7 @@ function importFile() {
     r.onload = () => {
       let rec = null; try { rec = JSON.parse(r.result); } catch (e) {}
       const d = rec && rec.karantin ? unpackRec(rec) : null;
-      if (!d) { toast('Это не файл сохранения «Карантина»'); return; }
+      if (!d) { toast('Это не файл сохранения «Нулевого дня»'); return; }
       try { if (!applyOrNull(d)) { toast('Файл сохранения повреждён'); return; } }
       catch (e) { toast('Это сохранение от старой версии города'); return; }
       beginPlay(); writeSave('auto');
@@ -132,7 +132,7 @@ addEventListener('error', e => logErr(e.error || e.message, 'window'));
 addEventListener('unhandledrejection', e => logErr(e.reason, 'promise'));
 function errReport() {
   const L = [];
-  L.push('Карантин ' + GAME_VER + ' · ' + new Date().toLocaleString('ru-RU'));
+  L.push('Нулевой день ' + GAME_VER + ' · ' + new Date().toLocaleString('ru-RU'));
   L.push(navigator.userAgent);
   L.push('Экран ' + innerWidth + '×' + innerHeight + ' @' + (devicePixelRatio || 1) + ', графика ' + settings.gfx + ', холст ' + cv.width + '×' + cv.height + (settings.smooth ? ', сглаживание' : '') + (typeof perfStat === 'function' ? ' · ' + perfStat() : ''));
   if (P && mode !== 'menu') L.push('День ' + (Math.floor(gameMin / 1440) + 1) + ', район ' + (world.dx || 0) + ',' + (world.dy || 0) + ' (' + (world.dtype || '?') + '), мертвецов ' + (zs ? zs.length : 0));
