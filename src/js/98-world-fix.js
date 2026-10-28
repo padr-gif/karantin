@@ -3,16 +3,20 @@
 // ---- 1. чёрная полоса снизу: на части телефонов окно (innerHeight) ниже, чем экран под fixed-слоями.
 //         Холст тогда не доставал до низа. Берём высоту по самому fixed-слою, если она чуть больше. ----
 if (typeof viewH === 'function') {
+  // iOS Safari рисует страницу и под своей панелью внизу, а innerHeight её не считает — fixed-слои кончаются выше.
+  // «Большая» высота окна (100lvh) — это вся видимая область; холст растягиваем до неё.
   const probe = document.createElement('div');
-  probe.style.cssText = 'position:fixed;left:0;top:0;bottom:0;width:1px;pointer-events:none;visibility:hidden';
+  probe.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:100vh;height:100lvh;pointer-events:none;visibility:hidden';
   document.body.appendChild(probe);
   const f = viewH;
   viewH = function () {
+    try { vpStretch = false; } catch (e) {}                                    // игра сама поднимет флаг, если растянула
     const h = f.apply(this, arguments);
     if (typeof vpStretch !== 'undefined' && vpStretch) return h;
     const ph = Math.round(probe.getBoundingClientRect().height), vv = window.visualViewport ? Math.round(visualViewport.height + visualViewport.offsetTop) : 0;
     const m = Math.max(ph, vv);
-    return m - h > 1 && m - h < 160 ? m : h;
+    if (m - h > 1 && m - h < 160) { try { vpStretch = true; } catch (e) {} return m; }
+    return h;
   };
   try { resize(); } catch (e) {}
 }

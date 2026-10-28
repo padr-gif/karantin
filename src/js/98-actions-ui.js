@@ -13,11 +13,12 @@ if (typeof getActions === 'function' && typeof onDraw === 'function') {
 #actBtn small{font:600 11.5px system-ui;color:#b9b2a2}
 #actBtn:after{content:'';position:absolute;left:50%;bottom:-7px;margin-left:-6px;width:10px;height:10px;background:rgba(16,20,22,.9);border-right:2px solid #f0c477;border-bottom:2px solid #f0c477;transform:rotate(45deg)}
 #actBtn:active{background:#2a2418}
-#actPop{position:fixed;z-index:12;min-width:180px;max-width:min(280px,70vw);background:rgba(16,20,22,.97);border:1px solid rgba(240,196,119,.5);border-radius:12px;
-  box-shadow:0 10px 26px rgba(0,0,0,.55);padding:5px;font:600 14px system-ui,sans-serif;color:#e9e3d6}
+body.popon #bAct{visibility:hidden}
+#actPop{position:fixed;z-index:12;min-width:160px;max-width:min(280px,70vw);background:rgba(16,20,22,.97);border:1px solid rgba(240,196,119,.5);border-radius:12px;
+  box-shadow:0 10px 26px rgba(0,0,0,.55);padding:5px;font:600 13.5px system-ui,sans-serif;color:#e9e3d6}
 #actPop[hidden]{display:none}
 #actPop .ttl{padding:5px 10px 7px;color:#f0c477;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
-#actPop button{display:flex;align-items:center;gap:10px;width:100%;min-height:42px;padding:8px 10px;border:0;border-radius:8px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+#actPop button{display:flex;align-items:center;gap:9px;width:100%;min-height:38px;padding:6px 10px;border:0;border-radius:8px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
 #actPop button:first-of-type{background:rgba(240,196,119,.15)}
 #actPop button:active{background:rgba(240,196,119,.28)}
 #actPop .ic{width:19px;height:19px;color:#f0c477;flex:none}
@@ -62,31 +63,41 @@ if (typeof getActions === 'function' && typeof onDraw === 'function') {
     if (props.includes(f)) { if (f.proc) drawProc(f, 1); else { if (f._pi == null || props[f._pi] !== f) f._pi = props.indexOf(f); objAt('P' + (f._pi + 1), propName(f, false), f.cx, f.cy, 1, null, 0, null); } return true; }
     return false;
   }
-  function outline(a) {
-    const W0 = cv.width, H0 = cv.height, [x, y, zt] = topOf(a);
-    const k = DPR, cx = SX(x, y) * k, by = SY(x, y, -U * .9) * k, ty = SY(x, y, zt + U * .9) * k, hw = U * (a.f && a.f.type === 'car' ? 2.6 : 1.9) * k;
-    const rx = Math.max(0, Math.floor(cx - hw)), ry = Math.max(0, Math.floor(ty)), rw = Math.min(W0, Math.ceil(cx + hw)) - rx, rh = Math.min(H0, Math.ceil(by)) - ry;
-    if (rw < 4 || rh < 4) return;
+  // кольцо считается один раз на цель (и раз в полсекунды — вдруг дверь открылась), а каждый кадр только
+  // переносится за предметом: два drawImage вместо дюжины перерисовок и размытия — на планшете это заметно
+  const OC = {key:null, f:null, t:0, ax:0, ay:0, dx:0, dy:0, pad:0, ok:false};
+  function outlineBuild(a, ax, ay) {
+    const k = DPR, [x, y, zt] = topOf(a);
+    const cx = SX(x, y) * k, by = SY(x, y, -U * .9) * k, ty = SY(x, y, zt + U * .9) * k, hw = U * (a.f && a.f.type === 'car' ? 2.6 : 1.9) * k;
+    const rx = Math.floor(cx - hw), ry = Math.floor(ty), rw = Math.ceil(cx + hw) - rx, rh = Math.ceil(by) - ry;
+    OC.ok = false; if (rw < 4 || rh < 4 || rw > 2400 || rh > 2400) return;
     const A = cvOf('a', rw, rh), B = cvOf('b', rw, rh), C = cvOf('c', rw, rh), ga = A._g, gb = B._g, gc = C._g;
-    // 1) силуэт цели
     ga.setTransform(1, 0, 0, 1, 0, 0); ga.clearRect(0, 0, rw, rh);
     const sc = ctx, sox = ox, soy = oy; let ok = false;
     ctx = ga; ox = sox - rx / k; oy = soy - ry / k; resetT();
     try { ok = drawAlone(a); } catch (e) { ok = false; } finally { ctx = sc; ox = sox; oy = soy; resetT(); }
     if (!ok) return;
-    // 2) залить силуэт цветом
     gb.setTransform(1, 0, 0, 1, 0, 0); gb.globalCompositeOperation = 'source-over'; gb.clearRect(0, 0, rw, rh); gb.drawImage(A, 0, 0);
     gb.globalCompositeOperation = 'source-in'; gb.fillStyle = '#ffd88a'; gb.fillRect(0, 0, rw, rh); gb.globalCompositeOperation = 'source-over';
-    // 3) кольцо: силуэт, раздвинутый во все стороны, минус сам силуэт
     const d = Math.max(1.5, k * 1.1);
     gc.setTransform(1, 0, 0, 1, 0, 0); gc.globalCompositeOperation = 'source-over'; gc.clearRect(0, 0, rw, rh);
     for (let n = 0; n < 12; n++) { const t = n / 12 * Math.PI * 2; gc.drawImage(B, Math.cos(t) * d, Math.sin(t) * d); }
     gc.globalCompositeOperation = 'destination-out'; gc.drawImage(A, 0, 0); gc.globalCompositeOperation = 'source-over';
-    // 4) на экран: мягкое свечение и чёткая линия
-    const pulse = .75 + Math.sin(performance.now() / 380) * .25;
+    // свечение запекается заранее
+    const pad = Math.ceil(8 * k), G = cvOf('g', rw + pad * 2, rh + pad * 2), gg = G._g;
+    gg.setTransform(1, 0, 0, 1, 0, 0); gg.clearRect(0, 0, G.width, G.height);
+    gg.shadowColor = 'rgba(240,196,119,.9)'; gg.shadowBlur = 10 * k / 2; gg.drawImage(C, pad, pad); gg.shadowBlur = 0;
+    Object.assign(OC, {ok:true, pad, dx:rx - ax, dy:ry - ay});
+  }
+  function outline(a) {
+    const k = DPR, [x, y] = topOf(a), ax = SX(x, y) * k, ay = SY(x, y, 0) * k, now = performance.now();
+    const key = tgtKey(a), st = U + '|' + k + '|' + a.kind + '|' + a.label;
+    if (key !== OC.f || st !== OC.key || now - OC.t > 500) { OC.f = key; OC.key = st; OC.t = now; outlineBuild(a, ax, ay); }
+    if (!OC.ok) return;
+    const rx = ax + OC.dx, ry = ay + OC.dy, pulse = .75 + Math.sin(now / 380) * .25;
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.globalAlpha = .55 * pulse; ctx.shadowColor = 'rgba(240,196,119,.9)'; ctx.shadowBlur = 10 * k / 2; ctx.drawImage(C, rx, ry);
-    ctx.shadowBlur = 0; ctx.globalAlpha = .95; ctx.drawImage(C, rx, ry);
+    ctx.globalAlpha = .55 * pulse; ctx.drawImage(O.g, rx - OC.pad, ry - OC.pad);
+    ctx.globalAlpha = .95; ctx.drawImage(O.c, rx, ry);
     ctx.restore(); resetT();
   }
   // старая прямоугольная рамка под целью больше не нужна
@@ -148,14 +159,25 @@ if (typeof getActions === 'function' && typeof onDraw === 'function') {
     const p = popEl(), list = actionsFor(a); p.textContent = '';
     p.appendChild(mk('div', 'ttl', actName(a) || 'Действия'));
     for (const b of list) { const it = btn('', () => { popClose(); runIt(b); }); it.setAttribute('role', 'menuitem'); it.appendChild(svgIc(iconOf(b))); it.appendChild(document.createTextNode(verb(b))); p.appendChild(it); }
-    AU.popFor = tgtKey(a); p.hidden = false;
-    const [x, y, z] = topOf(a), [px, py] = cssXY(SX(x, y), SY(x, y, z)), r = p.getBoundingClientRect();
-    p.style.left = Math.round(Math.max(8, Math.min(innerWidth - r.width - 8, px - r.width / 2))) + 'px';
-    let top = py - r.height - 14; if (top < 8) top = Math.min(innerHeight - r.height - 8, py + 20);
-    p.style.top = Math.round(top) + 'px';
+    AU.popFor = tgtKey(a); p.hidden = false; document.body.classList.add('popon');
+    const [x, y, z] = topOf(a), [px, py] = cssXY(SX(x, y), SY(x, y, z)), [, by] = cssXY(SX(x, y), SY(x, y, 0)), r = p.getBoundingClientRect();
+    const W = innerWidth, H = innerHeight, w = r.width, h = r.height, m = 8;
+    // где стоят кнопки: меню выбирает место, которое их не накрывает
+    const obs = [];
+    for (const id of ['bAct', 'bAtk', 'bRun', 'bSneak', 'bInv', 'bBar', 'dock', 'stick', 'knob', 'hud', 'zoomBox', 'bPhone', 'moodles', 'carPad', 'toasts', 'taskChip']) {
+      const e = $(id); if (!e || e.hidden || !e.offsetParent && getComputedStyle(e).position !== 'fixed') continue;
+      if (id === 'hud') { for (const c of e.children) { if (c.hidden) continue; const q = c.getBoundingClientRect(); if (q.width) obs.push(q); } continue; }
+      const q = e.getBoundingClientRect(); if (q.width && q.height) obs.push(q);
+    }
+    const hit = (l, t) => { let s = 0; for (const q of obs) { const ix = Math.min(l + w, q.right) - Math.max(l, q.left), iy = Math.min(t + h, q.bottom) - Math.max(t, q.top); if (ix > 0 && iy > 0) s += ix * iy; } return s; };
+    const cl = (l, t) => [Math.max(m, Math.min(W - w - m, l)), Math.max(m, Math.min(H - h - m, t))];
+    const cand = [cl(px - w / 2, py - h - 12), cl(px - w - 34, (py + by) / 2 - h / 2), cl(px + 34, (py + by) / 2 - h / 2), cl(px - w / 2, by + 16)];
+    let best = cand[0], bs = 1e12;
+    cand.forEach((c, i) => { const s = hit(c[0], c[1]) + i * 50; if (s < bs) { bs = s; best = c; } });
+    p.style.left = Math.round(best[0]) + 'px'; p.style.top = Math.round(best[1]) + 'px';
     SFX.select && SFX.select(); AU.opened = (AU.opened || 0) + 1;
   }
-  function popClose() { if (AU.pop) AU.pop.hidden = true; AU.popFor = null; }
+  function popClose() { if (AU.pop) AU.pop.hidden = true; AU.popFor = null; document.body.classList.remove('popon'); }
 
   // тап по предмету рядом — меню его действий
   onTap((cx, cy) => {
@@ -181,6 +203,8 @@ if (typeof getActions === 'function' && typeof onDraw === 'function') {
     if (AU.btn) AU.btn.hidden = true;                                           // главное действие — обычной кнопкой справа внизу
     if (AU.pop && !AU.pop.hidden && (panel || paused || !getActions().some(b => tgtKey(b) === AU.popFor))) popClose();
   });
+  // на кнопке справа внизу — одна строка: «Открыть окно», без повтора «окно» снизу
+  if (typeof setActButton === 'function' && $('bActN')) { const f = setActButton; setActButton = function (a) { const r = f.apply(this, arguments); if (a) { const n = actName(a) || ''; if (n && a.label.toLowerCase().includes(n.toLowerCase())) $('bActN').textContent = ''; } return r; }; }
   { const f = toMenu; toMenu = function () { popClose(); if (AU.btn) AU.btn.hidden = true; return f.apply(this, arguments); }; }
   // кнопка действия и E делают ровно то, что подсвечено (а не «ближайшее» заново)
   { const f = doAction; doAction = function (a0) { return f.call(this, a0 || (mode === 'play' && curAct) || undefined); }; }
