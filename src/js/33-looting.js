@@ -18,7 +18,7 @@ function queueXfer(c, items, dir) {
     if (room < need - 1e-6) { toast(dir === 'take' ? 'Слишком тяжело — не унести' : 'Сюда больше не влезет: ' + capOf(c) + ' мест'); break; }
     xferQ.push({c, it, dir, t:0, dur:xferDur(it)}); room -= need; added++;
   }
-  if (added) { SFX.rustle(); panel.sel = null; renderPanel(); }
+  if (added) { dir === 'take' ? SFX.pickup() : SFX.rustle(); panel.sel = null; renderPanel(); }
 }
 function tickXfer(dt) {
   if (!xferQ.length) return;
