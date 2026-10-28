@@ -290,7 +290,7 @@ await page.setViewportSize({width:640, height:360});
 await sleep(400);
 check('на узком экране слоты не заезжают под кнопки', await D("(() => { fitDock(); const d = $('dock').getBoundingClientRect(); return ['bSneak', 'bRun', 'bAtk'].every(id => { const r = $(id).getBoundingClientRect(); return d.right <= r.left || d.bottom <= r.top || d.top >= r.bottom; }); })()"));
 await page.setViewportSize({width:932, height:430});
-check('отчёт об ошибках собирается', await D("errReport().includes('Нулевой день') && !!document.getElementById('pReport')"));
+check('отчёт об ошибках собирается', await D("errReport().includes('Dead Line') && !!document.getElementById('pReport')"));
 
 check('тест скорости проходит и пишет результат', await D(`(async () => { toMenu(); BENCH_SCENES.forEach(s => s); const keep = BENCH_SCENES.splice(1); await runBench(); BENCH_SCENES.push(...keep); return BENCH && BENCH.rows.length === 1 && BENCH.rows[0].fps > 0 && mode === 'menu' && perfStat().includes('FPS'); })()`));
 await fresh();

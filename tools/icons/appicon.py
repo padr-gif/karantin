@@ -1,22 +1,18 @@
-# Иконка приложения «Нулевой день»: листок календаря с нулём и кровавыми подтёками, пиксель-арт 64x64.
+# Иконка приложения «Dead Line»: кардиограмма на мониторе, которая уходит в прямую линию. Пиксель-арт 64x64.
 #   python3 tools/icons/appicon.py pwa
 import sys, os
 from PIL import Image, ImageDraw
 out = sys.argv[1] if len(sys.argv) > 1 else 'pwa'
-BG, PAGE, INK, RED = '#3d1414', '#efe8da', '#1f1a17', '#c8322b'
-RECTS = [  # x, y, w, h, цвет
-    (0, 0, 64, 64, BG), (14, 12, 40, 46, '#2a0d0d'),                               # фон, тень листка
-    (12, 10, 40, 46, PAGE), (12, 10, 40, 11, RED),                                 # листок и красная шапка
-    (19, 7, 3, 6, '#1f0a0a'), (42, 7, 3, 6, '#1f0a0a'),                             # кольца
-    (17, 21, 2, 3, RED), (17, 24, 1, 2, RED), (38, 21, 2, 5, RED), (38, 26, 1, 2, RED), (47, 21, 1, 2, RED),  # подтёки
-    (24, 27, 16, 25, INK),                                                          # цифра 0
-    (24, 27, 2, 2, PAGE), (38, 27, 2, 2, PAGE), (24, 50, 2, 2, PAGE), (38, 50, 2, 2, PAGE),
-    (29, 31, 6, 17, PAGE), (33, 33, 2, 3, INK), (31, 36, 2, 4, INK), (29, 40, 2, 4, INK),
-    (12, 55, 40, 1, '#cfc6b4'),
-]
+BG, GRID, GLOW, LINE, TIP = '#0b1012', '#14241e', '#5a1210', '#ff3b30', '#ffd6cf'
+ECG = [(3, 34), (14, 34), (17, 29), (20, 34), (23, 34), (25, 39), (28, 11), (31, 51), (34, 34),
+       (39, 34), (41, 31), (43, 34), (60, 34)]   # два удара и прямая
 def art():
-    im = Image.new('RGBA', (64, 64)); d = ImageDraw.Draw(im)
-    for x, y, w, h, c in RECTS: d.rectangle([x, y, x + w - 1, y + h - 1], fill=c)
+    im = Image.new('RGBA', (64, 64), BG); d = ImageDraw.Draw(im)
+    for i in range(4, 64, 8):   # сетка монитора
+        d.line([(i, 0), (i, 63)], fill=GRID); d.line([(0, i), (63, i)], fill=GRID)
+    d.line(ECG, fill=GLOW, width=5, joint='curve')
+    d.line(ECG, fill=LINE, width=2, joint='curve')
+    x, y = ECG[-1]; d.rectangle([x - 1, y - 2, x + 2, y + 1], fill=TIP)   # точка-курсор в конце
     return im
 a = art(); os.makedirs(out, exist_ok=True)
 for s in (192, 512): a.resize((s, s), Image.NEAREST).save(f'{out}/icon-{s}.png')

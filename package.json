@@ -2,7 +2,7 @@
   "name": "karantin",
   "version": "0.67.0",
   "private": true,
-  "description": "Нулевой день — мобильная зомби-выживалка в браузере",
+  "description": "Dead Line — мобильная зомби-выживалка в браузере",
   "type": "module",
   "scripts": {
     "build": "node build.mjs",

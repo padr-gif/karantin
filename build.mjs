@@ -55,7 +55,7 @@ export function build({dev = false, pwa = false, out = 'dist/karantin.html'} = {
   // 3. page
   // the sheets start downloading straight from <head>, while the browser is still busy with the game code
   if (pwa) preload.push(`<script>window.__pre={};(function(u){try{if(window.fetch)for(var k in u)window.__pre[k]=fetch(u[k]);}catch(e){}})(${JSON.stringify(png)})</script>`);
-  const head = (pwa ? preload.join('') : '') + (pwa ? '<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#0c0f12"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Нулевой день"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" href="icon-192.png">'
+  const head = (pwa ? preload.join('') : '') + (pwa ? '<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#0c0f12"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Dead Line"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" href="icon-192.png">'
  : '');
   // fonts live in the page itself: an outside font server that hangs must never block the game from starting
   const FONTS = [['Oswald', 500, 'oswald-500'], ['Oswald', 700, 'oswald-700'], ['PT Sans', 400, 'ptsans-400'], ['PT Sans', 700, 'ptsans-700'], ['PT Mono', 400, 'ptmono-400']];
