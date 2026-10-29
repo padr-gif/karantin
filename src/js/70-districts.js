@@ -116,7 +116,7 @@ function blockClimbPlan(dx, dy) {
 
 // ---- край карты: уйти в соседний район ----
 function edgeSide() {
-  if (!P) return null;
+  if (!P || world.dtype === 'tut') return null;                              // в обучении соседних районов нет
   const m = .75;
   if (P.x < m) return 'w'; if (P.x > MW - m) return 'e'; if (P.y < m) return 'n'; if (P.y > MH - m) return 's';
   return null;

@@ -58,6 +58,17 @@ function genTutorial() {
   world.nofence = true;
 }
 
+// ---- со двора не уйти: ни через сломанные ворота, ни как-то ещё. Мертвецы заходят, герой выйти не может ----
+function tutKeepIn() {
+  if (!P || mode !== 'play' || world.dtype !== 'tut') return;
+  const F = TUT_FENCE, x0 = F.x0 + .5 + P.r + .05, x1 = F.x1 + .5 - P.r - .05, y0 = F.y0 + .5 + P.r + .05, y1 = F.y1 + .5 - P.r - .05;
+  if (P.x >= x0 && P.x <= x1 && P.y >= y0 && P.y <= y1) return;
+  P.x = Math.min(x1, Math.max(x0, P.x)); P.y = Math.min(y1, Math.max(y0, P.y));
+  if (P.act && P.act.tx != null) P.act = null;
+  if ((P._tutWallT || 0) < performance.now()) { P._tutWallT = performance.now() + 4000; toast('Там толпа. Назад во двор'); }
+}
+onUpdate(tutKeepIn);
+
 // ---- финал обучения: ворота не выдержали ----
 function tutBreakGate() {
   let n = 0;

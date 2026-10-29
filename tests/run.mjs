@@ -329,6 +329,9 @@ const tm = await D(`(() => { genTutMap = true; try { newGame({seed:20261028}); }
 })()`);
 check('маленькая карта с одним домом и воротами', tm.mw === 52 && tm.houses === 1 && tm.gate === 2, tm);
 check('со двора не уйти, а сломанные ворота открыты', !tm.edge && tm.open, tm);
+const tg = await D(`(() => { mode = 'play'; paused = false; const g = props.find(p => p.type === 'hfence' && p.gate); P.x = g.cx; P.y = g.cy + 3; tutKeepIn();
+  const back = P.y < TUT_FENCE.y1 + .5; P.x = 1; P.y = MH - 3; const side = edgeSide(); return {back, side}; })()`);
+check('через сломанные ворота не выйти, соседних районов нет', tg.back && !tg.side, tg);
 await fresh();
 
 console.log('Живая игра 15 секунд');
