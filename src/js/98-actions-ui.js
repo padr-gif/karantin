@@ -238,7 +238,7 @@ body.popon #bAct{visibility:hidden}
   const placePhone = () => {
     const b = $('bPhone'), z = $('zoomBox'); if (!b || !z) return;
     if (!b.classList.contains('top')) { b.className = 'ibtn sm top'; document.body.appendChild(b); }
-    const r = z.getBoundingClientRect(); if (!r.width) return;
+    const r = z.getBoundingClientRect(); if (!r.width || mode !== 'play' || $('hud').hidden) { b.hidden = true; return; }
     const s = Math.round(r.height) || 38; b.style.width = b.style.height = s + 'px';
     b.style.left = Math.round(r.right - s) + 'px'; b.style.top = Math.round(r.bottom + 8) + 'px';
     b.hidden = mode !== 'play' || $('hud').hidden;
