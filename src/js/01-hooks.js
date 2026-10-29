@@ -14,6 +14,12 @@ const onStartNew = (post, pre) => HOOKS.startNew.push({post, pre});
 const onNewWorld = (post, pre) => HOOKS.newWorld.push({post, pre});
 //   onPanel(post, pre)   — перерисовка открытого окна (renderPanel): pre() до, post() после; дописать вкладку, блок, подпись
 const onPanel = (post, pre) => HOOKS.panel.push({post, pre});
+//   onDraw(fn)           — fn(dt): дорисовать своё поверх мира каждый кадр (контур цели, метки), в координатах мира (SX/SY)
+const DRAW = [];
+const onDraw = fn => DRAW.push(fn);
+//   onTap(fn)            — fn(clientX, clientY) → true: тап по миру обработан (дальше не идёт: ни удар, ни обычный выбор цели)
+const TAPS = [];
+const onTap = fn => TAPS.push(fn);
 // Действия рядом с героем (кнопка «Действие» и список действий):
 //   addActions(fn)       — fn(out): дописать свои действия в список (после основных)
 //   defAction(kind, {name, icon, run}) — у действия этого вида своё имя цели, иконка и выполнение

@@ -159,7 +159,11 @@ function drawProc(p, f) {
   const x = Math.floor(p.cx), y = Math.floor(p.cy), fq = Math.round(f * 20) / 20;
   sprite('Q' + p._sid, p.type + '|' + fq + '|' + (p.dug ? 1 : 0) + '|' + (p.sign ? 1 : 0), x, y, -U - 6, -78, U + 6, 2 * hh + 6, () => drawProcRaw(p, fq));
 }
+// свои процедурные вещи из других файлов: defProc('тип', (p, f) => {…}) — рисуются вместо встроенных
+const PROCS = {};
+function defProc(type, fn) { PROCS[type] = fn; }
 function drawProcRaw(p, f) {
+  if (PROCS[p.type]) return PROCS[p.type](p, f);
   if (p.type === 'pfence') {
     const x = Math.floor(p.cx), y = Math.floor(p.cy), c = PF_COL[p.st || 0], X = p.ax === 'x';
     const a0 = X ? [x, y + .5] : [x + .5, y], d = X ? [1, 0] : [0, 1], t = .035;

@@ -150,6 +150,7 @@ function invDetail(body) {
       const d = ITEMS[g.it.id], bs = []; it = g.it;
       if (d.kind === 'light') bs.push(btn(g.it.on ? 'Выключить' : 'Включить', () => useItem(null, g.idx)));
       else if (d.verb) bs.push(btn(d.verb, () => { beginUse(g.idx); updateHud(); }));
+      if (d.kind === 'phone') bs.push(...phButtons(g.it));
       bs.push(btn('На землю', () => dropItemGround(g.idx), 'ghost'));
       dc = detailCard(g.it, g.n, bs);
     } else panel.sel = null;

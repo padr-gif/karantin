@@ -345,6 +345,7 @@ function genIndustrial() {
 // построить карту района по его типу (curDType): город нового вида (world.gen ≥ 2), старый город, деревня, лес, промзона
 function generate() {
   ROADSX = ROADSY = null; curAct = null;                                    // прежнее действие ссылается на старую карту
+  if (genTutMap) { setWorldSize(TUT_MW); world.dtype = 'tut'; GCFG = {}; genTutorial(); growFurniture(); return; }   // обучение: один двор за забором (76-tut-map)
   const t = curDType();
   setWorldSize(world.gen >= 3 && t === 'town' ? 256 : 184);                 // новый городок — большая карта, остальные районы как были
   if (world.gen >= 3 && t === 'town') { world.dtype = t; GCFG = {}; genCounty(); growFurniture(); return; }   // городок вдоль трассы с фермами (74-county)

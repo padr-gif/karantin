@@ -178,6 +178,7 @@ function render(dt) {
   }
   drawParts();
   drawBreath(); drawBustle(); drawEvac(); drawScreamFx(); drawLootMarks(); drawV23(); drawEditMarks(); drawFog(); if (tapMark) tapMark.t -= dt;
+  for (const fn of DRAW) { try { fn(dt); } catch (e) { if (!fn._err) { fn._err = 1; console.error(e); } } }   // onDraw (01-hooks)
 
   // time-of-day tint
   const hr = hourOf(), L = lightLevel();

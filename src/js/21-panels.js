@@ -14,7 +14,7 @@ function catOf(id) {
   if (d.kind === 'book' || d.kind === 'fun') return 'Книги';
   if (d.kind === 'smoke') return 'Медицина';
   if (d.kind === 'cloth') return 'Одежда';
-  if (['light', 'battery', 'bag', 'map', 'radio', 'burner', 'sleepbag', 'tape', 'armor', 'generator', 'fuel', 'seeds'].includes(d.kind) || ['pot', 'opener', 'matches', 'lighter', 'alarm', 'molotov', 'flare'].includes(id) || d.kind === 'bino' || d.kind === 'trap') return 'Снаряжение';
+  if (['light', 'phone', 'battery', 'bag', 'map', 'radio', 'burner', 'sleepbag', 'tape', 'armor', 'generator', 'fuel', 'seeds'].includes(d.kind) || ['pot', 'opener', 'matches', 'lighter', 'alarm', 'molotov', 'flare'].includes(id) || d.kind === 'bino' || d.kind === 'trap') return 'Снаряжение';
   return 'Материалы';
 }
 const COOK = [
@@ -54,7 +54,7 @@ function groupItems(list) {
   const groups = [];
   list.forEach((it, k) => {
     const d = ITEMS[it.id];
-    const key = ((d.kind === 'weapon' || d.kind === 'light' || d.uses) ? 'u' + k : it.id + (isRotten(it) ? '!' : '')) + (inv && it.bp ? '@b' : '') + (it.u ? '#' + it.u : '');
+    const key = ((d.kind === 'weapon' || d.kind === 'light' || d.kind === 'phone' || d.uses) ? 'u' + k : it.id + (isRotten(it) ? '!' : '')) + (inv && it.bp ? '@b' : '') + (it.u ? '#' + it.u : '');
     let g = groups.find(g => g.key === key);
     if (!g) groups.push(g = {key, idx:k, n:0, it});
     g.n++;

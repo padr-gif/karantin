@@ -84,7 +84,7 @@ function removeItem(id) { const k = P.inv.findIndex(i => i.id === id); if (k >= 
 const powerOn = () => gameMin < powerOffAt;
 const waterOn = () => gameMin < waterOffAt;
 const isRotten = it => it.rot != null && gameMin > it.rot;
-const flashlight = () => P.inv.find(i => (i.id === 'flashlight' || i.id === 'candle') && i.on && i.ch > 0);
+const flashlight = () => P.inv.find(i => (i.id === 'flashlight' || i.id === 'candle' || i.id === 'phone') && i.on && i.ch > 0);
 
 // удар (или выстрел); кулаки чередуются — правой, левой
 function attack() { const t0 = P.atkT; attackSwing(); if (P.atkT === 0 && t0 !== 0) P._altHand = !P._altHand; }
@@ -560,6 +560,7 @@ function itemText(it) {
   if (it.id === 'lure') return `заводов: ${it.ch != null ? it.ch : 3}/3 · гремит ~15 секунд`;
   if (d.kind === 'weapon') return `урон ${d.dmg} · прочность ${it.dur}/${d.dur}` + (it.id === 'hammer' ? ' · для баррикад' : it.id === 'knife' ? ' · открывает консервы' : '');
   if (d.kind === 'light') return `заряд ${Math.round(it.ch)}%` + (it.on ? ' · включён' : '');
+  if (d.kind === 'phone') return `${PH_STORIES[it.ph] ? 'хозяин: ' + PH_STORIES[it.ph].owner + ' · ' : ''}заряд ${Math.max(0, Math.round(it.ch || 0))}%` + (it.plug ? ' · заряжается' : '') + (it.on ? ' · фонарик' : '') + (it.mute ? ' · без звука' : '');
   if (d.kind === 'canteen') return `воды ${it.w || 0}/${wcap(it)} · +30 вода за глоток`;
   if (d.kind === 'fun') return 'прогоняет скуку' + (d.keep ? ' · колода остаётся' : '');
   if (d.kind === 'smoke') return `успокаивает · осталось ${it.uses}`;
