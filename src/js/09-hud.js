@@ -2,6 +2,8 @@
 const statEls = {};
 document.querySelectorAll('.stat').forEach(el => statEls[el.dataset.k] = el);
 let lastUse = '', lastBar = null;
+// значок состояния в HUD (77-moodicons рисует их картинками); сколько показать, остальное — «+N»
+let moodChip = (t, c) => `<span class="mood ${c}">${t}</span>`, MOOD_MAX = 5;
 function fmtTime(m) { const h = Math.floor(m / 60) % 24, mm = Math.floor(m % 60); return String(h).padStart(2, '0') + ':' + String(mm).padStart(2, '0'); }
 function updateHud() {
   for (const k of ['hp', 'sat', 'hyd', 'en']) {
@@ -18,6 +20,7 @@ function updateHud() {
   if ((P.panic || 0) > 65) m.push(['Паника', 'crit']); else if ((P.panic || 0) > 30 || chasing) m.push(['Тревога', 'warn']);
   if (P.bleed) m.push(['Кровотечение', 'crit']);
   m.push(...woundMoodles());
+  for (const s of MOODS) if (s.hud) s.hud(m);
   if (P.sneak && !chasing && !P.car) m.push(['Незаметен', '']);
   if (P.inf && P.infT > 360) m.push(['Жар', 'crit']); else if (P.inf && P.infT > 120) m.push(['Тошнота', 'warn']);
   if (P.pois > 0) m.push(['Отравление', 'crit']);
@@ -31,9 +34,9 @@ function updateHud() {
   if ((P.stress || 0) > 80) m.push(['Нервы на пределе', 'crit']); else if ((P.stress || 0) > 50) m.push(['Стресс', 'warn']);
   if ((P.bored || 0) > 60) m.push(['Скука', 'warn']);
   m.sort((a, b) => (b[1] === 'crit') - (a[1] === 'crit') || (b[1] === 'warn') - (a[1] === 'warn'));
-  if (m.length > 5) { const n = m.length - 4; m.length = 4; m.push(['+' + n, '']); }
-  const html = m.map(([t, c]) => `<span class="mood ${c}">${t}</span>`).join('');
-  const mo = $('moodles'); if (mo.innerHTML !== html) mo.innerHTML = html;
+  if (m.length > MOOD_MAX) { const n = m.length - MOOD_MAX + 1; m.length = MOOD_MAX - 1; m.push(['+' + n, '']); }
+  const html = m.map(([t, c]) => moodChip(t, c)).join('');
+  const mo = $('moodles'); if (mo._h !== html) { mo._h = html; mo.innerHTML = html; }
   curAct = getAction(); curBar = getBarricade();
   const key = curAct ? curAct.label : '';
   if (key + actName(curAct || {}) !== lastUse) { lastUse = key + actName(curAct || {}); setActButton(curAct); }

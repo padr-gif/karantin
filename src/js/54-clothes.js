@@ -125,18 +125,31 @@ onLoad((d) => { if (P && !(P.cloth && P.cloth.v)) starterClothes();
 
 // ---- картинка: красим области тела цветом надетых вещей ----
 const hash34 = (x, y) => (((x * 73856093) ^ (y * 19349663)) >>> 0) % 1000 / 1000;
-function outfitRegs() {
-  if (P && P._inShower) return new Array(16).fill(null);                    // в душе — без одежды
-  const reg = new Array(16).fill(null);
+// cl — набор одежды (по умолчанию надетое), lk — внешность: цвет кожи и волос (кадры героя цветные — перекрашиваем по карте областей)
+function outfitRegs(cl, lk) {
+  cl = cl || (P && P.cloth); lk = lk || (P && P.look) || look;
+  const reg = new Array(16).fill(null); reg.tint = lookTint(lk);
+  if (P && P._inShower && cl === P.cloth) return reg;                       // в душе — без одежды
   for (const s of DRAW_ORDER) {
-    const c = P.cloth && P.cloth[s]; if (!c) continue;
-    const d = ITEMS[c.id], o = {d, torn:cdur(c) < 35};
+    const c = cl && cl[s]; if (!c) continue;
+    const d0 = ITEMS[c.id], d = c.col ? Object.assign({}, d0, {col:c.col}) : d0, o = {d, torn:cdur(c) < 35};   // c.col — свой цвет вещи (выбран при создании)
     for (const r of COVER[d.cov] || []) reg[r] = o;
   }
-  if (P.armor) reg[1] = {d:{col:[46, 56, 74], pat:'armor'}};
+  if (cl === (P && P.cloth) && P.armor) reg[1] = {d:{col:[46, 56, 74], pat:'armor'}};
   return reg;
 }
-function outfitKey() { if (P && P._inShower) return 'shower'; return DRAW_ORDER.map(s => { const c = P.cloth && P.cloth[s]; return c ? c.id + (cdur(c) < 35 ? '~' : '') : ''; }).join(',') + (P.armor ? ',A' : ''); }
+// перекраска кожи и волос: множители к цвету кадра (листы отрисованы со светлой кожей LOOK.skin[5] и русыми волосами LOOK.hair[6])
+function lookTint(lk) {
+  if (!lk) return null;
+  const s0 = LOOK.skin[5], h0 = LOOK.hair[6], s = LOOK.skin[lk.skin] || s0, h = lk.hair < 0 ? s.map(v => v * .92) : LOOK.hair[lk.hair] || h0;
+  const sk = s.map((v, i) => v / s0[i]), hk = h.map((v, i) => v / h0[i]);
+  return sk.every(v => Math.abs(v - 1) < .01) && hk.every(v => Math.abs(v - 1) < .01) ? null : {sk, hk};
+}
+function outfitKey(cl, lk) {
+  cl = cl || (P && P.cloth); lk = lk || (P && P.look) || look; const t = '|' + lk.skin + ',' + lk.hair;
+  if (P && P._inShower && cl === P.cloth) return 'shower' + t;
+  return DRAW_ORDER.map(s => { const c = cl && cl[s]; return c ? c.id + (c.col ? '#' + c.col.join('.') : '') + (cdur(c) < 35 ? '~' : '') : ''; }).join(',') + (cl === (P && P.cloth) && P.armor ? ',A' : '') + t;
+}
 function patCol(d, x, y) {
   const c = d.col;
   switch (d.pat) {
@@ -157,8 +170,13 @@ function dressFrame(f, cv, reg) {
   const R = tg.getImageData(0, 0, w, h).data, g = cv.getContext('2d', {willReadFrequently:true}), D = g.getImageData(0, 0, w, h), a = D.data;
   const n = w * h, O = new Array(n);
   for (let p = 0; p < n; p++) O[p] = R[p * 4 + 3] < 128 ? undefined : reg[R[p * 4] >> 4];
+  const T = reg.tint;
   for (let i = 0, p = 0; i < a.length; i += 4, p++) {
-    const o = O[p]; if (!o) continue;
+    const o = O[p];
+    if (!o) {                                                                 // открытое тело: кожа и волосы своего цвета
+      if (T && R[i + 3] >= 128 && a[i + 3]) { const r = R[i] >> 4; if (r !== 6) { const m = r === 12 ? T.hk : T.sk; a[i] = Math.min(255, a[i] * m[0]); a[i + 1] = Math.min(255, a[i + 1] * m[1]); a[i + 2] = Math.min(255, a[i + 2] * m[2]); } }
+      continue;
+    }
     const x = p % w, y = (p / w) | 0;
     if (o.torn && hash34(x + 7, y) < .16) continue;                              // дыры: видно кожу
     // край вещи (рядом тело без неё) — тёмный шов: манжеты, низ штанин, ворот
@@ -171,8 +189,8 @@ function dressFrame(f, cv, reg) {
 }
 const playerLookPal34 = playerLookPal;
 playerLookPal = function (lk) {
-  if (lk.g === 'm') return {pal:{outfit:outfitRegs()}, key:'PM|' + outfitKey()};
-  // героиня — старые палитровые кадры: верх, штаны, шапка цветом вещей; без вещи — кожа / бельё
+  if (heroRig(lk)) return {pal:{outfit:outfitRegs(null, lk)}, key:heroPre(lk).toUpperCase() + '|' + outfitKey(null, lk)};
+  // старые палитровые кадры: верх, штаны, шапка цветом вещей; без вещи — кожа / бельё
   const pal = lookPal(lk), cl = P.cloth || {}, top = cl.torso || cl.shirt, skin = LOOK.skin[lk.skin];
   pal[3] = pal[9] = top ? ITEMS[top.id].col : [226, 226, 220];
   pal[4] = cl.torso || (cl.shirt && ITEMS[cl.shirt.id].cov === 'long') ? ITEMS[top.id].col : skin;

@@ -30,9 +30,10 @@ function hurtPlayer(z) {
   const brute = !!(z && z.brute), crawl = !!(z && z.crawl), part = crawl ? 'leg' : rollPart();
   const dmg = (6 + rng() * 7) * DIFF[world.diff].dmg * (brute ? 1.45 : 1) * (crawl ? .75 : 1);
   let arm = 1;
-  if (P.armor && (part === 'torso' || (part === 'arm' && rng() < .4))) { arm = .5; P.armor.dur -= 6 + rng() * 4; if (P.armor.dur <= 0) { P.armor = null; toast('Бронежилет разорван в клочья'); } }
+  if (P.armor && (part === 'torso' || (part === 'arm' && rng() < .4))) { arm = .5; P.armor.dur -= 6 + rng() * 4; if (P.armor.dur <= 0) { toast((ITEMS[P.armor.id].broke || 'Бронежилет разорван в клочья')); P.armor = null; } }
   P.stress = Math.min(100, (P.stress || 0) + 10); P.panic = Math.min(100, (P.panic || 0) + 12 * panicK());
-  P.hp -= dmg * (arm < 1 ? .55 : 1); P.hurt = .45; lastCause = 'Загрызли';
+  if (settings.vib && navigator.vibrate) try { navigator.vibrate(dmg > 10 ? [60, 40, 90] : 60); } catch (e) {}   // укус чувствуется рукой
+  P.hp -= dmg * (arm < 1 ? (P.armor && ITEMS[P.armor.id].armK) || .55 : 1); P.hurt = .45; lastCause = 'Загрызли';
   if (!P.act || (P.act.kind !== 'vault' && P.act.kind !== 'reload')) P.act = null;
   SFX.bite();
   if (P.sleep) wake('Тебя разбудили зубы мертвеца');
@@ -485,7 +486,7 @@ function useItemBase(it, k, d) {
   } else if (d.kind === 'fuel') { toast(it.fuel > 0 ? `В канистре бензина: ${Math.round(it.fuel)}%. Залей в генератор` : 'Канистра пустая. Наполни на заправке'); return;
   } else if (d.kind === 'seeds') { toast('Сколоти грядку (Рюкзак → Создать), подойди к ней и посади семена'); return;
   } else if (d.kind === 'armor') {
-    P.inv.splice(k, 1); if (P.armor) P.inv.push(P.armor); P.armor = it; toast('Бронежилет надет'); SFX.equip();
+    P.inv.splice(k, 1); if (P.armor) P.inv.push(P.armor); P.armor = it; toast(d.name + ': надето'); SFX.equip();
   } else if (d.kind === 'canteen') {
     if (!(it.w > 0)) { toast('Фляга пуста'); return; }
     it.w--; P.hyd = clamp(P.hyd + 30, 0, 100); SFX.drink();
@@ -534,8 +535,10 @@ function unequip() {
   P.inv.push(P.weapon); P.weapon = null; renderInv(); updateHud();
 }
 // подпись вещи в рюкзаке: свойства и вес
+// привычное оружие (79-rescue): уровень по числу убитых этой вещью — 10, 30, 75; каждый даёт +8% урона
+const wkLv = it => !it || !it.kx ? 0 : it.kx >= 75 ? 3 : it.kx >= 30 ? 2 : it.kx >= 10 ? 1 : 0;
 function itemInfo(it) {
-  const d = ITEMS[it.id], s = itemText(it) || '';
+  const d = ITEMS[it.id], s = [it.sharp > 0 ? 'заточено ещё на ' + it.sharp + ' ударов' : '', it.kx ? 'убито ' + it.kx + (wkLv(it) ? ' · ' + '★'.repeat(wkLv(it)) + ' урон +' + wkLv(it) * 8 + '%' : '') : '', itemText(it)].filter(Boolean).join(' · ');
   const kg = fmtKg(itemKg(it)) + ' кг';
   if (d && d.kind === 'bag') return 'вместимость ' + d.bcap + ' кг · весит ' + kg;
   return (s ? s.replace(/ · карманы \+(\d+)/, (m, n) => ' · карманы +' + fmtKg(n * .7) + ' кг') + ' · ' : '') + kg;
@@ -553,7 +556,7 @@ function itemText(it) {
     return s.join(' · ') + ` · целость ${Math.round(cdur(it))}%` + (it.pad ? ' · утеплено' : '');
   }
   if (d.kind === 'weapon' && d.gun) return `урон ${d.dmg} · патронов ${it.mag || 0}/${d.mag} · прочность ${it.dur}/${d.dur} · очень громко`;
-  if (d.kind === 'ammo') return `патронов: ${it.uses} · для оружия «${ITEMS[d.gun].sh}»`;
+  if (d.kind === 'ammo') return `${d.unit || 'патронов'}: ${it.uses} · для оружия «${ITEMS[d.gun].sh}»`;
   if (it.id === 'sewkit') return `ниток на ${it.uses} раз · зашить, утеплить`;
   if (it.id === 'antisep') return 'обеззараживает все раны · +4 здоровье';
   if (it.id === 'rag') return 'временная повязка · материал для бинтов и шитья';

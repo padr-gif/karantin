@@ -19,7 +19,7 @@ function drawBook(name, zoff) {
   P4(at(-1, -.55), at(-.04, -.55), at(-.04, .62), at(-1, .62), '#ece6d6');              // страницы
   P4(at(.04, -.55), at(1, -.55), at(1, .62), at(.04, .62), '#e2dccb');
   ctx.fillStyle = 'rgba(60,50,40,.55)'; for (const s of [-.75, -.5, .3, .55]) { const p = at(s, -.2); ctx.fillRect(Math.round(p[0]), Math.round(p[1]), 1, 1); }
-  const n = AN('p', 'read'), fi = Math.floor(animT / ((ART.meta.anims.pmdur && ART.meta.anims.pmdur.read) || 3.2) * n) % n, k = fi / n;
+  const n = AN('p', 'read'), fi = Math.floor(animT / heroDur('read', 3.2) * n) % n, k = fi / n;
   if (k < .3) {                                                                         // страница поднимается и ложится налево
     const u = k / .3, sx = 1 - 2 * u, lift = Math.sin(Math.PI * u) * 2.4;
     const p0 = at(0, -.55), p1 = at(0, .62), q1 = at(sx, .62), q0 = at(sx, -.55);

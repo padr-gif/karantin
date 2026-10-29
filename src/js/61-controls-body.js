@@ -3,10 +3,10 @@
 
 // ---- одежда не в облипку: под одеждой — кадры с чуть «раздутым» телом ----
 heroVar = function (lk) {
-  if (!lk || lk.g !== 'm' || !P || !P.cloth || P._inShower) return '';
+  if (!lk || !heroRig(lk) || !P || !P.cloth || P._inShower) return '';
   const c = P.cloth, top = c.shirt || c.torso, legs = c.legs && ITEMS[c.legs.id].cov === 'pants';
   const v = top ? (legs ? 'f' : 't') : '';
-  return v && ART.meta.frames['pm' + v + '_idle_0_0'] ? v : '';
+  return v && ART.meta.frames[heroPre(lk) + v + '_idle_0_0'] ? v : '';
 };
 
 // (удары по очереди правой — левой: attack в 06-actions, клипы — playerAnim)
@@ -15,19 +15,20 @@ heroVar = function (lk) {
 // (стили — в styles.css: #settings .setlist)
 
 // ---- свои места для кнопок управления ----
-const CTL_IDS = ['bAct', 'bAtk', 'bSneak', 'bRun', 'bInv', 'dock', 'mini', 'bPause', 'vitals', 'moodles', 'clockBox', 'zoomBox', 'stick'];
-const CTL_NAME = {bAct:'Действие', bAtk:'Удар', bSneak:'Красться', bRun:'Бег', bInv:'Рюкзак', dock:'Нижняя панель', mini:'Мини-карта',
+const CTL_IDS = ['bAct', 'actAlt', 'bBar', 'bAtk', 'bSneak', 'bRun', 'bInv', 'dock', 'mini', 'bPause', 'vitals', 'moodles', 'taskChip', 'clockBox', 'zoomBox', 'stick'];
+const CTL_NAME = {bAct:'Действие', actAlt:'Кнопки взаимодействия', bBar:'Заколотить', taskChip:'Дневник', bAtk:'Удар', bSneak:'Красться', bRun:'Бег', bInv:'Рюкзак', dock:'Нижняя панель', mini:'Мини-карта',
   bPause:'Меню', vitals:'Здоровье, еда, вода, бодрость', moodles:'Состояния', clockBox:'Время и погода', zoomBox:'Масштаб', stick:'Джойстик'};
-const CTL_FOLLOW = {bAct:['bMore', 'actAlt', 'bBar']};                    // ходят вместе с кнопкой действия
+const CTL_FOLLOW = {bAct:['bMore', 'actAlt', 'bBar']};                    // ходят вместе с кнопкой действия (и ещё на своё смещение, если его задали)
 function ctlApply() {
   const B = settings.btn || {};
   for (const id of CTL_IDS) {
     const el = $(id); if (!el) continue; const b = B[id];
     if (id === 'stick') { el.style.scale = b && b.s && b.s !== 1 ? String(b.s) : ''; continue; }   // место джойстика — в 63-lights-anims (joyHome)
-    for (const e of [el].concat((CTL_FOLLOW[id] || []).map(k => $(k)).filter(Boolean))) {
-      e.style.translate = b ? b.x + 'px ' + b.y + 'px' : ''; if (e === el) e.style.scale = b && b.s && b.s !== 1 ? String(b.s) : '';
-    }
+    const lead = Object.keys(CTL_FOLLOW).find(k => CTL_FOLLOW[k].includes(id)), l = lead && B[lead];
+    const x = (b ? b.x : 0) + (l ? l.x : 0), y = (b ? b.y : 0) + (l ? l.y : 0);
+    el.style.translate = x || y ? x + 'px ' + y + 'px' : ''; el.style.scale = b && b.s && b.s !== 1 ? String(b.s) : '';
   }
+  for (const k in CTL_FOLLOW) for (const f of CTL_FOLLOW[k]) if (!CTL_IDS.includes(f) && $(f)) $(f).style.translate = B[k] ? B[k].x + 'px ' + B[k].y + 'px' : '';
 }
 let CTLE = null;
 function ctlEditOpen() {
@@ -39,7 +40,7 @@ function ctlEditOpen() {
   ov.innerHTML = '<div class="ceBar"><b>Перетащи кнопку пальцем</b><span id="ceSel">Выбери кнопку</span>' +
     '<button type="button" id="ceMinus" aria-label="Меньше">−</button><button type="button" id="cePlus" aria-label="Больше">+</button>' +
     '<button type="button" id="ceReset">Сбросить</button><button type="button" class="go" id="ceDone">Готово</button></div>';
-  document.body.appendChild(ov); document.body.classList.add('ctledit');
+  document.body.appendChild(ov); document.body.classList.add('ctledit'); stackKey = '';   // стопка действий перерисуется с примеркой
   settings.btn = settings.btn || {};
   CTLE = {sel:null, drag:null, back, ctrlWasHidden, hudWasHidden};
   const sel = id => { CTLE.sel = id; for (const k of CTL_IDS) { const e = $(k); if (e) e.classList.toggle('ceSel', k === id); } $('ceSel').textContent = id ? CTL_NAME[id] : 'Выбери кнопку'; };
@@ -48,7 +49,7 @@ function ctlEditOpen() {
   $('ceReset').onclick = () => { settings.btn = {}; ctlApply(); sel(null); };
   $('ceDone').onclick = () => {
     saveSettings(); for (const k of CTL_IDS) { const e = $(k); if (e) e.classList.remove('ceSel'); }
-    ov.remove(); document.body.classList.remove('ctledit'); $('ctrl').hidden = CTLE.ctrlWasHidden; $('hud').hidden = CTLE.hudWasHidden;
+    ov.remove(); document.body.classList.remove('ctledit'); stackKey = ''; $('ctrl').hidden = CTLE.ctrlWasHidden; $('hud').hidden = CTLE.hudWasHidden;
     const b = CTLE.back; CTLE = null; if (b) openSettings(settingsFrom || 'menu');
   };
   CTLE.down = e => {

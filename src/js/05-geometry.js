@@ -33,7 +33,7 @@ function los(ax, ay, bx, by, skipLast) {
 }
 function computeVis() {
   vis.fill(0);
-  const R = (P.binoT > 0 ? 26 : 15) + (hasTr('eagle') ? 4 : 0) - (hasTr('short') ? 4 : 0), px = P.x, py = P.y, cx = Math.floor(px), cy = Math.floor(py);
+  const R = (P.binoT > 0 ? 26 : 15) + heroAdd('sight') + (hasTr('eagle') ? 4 : 0) - (hasTr('short') ? 4 : 0), px = P.x, py = P.y, cx = Math.floor(px), cy = Math.floor(py);
   for (let y = cy - R; y <= cy + R; y++) for (let x = cx - R; x <= cx + R; x++) {
     if (x < 0 || y < 0 || x >= MW || y >= MH) continue;
     if ((x - cx) * (x - cx) + (y - cy) * (y - cy) > R * R) continue;
@@ -64,6 +64,13 @@ function openingCost(i) {
 // активная зона (v65): поле путей и полный ум мертвецов — только в квадрате ZONE_R клеток вокруг героя,
 // чтобы на большой карте нагрузка не росла. Дальние мертвецы «спят» и изредка дёшево сдвигаются (updateCore)
 const ZONE_R = 36;
+// через какой забор можно перелезть: заборы дворов и сетка у складов и ферм; карантинная сетка по краю района — нет
+function climbFence(p) {
+  if (p.type === 'pfence') return true;
+  if (p.type !== 'fence' || p.sign) return false;
+  const x = Math.floor(p.cx), y = Math.floor(p.cy), F2 = MW - 1 - FEN;
+  return x !== FEN && x !== F2 && y !== FEN && y !== F2;
+}
 let flowBox = null;                                                           // [x0, y0, x1, y1] прошлого поля — его и чистим
 function buildFlow() {
   if (flowBox && flow.length === NT) { const [a0, b0, a1, b1] = flowBox; for (let y = b0; y <= b1; y++) flow.fill(-1, y * MW + a0, y * MW + a1 + 1); }
@@ -82,8 +89,9 @@ function buildFlow() {
         const nx = x + ox, ny = y + oy;
         if (nx < X0 || ny < Y0 || nx > X1 || ny > Y1) continue;
         const j = ny * MW + nx, t = map[j];
-        if (t === WALL || t === TREE || t === WATER || furn[j] || (propAt[j] && props[propAt[j] - 1].solid)) continue;
-        const nd = d + openingCost(j);
+        const pj = propAt[j] && props[propAt[j] - 1], fc = pj && climbFence(pj), bw = pj && pj.bw && pj.solid;
+        if (t === WALL || t === TREE || t === WATER || furn[j] || (pj && pj.solid && !fc && !bw)) continue;
+        const nd = d + (fc ? 6 : bw ? 4 + Math.ceil(pj.hp / 40) * 3 : openingCost(j));   // свою стену мертвецы проламывают (85-building)                              // через забор двора мертвец перевалится, но калитка рядом — короче
         if (nd >= buckets.length) continue;
         if (flow[j] === -1 || nd < flow[j]) { flow[j] = nd; buckets[nd].push(j); }
       }

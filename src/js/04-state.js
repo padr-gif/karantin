@@ -3,13 +3,21 @@ let P, zs, decals, corpses, kills, gameMin, startMin, powerOffAt, waterOffAt, po
 let mode = 'menu', paused = false, spawnHouse = 0;
 let godMode = false, uiOff = false;                                    // тест скорости: герой неуязвим / без миникарты
 let spawnTimer = 0, flowTimer = 0, visTimer = 0, noiseTimer = 0, hudTimer = 0, weatherTimer = 0;
+// особенности героя из профессии (P.pk — копия при создании, 81-newgame), возраста и телосложения (P.look.age / P.look.build)
+const AGES = {young:{name:'Молодой', nameF:'Молодая', info:'20–30 лет. Меньше устаёт, но опыт копится чуть медленнее.', en:.88, xp:.92}, mid:{name:'Средних лет', info:'30–50 лет. Без особенностей.'},
+  old:{name:'В возрасте', info:'За 50. Быстрее устаёт, зато опытный: навыки профессии на уровень выше, учится быстрее.', en:1.15, xp:1.2, skill:1}};
+const BUILDS = {thin:{name:'Худой', nameF:'Худая', info:'Тише и легче: шаги тише, устаёт меньше. Удар слабее, унесёт на 2 кг меньше.', dmg:.88, en:.92, noise:.85, carry:-2}, avg:{name:'Обычный', nameF:'Обычная', info:'Без особенностей.'},
+  stocky:{name:'Крепкий', nameF:'Крепкая', info:'Удар сильнее, унесёт на 3 кг больше. Устаёт быстрее и ест больше.', dmg:1.14, en:1.07, food:1.1, carry:3}};
+const lkName = (o, lk) => (o && ((lk || {}).g === 'f' && o.nameF || o.name)) || '';   // «Молодая», «Худая» у героини
+function heroK(k) { const p = P && P.pk && P.pk[k], lk = (P && P.look) || {}, a = AGES[lk.age] || {}, b = BUILDS[lk.build] || {}; return (p != null ? p : 1) * (a[k] != null ? a[k] : 1) * (b[k] != null ? b[k] : 1); }
+function heroAdd(k) { const lk = (P && P.look) || {}, p = (P && P.pk && P.pk[k]) || 0, a = (AGES[lk.age] || {})[k] || 0, b = (BUILDS[lk.build] || {})[k] || 0; return p + a + b; }
 let shake = 0, camX = 0, camY = 0, lastCause = 'Загрызли', curAct = null, curBar = null;
 let rain = 0, rainTarget = 0;
 let flow = new Int16Array(NT);
 const buckets = Array.from({length:90}, () => []);
 function zPal() {
   const r = rng(), rb = rng(), b = rb < .34 ? 'f' : rb < .5 ? 'h' : 'm';
-  if (r < (typeof gameMin === 'number' && lightLevel() < .3 ? .12 : .025)) return {pi:14, fast:true, b:b === 'h' ? 'm' : b, blood:0};
+  if (r < (typeof gameMin === 'number' && lightLevel() < .3 ? .12 : .025) * (world.fastK != null ? world.fastK : 1)) return {pi:14, fast:true, b:b === 'h' ? 'm' : b, blood:0};   // fastK — бегунов меньше/больше (настройка мира)
   let pi = r < .28 ? ri(10, 13) : ri(0, 9);
   for (let k = 0; k < 10 && b === 'f' && ZPALS[pi] && ZPALS[pi].bald; k++) pi = (pi + 1) % 10;
   return {pi, b, blood:0};

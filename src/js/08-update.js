@@ -35,7 +35,7 @@ function updateCore(dt) {
   if (!powerMsg && !powerOn()) { powerMsg = true; toast('Свет погас. Электричества больше нет.'); }
   if (!waterMsg && !waterOn()) { waterMsg = true; toast('Вода в кранах кончилась.'); }
   weatherTimer -= gm;
-  if (weatherTimer <= 0) { weatherTimer = 120 + rng() * 240; rainTarget = rainTarget ? (rng() < .55 ? 0 : 1) : (rng() < .3 ? 1 : 0); world.storm = !!rainTarget && rng() < .4; if (world.storm) toast('Надвигается гроза'); }
+  if (weatherTimer <= 0) { weatherTimer = 120 + rng() * 240; rainTarget = rainTarget ? (rng() < .55 / (world.rainK || 1) ? 0 : 1) : (rng() < .3 * (world.rainK != null ? world.rainK : 1) ? 1 : 0); world.storm = !!rainTarget && rng() < .4; if (world.storm) toast('Надвигается гроза'); }
   rain += clamp(rainTarget - rain, -dt * .25, dt * .25);
   SFX.ambient(snowing() ? rain * .2 : rain, 1 - L, insideHouse(P.x, P.y));
   for (const fi of fires) if (!fi.out && fi.t > 0 && Math.random() < dt * 9) SFX.crackle(fi.x, fi.y);
@@ -93,7 +93,7 @@ function updateCore(dt) {
   if (!panel && piles.some(p => !p.items.length)) piles = piles.filter(p => p.items.length);
 
   const rate = P.sleep ? .5 : 1;
-  const thrift = P.prof === 'none' ? .8 : 1;
+  const thrift = heroK('thrift') * heroK('food');                              // профессия и телосложение (безработный — .8)
   P.sat -= gm / 12 * rate * thrift * (hasTr('hearty') ? 1.3 : 1); P.hyd -= gm / 9 * rate * thrift;
   if (P.sleep) P.en += gm * .22 * (hasTr('insomnia') ? .65 : 1); else if (P.running) P.en -= gm * .9 * (hasTr('athlete') ? .7 : 1) * enDrainK(); else P.en -= gm * .1 * enDrainK();
   if (P.sat <= 0) { P.hp -= gm * .45; lastCause = 'Голод'; }
@@ -189,7 +189,7 @@ function updateCore(dt) {
       if (!z.crawl && !z.pal.fast) sp *= .5 + .78 * Math.abs(Math.sin(z.walk * .5 + z.seed * 3));  // shambling: pushes on each step, drags in between
       const px = z.x, py = z.y;
       move(z, ax * sp * dt, ay * sp * dt);
-      if (zWindowCheck(z, px, py)) continue;
+      if (zWindowCheck(z, px, py) || zFenceCheck(z, px, py, mx, my)) continue;
       const moved = Math.hypot(z.x - px, z.y - py); z.walk += moved * 6.5; z.mv = clamp(moved / dt / 1.6, 0, 1);
       const ta = Math.atan2(my, mx);
       z.face += Math.atan2(Math.sin(ta - z.face), Math.cos(ta - z.face)) * Math.min(1, dt * 6);

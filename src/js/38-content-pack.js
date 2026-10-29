@@ -118,23 +118,42 @@ function drawScreamFx() {
 // ---- dismantling furniture into planks (editor) ----
 const PLANKS = {bed:3, sofa:2, wardrobe:3, dresser:3, bookshelf:3, table:2, nightstand:1, desk:2, shelf:2, crate:2, cabinet:2, counter:2, hanger:1, tv:0, locker:0, toolrack:1};
 const canBreak = () => hasTool('hammer') || hasTool('axe') || hasTool('hatchet') || hasTool('crowbar') || hasTool('sledge');
-function dismantleSel() {
-  const f = EDIT.sel; if (!f) return;
-  if (!canBreak()) { toast('Нужен молоток, топор, лом или кувалда'); return; }
-  if (!(f.type in PLANKS) || PLANKS[f.type] === 0) { toast(furnLabel(f) + ': на доски не разобрать'); return; }
-  P.act = {kind:'dismantle', t:0, dur:hasTool('axe') || hasTool('sledge') ? 2.4 : 3.6, f};
-  SFX.wood(f.cx, f.cy);
+// v73: техника и сантехника — на металлолом, провод и трубы; инструмент свой (tools), выход — give
+const METAL_T = ['wrench', 'crowbar', 'sledge'];
+const SALVAGE = {
+  fridge:{tools:METAL_T, dur:6, give:[['scrap', 3], ['wire', 1]]}, stove:{tools:METAL_T, dur:5.5, give:[['scrap', 3], ['wire', 1]]},
+  washer:{tools:METAL_T, dur:5.5, give:[['scrap', 2], ['wire', 1], ['rag', 1]]}, tv:{tools:METAL_T.concat('hammer'), dur:3, give:[['wire', 2], ['scrap', 1]]},
+  sink:{tools:['wrench'], dur:4, give:[['pipe', 1], ['scrap', 1]]}, bsink:{tools:['wrench'], dur:4, give:[['pipe', 1], ['scrap', 1]]},
+  bath:{tools:['wrench'], dur:6, give:[['pipe', 1], ['scrap', 2]]}, radiator:{tools:['wrench'], dur:4.5, give:[['scrap', 2], ['pipe', 1]]},
+  toilet:{tools:['wrench', 'sledge', 'hammer'], dur:3.5, give:[['toiletlid', 1]]}, locker:{tools:METAL_T, dur:4, give:[['scrap', 2]]},
+  floorlamp:{tools:METAL_T.concat('hammer', 'knife'), dur:2, give:[['wire', 1]]},
+};
+const salvageOf = f => SALVAGE[f.type] || (PLANKS[f.type] ? {tools:['hammer', 'axe', 'hatchet', 'crowbar', 'sledge'], dur:3.6, give:[['plank', PLANKS[f.type]]], wood:true} : null);
+const salvageTool = s => s.tools.find(t => hasTool(t));
+const TOOL_NAME = {wrench:'разводной ключ', crowbar:'лом', sledge:'кувалда', hammer:'молоток', axe:'топор', hatchet:'топорик', knife:'нож'};
+function startDismantle(f) {
+  const s = salvageOf(f);
+  if (!s) { toast(furnLabel(f) + ': не разобрать'); return false; }
+  const t = salvageTool(s);
+  if (!t) { toast(furnLabel(f) + ': нужен ' + s.tools.slice(0, 3).map(k => TOOL_NAME[k] || k).join(', ').replace(/, ([^,]*)$/, ' или $1')); return false; }
+  const fast = t === 'axe' || t === 'sledge' || t === 'crowbar';
+  P.act = {kind:'dismantle', t:0, dur:s.dur * (fast ? .7 : 1) * (1 - .06 * skillLv(s.wood ? 'carp' : 'mech')), f};
+  s.wood ? SFX.wood(f.cx, f.cy) : SFX.knock(f.cx, f.cy);
+  return true;
 }
+function dismantleSel() { const f = EDIT.sel; if (f) startDismantle(f); }
 function finishDismantle(a) {
-  const f = a.f, n = PLANKS[f.type] || 1;
+  const f = a.f, s = salvageOf(f) || {give:[['plank', 1]], wood:true}, n = s.give.reduce((k, g) => k + g[1], 0);
   unregFurn(f); f.tiles = [f.y * MW + f.x]; furn[f.y * MW + f.x] = furnIdx(f);   // большая мебель: освободить все клетки
   if (f.items && f.items.length) for (const it of f.items) addToPile(f.cx, f.cy, it);
   const oi = f.y * MW + f.x; if (furns[furn[oi] - 1] === f) furn[oi] = 0;
   for (const ch of chunksNear(f.x + .5, f.y + .5, 2)) for (const [k, v] of CHUNKS) if (v === ch) CHUNKS.delete(k);
-  for (let q = 0; q < n; q++) { if (!invFull()) P.inv.push(mkItem('plank')); else addToPile(f.cx, f.cy, mkItem('plank')); }
+  const extra = s.wood && rng() < .35 + .08 * skillLv('carp') ? [['nails', 1]] : [];                  // из мебели иногда выходят и гвозди
+  for (const [id, k] of s.give.concat(extra)) for (let q = 0; q < k; q++) { if (!ITEMS[id]) continue; const it = mkItem(id); if (!invFull()) P.inv.push(it); else addToPile(f.cx, f.cy, it); }
   Object.assign(f, {gone:true, moved:true, items:[], searched:true, cx:-999, cy:-999, r:[-999, -999, -999, -999]});
   buildFlow(); noise(P.x, P.y, 9); P.en = Math.max(0, P.en - 5); SFX.wood(P.x, P.y); emit('wood', a.f.x + .5, a.f.y + .5, .6, 10, null, 0, 2);
-  toast('Разобрано: +' + n + ' ' + (n === 1 ? 'доска' : 'доски')); stat('dism'); ach('dism'); EDIT.sel = null; editUI(); renderInv();
+  toast(furnLabel(f) + ' разобран: ' + s.give.concat(extra).map(([id, k]) => (ITEMS[id] ? ITEMS[id].sh || ITEMS[id].name : id) + (k > 1 ? ' ×' + k : '')).join(', '));
+  addXp(s.wood ? 'carp' : 'mech', 2); stat('dism'); ach('dism'); EDIT.sel = null; editUI(); renderInv();
   f.tiles = []; f.big = false; f.dt = null;
 }
 

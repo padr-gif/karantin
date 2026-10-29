@@ -179,10 +179,10 @@ function buildInvDoll(body) {
   const lay = mk('div', 'lay3 inv'), D = mk('div', 'dollside'), R = mk('div', 'pcol'), Dd = mk('div', 'pdet');
   const slot = (it, key, label, onTap) => { const c = cell(it, 1, it ? onTap || (() => { panel.sel = panel.sel === key ? null : key; renderPanel(); }) : null, {sel:panel.sel === key, label, size:30}); c.classList.add('dslot'); const w = mk('div', 'dwrap'); w.appendChild(c); if (it) w.appendChild(mk('span', 'dlab', label)); return w; };
   const cl = P.cloth || {}, colL = mk('div', 'dcol'), colR = mk('div', 'dcol');
-  for (const s of ['head', 'torso', 'shirt', 'hands']) colL.appendChild(slot(cl[s], 'cl_' + s, SLOT_NAME[s]));
+  for (const s of ['head', 'torso', 'shirt', 'hands', 'wrist']) colL.appendChild(slot(cl[s], 'cl_' + s, SLOT_NAME[s]));
   colR.appendChild(slot(P.weapon, 'hand', 'В руках')); colR.appendChild(slot(P.armor, 'armor', 'Броня'));
   colR.appendChild(slot(P.bag, 'bagslot', 'Рюкзак'));
-  for (const s of ['legs', 'feet', 'wrist']) colR.appendChild(slot(cl[s], 'cl_' + s, SLOT_NAME[s]));
+  for (const s of ['legs', 'feet']) colR.appendChild(slot(cl[s], 'cl_' + s, SLOT_NAME[s]));
   const mid = mk('div', 'dmid'), cv2 = mk('canvas'); cv2.id = 'dollCv'; cv2.width = 300; cv2.height = 380; mid.appendChild(cv2);
   const st = mk('div', 'dstat'); st.appendChild(mk('span', '', 'Тепло ' + insulation()));
   const pr = Math.round(partProt('torso') * 100); st.appendChild(mk('span', '', P.armor ? 'Броня ' + Math.max(0, Math.round(P.armor.dur)) : pr ? 'Защита ' + pr + '%' : 'Без защиты'));

@@ -3,7 +3,7 @@
 // Если основное не читается или не загружается, игра берёт запасное. Сохранение можно выгрузить файлом и загрузить
 // из файла (перенести игру на другой телефон). Ошибки кадра и скрипта пишутся в журнал; в паузе — «Отчёт об ошибках».
 
-const GAME_VER = '0.67';
+const GAME_VER = '0.73';
 const PKEY = s => LKEY(s) + '-prev';
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } };
@@ -148,9 +148,7 @@ async function copyReport() {
   if (!ok) { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); try { ok = document.execCommand('copy'); } catch (e) {} ta.remove(); }
   toast(ok ? 'Отчёт скопирован — вставь его в сообщение' : 'Не удалось скопировать');
 }
-{ const nav = document.querySelector('#pause .mlist');
-  if (nav && !$('pReport')) { const b = mk('button', 'mbtn', 'Отчёт об ошибках'); b.id = 'pReport'; b.type = 'button'; b.addEventListener('click', () => { SFX.ui(); copyReport(); }); nav.insertBefore(b, $('pMenu')); }
-}
+// кнопка «Отчёт об ошибках» — в админ-меню (84-world-editor), в паузе её нет
 
 // ---- тест скорости: из главного меню, ~25 секунд, четыре сцены. Результат — в отчёт и на экран ----
 let BENCH = null; try { BENCH = JSON.parse(localStorage.getItem('karantin-bench') || 'null'); } catch (e) {}

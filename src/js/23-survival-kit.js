@@ -201,12 +201,13 @@ function listenRadio(it) {
 // ---- map ----
 const MAPC = {8:'#2f5d78', 0:'#3b5634', 1:'#2c2e33', 2:'#7a7a74', 3:'#8d6e50', 4:'#d6c6a4', 5:'#9fc0d0', 6:'#24401f', 7:'#b07a44'};
 function drawMapCanvas(c) {
-  const g = c.getContext('2d'), dpr = Math.min(3, devicePixelRatio || 1);
+  const g = c.getContext('2d'); let dpr = Math.min(3, devicePixelRatio || 1);
   const wrap = c.parentNode, aw = Math.max(200, (wrap ? wrap.clientWidth : 560) - 4), ah = Math.max(120, (wrap ? wrap.clientHeight : 300) - 4);
   const m0 = FEN - 5, N = MW - 2 * m0, mz = world.mapZ || 2;
-  const s = mz === 1 ? Math.min(aw / (2 * N), ah / N) : aw / (2 * N) * (mz - .5);
-  const cw = Math.floor(2 * N * s), chh = Math.floor(N * s);
-  c.width = cw * dpr; c.height = chh * dpr; c.style.width = cw + 'px'; c.style.height = chh + 'px';
+  const fit = Math.min(aw / (2 * N), ah / N), s = mz <= 1.01 ? fit : Math.max(fit, aw / (2 * N) * (mz - .5));   // масштаб плавный: щипок и колесо (21-panels mapDrag)
+  const cw = Math.floor(2 * N * s), chh = Math.floor(N * s); c._mp = {s, cw, m0};   // для «Где я»: мир → холст
+  dpr = Math.min(dpr, Math.sqrt(12e6 / Math.max(1, cw * chh)));               // холст не больше ~12 Мпикс: телефоны (iOS) большие не рисуют
+  c.width = Math.round(cw * dpr); c.height = Math.round(chh * dpr); c.style.width = cw + 'px'; c.style.height = chh + 'px';
   g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, cw, chh);
   g.setTransform(dpr * s, dpr * s / 2, -dpr * s, dpr * s / 2, dpr * cw / 2, -dpr * m0 * s);
   for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) {

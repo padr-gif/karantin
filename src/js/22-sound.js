@@ -179,6 +179,7 @@ function drawProcRaw(p, f) {
     else for (let k = 0; k < 3; k++) { const yy = y + .22 + k * .28; box(x + .15, yy - .04, x + .85, yy + .04, 1.5, 2, [64, 46, 32], f); }
     return;
   }
+  if (PROCS[p.type]) return PROCS[p.type](p, f);                            // свои виды механик (defProc)
   const [x0, y0, x1, y1] = p.r;
   switch (p.type) {
     case 'fence': return drawFence(p, f);

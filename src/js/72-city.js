@@ -281,9 +281,9 @@ const VEG_LOOT = [['potato', 'potato', 'carrot'], ['carrot', 'cabbage', 'potato'
 
 // ---- включение: новые игры строят города новым генератором ----
 { onStartNew(() => {
-}, () => { world.gen = 3; }); }   // 3 — городок в духе Project Zomboid (74-county); 2 — сетка этого файла
+}, () => { world.gen = 4; world.townN = 320; }); }   // v73: 4 — тот же городок, но плотнее и с меньшим лесом   // v72: город крупнее — 320×320   // 3 — городок в духе Project Zomboid (74-county); 2 — сетка этого файла
 DIST_FIELDS.push('x53v');
-{ onSave(d => { d.x53 = {gen:world.gen || 1}; d.x53v = {dug:props.map((p, k) => p.type === 'veg' && p.dug ? k : -1).filter(k => k >= 0)};
+{ onSave(d => { d.x53 = {gen:world.gen || 1, n:world.townN || 256}; d.x53v = {dug:props.map((p, k) => p.type === 'veg' && p.dug ? k : -1).filter(k => k >= 0)};
 }); }
 { onLoad((d) => { for (const k of (d && d.x53v && d.x53v.dug) || []) if (props[k] && props[k].type === 'veg') props[k].dug = true;
-}, d => { world.gen = (d && d.x53 && d.x53.gen) || 1; }); }
+}, d => { world.gen = (d && d.x53 && d.x53.gen) || 1; world.townN = (d && d.x53 && d.x53.n) || 256; }); }

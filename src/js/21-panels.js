@@ -107,6 +107,7 @@ function moodleList() {
   if (P.cold > 55) m.push('Холод: оденься теплее, зайди в дом или погрейся у костра');
   if (P.wet > 40) m.push('Промок: обсохни в доме или у огня');
   m.push(...moodText());
+  for (const s of MOODS) if (s.tips) s.tips(m);
   const W = wounds();
   if (W.some(w => w.k === 'frac' && !w.spl)) m.push('Перелом: наложи шину (доска + бинт или тряпка)');
   if (W.some(w => w.sep > 50)) m.push('Воспаление: антисептик, антибиотики или аптечка');
@@ -192,6 +193,7 @@ function renderPanel() { runHooked('panel', renderPanelCore); }
 function renderPanelCore() {
   if (!panel) return;
   const body = $('pnBody'), tabs = $('pnTabs'); body.textContent = ''; tabs.textContent = '';
+  $('panel').classList.toggle('pmap', panel.kind === 'map');                    // карта — на весь экран
   const sec = t => body.appendChild(mk('div', 'sect', t));
   const empty = t => body.appendChild(mk('p', 'empty', t));
   if (panel.kind === 'inv') {
@@ -267,17 +269,28 @@ function renderPanelCore() {
     if (!panel.tv) { const r = mk('div', 'secrow'); r.appendChild(mk('span', 'empty', 'Каждое прослушивание тратит 10% заряда'));
     const b = btn('Поймать ещё', () => listenRadio(it)); b.disabled = !(it.ch > 0); r.appendChild(b); body.appendChild(r); }
   } else if (panel.kind === 'map') {
-    $('pnTitle').textContent = 'Карта'; $('pnSub').textContent = P.mapRead ? 'район изучен по бумажной карте' : 'отмечено только то, что ты видел своими глазами';
-    const zr = mk('div', 'secrow'), zs2 = mk('div', 'seg mapz');
-    for (const [z, t] of [[1, 'Весь город'], [2, '×2'], [3, '×3']]) zs2.appendChild(btn(t, () => { world.mapZ = z; renderPanel(); }, (world.mapZ || 2) === z ? 'on' : ''));
-    zr.appendChild(zs2); zr.appendChild(mk('span', 'empty', 'Тап по карте: поставить значок — обыскано, опасно, вода, база…')); body.appendChild(zr);
-    const mw = mk('div', 'mapwrap'), c = mk('canvas', 'mapc'); mw.appendChild(c); body.appendChild(mw);
-    const lg = mk('div', 'legend');
-    for (const [col, t] of [['#e8473a', 'ты'], ['#ff9a3c', 'костёр'], ['#5aa8e0', 'бочка'], ['#f2ead8', 'вещи'], ['#e7c531', 'ограждение'], ['#c4312a', 'блокпост'], ['#e3c13a', 'генератор'], ['#7bc46a', 'грядка'], ['#7fd0ff', 'метки'], ['#3f8a4a', 'обысканный дом'], ['#6fdc5f', 'эвакуация'], ['#c9a46a', 'ящики'], ['#ff7ab0', 'приманки']]) { const e = mk('span'); const dt = mk('i'); dt.style.background = col; e.appendChild(dt); e.appendChild(document.createTextNode(t)); lg.appendChild(e); }
-    body.appendChild(lg);
-    if (!P.mapRead) body.appendChild(mk('p', 'empty', 'Найди бумажную карту района в машинах или шкафах, чтобы увидеть весь город.'));
-    requestAnimationFrame(() => drawMapCanvas(c));
-    c.addEventListener('click', e => mapPin(e, c));
+    $('pnTitle').textContent = 'Карта'; $('pnSub').textContent = P.mapRead ? 'район по бумажной карте' : 'только то, что видел сам';
+    // карта на весь экран: тащи пальцем или мышью, щипок и колесо — масштаб; «Где я», обозначения сворачиваются; при открытии — по центру на тебе
+    const zr = mk('div', 'secrow maptools'), zs2 = mk('div', 'seg mapz');
+    const mid = () => [c.parentNode.clientWidth / 2, c.parentNode.clientHeight / 2];
+    zs2.appendChild(btn('Весь город', () => { SFX.ui(); mapZoomTo(c, 1, ...mid()); }, (world.mapZ || 2) <= 1.01 ? 'on' : ''));
+    zs2.appendChild(btn('−', () => { SFX.ui(); mapZoomTo(c, (world.mapZ || 2) / 1.4, ...mid()); }, 'mzb'));
+    zs2.appendChild(btn('+', () => { SFX.ui(); mapZoomTo(c, (world.mapZ || 2) * 1.4, ...mid()); }, 'mzb'));
+    zr.appendChild(zs2);
+    const me = btn('Где я', () => { SFX.ui(); mapCenter(c); }, 'mapme'); zr.appendChild(me);
+    const lgB = btn(world.mapLg ? 'Скрыть обозначения' : 'Обозначения', () => { world.mapLg = !world.mapLg; renderPanel(); }, 'maplg'); zr.appendChild(lgB);
+    body.appendChild(zr);
+    const mw = mk('div', 'mapwrap' + (world.mapLg ? '' : ' big')), c = mk('canvas', 'mapc'); mw.appendChild(c); body.appendChild(mw);
+    if (world.mapLg) {
+      const lg = mk('div', 'legend');
+      for (const [col, t] of [['#e8473a', 'ты'], ['#ff9a3c', 'костёр'], ['#5aa8e0', 'бочка'], ['#f2ead8', 'вещи'], ['#e7c531', 'ограждение'], ['#c4312a', 'блокпост'], ['#e3c13a', 'генератор'], ['#7bc46a', 'грядка'], ['#7fd0ff', 'метки'], ['#3f8a4a', 'обысканный дом'], ['#c9a46a', 'ящики'], ['#ff6fae', 'приманки']]) { const it = mk('span', 'lg'); const d = mk('i'); d.style.background = col; it.appendChild(d); it.appendChild(document.createTextNode(t)); lg.appendChild(it); }
+      lg.appendChild(mk('span', 'lg note', 'Тап по карте — свой значок: обыскано, опасно, вода, база'));
+      body.appendChild(lg);
+    }
+    if (!P.mapRead) body.appendChild(mk('p', 'empty mapnote', 'Видно только то, что ты видел сам. Бумажная карта района из машин и шкафов откроет весь город.'));
+    requestAnimationFrame(() => { drawMapCanvas(c); mapCenter(c); });
+    mapDrag(mw, c);
+    mw.addEventListener('click', e => { if (c._dragged) { c._dragged = false; return; } mapPin(e, c); });   // на обёртке: при захвате указателя клик приходит ей
   } else if (panel.kind === 'cook') {
     const src = panel.src, fire = src.type === 'fire', brn = src.type === 'burner';
     $('pnTitle').textContent = fire ? 'Костёр' : brn ? 'Газовая горелка' : 'Плита';
@@ -300,4 +313,39 @@ function renderPanelCore() {
       body.appendChild(recipeCard('Подкинуть доску', [{id:'plank', ok:countItem('plank') > 0, badge:'×' + countItem('plank')}], 'campfire', [b], '+150 минут горения'));
     }
   }
+}
+
+// карта: новый масштаб z (1 — весь город, до 6), точка (fx, fy) окна карты остаётся на месте
+function mapZoomTo(c, z, fx, fy) {
+  const w = c && c.parentNode, m = c && c._mp; if (!w || !m) return;
+  z = Math.max(1, Math.min(6, z)); if (Math.abs(z - (world.mapZ || 2)) < .01) return;
+  const u = (w.scrollLeft + fx - m.cw / 2) / m.s, v = (w.scrollTop + fy + m.m0 * m.s) * 2 / m.s;   // u = x − y, v = x + y под пальцем
+  world.mapZ = z; drawMapCanvas(c); const n = c._mp;
+  w.scrollLeft = n.s * u + n.cw / 2 - fx; w.scrollTop = n.s / 2 * v - n.m0 * n.s - fy;
+  const zb = w.parentNode && w.parentNode.querySelector('.mapz button'); if (zb) zb.classList.toggle('on', z <= 1.01);
+}
+// карта двигается пальцем и мышью; два пальца — масштаб; колесо — масштаб под курсором. Сдвиг больше 6 пикселей — не тап (не ставит значок)
+function mapDrag(w, c) {
+  const pts = new Map(); let pinch = null, raf = 0, want = null;
+  const loc = e => { const r = w.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+  const zoomSoon = (z, fx, fy) => { want = [z, fx, fy]; if (!raf) raf = requestAnimationFrame(() => { raf = 0; if (want) mapZoomTo(c, ...want); want = null; }); };
+  w.addEventListener('pointerdown', e => { pts.set(e.pointerId, {x:e.clientX, y:e.clientY, mv:0}); try { w.setPointerCapture(e.pointerId); } catch (er) {}
+    if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = {d:Math.hypot(a.x - b.x, a.y - b.y), z:world.mapZ || 2}; } });
+  w.addEventListener('pointermove', e => {
+    const p = pts.get(e.pointerId); if (!p) return;
+    const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY; p.mv += Math.abs(dx) + Math.abs(dy);
+    if (p.mv > 6) c._dragged = true;
+    if (pts.size >= 2 && pinch) { const [a, b] = [...pts.values()], d = Math.hypot(a.x - b.x, a.y - b.y), r = w.getBoundingClientRect();
+      zoomSoon(pinch.z * d / Math.max(20, pinch.d), (a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top); return; }
+    w.scrollLeft -= dx; w.scrollTop -= dy;
+  });
+  const up = e => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; if (!pts.size) setTimeout(() => { c._dragged = false; }, 0); };
+  w.addEventListener('pointerup', up); w.addEventListener('pointercancel', up);
+  w.addEventListener('wheel', e => { e.preventDefault(); zoomSoon((world.mapZ || 2) * (e.deltaY < 0 ? 1.18 : 1 / 1.18), ...loc(e)); }, {passive:false});
+}
+// карта: прокрутить так, чтобы герой был посередине
+function mapCenter(c) {
+  const m = c && c._mp, w = c && c.parentNode; if (!m || !w) return;
+  const px = m.s * (P.x - P.y) + m.cw / 2, py = m.s / 2 * (P.x + P.y) - m.m0 * m.s;
+  w.scrollLeft = px - w.clientWidth / 2; w.scrollTop = py - w.clientHeight / 2;
 }

@@ -86,5 +86,6 @@ const stat = (k, n) => { P.stats = P.stats || {}; P.stats[k] = (P.stats[k] || 0)
 function renderAch() {
   const box = $('achList'); box.textContent = '';
   const n = ACH.filter(a => achDone[a[0]]).length; $('achCount').textContent = `${n} из ${ACH.length}`;
-  for (const [id, t, d] of ACH) { const r = mk('div', 'achi' + (achDone[id] ? ' on' : '')); r.appendChild(mk('b', '', (achDone[id] ? '★ ' : '☆ ') + t)); r.appendChild(mk('small', '', d)); box.appendChild(r); }
+  { const bar = mk('div', 'achbar'), f = mk('i'); f.style.width = Math.round(n / ACH.length * 100) + '%'; bar.appendChild(f); box.appendChild(bar); }   // прогресс, полученные — первыми
+  for (const [id, t, d] of ACH.slice().sort((a, b) => !!achDone[b[0]] - !!achDone[a[0]])) { const r = mk('div', 'achi' + (achDone[id] ? ' on' : '')); r.appendChild(mk('b', '', (achDone[id] ? '★ ' : '☆ ') + t)); r.appendChild(mk('small', '', d)); box.appendChild(r); }
 }

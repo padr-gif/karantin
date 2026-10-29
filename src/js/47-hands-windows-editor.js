@@ -52,20 +52,4 @@ function placeTgt() {
   P.act = {kind:'furn', t:0, dur:.9, f, x:tg.x, y:tg.y, wd:tg.wd}; SFX.wood(f.cx, f.cy); EDIT.tgt = null; editUI();
 }
 
-// ---- new survivor screen: three tabs instead of one long page; «Начать» is always in view ----
-let cTab = 'look';
-function showCTab(t) {
-  cTab = t;
-  for (const b of $('cTabs').children) b.classList.toggle('on', b.dataset.t === t);
-  for (const o of document.querySelectorAll('#create .opts')) o.hidden = o.dataset.tab !== t;
-  const o = document.querySelector('#create .opts:not([hidden])'); if (o) o.scrollTop = 0;
-  cSummary();
-}
-function cSummary() {
-  const s = $('cSum'); if (!s) return;
-  const prof = PROFS[newProf] ? PROFS[newProf].name : 'Безработный', nt = (newTraits || []).length;
-  const se = SEASONS[NEWCFG.season] ? SEASONS[NEWCFG.season].name : '', df = {easy:'лёгкая', normal:'обычная', hard:'тяжёлая'}[newDiff] || newDiff;
-  s.innerHTML = '<b>' + prof + '</b>' + (nt ? ' · черт: ' + nt : '') + '<br>' + se + ' · ' + df + (NEWCFG.mut ? ' · громилы' : '');
-}
-$('cTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; SFX.ui(); showCTab(b.dataset.t); });
-document.getElementById('create').addEventListener('click', () => setTimeout(cSummary, 0));
+// (экран «Новый выживший» — 81-newgame.js)

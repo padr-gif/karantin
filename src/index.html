@@ -9,6 +9,7 @@
   <div class="bootc">
     <span class="stamp">Округ закрыт · связи нет</span>
     <div class="btitle">Dead Line</div>
+    <div class="bsub" style="font:500 13px/1 var(--f-display,sans-serif);letter-spacing:.32em;text-transform:uppercase;color:#9fc4d8;text-align:center;margin-top:-4px">Северная лихорадка</div>
     <div class="bbar"><i id="bootBar"></i></div>
     <div class="bstat" id="bootStat">Загружаю город…</div>
     <div class="btip" id="bootTip"></div>
@@ -135,52 +136,65 @@
 </div>
 
 <section class="screen" id="menu">
-  <div class="card menu-card mainmenu">
-    <div class="mleft">
+  <div class="mm">
+    <div class="mm-head">
       <span class="stamp">Округ закрыт · связи нет</span>
       <h1>Dead Line</h1>
-      <p class="lead">2026 год. Город закрыт на карантин, на улицах мертвецы, помощи не будет. Выжить нельзя — можно только продержаться. Сколько дней ты протянешь?</p>
-      <div class="rec" id="rec"></div>
+      <div class="mm-sub">Северная лихорадка</div>
     </div>
+    <p class="lead mm-lead">Образцы из вечной мерзлоты ожили при плюс четырёх. Через неделю город закрыли бетонными блоками, через две — забыли. Ты дома, свет ещё горит. Сколько дней ты продержишься?</p>
     <nav class="mlist">
       <button class="go" id="mContinue" type="button" hidden>Продолжить</button>
+      <small class="mm-cont" id="mContInfo" hidden></small>
       <button class="go" id="mNew" type="button">Новая игра</button>
       <button class="mbtn" id="mLoad" type="button">Загрузить</button>
       <button class="mbtn" id="mSettings" type="button">Настройки</button>
       <button class="mbtn" id="mAch" type="button">Достижения</button>
-      <button class="mbtn" id="mHelp" type="button">Как играть</button>
+      <button class="mbtn" id="mHelp" type="button">Как выжить</button>
     </nav>
+    <div class="rec" id="rec"></div>
   </div>
+  <div class="mm-ticker" id="mmTicker" aria-hidden="true"></div>
+  <div class="mm-flash" id="mmFlash"></div>
 </section>
 
 <section class="screen" id="create" hidden>
-  <div class="card wide cwrap">
-    <div class="card-head"><h2 class="h2s">Новый выживший</h2>
-      <div class="ctabs" id="cTabs" role="tablist"><button type="button" data-t="look" class="on">Внешность</button><button type="button" data-t="who">Профессия и черты</button><button type="button" data-t="world">Мир</button></div></div>
+  <div class="card wide cwrap ng">
+    <div class="card-head"><h2 class="h2s">Новый выживший</h2><button type="button" class="rnd" id="cRand" title="Случайный выживший">🎲 Случайный</button>
+      <div class="ctabs" id="cTabs" role="tablist"><button type="button" data-t="look" class="on">Внешность</button><button type="button" data-t="wear">Одежда</button><button type="button" data-t="prof">Профессия</button><button type="button" data-t="traits">Черты</button><button type="button" data-t="world">Мир</button></div></div>
     <div class="create">
-      <div class="prev-wrap"><canvas id="cPrev" width="96" height="120" aria-label="Предпросмотр персонажа"></canvas><span class="csum" id="cSum"></span></div>
+      <div class="prev-wrap">
+        <div class="cname"><input type="text" id="cName" maxlength="24" placeholder="Имя" aria-label="Имя"><button type="button" id="cNameR" class="ib" aria-label="Другое имя" title="Другое имя">↻</button></div>
+        <div class="cstage"><canvas id="cPrev" width="240" height="300" aria-label="Предпросмотр персонажа"></canvas>
+          <button type="button" class="rot l" id="cRotL" aria-label="Повернуть">‹</button><button type="button" class="rot r" id="cRotR" aria-label="Повернуть">›</button>
+          <button type="button" class="pose" id="cPose">Идёт</button></div>
+        <span class="csum" id="cSum"></span>
+      </div>
       <div class="opts" data-tab="look">
         <div class="opt"><span class="olbl">Пол</span><div class="seg" id="oGender"></div></div>
+        <div class="opt"><span class="olbl">Возраст</span><div class="seg" id="oAge"></div></div>
+        <p class="rec" id="oAgeInfo"></p>
+        <div class="opt"><span class="olbl">Сложение</span><div class="seg" id="oBuild"></div></div>
+        <p class="rec" id="oBuildInfo"></p>
         <div class="opt"><span class="olbl">Кожа</span><div class="sw" id="oSkin"></div></div>
         <div class="opt"><span class="olbl">Волосы</span><div class="sw" id="oHair"></div></div>
-        <div class="opt"><span class="olbl">Куртка</span><div class="sw" id="oShirt"></div></div>
-        <div class="opt"><span class="olbl">Штаны</span><div class="sw" id="oPants"></div></div>
       </div>
-      <div class="opts" data-tab="who" hidden>
-        <div class="opt"><span class="olbl">Профессия</span><div class="seg" id="oProf"></div></div>
-        <p class="rec" id="oProfInfo"></p>
-        <div class="opt"><span class="olbl">Черты <b class="tpts" id="oTraitPts">Очки: 2</b></span><div class="traits" id="oTraits"></div></div>
+      <div class="opts" data-tab="wear" hidden>
+        <p class="rec">С чем выйдешь из дома в первый день. Тёплая одежда спасает зимой, но летом в ней жарко.</p>
+        <div id="oWear"></div>
+      </div>
+      <div class="opts" data-tab="prof" hidden>
+        <div class="profgrid" id="oProfs"></div>
+        <div class="profdet" id="oProfDet"></div>
+      </div>
+      <div class="opts" data-tab="traits" hidden>
+        <div class="opt"><span class="olbl">Черты <b class="tpts" id="oTraitPts">Очки: 2</b></span><div class="tgrid" id="oTraits"></div></div>
         <p class="rec" id="oTraitInfo"></p>
       </div>
       <div class="opts" data-tab="world" hidden>
         <div class="opt"><span class="olbl">Сложность</span><div class="seg" id="oDiff"></div></div>
         <p class="rec" id="oDiffInfo"></p>
-        <div class="opt"><span class="olbl">Сезон</span><div class="seg" id="oSeason"></div></div>
-        <p class="rec" id="oSeasonInfo"></p>
-        <div class="opt"><span class="olbl">Свет</span><div class="seg" id="oPower"></div></div>
-        <div class="opt"><span class="olbl">Вода</span><div class="seg" id="oWater"></div></div>
-        <p class="rec">Через сколько дней в городе отключат электричество и водопровод</p>
-        <div class="opt"><span class="olbl">Мертвецы</span><div class="seg" id="oMut"></div></div>
+        <div id="oWorld"></div>
       </div>
     </div>
     <div class="row-btns"><button class="mbtn" id="cBack" type="button">Назад</button><button class="go" id="cStart" type="button">Начать</button></div>
@@ -288,6 +302,7 @@
       <dt>Убито мертвецов</dt><dd id="dKills">0</dd>
       <dt>Причина</dt><dd id="dCause">—</dd>
       <dt>Рекорд</dt><dd id="dRec">—</dd>
+      <dt>Последняя запись</dt><dd id="dLast">—</dd>
     </dl>
     <div class="row-btns"><button class="go" id="bAgain" type="button">Новая игра</button><button class="mbtn" id="dLoad" type="button">Загрузить</button><button class="mbtn" id="dMenu" type="button">Главное меню</button></div>
   </div>

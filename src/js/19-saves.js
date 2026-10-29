@@ -34,7 +34,7 @@ async function writeSave(s) {
   if (saving) return false; saving = true;
   try {
     const body = JSON.stringify(serialize());
-    const meta = {day:Math.floor(gameMin / 1440) + 1, time:fmtTime(gameMin), kills, t:Date.now(), diff:world.diff};
+    const meta = {day:Math.floor(gameMin / 1440) + 1, time:fmtTime(gameMin), kills, t:Date.now(), diff:world.diff, dn:(DIFF[world.diff] || DIFF.normal).name, name:(P.look && P.look.name) || ''};
     let ok = false;
     try { localStorage.setItem(LKEY(s), JSON.stringify({meta, body})); ok = true; } catch (e) {}
     await waitStore();

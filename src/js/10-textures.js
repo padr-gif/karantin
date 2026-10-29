@@ -14,40 +14,65 @@ function fbm(x, y, per) { return vnP(x, y, per) * .55 + vnP(x * 2, y * 2, per * 
 // per-pixel painter: fn(x, y) -> [r,g,b,a?]
 // текстура size×size из функции цвета fn(x, y); в детальной графике — HDQ× мельче и слегка размыта (бесшовно)
 function paint(size, fn) {
+  if (texRec && texRec.make && !texRec.fn) { texRec.size = size; texRec.fn = fn; return TEX_LATER; }   // заготовка по частям: только запомнить, что считать
   if (HDQ <= 1) return paintRaw(size, fn);
-  const q = HDQ, c = paintRaw(size * q, (x, y) => fn(x / q, y / q));
-  const g = c.getContext('2d'); g.setTransform(q, 0, 0, q, 0, 0);   // later strokes by the maker land in the same place
+  const q = HDQ; return paintHD(paintRaw(size * q, (x, y) => fn(x / q, y / q)), q);
+}
+// мягкость детальной текстуры: размытие с заворотом краёв (плитка бесшовная). Отдаём размытую копию, без копирования
+// обратно в исходный холст — то копирование стоило больше половины всей текстуры
+function paintHD(c, q) {
   c._q = q;
   try {
     const t = mkCanvas(c.width, c.height), g = t.getContext('2d');
-    g.filter = 'blur(' + (c._q * .45).toFixed(2) + 'px)';
+    g.filter = 'blur(' + (q * .45).toFixed(2) + 'px)';
     for (const [dx, dy] of [[0, 0], [-c.width, 0], [c.width, 0], [0, -c.height], [0, c.height]]) g.drawImage(c, dx, dy);   // wrap so the tile stays seamless
-    const cg = c.getContext('2d'); cg.save(); cg.setTransform(1, 0, 0, 1, 0, 0); cg.clearRect(0, 0, c.width, c.height); cg.drawImage(t, 0, 0); cg.restore();
-  } catch (e) {}
-  return c;
+    g.filter = 'none'; g.setTransform(q, 0, 0, q, 0, 0); t._q = q;           // later strokes by the maker land in the same place
+    return t;
+  } catch (e) { c.getContext('2d').setTransform(q, 0, 0, q, 0, 0); return c; }
 }
 function paintRaw(size, fn) {
   const c = mkCanvas(size, size), g = c.getContext('2d');
   const img = g.createImageData(size, size), d = img.data;
-  if (d && d.length) for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
-    const p = fn(x, y), k = (y * size + x) * 4;
-    d[k] = p[0]; d[k + 1] = p[1]; d[k + 2] = p[2]; d[k + 3] = p.length > 3 ? p[3] : 255;
-  }
+  if (d && d.length) for (let y = 0; y < size; y++) paintRow(d, size, y, fn, 1);
   g.putImageData(img, 0, 0);
   return c;
+}
+function paintRow(d, size, y, fn, q) {
+  for (let x = 0; x < size; x++) {
+    const p = q > 1 ? fn(x / q, y / q) : fn(x, y), k = (y * size + x) * 4;
+    d[k] = p[0]; d[k + 1] = p[1]; d[k + 2] = p[2]; d[k + 3] = p.length > 3 ? p[3] : 255;
+  }
 }
 const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 const shadeC = (c, k) => [c[0] * k, c[1] * k, c[2] * k];
 function pattern(key, make) {
   const k = key + '@' + HDQ; let p = texCache.get(k);
-  if (!p) {
-    const cnv = make(); hdCtx(mainCtx);
-    p = mainCtx.createPattern(cnv, 'repeat');
-    const q = cnv._q || (cnv.width > 0 && HDQ > 1 ? HDQ : 1);
-    try { if (p && p.setTransform && typeof DOMMatrix !== 'undefined') p.setTransform(new DOMMatrix([1 / (TP * q), 0, 0, 1 / (TP * q), 0, 0])); } catch (e) {}
-    texCache.set(k, p);
-  }
+  if (!p) { if (texRec) { texRec.k = k; texRec.make = make; return null; } p = texPut(k, make()); }
   return p;
+}
+function texPut(k, cnv) {
+  hdCtx(mainCtx);
+  const p = mainCtx.createPattern(cnv, 'repeat');
+  const q = cnv._q || (cnv.width > 0 && HDQ > 1 ? HDQ : 1);
+  try { if (p && p.setTransform && typeof DOMMatrix !== 'undefined') p.setTransform(new DOMMatrix([1 / (TP * q), 0, 0, 1 / (TP * q), 0, 0])); } catch (e) {}
+  texCache.set(k, p); return p;
+}
+// ---- текстура по частям, без рывка: call() — вызов TX.…(); возвращает шаг step(есть время?) → true, когда готово (null — уже в кэше) ----
+// pattern и paint в режиме записи (texRec) только запоминают, что считать; строки картинки считаются, пока у кадра есть время
+let texRec = null; const TEX_LATER = {};
+function texJob(call) {
+  const r = texRec = {}; let out;
+  try { call(); if (r.make) out = r.make(); } catch (e) { out = null; } finally { texRec = null; }
+  if (!r.k || texCache.has(r.k)) return null;
+  if (out !== TEX_LATER) { if (out) texPut(r.k, out); return null; }            // текстура не из одного paint — сделана целиком сразу
+  const q = HDQ > 1 ? HDQ : 1, S = r.size * q, c = mkCanvas(S, S), g = c.getContext('2d'), img = g.createImageData(S, S), d = img.data;
+  let y = 0;
+  return more => {
+    while (y < S && more()) paintRow(d, S, y++, r.fn, q);
+    if (y < S) return false;
+    g.putImageData(img, 0, 0); if (!texCache.has(r.k)) texPut(r.k, q > 1 ? paintHD(c, q) : c);
+    return true;
+  };
 }
 const TX = {
   grass: () => pattern('grass', () => {

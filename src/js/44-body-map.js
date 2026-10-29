@@ -133,16 +133,33 @@ function buildSkillsTab(host) {
 }
 function buildInfoTab(host) {
   const lay = mk('div', 'infolay'), a = mk('div'), b = mk('div');
-  const dl = mk('dl', 'kv'), add = (k, v) => { dl.appendChild(mk('dt', '', k)); dl.appendChild(mk('dd', '', v)); };
-  add('Здоровье', Math.round(P.hp) + '%'); add('Сытость', Math.round(P.sat) + '%'); add('Вода', Math.round(P.hyd) + '%'); add('Бодрость', Math.round(P.en) + '%');
-  add('Прожито', fmtDur(gameMin - startMin)); add('Убито', String(kills)); add('Профессия', (PROFS[P.prof] || PROFS.none).name); add('Сложность', DIFF[world.diff].name);
-  add('Дата', dateStr(gameMin) + ' · ' + seasonName()); add('Температура', Math.round(airTemp(P.x, P.y)) + '°C' + (P.cold > 30 ? ' · тебе холодно' : ''));
-  add('Одежда', [P.cloth && P.cloth.torso, P.cloth && P.cloth.head].filter(Boolean).map(i => ITEMS[i.id].name.toLowerCase()).join(', ') || 'обычная'); add('Тепло', String(insulation()));
-  add('Намокание', Math.round(P.wet || 0) + '%'); add('Стресс', Math.round(P.stress || 0) + '%'); add('Скука', Math.round(P.bored || 0) + '%'); add('Паника', Math.round(P.panic || 0) + '%'); add('Уныние', Math.round(P.unh || 0) + '%');
-  add('Электричество', powerOn() ? 'есть' : gens.some(g => g.on) ? 'от генератора' : 'отключено'); add('Водопровод', waterOn() ? 'работает' : 'отключён');
-  a.appendChild(dl);
+  // карточка героя: имя, профессия, возраст и сложение, сколько прожито и убито
+  const lk = P.look || look, hc = mk('div', 'hcard'), ht = mk('div', 'hc-t');
+  ht.appendChild(mk('b', '', lk.name || 'Выживший'));
+  ht.appendChild(mk('small', '', [(PROFS[P.prof] || PROFS.none).name, lkName(AGES[lk.age], lk), lkName(BUILDS[lk.build], lk)].filter(Boolean).join(' · ')));
+  hc.appendChild(ht);
+  const big = (v, t) => { const e = mk('div', 'hc-n'); e.appendChild(mk('b', '', v)); e.appendChild(mk('span', '', t)); return e; };
+  hc.appendChild(big(String(Math.floor((gameMin - startMin) / 1440) + 1), 'день')); hc.appendChild(big(String(kills), 'убито')); hc.appendChild(mk('small', 'hc-d', dateStr(gameMin) + ' · ' + seasonName() + ' · ' + DIFF[world.diff].name.toLowerCase()));
+  a.appendChild(hc);
+  // тело — полосами: зелёная, жёлтая, красная по уровню
+  const bars = (list, inv) => { const g = mk('div', 'vbars'); for (const [t, v] of list) { const r = mk('div', 'vbar'), x = Math.max(0, Math.min(100, Math.round(v))), bad = inv ? x : 100 - x;
+    r.appendChild(mk('span', '', t)); const i = mk('i'), u = mk('u'); u.style.width = x + '%'; u.className = bad > 65 ? 'lo' : bad > 35 ? 'mid' : 'ok'; i.appendChild(u); r.appendChild(i); r.appendChild(mk('em', '', x + '%')); g.appendChild(r); } return g; };
+  a.appendChild(mk('div', 'sect', 'Тело'));
+  a.appendChild(bars([['Здоровье', P.hp], ['Сытость', P.sat], ['Вода', P.hyd], ['Бодрость', P.en]]));
+  a.appendChild(mk('div', 'sect', 'Душа'));
+  a.appendChild(bars([['Стресс', P.stress || 0], ['Скука', P.bored || 0], ['Паника', P.panic || 0], ['Уныние', P.unh || 0], ['Намокание', P.wet || 0]], true));
+  // вокруг: погода, тепло, свет и вода
+  a.appendChild(mk('div', 'sect', 'Вокруг'));
+  const env = mk('div', 'envchips'), chip = (t, v, cls) => { const e = mk('span', 'ec' + (cls ? ' ' + cls : '')); e.appendChild(mk('small', '', t)); e.appendChild(mk('b', '', v)); env.appendChild(e); };
+  const tC = Math.round(airTemp(P.x, P.y));
+  chip('Температура', tC + '°C', P.cold > 30 ? 'bad' : tC > 28 ? 'warn' : '');
+  chip('Тепло одежды', String(insulation()));
+  chip('Свет', powerOn() ? 'есть' : gens.some(g => g.on) ? 'генератор' : 'нет', powerOn() ? '' : 'bad');
+  chip('Водопровод', waterOn() ? 'работает' : 'отключён', waterOn() ? '' : 'bad');
+  chip('Одежда', [P.cloth && P.cloth.torso, P.cloth && P.cloth.head].filter(Boolean).map(i => ITEMS[i.id].name.toLowerCase()).join(', ') || 'обычная', 'wide');
+  a.appendChild(env);
   if (P.traits && P.traits.length) { a.appendChild(mk('div', 'sect', 'Черты')); const tl = mk('div', 'tlist'); for (const k of P.traits) { const t = TRAITS[k]; if (!t) continue; const e = mk('span', 'tr ' + (t.pts > 0 ? 'pos' : 'neg'), t.name); e.title = t.info; tl.appendChild(e); } a.appendChild(tl); }
-  b.appendChild(mk('div', 'sect', 'Самочувствие')); for (const t of moodleList()) b.appendChild(mk('p', 'empty', t));
+  b.appendChild(mk('div', 'sect', 'Самочувствие')); { const ml = moodleList(), mb = mk('div', 'moodlist'); for (const t of ml) mb.appendChild(mk('span', 'ml', t)); if (!ml.length) mb.appendChild(mk('p', 'empty', 'Всё в порядке')); b.appendChild(mb); }
   b.appendChild(mk('div', 'sect', 'Дневник'));
   const log = (P.log || []).slice().reverse(), dv = mk('div', 'diary');
   if (!log.length) dv.appendChild(mk('p', 'empty', 'Пока пусто'));

@@ -63,7 +63,7 @@ function pocketKg() {
 }
 const bagCapKg = () => (P.bag && ITEMS[P.bag.id] && ITEMS[P.bag.id].bcap) || 0;
 const strK = () => (hasTr('strong') ? 1.2 : 1) * (hasTr('weak') ? .8 : 1);
-function invCapKg() { return (pocketKg() + bagCapKg()) * strK(); }
+function invCapKg() { return Math.max(1, (pocketKg() + bagCapKg() + heroAdd('carry')) * strK()); }
 function invKg() {
   let k = 0; for (const it of P.inv) k += itemKg(it);
   return k + itemKg(P.weapon) + itemKg(P.armor) + itemKg(P.bag);

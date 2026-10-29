@@ -229,6 +229,6 @@ setInterval(() => {
 
 // ---- сохранение ----
 onStartNew(() => { if (P) { P.phone = phNew(); PH.cnt = -1; PH.cur = null; } });
-onSave(d => { if (P) d.xPhone = {read:P.phone.read}; });
+onSave(d => { if (P && P.phone) d.xPhone = {read:P.phone.read}; });
 onLoad(d => { if (P) P.phone = {read:(d && d.xPhone && d.xPhone.read) || {}}; PH.cnt = -1; PH.cur = null; });
 { const f = toMenu; toMenu = function () { phClose(); return f.apply(this, arguments); }; }

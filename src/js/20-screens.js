@@ -29,13 +29,14 @@ async function refreshMenu() {
   for (const s of SAVE_SLOTS) if (metas[s] && metas[s].t > best) { best = metas[s].t; latestSlot = s; }
   $('mContinue').hidden = !latestSlot;
   if (latestSlot) $('mContinue').textContent = 'Продолжить · день ' + metas[latestSlot].day;
+  { const m = latestSlot && metas[latestSlot], ci = $('mContInfo'); if (ci) { ci.hidden = !m; if (m) ci.textContent = [m.name, m.time, (m.dn || (DIFF[m.diff] || DIFF.normal).name).toLowerCase(), 'убито ' + m.kills].filter(Boolean).join(' · '); } }
 }
 function toMenu() {
   closePanel(); wake();
   mode = 'menu'; paused = false;
   $('hud').hidden = true; $('ctrl').hidden = true; $('sleep').hidden = true;
   for (let i = 0; i < NT; i++) seen[i] = 1;
-  fogFull = true;
+  fogFull = true; menuScene();
   show('menu'); refreshMenu();
 }
 async function exitToMenu() { if (settings.autosave && mode === 'play') { await writeSave('auto'); } toMenu(); }
@@ -55,7 +56,7 @@ function startNew() {
   runHooked('startNew', startNewCore);
 }
 function startNewCore() {
-  newGame({look:Object.assign({}, look), diff:newDiff});
+  newGame({look:Object.assign({}, look), diff:newDiff, seed:NEWCFG.seedNum});   // seedNum — код мира с экрана создания (null — новый город)
   applyProf(newProf);
   if (NEWCFG.season === 'winter') { world.snow = .8; world.snowMsg = true; P.inv.push(mkItem('sweater')); P.inv.push(mkItem('hotpack')); }
   world.season = null;
@@ -65,22 +66,35 @@ function startPlayAfterStory() {
   show(null); beginPlay();
   toast('Город закрыт на карантин. Ты дома: обыщи комнаты, пока на улице тихо.');
 }
+// вступление: пять датированных листов — откуда пришла лихорадка и почему никто не придёт. Людей в живых нет, развязки нет.
+// [сдвиг даты от начала игры в днях (null — «сегодня»), заголовок, текст, вид листа]
 const STORY = [
-  ['12 сентября', 'Сначала это называли северной лихорадкой', 'Жар, бред, потом тишина. По телевизору говорили про тяжёлый грипп и просили не паниковать. В аптеках закончились жаропонижающие, у больницы выстроились очереди.'],
-  ['13–14 сентября', 'Умершие поднялись', 'Через сутки после смерти заболевшие вставали. Они не узнавали родных и кусали всех, кто оказывался рядом. Больница №2 замолчала за одну ночь. К вечеру укушенные становились такими же.'],
-  ['15 сентября, утро', 'Город закрыли', 'Ночью военные перекрыли все выезды бетонными блоками и колючей проволокой. По радио крутят одно и то же: «Оставайтесь дома. Ожидайте указаний». Тех, кто пытался прорваться к блокпосту, ты видел из окна.'],
-  ['Сегодня', 'Никто не придёт', 'Свет обещают держать ещё неделю, воду — чуть дольше. Потом город останется один. Спасения не будет. Твоя задача прожить ещё один день. И ещё один. Осень, зима, весна… Сколько ты продержишься?'],
+  [-40, 'Образцы из мерзлоты', 'На северном месторождении вскрыли старую мерзлоту. В лаборатории НИИ «Северный» образцы дали рост при плюс четырёх. Отчёт отправили наверх. Ответа не пришло.', 'doc'],
+  [-4, 'Северная лихорадка', 'Первые трое — с вахты. Жар сорок один, бред, потом тишина. По телевизору сказали: тяжёлый грипп, без паники. Жаропонижающие в аптеках кончились за день.', 'diary'],
+  [-2, 'Умершие поднялись', 'Через несколько часов после смерти они вставали. Не узнавали родных, шли на звук и на свет. Укушенные к вечеру горели в жару — и тоже вставали.', 'diary'],
+  [0, 'Город закрыли', 'Ночью на выездах поставили бетонные блоки и сетку. По радио крутили одно и то же: «Оставайтесь дома». Потом замолчало и радио.', 'radio'],
+  [null, 'Никто не придёт', 'Свет обещают держать ещё неделю, воду — чуть дольше. Потом город останется один. Спасения не будет. История кончится только тогда, когда кончишься ты. Осень, зима, весна — сколько ты протянешь?', 'diary'],
 ];
-let storyI = 0;
+const MONTHS_NOM = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+let storyI = 0, storyType = 0;
 function showStory(i) {
-  storyI = i; let [when, title, text] = STORY[i];
-  { const base = dateOf(gameMin), fmt = dd => { const t = new Date(base); t.setDate(t.getDate() + dd); return t.getDate() + ' ' + MONTHS[t.getMonth()]; };
-    when = i === 0 ? fmt(-3) : i === 1 ? fmt(-2) + ' – ' + fmt(-1) : i === 2 ? fmt(0) + ', утро' : 'Сегодня';
-    if (i === 3 && world.dayOff) text = text.replace('Осень, зима, весна', ({91:'Зима, весна, лето', 181:'Весна, лето, осень', 273:'Лето, осень, зима'})[world.dayOff] || 'Осень, зима, весна'); }
-  $('stWhen').textContent = when; $('stTitle').textContent = title; $('stText').textContent = text;
+  storyI = i; let [dd, title, text, kind] = STORY[i];
+  const base = dateOf(gameMin), fmt = d => { const t = new Date(base); t.setDate(t.getDate() + d); return t.getDate() + ' ' + MONTHS[t.getMonth()]; };
+  const when = dd == null ? 'Сегодня' : dd <= -20 ? MONTHS_NOM[new Date(new Date(base).setDate(new Date(base).getDate() + dd)).getMonth()] + ' · НИИ «Северный»' : fmt(dd) + (dd === 0 ? ', утро' : '');
+  if (i === STORY.length - 1) {
+    if (world.dayOff) text = text.replace('Осень, зима, весна', ({91:'Зима, весна, лето', 181:'Весна, лето, осень', 273:'Лето, осень, зима'})[world.dayOff] || 'Осень, зима, весна');
+    if (P && P.look && P.look.name) text = P.look.name + ', ' + ((PROFS[P.prof] || PROFS.none).name).toLowerCase() + '. ' + text;
+  }
+  $('stWhen').textContent = when; $('stTitle').textContent = title;
+  const card = document.querySelector('#story .story'); if (card) card.dataset.kind = kind;
   $('stDots').textContent = STORY.map((_, k) => k === i ? '●' : '○').join(' ');
   $('stNext').textContent = i === STORY.length - 1 ? 'Начать выживать' : 'Далее';
   show('story');
+  // текст печатается по буквам; тап по листу — сразу целиком
+  const el = $('stText'); clearInterval(storyType); el.textContent = '';
+  if (reduceMotion) { el.textContent = text; return; }
+  let n = 0; storyType = setInterval(() => { n += 2; el.textContent = text.slice(0, n); if (n >= text.length) clearInterval(storyType); }, 18);
+  el.onclick = () => { clearInterval(storyType); el.textContent = text; };
 }
 async function loadSlot(s) {
   const d = await readSave(s);
@@ -91,7 +105,7 @@ async function loadSlot(s) {
 function openPause() {
   if (mode !== 'play' || P.sleep) return;
   closePanel(); paused = true; atkHeld = false; joy.id = null; joy.x = joy.y = 0; $('stick').hidden = true;
-  $('pInfo').textContent = `День ${Math.floor(gameMin / 1440) + 1}, ${fmtTime(gameMin)} · убито ${kills} · ${DIFF[world.diff].name.toLowerCase()} сложность`;
+  $('pInfo').innerHTML = (P.look && P.look.name ? '<b>' + P.look.name.replace(/</g, '') + '</b> · ' + (PROFS[P.prof] || PROFS.none).name.toLowerCase() + '<br>' : '') + `День ${Math.floor(gameMin / 1440) + 1}, ${fmtTime(gameMin)} · убито ${kills} · ${(DIFF[world.diff] || DIFF.normal).name.toLowerCase()}`;
   show('pause');
 }
 function resume() { show(null); if (!panel) paused = false; }
@@ -109,8 +123,8 @@ async function renderSaves() {
   for (const s of SAVE_SLOTS) {
     if (svMode === 'save' && s === 'auto') continue;
     const m = metas[s], row = mk('div', 'slot'), info = mk('div');
-    info.appendChild(mk('b', '', s === 'auto' ? 'Автосохранение' : 'Слот ' + s));
-    info.appendChild(mk('small', '', m ? `День ${m.day}, ${m.time} · убито ${m.kills} · ${(DIFF[m.diff] || DIFF.normal).name.toLowerCase()} · ${new Date(m.t).toLocaleString('ru-RU', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'})}` : 'Пусто'));
+    info.appendChild(mk('b', '', (s === 'auto' ? 'Автосохранение' : 'Слот ' + s) + (m && m.name ? ' · ' + m.name : '')));
+    info.appendChild(mk('small', '', m ? `День ${m.day}, ${m.time} · убито ${m.kills} · ${(m.dn || (DIFF[m.diff] || DIFF.normal).name).toLowerCase()} · ${new Date(m.t).toLocaleString('ru-RU', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'})}` : 'Пусто'));
     const acts = mk('div', 'acts');
     if (svMode === 'load') {
       const b = btn('Загрузить', () => loadSlot(s)); b.disabled = !m; acts.appendChild(b);
@@ -139,50 +153,8 @@ function openSettings(from) {
   seg($('sJoy'), [[false, 'Где коснулся'], [true, 'Закреплён']], () => !!settings.joyFix, v => { settings.joyFix = v; saveSettings(); if (!v) { $('stick').hidden = true; $('stick').classList.remove('fixed'); } });
   seg($('sNight'), onoff, () => settings.nightSnd !== false, v => { settings.nightSnd = v; saveSettings(); });
   seg($('sAdmin'), onoff, () => !!settings.admin, v => { settings.admin = v; saveSettings(); adminApply(); });
+  if ($('sBright')) bind('sBright', [[1.15, 'Темнее'], [1, 'Обычно'], [.82, 'Светлее'], [.65, 'Ярко']], 'nightK');
+  if ($('sVib')) bind('sVib', onoff, 'vib');
+  if (typeof setTabs === 'function') setTabs();
 }
-function openCreate() {
-  show('create'); prevCache.clear();
-  const re = () => { prevCache.clear(); openCreateFields(); };
-  function openCreateFields() {
-    seg($('oGender'), [['m', 'Мужчина'], ['f', 'Женщина']], () => look.g, v => { look.g = v; if (v === 'f' && look.hair < 0) look.hair = 0; re(); });
-    swatches($('oSkin'), LOOK.skin, () => look.skin, v => { look.skin = v; re(); });
-    swatches($('oHair'), LOOK.hair, () => look.hair, v => { look.hair = v; re(); }, look.g === 'm');
-    swatches($('oShirt'), LOOK.shirt, () => look.shirt, v => { look.shirt = v; re(); });
-    swatches($('oPants'), LOOK.pants, () => look.pants, v => { look.pants = v; re(); });
-    seg($('oProf'), Object.entries(PROFS).map(([k, d]) => [k, d.name]), () => newProf, v => { newProf = v; $('oProfInfo').textContent = PROFS[v].info; });
-    $('oProfInfo').textContent = PROFS[newProf].info;
-    seg($('oDiff'), Object.entries(DIFF).map(([k, d]) => [k, d.name]), () => newDiff, v => { newDiff = v; $('oDiffInfo').textContent = DIFF[v].info; });
-    $('oDiffInfo').textContent = DIFF[newDiff].info;
-    seg($('oPower'), [[3, '3 дня'], [8, '8 дней'], [15, '15 дней'], [30, '30 дней'], [0, 'Никогда']], () => NEWCFG.power, v => { NEWCFG.power = v; });
-    seg($('oWater'), [[3, '3 дня'], [9, '9 дней'], [15, '15 дней'], [30, '30 дней'], [0, 'Никогда']], () => NEWCFG.water, v => { NEWCFG.water = v; });
-    seg($('oSeason'), Object.entries(SEASONS).map(([k, d]) => [k, d.name]), () => NEWCFG.season, v => { NEWCFG.season = v; $('oSeasonInfo').textContent = SEASONS[v].info; });
-    $('oSeasonInfo').textContent = SEASONS[NEWCFG.season].info;
-    seg($('oMut'), [[false, 'Обычные и бегуны'], [true, '+ громилы и крикуны']], () => NEWCFG.mut, v => { NEWCFG.mut = v; });
-  }
-  openCreateFields();
-  renderTraitsUI();
-  showCTab('look');
-}
-// character preview: recolour single frames
-const prevCache = new Map();
-function recolorFrame(name, pal) {
-  const f = ART.meta.frames[name]; if (!f) return null;
-  const c = mkCanvas(f[3], f[4]), g = c.getContext('2d');
-  g.drawImage(ART.imgs[f[0]], f[1], f[2], f[3], f[4], 0, 0, f[3], f[4]);
-  const d = g.getImageData(0, 0, f[3], f[4]), a = d.data;
-  if (f[8] !== 1) for (let i = 0; i < a.length; i += 4) if (a[i + 3]) keyPx(a, i, pal);   // цветные кадры не перекрашиваем
-  g.putImageData(d, 0, 0);
-  return {c, ax:f[5], ay:f[6]};
-}
-function drawPreview() {
-  const cvp = $('cPrev'); if (cvp.width !== 240) { cvp.width = 240; cvp.height = 300; }
-  const g = cvp.getContext('2d');
-  g.clearRect(0, 0, cvp.width, cvp.height);
-  g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(120, 282, 52, 16, 0, 0, 6.283); g.fill();
-  const dir = Math.floor(animT / 1.2) % 8, nw = AN('p', 'walk'), fi = Math.floor(animT * 12) % nw;
-  const name = 'p' + look.g + '_walk_' + dir + '_' + fi;
-  const fr = charFrame(name, 'P' + look.g + look.skin + look.hair + look.shirt + look.pants, lookPal(look), true);
-  if (!fr) return;
-  const ps = 3.5 / ((fr && fr.s) || ART.meta.charScale || 1);                // вчетверо — крупно, пиксели ровные, размер не прыгает
-  g.imageSmoothingEnabled = false; g.drawImage(fr.cv, 120 - fr.ax * ps, 282 - fr.ay * ps, fr.w * ps, fr.h * ps);
-}
+// экран «Новый выживший» — 81-newgame.js

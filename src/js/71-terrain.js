@@ -346,7 +346,7 @@ function genIndustrial() {
 function generate() {
   ROADSX = ROADSY = null; curAct = null;                                    // прежнее действие ссылается на старую карту
   const t = curDType();
-  setWorldSize(world.gen >= 3 && t === 'town' ? 256 : 184);                 // новый городок — большая карта, остальные районы как были
+  setWorldSize(world.gen >= 3 && t === 'town' ? (world.townN || 256) : 184);   // новый городок — большая карта (v72: 320, старые сохранения — 256), остальные районы как были
   if (world.gen >= 3 && t === 'town') { world.dtype = t; GCFG = {}; genCounty(); growFurniture(); return; }   // городок вдоль трассы с фермами (74-county)
   if (world.gen >= 2 && (t === 'town' || t === 'downtown')) { world.dtype = t; GCFG = {}; genCity(t); growFurniture(); return; }
   world.dtype = t; world.nofence = false;

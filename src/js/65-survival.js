@@ -65,6 +65,7 @@ function diaryChip() {
     c = document.createElement('button'); c.type = 'button'; c.id = 'taskChip';
     c.onclick = () => { if (mode !== 'play') return; SFX.ui(); openPanel('inv'); if (panel) { panel.tab = 'tasks'; renderPanel(); } };
     const L = document.querySelector('#hud .left'); if (L) L.insertBefore(c, $('moodles')); else return;
+    ctlApply();                                                              // своё место и размер из настройки кнопок
   }
   const T = P && P.tasks; if (!T) { c.hidden = true; return; }
   const done = T.list.filter(t => t.done).length;

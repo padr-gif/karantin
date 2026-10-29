@@ -48,7 +48,7 @@ function updateClimate(gm) {
   else P.cold = Math.max(0, P.cold - gm * (feels - 15) * .06);
   if (P.cold > 85) { P.hp -= gm * .06; lastCause = 'Переохлаждение'; }
   if (P.cold > 55) P.en -= gm * .05;
-  const dc = (P.cold || 0) - c0; if (dc > 0) P.cold = clamp(c0 + dc * (hasTr('cold') ? 1.45 : 1) * (hasTr('hardy') ? .7 : 1), 0, 100);
+  const dc = (P.cold || 0) - c0; if (dc > 0) P.cold = clamp(c0 + dc * heroK('cold') * (hasTr('cold') ? 1.45 : 1) * (hasTr('hardy') ? .7 : 1), 0, 100);
   const f = P.cloth && P.cloth.feet; if (f && ITEMS[f.id].dry && (P.wet || 0) > w0) P.wet = w0 + (P.wet - w0) * .7;
 }
 // надеть / снять одежду (снятое — в инвентарь; вещи раскладываются по карманам и рюкзаку заново)
@@ -75,7 +75,7 @@ function updateStorm(dt) {
   }
 }
 // ---- hordes on the move ----
-function scheduleHorde(from) { world.hordeAt = from + 1440 * ri(2, 3) + ri(-300, 300); }
+function scheduleHorde(from) { const k = world.hordeK != null ? world.hordeK : 1; world.hordeAt = k > 0 ? from + (1440 * ri(2, 3) + ri(-300, 300)) / k : 1e12; }   // hordeK — орды реже/чаще, 0 — нет
 // орда: толпа с дальнего края идёт к герою (или к шумовой приманке)
 function startHorde() {
   const before = new Set(zs);

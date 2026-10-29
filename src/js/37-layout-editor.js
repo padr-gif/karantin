@@ -4,7 +4,7 @@ const PNAMES = {campfire:'Огонь', burner:'Горелка', seeds:'Гряд�
 function vaultZ() { const A = P.act; if (!A || A.kind !== 'vault') return 0; const k = Math.min(1, A.t / A.dur); return Math.sin(Math.PI * Math.min(1, k * 1.15)) * U * .62; }
 function vaultAnim() {
   const A = P.act, k = Math.min(1, A.t / A.dur);
-  if (heroMale() && AN('p', 'vault') >= 2) {                                    // у мужского героя — свой клип перелезания
+  if (heroRig() && AN('p', 'vault') >= 2) {                                    // у мужского героя — свой клип перелезания
     const np = AN('p', 'pickup');
     if (k < .35) return ['pickup', Math.min(np - 1, Math.floor(k / .35 * np))];
     if (k < .75) { const n = AN('p', 'vault'); return ['vault', Math.floor((k - .35) / .4 * n * 1.5) % n]; }

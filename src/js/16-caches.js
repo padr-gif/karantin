@@ -230,9 +230,36 @@ function propName(p, on) {
   if (p.type === 'barrel') return 'barrel';
   return 'bush_' + (Math.floor(hash(Math.floor(p.cx * 7), Math.floor(p.cy * 3)) * 3));
 }
+// удар по виду оружия: укол, удар сверху, мах, рубка, тычок древком; остальное одноручное — наискось (attack), двуручное — attack2h
+const WSTYLE = {knife:'stab', shiv:'stab', hammer:'bash', pan:'bash', baton:'bash', wrench:'bash', bat:'swing', nailbat:'swing', golf:'swing', pipe:'swing', crowbar:'swing',
+  axe:'chop', sledge:'chop', spear:'thrust', shovel:'thrust'};
+const WSTART = {stab:.2, bash:.3, swing:.3, chop:.32, thrust:.25};             // урон — в момент нажатия, поэтому замах показываем уже почти законченным
+// как держит оружие стоя и на ходу: двуручное — на плече (h2), пистолет и рогатка — двумя руками перед собой (g1), ружьё — поперёк тела (g2)
+const holdCls = id => { const w = ITEMS[id]; return !w ? null : w.gun ? (id === 'shotgun' ? 'g2' : 'g1') : TWO_H.has(id) ? 'h2' : null; };
+function holdAnim(r) {
+  const c = P.weapon && holdCls(P.weapon.id); if (!c) return null;
+  const an = r[0] === 'run' ? c + 'run' : r[0] === 'walk' ? c + 'walk' : r[0] === 'idle' ? c + 'idle' : null;
+  if (!an || AN('p', an) < 2) return null;
+  const n = AN('p', an); return [an, Math.floor(r[1] / AN('p', r[0]) * n) % n];   // тот же такт шагов, что у обычной походки
+}
+function weaponAnim(pAtk) {
+  const w = P.weapon && ITEMS[P.weapon.id];
+  if (P.act && P.act.kind === 'reload' && w && w.gun) {                       // перезарядка: магазин у пистолета, патроны в переломленное ружьё
+    const an = P.weapon.id === 'shotgun' ? 'reload2' : 'reload1', n = AN('p', an);
+    if (n > 1) return [an, Math.min(n - 1, Math.floor(P.act.t / P.act.dur * n))];
+  }
+  if (pAtk >= 0 && w && w.gun) { const an = P.weapon.id === 'shotgun' ? 'aim2' : 'aim1', n = AN('p', an); if (n > 1) return [an, Math.min(n - 1, Math.floor(pAtk * n))]; }
+  if (pAtk >= 0 && w && w.gun && AN('p', 'shoot') > 1) { const n = AN('p', 'shoot'); return ['shoot', Math.min(n - 1, Math.floor(pAtk * n))]; }
+  if (P.thrT > 0 && AN('p', 'throw') > 1) { const n = AN('p', 'throw'); return ['throw', Math.min(n - 1, Math.floor((.35 + .65 * (1 - P.thrT / .32)) * n))]; }
+  const st = pAtk >= 0 && w && !w.gun && WSTYLE[P.weapon.id];
+  if (!st || AN('p', st) < 2) return null;
+  const an = P.moving && AN('p', st + 'run') > 1 ? st + 'run' : st, n = AN('p', an);
+  return [an, Math.min(n - 1, Math.floor((WSTART[st] + (1 - WSTART[st]) * pAtk) * n))];
+}
 // кадр анимации героя: у мужского героя есть свои клипы (удар на бегу, двуручное, присед, душ…), остальное — общее
 function playerAnim(pAtk) {
-  if (heroMale()) {
+  if (heroRig() && mode !== 'dead') { const r = weaponAnim(pAtk); if (r) return r; }
+  if (heroRig()) {
     const A = P.act;
     if (pAtk < 0 && A && A.kind === 'job' && A.an === 'searchlow' && AN('p', 'searchlow') > 1) return pmLoop('searchlow');
     if (mode !== 'dead') {
@@ -255,13 +282,15 @@ function playerAnim(pAtk) {
     }
   }
   const r = playerAnimBase(pAtk);
-  if (!heroMale() || mode === 'dead') return r;
+  if (!heroRig() || mode === 'dead') return r;
   const A = P.act, act = A && A.kind;
   if (A && act === 'job' && A.an === 'jacks' && AN('p', 'jacks') > 1) return pmLoop('jacks');
+  if (A && act === 'job' && A.loopAn && AN('p', A.loopAn) > 1) return pmLoop(A.loopAn, A.loopAn === 'chop' ? 1.3 : 1);   // рубка — взмахи топором
   if (A && act === 'job' && A.shower) return P._inShower && AN('p', 'shower') > 1 ? pmLoop('shower') : pmLoop('idle', .8);
   // обыск низкой мебели и вещей на полу — присев
   if (r[0] === 'search' && A && A.f && AN('p', 'searchlow') > 1 && (LOW_FURN.has(A.f.type) || A.f.type === 'pile' || !A.f.type)) return pmLoop('searchlow');
   if (A && act === 'use' && A.an === 'read' && AN('p', 'read') > 1) return pmLoop('read');
+  { const h = !A && holdAnim(r); if (h) return h; }                        // с оружием в руках — своя стойка и походка
   if (r[0] === 'idle' || r[0] === 'search' || r[0] === 'work') return pmLoop(r[0]);   // живые циклы стояния и работы
   return r;
 }
@@ -294,11 +323,19 @@ function zombieAnim(z) {
     if (z.vt) { const k = z.vt.t / z.vt.dur, m = AN('z', 'hit'); return k < .55 ? ['attack', Math.min(AN('z', 'attack') - 1, 3)] : ['hit', Math.min(m - 1, Math.floor((k - .55) / .45 * m))]; }
     if (z.down > 0) {
       const up = .45;   // last part of the time on the ground: getting back up
-      if (z.down < up) return ['death', Math.max(0, Math.min(n - 1, Math.floor(z.down / up * n)))];
-      return ['death', Math.min(n - 1, Math.floor(Math.min(1, z.downT * 3) * n))];
+      const an = z.downF && AN('z', 'fallf') > 1 ? 'fallf' : 'death', m = AN('z', an);   // перевалился через забор или окно — лицом вперёд
+      if (z.down < up) return [an, Math.max(0, Math.min(m - 1, Math.floor(z.down / up * m)))];
+      return [an, Math.min(m - 1, Math.floor(Math.min(1, z.downT * 3) * m))];
     }
   }
-  if (z.crawl) { const n = AN('z', 'death'); return ['death', (z.mv || 0) > .05 || z.wind > 0 ? n - 1 - (Math.floor(z.walk * .9) % 2) : n - 1]; }
+  if (z.crawl) {
+    const n = AN('z', 'crawl');
+    if (n > 1) {                                                             // ползёт на животе: руки по очереди подтягивают тело
+      if (z.wind > 0) return ['crawl', Math.floor((1 - z.wind / .35) * n * .4) % n];   // рывок к ноге: выбрасывает руку вперёд
+      return ['crawl', ((Math.floor(z.walk * 1.3 / (Math.PI * 2) * n) % n) + n) % n];
+    }
+    const m = AN('z', 'death'); return ['death', (z.mv || 0) > .05 || z.wind > 0 ? m - 1 - (Math.floor(z.walk * .9) % 2) : m - 1];
+  }
   if (z.stun > 0) { const n = AN('z', 'hit'); return ['hit', Math.min(n - 1, Math.floor((1 - z.stun / .45) * n))]; }
   if (z.wind > 0) { const n = AN('z', 'attack'); return ['attack', Math.min(n - 1, Math.floor((1 - z.wind / .35) * n))]; }
   const an = (z.reachA || 0) > .5 ? 'chase' : 'walk', n = AN('z', an);

@@ -23,7 +23,7 @@ function lookPal(lk, weapon) {
   if (weapon) { pal[11] = WCOL[weapon][0]; pal[12] = WCOL[weapon][1]; }
   return pal;
 }
-const SETTINGS_DEF = {gfx:2, mini:true, vol:.7, zoom:0, dayLen:1, rain:true, shake:true, gore:true, hints:true, autosave:true, uia:1};
+const SETTINGS_DEF = {gfx:2, mini:true, vol:.7, zoom:0, dayLen:1, rain:true, shake:true, gore:true, hints:true, autosave:true, uia:1, nightK:1, vib:true};   // nightK — темнота ночи, vib — вибрация при укусе
 const settings = Object.assign({}, SETTINGS_DEF);
 function loadSettings() { try { const s = JSON.parse(localStorage.getItem('karantin-settings') || 'null'); if (s) Object.assign(settings, s); } catch (e) {} applySettings(); }
 function saveSettings() { try { localStorage.setItem('karantin-settings', JSON.stringify(settings)); } catch (e) {} applySettings(); }

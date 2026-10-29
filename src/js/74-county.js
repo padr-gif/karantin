@@ -55,6 +55,7 @@ function drawSoil(x, y, k) {
 // ---- городок вдоль трассы ----
 function genCounty() {
   genReset(); cityMask = new Uint8Array(NT);
+  const G4 = world.gen >= 4;                                                  // v73: город плотнее и длиннее, хуторов больше, леса меньше (старые сохранения — как было)
   const V = rng() < .5;                                                       // главная трасса вдоль y (true) или вдоль x
   const H0 = EXIT_R, H1 = EXIT_R + RW - 1;
   // в абстрактных координатах: a — вдоль главной трассы, c — поперёк (трасса на c = H0..H1)
@@ -71,7 +72,7 @@ function genCounty() {
   for (let a = 0; a < MW; a++) for (let c = rc(a) - rw(a); c <= rc(a) + rw(a); c++) { const [x, y] = XY(a, c); set(x, y, WATER); }
 
   // ---- город: длинный и узкий вдоль трассы, поперечные улицы с разным шагом, задние улицы со сдвигом в каждом квартале
-  const A0lim = Math.max(FEN + 14, EXIT_R - ri(56, 80)), A1lim = Math.min(MW - FEN - 18, EXIT_R + ri(56, 80));
+  const TK = MW / 256, A0lim = Math.max(FEN + 14, EXIT_R - Math.round((G4 ? ri(84, 100) : ri(56, 80)) * TK)), A1lim = Math.min(MW - FEN - 18, EXIT_R + Math.round((G4 ? ri(84, 100) : ri(56, 80)) * TK));   // город растёт с картой
   const cross = [EXIT_R];
   const gap = () => rng() < .35 ? ri(16, 19) : ri(24, 30);
   for (let a = EXIT_R - gap(); a >= A0lim; a -= gap()) cross.unshift(a);
@@ -85,7 +86,7 @@ function genCounty() {
     const a0 = cross[k], a1 = cross[k + 1] + RW - 1, w = 1 - Math.min(1, Math.abs((a0 + a1) / 2 - TC) / ((A1 - A0) / 2 + 1));
     const col = {a0, a1, lines:[[], []]};
     for (const sd of [0, 1]) {
-      let lvl = rng() < .3 + .55 * w ? 2 : 1;
+      let lvl = rng() < (G4 ? .6 : .3) + .55 * w ? 2 : 1;
       const g1 = ri(20, 26), g2 = ri(19, 23), room = sd === riverSide ? nearBank(a0, a1) : 1e9;
       if (lvl === 2 && g1 + RW + g2 + RW + 14 > room) lvl = 1;
       if (g1 + RW + 14 > room) lvl = 0;                                     // у самой реки — только дома у главной
@@ -191,7 +192,7 @@ function genCounty() {
   for (const r of rowsAll) for (let p = 1; p < r.Lp - 8;) {
     const wp = Math.min(ri(8, 10), r.Lp - 1 - p); if (wp < 8) break;
     const [x, y] = r.at(p, r.q0), [w, h] = r.alongX ? [wp, r.d] : [r.d, wp];
-    if (rng() < .08 || !freeC(x, y, w, h, 1)) { p += 3; continue; }
+    if (rng() < (G4 ? .02 : .08) || !freeC(x, y, w, h, 1)) { p += 3; continue; }
     const H = bld(x, y, w, h, 'house', sidesOf(r.front)); pathFromDoor(H);
     p += wp + ri(1, 2);
   }
@@ -298,7 +299,7 @@ function genCounty() {
     { const [ax, ay, aw, ah] = F.LR((FU >> 1) - 2, -4, 5, 4); carve(ax, ay, ax + aw - 1, ay + ah - 1, WALK); }
   } }
   // фермы: дом и амбар рядом, двор, за ними пашня и пастбище, лесополоса; у трассы или в глубине, тогда к ним ведёт грунтовка
-  for (let f = 0, nf = ri(2, 4); f < nf; f++) {
+  for (let f = 0, nf = G4 ? ri(4, 5) : ri(2, 4); f < nf; f++) {
     let FU = ri(30, 34), FV = ri(20, 23), F = findFrame(FU, FV, 2, 2, .5, 400);
     if (!F) { FU = 30; FV = 19; F = findFrame(FU, FV, 2, 1, .5, 600); }
     if (!F) break;
@@ -327,11 +328,12 @@ function genCounty() {
     for (let u = -1; u <= FU; u++) { const [x, y] = L(u, FV + 1); if (inMap(x, y, FEN + 2) && get(x, y) === GRASS && !propAt[y * MW + x] && !soil[y * MW + x] && rng() < .85) set(x, y, TREE); }   // лесополоса
   }
   // дома вдоль трасс за городом: город «растекается» по дороге
-  for (let n = 0, nn = ri(7, 11), t = 0; n < nn && t < 400; t++) {
+  for (let n = 0, nn = G4 ? ri(18, 24) : ri(7, 11), t = 0; n < nn && t < (G4 ? 900 : 400); t++) {
     const FU = ri(9, 11), FV = ri(8, 9), F = findFrame(FU, FV, 3, 2, 1, 1); if (!F) continue;
     const [x, y, w, h] = F.rect, H = bld(x, y, w, h, 'house', [F.LS(0, -1), F.LS(0, 1)]); if (!H) continue;
     pathFromDoor(H); n++;
-    if (rng() < .5) yardFence(H); if (rng() < .5) yardGarden(H); if (rng() < .3) yardGarage(H);
+    const farF = H.x - FEN >= 12 && H.y - FEN >= 12 && MW - FEN - H.x - H.w >= 12 && MH - FEN - H.y - H.h >= 12;   // у самого забора гараж упрётся воротами в сетку
+    if (rng() < .5) yardFence(H); if (rng() < .5) yardGarden(H); if (rng() < .3 && (!G4 || farF)) yardGarage(H);
   }
   // озеро с рыбацким домиком и грунтовкой
   for (let t = 0; t < 120; t++) {
@@ -344,7 +346,7 @@ function genCounty() {
     break;
   }
   // охотничьи домики в лесу, к двум из них — грунтовка
-  for (let n = 0, t = 0; n < 4 && t < 400; t++) {
+  for (let n = 0, t = 0; n < (G4 ? 7 : 4) && t < 400; t++) {
     const x = ri(FEN + 4, MW - FEN - 10), y = ri(FEN + 4, MH - FEN - 10);
     if (!freeArea(x, y, 5, 4, 4)) continue;
     bld(x, y, 5, 4, 'shed'); n++;
@@ -360,10 +362,12 @@ function genCounty() {
     for (const y of [FEN, F2]) if (get(v, y) !== ROAD && get(v, y) !== WATER && !propAt[y * MW + v]) { if (get(v, y) === TREE) set(v, y, GRASS); addProp({type:'fence', proc:true, ax:'x', cx:v + .5, cy:y + .5, solid:true, r:[v, y + .42, v + 1, y + .58], sign:(v % 9) === 4}, [[v, y]]); }
   }
   const nearCP = (x, y) => (Math.abs(x - EXIT_R - 2) < 10 && (y < FEN + 10 || y > MH - FEN - 11)) || (Math.abs(y - EXIT_R - 2) < 10 && (x < FEN + 10 || x > MW - FEN - 11));
+  const nearYard = (x, y) => { for (let b = -2; b <= 2; b++) for (let a = -2; a <= 2; a++) { const id = propAt[(y + b) * MW + x + a]; if (id && props[id - 1].type === 'pfence') return true; } return false; };
   genFinish({tree:(x, y, n) => {
     if (nearCP(x, y) || cityMask[y * MW + x]) return 0;
+    if (G4 && nearYard(x, y)) return 0;                                       // во дворах и у калиток деревья не растут — проход к дому не загородят
     if (x >= box[0] && x <= box[2] && y >= box[1] && y <= box[3]) return .02;
-    return insideFence(x, y) ? .15 + .22 * n : .36 + .2 * n;
-  }, bush:.03, bins:.018, hideouts:3});
+    return insideFence(x, y) ? (G4 ? .06 + .12 * n : .15 + .22 * n) : .36 + .2 * n;
+  }, bush:G4 ? .04 : .03, bins:.018, hideouts:3});
   cityMask = null; world.nofence = false;
 }

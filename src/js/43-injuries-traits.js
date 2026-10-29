@@ -104,7 +104,7 @@ function addWound(k, part, where) {
   while (W.length > 9) { const j = W.findIndex(x => x.k === 'scratch'); W.splice(j >= 0 ? j : 0, 1); }
   return w;
 }
-function bleeding(w) { const D = WOUND[w.k]; return D.bleed > 0 && !w.band && (!D.clot || w.t < D.clot); }
+function bleeding(w) { const D = WOUND[w.k]; return D.bleed > 0 && !w.band && !(w.tq > gameMin) && (!D.clot || w.t < D.clot); }   // tq — жгут держит кровь до этого времени
 function bleedRate() { let s = 0; for (const w of wounds()) if (bleeding(w)) s += WOUND[w.k].bleed; return s || (P.bleed ? .3 : 0); }
 const fracAt = part => wounds().find(w => w.k === 'frac' && w.part === part);
 const dirtyBand = w => w.band && w.bT > 720;
@@ -234,24 +234,33 @@ const TRAITS = {
 const TRAIT_FREE = 2;
 let newTraits = [];
 const traitPts = () => TRAIT_FREE - newTraits.reduce((s, k) => s + TRAITS[k].pts, 0);
+// выбор черт: две колонки — хорошие стоят очков, плохие их дают; на карточке сразу видно, что черта делает,
+// сколько стоит и почему её нельзя взять (не хватает очков) или что она заменит (противоположную черту)
 function renderTraitsUI() {
   const box = $('oTraits'); if (!box) return; box.textContent = '';
   const info = $('oTraitInfo'), left = traitPts();
-  for (const [k, t] of Object.entries(TRAITS)) {
-    const on = newTraits.includes(k), b = btn('', () => {
-      if (on) newTraits = newTraits.filter(x => x !== k);
-      else {
-        if (t.vs) newTraits = newTraits.filter(x => x !== t.vs);
-        if (t.pts > 0 && traitPts() - t.pts < 0) { if (info) info.textContent = 'Не хватает очков на «' + t.name + '». Возьми плохую черту, чтобы получить очки'; return; }
-        newTraits.push(k);
-      }
-      renderTraitsUI(); if (info) info.textContent = t.name + ': ' + t.info + '. Осталось очков: ' + traitPts();
-    }, (t.pts > 0 ? 'pos' : 'neg') + (on ? ' on' : ''));
-    b.appendChild(document.createTextNode(t.name)); b.appendChild(mk('small', '', (t.pts > 0 ? '−' : '+') + Math.abs(t.pts)));
-    b.title = t.info; box.appendChild(b);
-  }
+  const col = (title, note, pos) => {
+    const c = mk('div', 'tcol ' + (pos ? 'tpos' : 'tneg')); const h = mk('div', 'thead'); h.appendChild(mk('b', '', title)); h.appendChild(mk('small', '', note)); c.appendChild(h);
+    for (const [k, t] of Object.entries(TRAITS)) {
+      if ((t.pts > 0) !== pos) continue;
+      const on = newTraits.includes(k), vsOn = t.vs && newTraits.includes(t.vs), lack = pos && !on ? t.pts - left : 0;
+      const can = on || !pos || left - t.pts >= 0;
+      const b = btn('', () => {
+        if (on) newTraits = newTraits.filter(x => x !== k);
+        else { if (!can) { SFX.ui(); return; } if (t.vs) newTraits = newTraits.filter(x => x !== t.vs); newTraits.push(k); }
+        SFX.ui(); renderTraitsUI(); if (typeof cSummary === 'function') cSummary();
+      }, 'tcard' + (on ? ' on' : '') + (can ? '' : ' no'));
+      const top = mk('div', 'ttop'); top.appendChild(mk('b', '', t.name)); top.appendChild(mk('span', 'tcost', (t.pts > 0 ? '−' : '+') + Math.abs(t.pts))); b.appendChild(top);
+      b.appendChild(mk('small', 'teff', t.info.charAt(0).toUpperCase() + t.info.slice(1)));
+      const why = !can ? 'не хватает ' + lack + ' оч.' : vsOn && !on ? 'вместо «' + TRAITS[t.vs].name + '»' : on ? 'выбрано — нажми, чтобы убрать' : '';
+      if (why) b.appendChild(mk('span', 'twhy', why));
+      c.appendChild(b);
+    }
+    return c;
+  };
+  box.appendChild(col('Хорошие', 'стоят очков', true)); box.appendChild(col('Плохие', 'дают очки', false));
   const pts = $('oTraitPts'); if (pts) { pts.textContent = 'Очки: ' + left; pts.classList.toggle('neg', left < 0); }
-  if (info && !info.textContent) info.textContent = 'Хорошие черты стоят очков, плохие их дают. Можно ничего не выбирать.';
+  if (info) info.textContent = left < 0 ? 'Очков не хватает: убери хорошую черту или возьми плохую.' : 'Свободных очков: ' + left + '. Плохие черты дают очки на хорошие. Можно ничего не выбирать.';
 }
 onStartNew(() => {
   P.traits = newTraits.slice();
@@ -260,7 +269,7 @@ onStartNew(() => {
 });
 
 // ================= panic & gloom =================
-function panicK() { return (hasTr('brave') ? .5 : 1) * (hasTr('coward') ? 2 : 1) * ((P.stress || 0) > 60 ? 1.3 : 1) * (1 - .06 * fitLv()); }
+function panicK() { return heroK('panic') * (hasTr('brave') ? .5 : 1) * (hasTr('coward') ? 2 : 1) * ((P.stress || 0) > 60 ? 1.3 : 1) * (1 - .06 * fitLv()); }
 function tickMind(dt, gm) {
   let near = 0, close = 0;
   for (const z of zs) { if (z.state !== 'chase') continue; const d = Math.hypot(z.x - P.x, z.y - P.y); if (d < 9) { near++; if (d < 2.6) close++; } }
@@ -277,9 +286,9 @@ function tickMind(dt, gm) {
 }
 function missChance() { let m = Math.max(0, ((P.panic || 0) - 30) / 200); if ((P.pain || 0) > 40) m += (P.pain - 40) / 300; if (fracAt('arm')) m += .1; if (P.en < 10) m += .05; return Math.min(.45, m); }
 // множитель урона: черты, перелом руки, уныние, боль, физподготовка, счастливая бита
-function dmgK() { let k = 1; if (hasTr('strong')) k *= 1.2; if (hasTr('weak')) k *= .8; const af = fracAt('arm'); if (af) k *= af.spl ? .75 : .5; if ((P.unh || 0) > 80) k *= .85; if ((P.pain || 0) > 50) k *= .9; return k * (1 + .03 * fitLv()) * (P.weapon && P.weapon.u === 'bat' ? 1.2 : 1); }
-let stepNoiseK = () => (hasTr('quiet') ? .5 : 1) * (hasTr('clumsy') ? 1.5 : 1);
-let enDrainK = () => (1 - .05 * skillLv('fit')) * (hasTr('wakeful') ? .7 : 1) * (hasTr('sleepy') ? 1.3 : 1) * ((P.unh || 0) > 50 ? 1.2 : 1);
+function dmgK() { let k = heroK('dmg'); if (hasTr('strong')) k *= 1.2; if (hasTr('weak')) k *= .8; const af = fracAt('arm'); if (af) k *= af.spl ? .75 : .5; if ((P.unh || 0) > 80) k *= .85; if ((P.pain || 0) > 50) k *= .9; return k * (1 + .03 * fitLv()) * (P.weapon && P.weapon.u === 'bat' ? 1.2 : 1) * (1 + .08 * wkLv(P.weapon)) * (P.weapon && P.weapon.sharp > 0 ? 1.2 : 1); }   // sharp — заточено бруском
+let stepNoiseK = () => heroK('noise') * (hasTr('quiet') ? .5 : 1) * (hasTr('clumsy') ? 1.5 : 1);
+let enDrainK = () => heroK('en') * (1 - .05 * skillLv('fit')) * (hasTr('wakeful') ? .7 : 1) * (hasTr('sleepy') ? 1.3 : 1) * ((P.unh || 0) > 50 ? 1.2 : 1);
 
 // ================= tailoring =================
 const TEXTILE = new Set(['jacket', 'sweater', 'raincoat', 'hat', 'leather', 'parka', 'ushanka']);
@@ -350,8 +359,11 @@ function shoot(w) {
   T = T.filter(t => Math.abs(wrapA(t.a - P.face)) < cone + .3 / Math.max(.6, t.d)).sort((a, b) => a.d - b.d);
   it.mag--; it.dur = Math.max(0, it.dur - 1);
   P.cd = w.cd * (1 + (P.panic || 0) / 250); P.atkT = 0; P.atkDur = .2; if (P.act) P.act = null;
-  SFX.gun(!!w.spread); noise(P.x, P.y, w.loud * (rain > .5 ? .85 : 1)); scareCrows(P.x, P.y, 20);
-  P.stress = Math.min(100, (P.stress || 0) + 2); if (!reduceMotion && settings.shake) shake = Math.max(shake, w.spread ? .16 : .08);
+  if (w.quiet) { SFX.swing(); noise(P.x, P.y, w.loud); }                   // рогатка: тихо, без отдачи
+  else {
+    SFX.gun(!!w.spread); noise(P.x, P.y, w.loud * (rain > .5 ? .85 : 1)); scareCrows(P.x, P.y, 20);
+    P.stress = Math.min(100, (P.stress || 0) + 2); if (!reduceMotion && settings.shake) shake = Math.max(shake, w.spread ? .16 : .08);
+  }
   let L = w.range;
   for (let q = .4; q <= w.range; q += .15) if (opaquePt(P.x + Math.cos(P.face) * q, P.y + Math.sin(P.face) * q)) { L = q; break; }
   const list = w.spread ? T.slice(0, w.cleave) : T.slice(0, 1);
@@ -367,9 +379,9 @@ function shoot(w) {
   }
   if (!w.spread && hitD != null) L = hitD;
   gunFx.push({x0:P.x + Math.cos(P.face) * .5, y0:P.y + Math.sin(P.face) * .5, x1:P.x + Math.cos(P.face) * L, y1:P.y + Math.sin(P.face) * L, t:.1, big:!!w.spread, a:P.face});
-  stat('shots'); ach('gun'); hud3Key = '';
+  if (!w.quiet) { stat('shots'); ach('gun'); } hud3Key = '';
   if (it.dur <= 0) { toast('Сломалось: ' + w.name); P.weapon = null; }
-  else if (it.mag <= 0) toast(ammoFor(it).length ? 'Патроны кончились. Удар — перезарядка' : 'Патроны кончились');
+  else if (it.mag <= 0) toast(w.quiet ? (ammoFor(it).length ? 'Удар — зарядить камень' : 'Камни кончились — набери на улице') : ammoFor(it).length ? 'Патроны кончились. Удар — перезарядка' : 'Патроны кончились');
 }
 
 // ================= mechanics, base defence, lures, storage: world actions =================

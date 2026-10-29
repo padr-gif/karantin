@@ -47,6 +47,8 @@ function die() {
   const best = Math.max(readRecord(), lived); writeRecord(best);
   $('dTime').textContent = fmtDur(lived);
   $('dKills').textContent = kills;
+  { const h = document.querySelector('#dead h2'); if (h) h.textContent = P.look && P.look.name ? 'Так закончилась история: ' + P.look.name : 'Так закончилась твоя история'; }
+  { const L = (P.log || []).filter(e => !/^Умер/.test(e[1])), l = L[L.length - 1], el = $('dLast'); if (el) el.textContent = l ? '«' + l[1] + '»' : '—'; }
   $('dCause').textContent = lastCause;
   $('dRec').textContent = fmtDur(best);
   $('ctrl').hidden = true;
@@ -55,7 +57,7 @@ function die() {
 function flashSaved(ok) { $('saveInd').textContent = ok ? 'сохранено ' + fmtTime(gameMin) : ''; setTimeout(() => { $('saveInd').textContent = ''; }, 4000); }
 
 loadSettings();
-newGame(); for (let i = 0; i < NT; i++) seen[i] = 1; fogFull = true;
+newGame(); for (let i = 0; i < NT; i++) seen[i] = 1; fogFull = true; menuScene();
 mode = 'menu'; show('menu'); setMenuEnabled(false);
 $('keysHelp').textContent = isTouch
   ? 'Левая половина экрана — джойстик. Тап справа или «Удар» — атака. «Действие» — обыскать, открыть, готовить, спать. Держи телефон горизонтально.'
@@ -83,7 +85,7 @@ function frameBody(t) {
   if (panel && panel.kind === 'inv' && panel.tab === 'items' && ART.ready && frameNo % 2 === 0) drawDoll();
   if (mode === 'play' && !paused) { const t0 = performance.now(); if (!logicOff) update(dt); FT.u = performance.now() - t0; updateParts(dt); } else FT.u = 0;
   if (mode === 'dead') { P.fall = (P.fall || 0) + dt * 2.2; updateParts(dt); camX += (P.x - camX) * .05; camY += (P.y - camY) * .05; }
-  else if (mode === 'menu') { menuDrift += dt * .2; camX = P.x + Math.cos(menuDrift) * 4; camY = P.y + Math.sin(menuDrift * .7) * 3; }
+  else if (mode === 'menu') menuTick(dt);                                        // живая сцена меню (82-menu)
   else if (mode === 'dead') { camX += (P.x - camX) * .05; camY += (P.y - camY) * .05; }
   { const t0 = performance.now(); if (renderOff) { mainCtx.setTransform(1, 0, 0, 1, 0, 0); mainCtx.fillStyle = '#0c0f12'; mainCtx.fillRect(0, 0, cv.width, cv.height); } else render(dt); FT.r = performance.now() - t0; }
   FPS.rt += FT.r; FPS.ut += FT.u;

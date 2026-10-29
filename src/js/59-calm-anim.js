@@ -1,8 +1,10 @@
 // ================= спокойные анимации героя, зарядка «прыжки руки в стороны», душ — заходишь в кабину =================
-// У героя (tools/glbchar/bake_hero.py) свои числа кадров: anims.pm, и длительности клипов: anims.pmdur (секунды).
+// У героя и героини (tools/glbchar/bake_hero.py, HERO_SEX=f) свои числа кадров: anims.pm / anims.pf, и длительности клипов: anims.pmdur / anims.pfdur (секунды).
 // Циклы (стойка, обыск, работа, чтение, зарядка) идут с настоящей скоростью клипа — плавно, без рывков.
-function heroMale() { return ((P && P.look) || look).g === 'm' && ART.meta && ART.meta.anims && ART.meta.anims.pm; }
-const pmLoop = (an, speed) => { const n = AN('p', an), d = (ART.meta.anims.pmdur && ART.meta.anims.pmdur[an]) || 2; return [an, Math.floor(animT * (speed || 1) / d * n) % n]; };
+function heroPre(lk) { return 'p' + ((lk || (P && P.look) || look).g === 'f' ? 'f' : 'm'); }
+function heroRig(lk) { return !!(ART.meta && ART.meta.anims && ART.meta.anims[heroPre(lk)]); }   // запечён на модели UBC: все клипы, одежда по областям
+function heroDur(an, def) { const d = ART.meta.anims[heroPre() + 'dur']; return (d && d[an]) || def; }
+const pmLoop = (an, speed) => { const n = AN('p', an), d = heroDur(an, 2); return [an, Math.floor(animT * (speed || 1) / d * n) % n]; };
 
 // ---- зарядка: прыжки «ноги врозь — руки в стороны», дольше и полезнее ----
 // шаги в такт прыжкам

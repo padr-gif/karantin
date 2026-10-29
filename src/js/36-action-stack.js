@@ -57,7 +57,7 @@ function fitGrid(g) {
   const cs = getComputedStyle(host), padV = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom), padH = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
   const n = g.children.length, gap = 5, w = host.clientWidth - padH - 2, h = host.clientHeight - padV - used - 4;
   let s = 64, cols = 1;
-  for (; s > 30; s--) { cols = Math.max(1, Math.floor((w + gap) / (s + gap))); if (Math.ceil(n / cols) * (s + gap) - gap <= h) break; }
+  for (; s > 46; s--) { cols = Math.max(1, Math.floor((w + gap) / (s + gap))); if (Math.ceil(n / cols) * (s + gap) - gap <= h) break; }   // не мельче 46 px — под палец; что не влезло, листается в колонке
   cols = Math.max(1, Math.floor((w + gap) / (s + gap)));
   g.style.gridTemplateColumns = `repeat(${cols}, ${s}px)`; g.style.setProperty('--cs', s + 'px'); g.classList.toggle('tiny', s < 50);
 }
@@ -80,7 +80,7 @@ let stackKey = '';
 function renderActStack(list) {
   const box = $('actAlt'), bar = !$('bBar').hidden, prim = !$('bAct').classList.contains('off');
   const alts = prim ? list.slice(1) : [], maxAlt = bar ? 1 : 2;
-  const key = alts.map(a => a.kind + a.label + actName(a)).join('|') + bar + prim + (P.car ? 'c' : '');
+  const key = alts.map(a => a.kind + a.label + actName(a)).join('|') + bar + prim + (P.car ? 'c' : '') + document.body.classList.contains('ctledit');
   const base = 72, step = 50;
   if (key !== stackKey) {
     stackKey = key; box.textContent = '';
@@ -88,6 +88,7 @@ function renderActStack(list) {
     const mkPill = (icon, verb, name, fn) => { const b = mk('button', 'act alt'); b.type = 'button'; b.appendChild(svgIc(icon)); const t = mk('span', 'at'); t.appendChild(mk('b', '', verb)); if (name) t.appendChild(mk('small', '', name)); b.appendChild(t); b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); fn(); }); box.appendChild(b); return b; };
     for (let i = 0; i < shown; i++) { const a = alts[i]; mkPill(actIcon(a), a.label.charAt(0).toUpperCase() + a.label.slice(1), actName(a), () => doAction(a)); }
     if (alts.length > shown) mkPill('i-menu', 'Ещё ' + (alts.length - shown), 'другие действия', () => { if ($('actMenu').hidden) openActMenu(); else $('actMenu').hidden = true; });
+    if (!box.children.length && document.body.classList.contains('ctledit')) mkPill('i-hand', 'Взаимодействие', 'вторая кнопка', () => {}).classList.add('ceDummy');   // примерка в настройке кнопок
   }
   let k = 0;
   const sb = (el, v) => { if (el._sb !== v) { el._sb = v; el.style.bottom = v; } };   // не трогаем стиль, если не изменился

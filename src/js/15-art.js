@@ -218,8 +218,8 @@ function drawWeapon(name, wid, wx, wy, zoff) {
 // герой на экране: поза (наклон, отдача), полупрозрачный за стеклом душа, книга в руках при чтении
 function drawPlayer(an, fi, zoff) {
   const it = P.act && P.act.it, bk = it && ITEMS[it.id] && (ITEMS[it.id].kind === 'book' || it.id === 'novel' || it.id === 'newspaper');
-  const reading = bk && P.act.kind === 'use' && P.act.an === 'read' && heroMale() && AN('p', 'read') > 1;
-  const bname = reading ? 'pm' + heroVar(P.look || look) + '_read_' + dirOf(P.fd != null ? P.fd : P.face) + '_' + fi : '';
+  const reading = bk && P.act.kind === 'use' && P.act.an === 'read' && heroRig() && AN('p', 'read') > 1;
+  const bname = reading ? heroPre() + heroVar(P.look || look) + '_read_' + dirOf(P.fd != null ? P.fd : P.face) + '_' + fi : '';
   const front = reading && ![4, 5, 6].includes(dirOf(P.fd != null ? P.fd : P.face));   // со спины книгу не видно
   if (reading && !front) drawBook(bname, zoff);
   if (P._inShower) {
@@ -228,7 +228,7 @@ function drawPlayer(an, fi, zoff) {
   } else withPose(P.x, P.y, playerPose(an), () => drawHeroSprite(an, fi, zoff));
   if (reading) {
     if (front) drawBook(bname, zoff);
-    const cyc = Math.floor(animT / ((ART.meta.anims.pmdur && ART.meta.anims.pmdur.read) || 3.2));
+    const cyc = Math.floor(animT / heroDur('read', 3.2));
     if (P._pageCyc !== cyc) { P._pageCyc = cyc; if (SFX.ac) smp('paper', .22, 1.05); }   // шелест страницы
   }
 }
@@ -240,32 +240,77 @@ function drawHeroSprite(an, fi, zoff) {
   const busy = an === 'eat' || an === 'drink' || an === 'pickup' || an === 'work';
   const showW = w && an !== 'death' && an !== 'search' && !busy;
   if (showW && !front) drawWeapon(name, w, P.x, P.y, zoff);
+  const pk = packSpot(an, name, zoff);
+  if (pk && !pk.front) drawPack(pk);
   const pp = playerLookPal(lk);
-  drawChar(P, name, pp.key, pp.pal, P.x, P.y, zoff, P.hurt > .3);
+  drawChar(P, name, pp.key, pp.pal, P.x, P.y, zoff, P.hurt > .3, null, true);   // герой не ждёт очереди перекраски: в толпе из сотен мертвецов он иначе застывал на старом кадре
+  if (pk) { if (pk.front) drawPack(pk); else drawStraps(pk); }
   if (showW && front) drawWeapon(name, w, P.x, P.y, zoff);
   if ((an === 'eat' || an === 'drink') && P.act && P.act.kind === 'use' && P.act.it && wm) drawIcon(P.act.it.id, SX(P.x, P.y) + wm[0], SY(P.x, P.y, zoff || 0) + wm[1] - 1, 7);
+}
+// ---- надетый рюкзак на герое: объёмный спрайт pk_<вид>_<направление> (tools/glbchar/packs.py) на спине ----
+// Где спина в кадре, берём из карты областей тела (лист <имя>r, область 1 — туловище): так рюкзак сидит на месте
+// при ходьбе, наклоне, ударе и приседе. Лямки на груди — когда герой лицом к нам.
+const PACK_STRAP = {bag_school:'#26406e', sportbag:'#1c1d22', bag:'#6e3416', milbag:'#363d24'};
+const TORSO = new Map();
+function torsoOf(name) {
+  if (TORSO.has(name)) return TORSO.get(name);
+  const f = ART.meta.frames[name], rimg = f && ART.imgs[f[0] + 'r']; if (!rimg) return null;   // карта ещё грузится
+  const w = f[3], h = f[4], c = mkCanvas(w, h), g = c.getContext('2d', {willReadFrequently:true}); g.drawImage(rimg, f[1], f[2], w, h, 0, 0, w, h);
+  const R = g.getImageData(0, 0, w, h).data; let x0 = w, x1 = -1, y0 = h, y1 = -1, sx = 0, n = 0;
+  for (let p = 0; p < w * h; p++) if (R[p * 4 + 3] >= 128 && (R[p * 4] >> 4) === 1) { const x = p % w, y = (p / w) | 0; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; sx += x; n++; }
+  const t = n > 6 ? {cx:sx / n - f[5], top:y0 - f[6], bot:y1 - f[6], w:x1 - x0} : null;
+  TORSO.set(name, t); return t;
+}
+function packSpot(an, name, zoff) {
+  const b = P.bag, id = b && b.id;
+  if (!id || !PACK_STRAP[id] || !heroRig() || an === 'death' || P._inShower || P.sleep) return null;
+  const T = torsoOf(name); if (!T) return null;
+  const a = P.fd != null ? P.fd : P.face, c = Math.cos(a), s = Math.sin(a), d = dirOf(a), k = .08;   // от середины туловища к спине
+  const bx = SX(P.x, P.y), by = SY(P.x, P.y, zoff || 0);
+  return {id, name:'pk_' + id + '_' + d, T, bx, by, x:bx + T.cx + (-c + s) * 32 * k, y:by + T.top + (T.bot - T.top) * .36 + (-c - s) * 16 * k,
+    front:-c - s > -.01, sling:id === 'sportbag'};
+}
+function drawPack(p) {
+  const fr = ART.meta.frames[p.name]; if (!fr) return;
+  if (p.sling) drawSling(p);
+  ctx.drawImage(ART.imgs[fr[0]], fr[1], fr[2], fr[3], fr[4], Math.round(p.x - fr[5]), Math.round(p.y - fr[6]), fr[3], fr[4]);
+}
+function drawSling(p) {                                                       // ремень сумки: с левого плеча к правому бедру
+  ctx.strokeStyle = PACK_STRAP[p.id]; ctx.lineWidth = 1.2; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(p.bx + p.T.cx + p.T.w * .3, p.by + p.T.top + 1); ctx.lineTo(p.bx + p.T.cx - p.T.w * .3, p.by + p.T.bot - 1); ctx.stroke();
+}
+// герой лицом к нам: рюкзак за спиной, на плечах видны лямки
+function drawStraps(p) {
+  if (p.sling) return drawSling(p);
+  ctx.fillStyle = PACK_STRAP[p.id];
+  const L = Math.max(3, Math.round((p.T.bot - p.T.top) * .4)), y = Math.round(p.by + p.T.top);
+  for (const o of [-.28, .28]) ctx.fillRect(Math.round(p.bx + p.T.cx + p.T.w * o), y, 1, L);
 }
 // мертвец: поза (наклон, отдача); ползущий разворачивается головой вперёд
 function drawZombie(z, an, fi, alpha, force) {
   if (force) return drawZombieSprite(z, an, fi, alpha, force);
-  const f0 = z.face; if (z.crawl) z.face = f0 + Math.PI;
+  const f0 = z.face; if (z.crawl && an === 'death') z.face = f0 + Math.PI;   // старые листы без кадров ползания: лежит навзничь головой вперёд
   try { withPose(z.x, z.y, zombiePose(z, an), () => drawZombieSprite(z, an, fi, alpha, force)); } finally { z.face = f0; }
 }
 function drawZombieSprite(z, an, fi, alpha, force) {
   const pal = z.pal;
-  drawChar(z, 'z' + (pal.b || 'm') + '_' + an + '_' + dirOf(z.face) + '_' + fi, 'z' + pal.pi, ZPALS[pal.pi], z.x, z.y, 0, !force && z.stun > .3, alpha, force);
+  const near = force || Math.abs(z.x - P.x) + Math.abs(z.y - P.y) < 5;   // те, кто рядом с героем, тоже без очереди
+  drawChar(z, 'z' + (pal.b || 'm') + '_' + an + '_' + dirOf(z.face) + '_' + fi, 'z' + pal.pi, ZPALS[pal.pi], z.x, z.y, 0, !force && z.stun > .3, alpha, near);
 }
 // вариант кадров героя: '' — без одежды, 't' — в верхе, 'f' — в верхе и штанах (одежда не в облипку); 61-controls-body решает
 let heroVar = lk => '';
 // палитра героя для кадра: старая схема (перекраска слотов); 54-clothes заменяет её на одежду по областям тела
 let playerLookPal = function (lk) {
   const pal = lookPal(lk), ct = P.cloth && P.cloth.torso, ch = P.cloth && P.cloth.head;
-  if (ct) pal[3] = pal[4] = ITEMS[ct.id].col; if (ch) pal[2] = ITEMS[ch.id].col;
-  return {pal, key:'P' + lk.g + lk.skin + lk.hair + lk.shirt + lk.pants + (ct ? ct.id : '') + (ch ? ch.id : '')};
+  const cs = P.cloth && P.cloth.shirt, cl = P.cloth && P.cloth.legs, top = ct || cs;               // героиня (палитровые кадры): верх, штаны, шапка
+  if (top) pal[3] = pal[4] = top.col || ITEMS[top.id].col; if (ct && cs) pal[4] = cs.col || ITEMS[cs.id].col; if (cl) pal[5] = cl.col || ITEMS[cl.id].col; if (ch) pal[2] = ch.col || ITEMS[ch.id].col;
+  const ck = c => c ? c.id + (c.col ? c.col.join('.') : '') : '';
+  return {pal, key:'P' + lk.g + lk.skin + lk.hair + lk.shirt + lk.pants + ck(ct) + ck(cs) + ck(cl) + ck(ch)};
 };
 const dirOf = a => ((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8;
 // число кадров в анимации (у мужского героя — свои клипы pm)
-function AN(k, a) { if (k === 'p' && heroMale() && ART.meta.anims.pm[a]) return ART.meta.anims.pm[a]; return (ART.meta.anims && ART.meta.anims[k] && ART.meta.anims[k][a]) || 1; }
+function AN(k, a) { if (k === 'p' && heroRig() && ART.meta.anims[heroPre()][a]) return ART.meta.anims[heroPre()][a]; return (ART.meta.anims && ART.meta.anims[k] && ART.meta.anims[k][a]) || 1; }
 // object sprite with fog darkening (fogged variants cached)
 // предмет мира из атласа (пиксельный кадр); с туманом f<1 или оттенком — через кэш спрайтов
 function objAtPix(id, name, wx, wy, f, alpha, offX, tint) {

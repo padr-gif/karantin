@@ -58,11 +58,26 @@ function zWindowCheck(z, px, py) {
   z.face = Math.atan2(gy - py, gx - px); noise(cx, cy, 4); SFX.knock(cx, cy);
   return true;
 }
+// ---- упёрся в забор двора — переваливается через него и падает лицом вперёд (ползун не может) ----
+function zFenceCheck(z, px, py, mx, my) {
+  if (z.crawl || z.vt) return false;
+  const l = Math.hypot(mx, my) || 1, fx = z.x + mx / l * (z.r + .16), fy = z.y + my / l * (z.r + .16);
+  const pi = propAt[Math.floor(fy) * MW + Math.floor(fx)], p = pi && props[pi - 1];
+  if (!p || !p.solid || !climbFence(p)) return false;
+  const ax = p.ax === 'x', side = ax ? Math.sign(z.y - p.cy) : Math.sign(z.x - p.cx);
+  if (!side || (ax ? my : mx) * side > -.25 * l) return false;                 // идёт вдоль забора, а не на него
+  if ((ax ? z.y - py : z.x - px) * -side > .003) return false;                 // ещё не упёрся: шаг к забору прошёл
+  const gx = ax ? z.x : p.cx - side * .78, gy = ax ? p.cy - side * .78 : z.y;
+  if (blocked(gx, gy, z.r)) return false;
+  z.vt = {t:0, dur:1.2 + rng() * .4, fx:z.x, fy:z.y, tx:gx, ty:gy, fence:true};
+  z.face = Math.atan2(gy - z.y, gx - z.x); noise(p.cx, p.cy, 3); SFX.knock(p.cx, p.cy);
+  return true;
+}
 function tickZVault(z, dt) {
   const v = z.vt; v.t += dt; const k = Math.min(1, v.t / v.dur), e = k * k * (3 - 2 * k);
-  z.x = v.fx + (v.tx - v.fx) * e; z.y = v.fy + (v.ty - v.fy) * e; z.vz = Math.sin(Math.PI * Math.min(1, k * 1.1)) * U * .42; z.mv = 0;
+  z.x = v.fx + (v.tx - v.fx) * e; z.y = v.fy + (v.ty - v.fy) * e; z.vz = Math.sin(Math.PI * Math.min(1, k * 1.1)) * U * (v.fence ? .55 : .42); z.mv = 0;
   if (k >= 1) {
-    z.vt = null; z.vz = 0; z.down = 1.1 + rng() * .6; z.downT = 0;
+    z.vt = null; z.vz = 0; z.down = 1.1 + rng() * .6; z.downT = 0; z.downF = true;   // через забор и окно — лицом вперёд
     SFX.knock(z.x, z.y); addBlood(z.x, z.y, .25);
     if (v.glass) { emit('glass', z.x, z.y, .4, 6, null, 0, 1.2); z.hp -= 4; z.pal.blood = Math.min(5, z.pal.blood + 1); }
   }

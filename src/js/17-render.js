@@ -63,7 +63,7 @@ function render(dt) {
     if (isWallish(t)) dl.push({d:x + y + 1, k:1, x, y, i});
     else if (t === TREE) dl.push({d:x + y + 1, k:2, x, y, i});
     if (furn[i]) { const fu = furns[furn[i] - 1]; if (fu.dt == null ? seen[i] : fu.dt === i && fu.tiles.some(t => seen[t])) dl.push({d:furnDepth(fu), k:3, x, y, i, fu}); }   // big furniture: drawn once, from its front tile
-    if (propAt[i]) { const p = props[propAt[i] - 1]; if (p._f !== frameNo && !p.dyn) { p._f = frameNo; dl.push({d:p.cx + p.cy + (p.type === 'car' ? .3 : 0), k:7, p, i, pid:propAt[i]}); } }
+    if (propAt[i]) { const p = props[propAt[i] - 1]; if (p._f !== frameNo && !p.dyn) { p._f = frameNo; dl.push({d:p.cx + p.cy + (p.type === 'car' ? .3 : 0) + (p.dz || 0), k:7, p, i, pid:propAt[i]}); } }
   }
   {
     const ex0 = Math.floor(mnx), ex1 = Math.ceil(mxx), ey0 = Math.floor(mny), ey1 = Math.ceil(mxy);
@@ -177,7 +177,7 @@ function render(dt) {
     for (let q = 0; q < 3; q++) { const a = animT * (3 + q) + q * 2 + c.seed * 9; const fx = c.x + Math.cos(a) * .3, fy = c.y + Math.sin(a * 1.3) * .25; ctx.fillRect(Math.round(SX(fx, fy)), Math.round(SY(fx, fy, U * (.35 + Math.sin(a * 2) * .15))), 1, 1); }
   }
   drawParts();
-  drawBreath(); drawBustle(); drawEvac(); drawScreamFx(); drawLootMarks(); drawV23(); drawEditMarks(); drawFog(); if (tapMark) tapMark.t -= dt;
+  drawBreath(); drawBustle(); drawEvac(); drawScreamFx(); drawLootMarks(); drawV23(); drawEditMarks(); for (const fn of OVERLAYS) fn(); drawFog(); if (tapMark) tapMark.t -= dt;
 
   // time-of-day tint
   const hr = hourOf(), L = lightLevel();
@@ -190,7 +190,7 @@ function render(dt) {
   // darkness & lights
   const fl = mode === 'play' ? flashlight() : null;
   if (RD.light && !(mode === 'play' && L >= .999 && !P.sleep)) {
-    const alpha = mode === 'menu' ? .5 : (P.sleep ? .25 : .1) + .74 * (1 - L) + .08 * wet;
+    const alpha = mode === 'menu' ? .5 : ((P.sleep ? .25 : .1) + .74 * (1 - L) + .08 * wet) * (settings.nightK || 1);   // nightK: светлее ночь на ярком солнце телефона
     let rTiles = mode === 'menu' ? 9 : 3.4 + 9 * L + (hasTr('eagle') ? 1.2 : 0) - (hasTr('short') ? 1 : 0);
     if (inside && poweredAt(P.x, P.y) && roomLitAt(P.x, P.y) && L < .6 && mode === 'play') rTiles = Math.max(rTiles, 7);
     const vr = rTiles * U * .55;

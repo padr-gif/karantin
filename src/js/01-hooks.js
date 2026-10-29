@@ -14,6 +14,13 @@ const onStartNew = (post, pre) => HOOKS.startNew.push({post, pre});
 const onNewWorld = (post, pre) => HOOKS.newWorld.push({post, pre});
 //   onPanel(post, pre)   — перерисовка открытого окна (renderPanel): pre() до, post() после; дописать вкладку, блок, подпись
 const onPanel = (post, pre) => HOOKS.panel.push({post, pre});
+//   onTap(fn)            — fn(cx, cy): тап по миру (координаты экрана); вернуть true — тап обработан, дальше не идёт
+//   onDraw(fn)           — fn(): дорисовать поверх мира (до тумана), в координатах экрана игры (SX/SY)
+//   defProc(type, fn)    — fn(p, f): как рисовать процедурную вещь мира своего вида (p.proc), f — освещённость
+const TAPS = [], OVERLAYS = [], PROCS = {};
+const defProc = (type, fn) => { PROCS[type] = fn; };
+const onTap = fn => TAPS.push(fn);
+const onDraw = fn => OVERLAYS.push(fn);
 // Действия рядом с героем (кнопка «Действие» и список действий):
 //   addActions(fn)       — fn(out): дописать свои действия в список (после основных)
 //   defAction(kind, {name, icon, run}) — у действия этого вида своё имя цели, иконка и выполнение
@@ -24,6 +31,10 @@ const defAction = (kind, d) => { ACT[kind] = Object.assign(ACT[kind] || {}, d); 
 //   defUse(test, fn)     — test(it, d) → true: вещь применяется по-своему, fn(it, k, d); проверяются с последнего подключённого
 const USE = [];
 const defUse = (test, fn) => USE.push({test, fn});
+// Состояния героя:
+//   addMoodles(hud, tips) — hud(m): дописать значки HUD ([название, 'warn'|'crit'|'']); tips(m): строки-советы для «Состояния»
+const MOODS = [];
+const addMoodles = (hud, tips) => MOODS.push({hud, tips});
 // pre — с последнего подключённого к первому, post — с первого к последнему (как вложенные вызовы)
 function runHooked(name, core, arg) {
   const L = HOOKS[name], x = new Array(L.length);
