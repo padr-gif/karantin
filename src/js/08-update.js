@@ -111,7 +111,7 @@ function updateCore(dt) {
   fires = fires.filter(fi => !fi.out || fi.t > -600);
   if (rain > .3) for (const b of barrels) if (b.outside) b.w = Math.min(20, b.w + gm * .06 * rain);
   const fl = flashlight();
-  if (fl) { fl.ch -= gm / (fl.id === 'candle' ? 4 : 5); if (fl.ch <= 0) { fl.ch = 0; fl.on = false; if (fl.id === 'candle') { P.inv.splice(P.inv.indexOf(fl), 1); toast('Свеча догорела'); } else toast('Фонарик погас: батарейка села'); } }
+  if (fl) { fl.ch -= gm / (fl.id === 'candle' ? 4 : fl.id === 'phone' ? 2.5 : 5); if (fl.ch <= 0) { fl.ch = 0; fl.on = false; if (fl.id === 'candle') { P.inv.splice(P.inv.indexOf(fl), 1); toast('Свеча догорела'); } else toast(fl.id === 'phone' ? 'Телефон сел — фонарик погас' : 'Фонарик погас: батарейка села'); } }
 
   flowTimer -= dt; if (flowTimer <= 0) { buildFlow(); flowTimer = .3; }
   visTimer -= dt; if (visTimer <= 0) { computeVis(); fogDirty = true; visTimer = .12; }

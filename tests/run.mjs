@@ -295,6 +295,42 @@ check('отчёт об ошибках собирается (кнопка — в 
 check('тест скорости проходит и пишет результат', await D(`(async () => { toMenu(); BENCH_SCENES.forEach(s => s); const keep = BENCH_SCENES.splice(1); await runBench(); BENCH_SCENES.push(...keep); return BENCH && BENCH.rows.length === 1 && BENCH.rows[0].fps > 0 && mode === 'menu' && perfStat().includes('FPS'); })()`));
 await fresh();
 
+console.log('Чужие телефоны');
+await fresh();
+check('у героя на старте нет телефона', await D("!P.inv.some(i => i.id === 'phone') && $('bPhone').hidden"));
+const phs = await D("JSON.stringify(furns.concat(props).flatMap(c => (c.items || []).filter(i => i.id === 'phone').map(i => i.ph)))");
+check('в городе разложены телефоны со своими историями', JSON.parse(phs).length >= 4 && !JSON.parse(phs).includes('viktor'), phs);
+const ph1 = await D(`(() => {
+  const it = mkPhone('timur'); it.ch = 50; P.inv.push(it); gameMin = phDay0() * 1440 + 13 * 60;
+  phOpen(it); const open = PH.open && !$('phone').hidden; phShow('bro'); phClose();
+  const mark = (world.marks || []).some(m => m.t === 'stash'), pile = piles.some(p => p.items.some(i => i.id === 'noodles'));
+  it.on = true; const lit = flashlight() === it; it.on = false; it.ch = 0; phOpen(it); const dead = !$('phone').querySelector('.dead').hidden; phClose();
+  return {open, mark, pile, lit, dead};
+})()`);
+check('телефон открывается, метка из переписки ставит тайник', ph1.open && ph1.mark && ph1.pile, ph1);
+check('фонарик телефона светит, севший телефон — чёрный экран', ph1.lit && ph1.dead, ph1);
+const ph2 = await D(`(() => {
+  const it = P.inv.find(i => i.id === 'phone'); it.ch = 10; it.mute = false; it.n0 = 0;
+  zs.length = 0; const z = mkZombie(P.x + 6, P.y, zPal(), 50, 1); z.state = 'idle'; phRing(it); const heard = z.state === 'investigate';
+  z.state = 'idle'; it.mute = true; phRing(it); const quiet = z.state === 'idle'; zs.length = 0;
+  return {heard, quiet};
+})()`);
+check('звонок слышат мертвецы, без звука — нет', ph2.heard && ph2.quiet, ph2);
+
+console.log('Карта обучения');
+await D("toMenu()"); await sleep(300);
+const tm = await D(`(() => { genTutMap = true; try { newGame({seed:20261028}); } finally { genTutMap = false; }
+  const H = houses.filter(h => h.kind === 'house'), gate = props.filter(p => p.type === 'hfence' && p.gate);
+  // со двора не выйти: от героя до края карты пути нет
+  const seen = new Uint8Array(NT), q = [[Math.floor(P.x), Math.floor(P.y)]]; seen[q[0][1] * MW + q[0][0]] = 1; let edge = false;
+  while (q.length) { const [x, y] = q.pop(); if (x <= 1 || y <= 1 || x >= MW - 2 || y >= MH - 2) { edge = true; break; }
+    for (const [a, b] of D4) { const nx = x + a, ny = y + b, i = ny * MW + nx; if (seen[i] || navBlocked(nx, ny)) continue; seen[i] = 1; q.push([nx, ny]); } }
+  tutBreakGate(); return {mw:MW, houses:H.length, gate:gate.length, edge, open:gate.every(p => !p.solid)};
+})()`);
+check('маленькая карта с одним домом и воротами', tm.mw === 52 && tm.houses === 1 && tm.gate === 2, tm);
+check('со двора не уйти, а сломанные ворота открыты', !tm.edge && tm.open, tm);
+await fresh();
+
 console.log('Живая игра 15 секунд');
 await fresh("['coward']");
 await D("P.weapon = mkItem('shotgun'); P.weapon.mag = 2; P.inv.push(mkItem('shells')); gameMin += 14 * 60; for (let i = 0; i < 25; i++) spawnZombie(4, false);");

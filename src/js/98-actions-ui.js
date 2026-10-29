@@ -241,7 +241,7 @@ body.popon #bAct{visibility:hidden}
     const r = z.getBoundingClientRect(); if (!r.width || mode !== 'play' || $('hud').hidden) { b.hidden = true; return; }
     const s = Math.round(r.height) || 38; b.style.width = b.style.height = s + 'px';
     b.style.left = Math.round(r.right - s) + 'px'; b.style.top = Math.round(r.bottom + 8) + 'px';
-    b.hidden = mode !== 'play' || $('hud').hidden;
+    b.hidden = mode !== 'play' || $('hud').hidden || !(typeof phMine === 'function' && phMine().length);   // телефон — только когда нашёл
   };
   addEventListener('resize', () => setTimeout(placePhone, 80)); setInterval(placePhone, 700); setTimeout(placePhone, 50);
 }
