@@ -1,7 +1,7 @@
 // ================= обучение: своя маленькая карта, шаги с подсказками, в конце герой погибает =================
 // «Обучение» в главном меню. Карта — один дом за высоким забором (86-tut-map), строится за экраном загрузки.
-// Шаги: идти, обыскать, забрать, поесть, почитать чужой телефон, взять оружие, красться, выйти во двор, убить мертвеца —
-// и толпа: ворота не выдерживают. После смерти — «Создать мир» (экран нового выжившего).
+// Шаги: идти, обыскать, забрать, поесть, почитать чужой телефон, взять оружие, красться, открыть дверь, за которой
+// скребётся мертвец (скример), убить его — и толпа: лезут через окна и двери со всех сторон дома. Ворота остаются закрыты. После смерти — «Создать мир» (экран нового выжившего).
 // Обучение ничего не пишет: ни сохранений, ни рекорда, ни достижений. «Новая игра» без обучения — как раньше.
 const TUT_SEED = 20261028;
 const TUT = {on:false, dead:false, step:-1, wait:false, t0:0, d:{}, iv:0, ui:null};
@@ -81,6 +81,52 @@ function tutHere() {
   return true;
 }
 
+// мертвец за внутренней дверью: стоит вплотную с той стороны, появляется, когда дверь открыли
+function tutBehind() {
+  const d = TUT.d.idoor; if (!d) return null;
+  const z = mkZombie(d.bx, d.by, {pi:3, b:'m', blood:2}, 40, .8);
+  z.crawl = false; z.tut = true; z.state = 'chase'; z.lost = 0; z.aw = 0; z.tx = P.x; z.ty = P.y;
+  return z;
+}
+// скример: удар музыки, вспышка, тряска, вибрация, рык
+function tutScare() {
+  TUT.d.z = tutBehind();
+  if (typeof musBuild === 'function') { try { musBuild(); musScare(); } catch (e) {} }
+  if (TUT.d.z) SFX.growl && SFX.growl(TUT.d.z);
+  if (!reduceMotion && settings.shake) shake = .6;
+  buzzTut([140, 40, 220]);
+  let f = $('tutScare'); if (!f) { f = mk('div'); f.id = 'tutScare'; document.body.appendChild(f); }
+  f.style.cssText = 'position:fixed;inset:0;z-index:39;pointer-events:none;background:radial-gradient(ellipse at 50% 50%,rgba(120,0,0,.15),rgba(60,0,0,.85));opacity:1;transition:none';
+  requestAnimationFrame(() => requestAnimationFrame(() => { f.style.transition = 'opacity 1.2s ease-out'; f.style.opacity = '0'; }));
+}
+// финал: стёкла в доме бьются, двери наружу распахиваются
+function tutCrack() {
+  const H = houses[spawnHouse - 1]; if (!H) return;
+  for (let y = H.y; y < H.y + H.h; y++) for (let x = H.x; x < H.x + H.w; x++) {
+    const i = y * MW + x, o = obs[i]; if (!o) continue;
+    if (map[i] === WIN && !o.broken) { o.broken = true; o.bhp = 0; }
+    const border = x === H.x || y === H.y || x === H.x + H.w - 1 || y === H.y + H.h - 1;
+    if (map[i] === DOOR && border) { o.open = true; o.bhp = 0; o.locked = false; }
+  }
+  SFX.glass && SFX.glass(P.x, P.y); setTimeout(() => SFX.glass && SFX.glass(P.x, P.y), 350);
+  buildFlow(); clearCaches();
+}
+// мертвец у стены дома снаружи — лезет в окно или дверь
+function tutAround() {
+  const H = houses[spawnHouse - 1]; if (!H) return null;
+  for (let k = 0; k < 120; k++) {
+    const side = Math.floor(Math.random() * 4), t = Math.random(), off = 1 + Math.random() * 2.2;
+    let x = side < 2 ? H.x + t * H.w : side === 2 ? H.x - off : H.x + H.w + off - 1;
+    let y = side >= 2 ? H.y + t * H.h : side === 0 ? H.y - off : H.y + H.h + off - 1;
+    const tx = Math.floor(x), ty = Math.floor(y);
+    if (!tutInYard(tx, ty) || navBlocked(tx, ty) || hAt[ty * MW + tx] || Math.hypot(x - P.x, y - P.y) < 3) continue;
+    const z = mkZombie(tx + .5, ty + .5, {pi:Math.floor(Math.random() * 10), b:Math.random() < .4 ? 'f' : 'm', blood:Math.floor(Math.random() * 2)}, 55, .85 + Math.random() * .2);
+    z.crawl = false; z.tut = true; z.state = 'chase'; z.lost = 0; z.aw = 0; z.tx = P.x; z.ty = P.y;
+    return z;
+  }
+  return null;
+}
+
 // ---- шаги ----
 const TUT_STEPS = [
   {title:'Пройдись', text:() => isTouch ? 'Левая половина экрана — джойстик: прижми палец и веди.' : 'WASD или стрелки — идти, Shift — бежать.',
@@ -107,24 +153,30 @@ const TUT_STEPS = [
    hi:['bInv'], check:() => P.weapon && P.weapon.id === 'bat'},
   {title:'Крадись', text:() => 'Шаги слышно далеко. Включи «Красться»' + (isTouch ? '' : ' (C)') + ' — мертвецы услышат только вблизи.',
    hi:['bSneak'], check:() => !!P.sneak},
-  {title:'Выйди во двор', text:() => 'Подойди к двери — справа внизу появится кнопка «Открыть». Со двора не уйти: забор высокий, ворота на засове.',
-   hi:['bAct'], target:() => TUT.d.door && [TUT.d.door.x + .5, TUT.d.door.y + .5],
-   check:() => !tutHome() && !panel},
-  {title:'Убей мертвеца', text:() => 'Один перелез через забор. Бей кнопкой «Удар»' + (isTouch ? ' или тапом справа' : ', мышью или Пробелом') + '. Ударил — отступи и снова.',
-   hi:['bAtk'], enter() { TUT.d.k0 = kills; TUT.d.z = tutZombie(6, 8, 40, .72); },
+  {title:'Что-то скребётся за дверью', text:() => 'Слышишь? Подойди к отмеченной двери и открой её. Бита в руках — держи наготове.',
+   hi:['bAct'], target:() => TUT.d.idoor && [TUT.d.idoor.x + .5, TUT.d.idoor.y + .5],
+   enter() { TUT.d.scrT = 0; TUT.d.k0 = kills; },
+   tick() {                                                                       // царапает и стучит изнутри, пока не откроешь
+     const d = TUT.d.idoor; if (!d) return;
+     if (performance.now() > TUT.d.scrT) { TUT.d.scrT = performance.now() + 2200 + Math.random() * 1500; SFX.knock && SFX.knock(d.x + .5, d.y + .5); }
+   },
+   check:() => { const d = TUT.d.idoor, o = d && obs[d.y * MW + d.x]; const op = !d || !o || o.open || o.dead; if (op && !TUT.d.scared) { TUT.d.scared = 1; tutScare(); } return op; }},
+  {title:'Убей его', text:() => 'Бей кнопкой «Удар»' + (isTouch ? ' или тапом справа' : ', мышью или Пробелом') + '. Ударил — отступи и снова.',
+   hi:['bAtk'],
    target:() => TUT.d.z && zs.includes(TUT.d.z) && [TUT.d.z.x, TUT.d.z.y],
-   tick() { if (!TUT.d.z || !zs.includes(TUT.d.z)) { if (kills <= TUT.d.k0) TUT.d.z = tutZombie(6, 8, 40, .72); } },
+   tick() { if ((!TUT.d.z || !zs.includes(TUT.d.z)) && kills <= TUT.d.k0) TUT.d.z = tutBehind(); },
    check:() => kills > TUT.d.k0},
-  {title:'Ворота не выдержали', text:() => 'Шум драки услышали с дороги. Держись, сколько сможешь — так кончается любая история.',
+  {title:'Они лезут отовсюду', text:() => 'Шум услышали. Мертвецы лезут через окна и двери, со всех сторон дома. Держись, сколько сможешь — так кончается любая история.',
    enter() {
-     TUT.t0 = performance.now(); for (let k = 0; k < 18; k++) tutZombie(0, 0, 55, .85 + Math.random() * .2, true);
-     for (let k = 0; k < 4; k++) tutZombie(6, 12, 55, .9);                                             // и пара — через забор
-     tutBreakGate(); if (!reduceMotion && settings.shake) shake = .5;
-     SFX.scream && SFX.scream(); if (typeof logEv === 'function') logEv('Ворота выломали. Если кто-то найдёт этот дневник — не шумите');
+     TUT.t0 = performance.now();
+     tutCrack();                                                                   // стёкла бьются, двери распахиваются
+     for (let k = 0; k < 16; k++) tutAround();
+     if (!reduceMotion && settings.shake) shake = .5;
+     SFX.scream && SFX.scream(); if (typeof logEv === 'function') logEv('Они лезли из всех щелей. Если кто-то найдёт этот дневник — не шумите');
    },
    tick() {
      const s = (performance.now() - TUT.t0) / 1000, mine = zs.filter(z => z.tut);
-     if (mine.length < 14) for (let k = 0; k < 4; k++) tutZombie(0, 0, 55, 1, true);                   // толпа с дороги не кончается
+     if (mine.length < 14) for (let k = 0; k < 3; k++) tutAround();                                    // лезут и лезут
      for (const z of mine) { z.state = 'chase'; z.lost = 0; if (s > 25 && !z.fastT) { z.spd *= 1.35; z.fastT = 1; } }
      if (s > 55) { P.hp -= 1.6; lastCause = 'Не продержался против толпы'; }                              // финал не тянется вечно
    }},
@@ -258,6 +310,20 @@ function tutBuild() {
   if (best) { best.items = best.items || []; best.items = best.items.filter(i => i && i.id !== 'phone'); const ph = mkPhone('viktor'); ph.ch = 64; const L = [mkItem('chips'), mkItem('bat'), ph]; for (const it of L) it.tut = 1; best.items.unshift(...L); }
   TUT.d.box = best;
   const H = houses[spawnHouse - 1]; TUT.d.door = H && H.doors && H.doors[0];
+  // внутренняя дверь, за которой ждёт мертвец: подальше от героя, комната за ней — дальняя сторона
+  TUT.d.idoor = null;
+  if (H) {
+    let bd = -1;
+    for (let y = H.y + 1; y < H.y + H.h - 1; y++) for (let x = H.x + 1; x < H.x + H.w - 1; x++) {
+      const i = y * MW + x; if (map[i] !== DOOR || !obs[i]) continue;
+      const ax = alongX(x, y), sides = ax ? [[x, y - 1], [x, y + 1]] : [[x - 1, y], [x + 1, y]];
+      const far = sides.map(([sx, sy]) => [sx, sy, Math.hypot(sx + .5 - P.x, sy + .5 - P.y)]).sort((a, b) => b[2] - a[2])[0];
+      if (map[far[1] * MW + far[0]] !== FLOOR || furn[far[1] * MW + far[0]]) continue;
+      const d = Math.hypot(x + .5 - P.x, y + .5 - P.y); if (d < 2.5 || far[2] < d) continue;
+      if (d > bd) { bd = d; TUT.d.idoor = {x, y, bx:far[0] + .5, by:far[1] + .5}; }
+    }
+    if (TUT.d.idoor) { const o = obs[TUT.d.idoor.y * MW + TUT.d.idoor.x]; o.open = false; o.locked = false; o.dead = false; o.bhp = 0; }
+  }
   P.inv = P.inv.filter(i => i && i.id !== 'chips' && i.id !== 'bat' && i.id !== 'phone'); if (P.weapon && P.weapon.id === 'bat') P.weapon = null;
   world.marks = [];
 }

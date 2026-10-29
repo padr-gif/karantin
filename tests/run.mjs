@@ -332,6 +332,15 @@ check('со двора не уйти, а сломанные ворота отк�
 const tg = await D(`(() => { mode = 'play'; paused = false; const g = props.find(p => p.type === 'hfence' && p.gate); P.x = g.cx; P.y = g.cy + 3; tutKeepIn();
   const back = P.y < TUT_FENCE.y1 + .5; P.x = 1; P.y = MH - 3; const side = edgeSide(); return {back, side}; })()`);
 check('через сломанные ворота не выйти, соседних районов нет', tg.back && !tg.side, tg);
+await D("toMenu()"); await sleep(300);
+const td = await D(`(() => { tutBuild(); beginPlay(); paused = false; const d = TUT.d.idoor; if (!d) return {d:null};
+  TUT.step = TUT_STEPS.findIndex(s => s.title.startsWith('Что-то скребётся')); TUT.wait = false; TUT_STEPS[TUT.step].enter();
+  obs[d.y * MW + d.x].open = true; tutTick(); const z = TUT.d.z && zs.includes(TUT.d.z), near = z && Math.hypot(TUT.d.z.x - d.x - .5, TUT.d.z.y - d.y - .5) < 1.5;
+  tutCrack(); for (let k = 0; k < 10; k++) tutAround(); const H = houses[spawnHouse - 1];
+  const wins = []; for (let y = H.y; y < H.y + H.h; y++) for (let x = H.x; x < H.x + H.w; x++) if (map[y * MW + x] === WIN) wins.push(obs[y * MW + x].broken);
+  const around = zs.filter(q => q.tut && q !== TUT.d.z && tutInYard(q.x, q.y)).length, gate = props.filter(p => p.gate).every(p => p.solid);
+  toMenu(); return {d:true, z, near, wins:wins.every(Boolean), around, gate}; })()`);
+check('обучение: за дверью мертвец, в финале лезут со всех сторон дома, ворота закрыты', td.d && td.z && td.near && td.wins && td.around >= 8 && td.gate, td);
 await fresh();
 
 console.log('Живая игра 15 секунд');
