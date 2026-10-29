@@ -46,7 +46,8 @@ function bzRand(a, b) { return a + Math.random() * (b - a); }
 function initSmokes() {
   BZ.smokes = [];
   const R = mulberry32((world.seed || 1) * 7 + 3);
-  const cands = houses.filter(h => !COMM.has(h.kind) && h.kind !== 'shed');
+  if (world.dtype === 'tut') return;                                              // обучение: свой единственный дом не дымит
+  const cands = houses.filter((h, i) => !COMM.has(h.kind) && h.kind !== 'shed' && i + 1 !== spawnHouse);   // и стартовый дом героя тоже
   for (let k = 0; k < 3 && cands.length; k++) {
     const H = cands[Math.floor(R() * cands.length)];
     BZ.smokes.push({x:(H.ix0 + H.ix1) / 2, y:(H.iy0 + H.iy1) / 2, end:(9 * 60) + 1440 * (1 + R() * 3), puffs:[]});

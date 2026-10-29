@@ -71,6 +71,16 @@ function tutZombie(dmin, dmax, hp, spd, road) {
   return null;
 }
 
+// открыл другую мебель, а не отмеченную — вещи обучения переезжают туда, чтобы не искать их по дому
+function tutHere() {
+  const c = panel && panel.src, b = TUT.d.box; if (!c || !c.items || c === b) return !!c;
+  const mine = b && b.items ? b.items.filter(i => i && i.tut) : [];
+  if (!mine.length) return true;
+  b.items = b.items.filter(i => !(i && i.tut)); c.items.unshift(...mine); TUT.d.box = c;
+  if (typeof renderPanel === 'function') renderPanel();
+  return true;
+}
+
 // ---- шаги ----
 const TUT_STEPS = [
   {title:'Пройдись', text:() => isTouch ? 'Левая половина экрана — джойстик: прижми палец и веди.' : 'WASD или стрелки — идти, Shift — бежать.',
@@ -78,9 +88,10 @@ const TUT_STEPS = [
    check:() => Math.hypot(P.x - TUT.d.sx, P.y - TUT.d.sy) > 2.5},
   {title:'Обыщи отмеченную мебель', text:() => 'Подойди к кольцу: мебель засветится, а справа внизу появится кнопка «Обыскать». Нажми её' + (isTouch ? '.' : ' (или E).'),
    hi:['bAct'], target:() => TUT.d.box && [TUT.d.box.x + .5, TUT.d.box.y + .5],
-   check:() => panel && panel.kind === 'loot'},
+   check:() => panel && panel.kind === 'loot' && tutHere()},
   {title:'Забери чипсы, биту и телефон', text:() => 'Нажми на вещь и «Взять». Двойной тап переносит сразу.',
    target:() => TUT.d.box && [TUT.d.box.x + .5, TUT.d.box.y + .5],
+   tick() { if (panel && panel.kind === 'loot') tutHere(); },
    check:() => tutHas('bat') && tutHas('phone') && (tutHas('chips') || !((TUT.d.box && TUT.d.box.items) || []).some(i => i && i.id === 'chips'))},
   {title:'Нажми на саму мебель', text:() => 'Закрой ящик и нажми прямо на саму тумбочку: откроется меню со всеми действиями с ней. Так с любым предметом.',
    target:() => TUT.d.box && [TUT.d.box.x + .5, TUT.d.box.y + .5],
@@ -244,7 +255,7 @@ function tutBuild() {
     if (f.gone || !CONT[f.type] || !CONT[f.type].loot || hAt[f.y * MW + f.x] !== spawnHouse) continue;
     const d = Math.hypot(f.x + .5 - P.x, f.y + .5 - P.y); if (d > 1.2 && d < bd) { bd = d; best = f; }
   }
-  if (best) { best.items = best.items || []; best.items = best.items.filter(i => i && i.id !== 'phone'); const ph = mkPhone('viktor'); ph.ch = 64; best.items.unshift(mkItem('chips'), mkItem('bat'), ph); }
+  if (best) { best.items = best.items || []; best.items = best.items.filter(i => i && i.id !== 'phone'); const ph = mkPhone('viktor'); ph.ch = 64; const L = [mkItem('chips'), mkItem('bat'), ph]; for (const it of L) it.tut = 1; best.items.unshift(...L); }
   TUT.d.box = best;
   const H = houses[spawnHouse - 1]; TUT.d.door = H && H.doors && H.doors[0];
   P.inv = P.inv.filter(i => i && i.id !== 'chips' && i.id !== 'bat' && i.id !== 'phone'); if (P.weapon && P.weapon.id === 'bat') P.weapon = null;
