@@ -343,6 +343,26 @@ const td = await D(`(() => { tutBuild(); beginPlay(); paused = false; const d = 
 check('обучение: за дверью мертвец, в финале лезут со всех сторон дома, ворота закрыты', td.d && td.z && td.near && td.wins && td.around >= 8 && td.gate, td);
 await fresh();
 
+console.log('Бодрость и окно обыска');
+await fresh();
+const wk = await D(`(() => {
+  const f = furns.find(f => !f.gone && CONT[f.type] && CONT[f.type].loot); openPanel('loot', {src:f});
+  const head = $('lootHere').textContent.startsWith(CONT[f.type].name); closePanel();
+  P.awake = 0; const c0 = enCap(); P.awake = 720; const c12 = enCap(); P.awake = 1440; const c24 = enCap();
+  P.awake = 720; P.en = 40; const ch = furns.find(f => !f.gone && REST_FURN.has(f.type)); P.x = ch.cx + .6; P.y = ch.cy + .6;
+  ACT.rest.run({kind:'rest', f:ch}); const resting = !!(P.act && P.act.rest);
+  const g0 = gameMin; for (let k = 0; k < 200 && P.act; k++) { gameMin += 2; wakeTick(2); }
+  const capped = P.en <= enCap() + .5 && P.en > 60;
+  P.act = null; P.awake = AWAKE_ZERO; P.en = 50; wakeTick(1);
+  const out = P.sleep && !P.bed; P.sleep = false; $('sleep').hidden = true; $('ctrl').hidden = false; P.awake = 0;
+  return {head, c0, c12, c24, resting, capped, out};
+})()`);
+check('в окне обыска — название мебели вместо «Здесь»', wk.head, wk);
+check('потолок бодрости: 100 → 75 через полдня → 50 через сутки', Math.round(wk.c0) === 100 && Math.round(wk.c12) === 75 && Math.round(wk.c24) === 50, wk);
+check('отдых сидя поднимает бодрость только до потолка', wk.resting && wk.capped, wk);
+check('потолок 0 — герой вырубается на месте', wk.out, wk);
+await fresh();
+
 console.log('Живая игра 15 секунд');
 await fresh("['coward']");
 await D("P.weapon = mkItem('shotgun'); P.weapon.mag = 2; P.inv.push(mkItem('shells')); gameMin += 14 * 60; for (let i = 0; i < 25; i++) spawnZombie(4, false);");

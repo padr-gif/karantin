@@ -234,7 +234,7 @@ function renderPanelCore() {
     $('pnSub').textContent = xferQ.length ? 'переношу… в очереди ' + xferQ.length + ' · тап по вещи отменит' : 'тап: подробнее · двойной тап: перенести';
     const lay = mk('div', 'lay3'), A = mk('div', 'pcol'), B = mk('div', 'pcol'), Dd = mk('div', 'pdet');
     const gA = groupItems(c.items), gB = groupItems(P.inv);
-    const hA = mk('div', 'secrow'), tA = mk('div', 'sect', 'Здесь'); tA.appendChild(mk('small', '', c.items.length + '/' + capOf(c))); hA.appendChild(tA);
+    const hA = mk('div', 'secrow'), tA = mk('div', 'sect', 'Здесь'); tA.id = 'lootHere'; tA.appendChild(mk('small', '', c.items.length + '/' + capOf(c))); hA.appendChild(tA);
     if (c.items.length) { const bx = mk('div', 'row-btns'); bx.appendChild(btn('Взять всё', () => queueXfer(c, c.items.slice(), 'take'))); hA.appendChild(bx); }
     A.appendChild(hA);
     A.appendChild(markQueued(gridOf(gA, g => lootTap(c, 'c', g), Math.max(capOf(c), 1), (panel.sel || '').startsWith('c:') ? panel.sel.slice(2) : null), gA, c));
