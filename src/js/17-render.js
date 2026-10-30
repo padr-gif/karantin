@@ -48,13 +48,7 @@ function render(dt) {
   const pD = P.x + P.y;
   for (let k = 0; k < houses.length; k++) {
     const Hs = houses[k];
-    Hs.mode = (k + 1 === inside) ? 1 : 0;
-    if (!Hs.mode && mode !== 'menu') {
-      const top = WH + U * 1.2, reach = top / U + .9;
-      if (Hs.ix1 < P.x - .6 || Hs.iy1 < P.y - .6 || Hs.ix0 > P.x + reach || Hs.iy0 > P.y + reach) continue;   // дом не на луче от героя к камере
-      for (let s = .15; s <= top / U + .3 && !Hs.mode; s += .25)
-        for (const o of [-.25, 0, .25]) { const qx = P.x + s + o, qy = P.y + s - o; if (qx >= Hs.ix0 - .3 && qx < Hs.ix1 + .3 && qy >= Hs.iy0 - .3 && qy < Hs.iy1 + .3) { Hs.mode = 2; break; } }
-    }
+    Hs.mode = (k + 1 === inside) ? 1 : 0;                                       // крыша снята только у дома, где герой; чужие не просвечивают
   }
   const dl = [];
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
@@ -96,11 +90,11 @@ function render(dt) {
 
   const tgtF = curAct && curAct.f, leafTint = seasonTint();
   const pAtk = P.atkT != null && P.atkT < P.atkDur ? P.atkT / P.atkDur : -1;
+  SIL.q.length = 0; SIL.on = mode === 'play';
   for (const e of RD.objects ? dl : []) {
     if (e.k === 99) { e.fn(); continue; }
     if (e.k === 1) {
-      const cut = mode !== 'menu' && ((inside && hAt[e.i] === inside && e.d > pD - .3) ||
-        (e.d > pD + .2 && Math.hypot(e.x + .5 - P.x, e.y + .5 - P.y) < 2.4) || occludes(e.x, e.y, WH));
+      const cut = wallCutAt(e.x, e.y, e.i, inside);                               // 57-occlusion: срез только в своём доме
       const door = map[e.i] === DOOR, bw = door ? 1.5 : 1.1;
       sprite('w' + e.i, wallKey(e.x, e.y, e.i, cut), e.x, e.y, Math.floor(-bw * U), Math.floor(-WH - .25 * U), Math.ceil(bw * U), Math.ceil((door ? 1.5 : 1.15) * U), () => drawWallTile(e.x, e.y, e.i, cut));
     } else if (e.k === 2) {
@@ -169,6 +163,7 @@ function render(dt) {
       drawPlayer(an, fi, vaultZ());
     }
   }
+  SIL.on = false;
   if (P.sleep && !P.bed) { const sx = SX(P.x, P.y), sy = SY(P.x, P.y, 0); ctx.fillStyle = '#3c6e78'; ctx.strokeStyle = 'rgba(16,14,12,.85)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.ellipse(sx, sy, 15, 7, 0, 0, 6.283); ctx.fill(); ctx.stroke(); }
   if (P.sleep) { const bed = P.bed, lk = P.look || look; drawChar(P, 'p' + lk.g + '_death_' + dirOf(bed ? Math.atan2(-bed.wd[1], -bed.wd[0]) : P.face) + '_' + (AN('p', 'death') - 1), 'P' + lk.g + lk.skin + lk.hair + lk.shirt + lk.pants, lookPal(lk), bed ? bed.cx : P.x, bed ? bed.cy : P.y, bed ? 15 : 3); }
   ctx.fillStyle = 'rgba(10,10,10,.9)';

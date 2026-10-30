@@ -9,13 +9,16 @@ function occInsideHouse() {
   if (mode !== 'menu') for (let k = 0; k < houses.length; k++) { const Hs = houses[k]; if (P.x > Hs.ix0 && P.x < Hs.ix1 && P.y > Hs.iy0 && P.y < Hs.iy1) occInside = k + 1; }
   return occInside;
 }
-// та же высота, что у стены на экране: срезанная (у дома, где ты) — низкая
-function occWallTop(x, y, i) {
-  if (mode === 'menu') return WH;
-  const d = x + y + 1, pD = P.x + P.y, ins = occInsideHouse();
-  const cut = (ins && hAt[i] === ins && d > pD - .3) || (d > pD + .2 && Math.hypot(x + .5 - P.x, y + .5 - P.y) < 2.4) || occludes(x, y, WH);
-  return cut ? U * .32 : WH;
+// срезана ли стена: только у дома, в котором стоит герой, — внутренние перегородки и нижние внешние стены
+// (нижняя и правая на экране). Верхние внешние стены и стены всех остальных домов — всегда в полный рост.
+function wallCutAt(x, y, i, ins) {
+  if (mode === 'menu' || !ins || hAt[i] !== ins) return false;
+  const H = houses[ins - 1]; if (!H) return false;
+  const inner = x > H.x && y > H.y && x < H.x + H.w - 1 && y < H.y + H.h - 1;
+  return inner || y === H.y + H.h - 1 || x === H.x + H.w - 1;
 }
+// та же высота, что у стены на экране: срезанная — низкая
+function occWallTop(x, y, i) { return wallCutAt(x, y, i, occInsideHouse()) ? U * .32 : WH; }
 // куски стены клетки (прямоугольники в координатах карты)
 function occPieces(x, y) {
   const i = y * MW + x, t = map[i];

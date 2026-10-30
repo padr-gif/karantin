@@ -363,6 +363,23 @@ check('отдых сидя поднимает бодрость только до
 check('потолок 0 — герой вырубается на месте', wk.out, wk);
 await fresh();
 
+console.log('Стены, крыши, контуры');
+await fresh();
+const wl = await D(`(() => {
+  const H = houses[spawnHouse - 1], k = spawnHouse;
+  P.x = (H.ix0 + H.ix1) / 2; P.y = (H.iy0 + H.iy1) / 2;
+  const cut = (x, y) => wallCutAt(x, y, y * MW + x, k);
+  const lower = cut(H.x + 2, H.y + H.h - 1) && cut(H.x + H.w - 1, H.y + 2), upper = !cut(H.x + 2, H.y) && !cut(H.x, H.y + 2);
+  const other = houses.findIndex((h, i) => i + 1 !== k && h.kind === 'house'), O = houses[other];
+  const otherCut = wallCutAt(O.x + 2, O.y + O.h - 1, (O.y + O.h - 1) * MW + O.x + 2, k);
+  const outside = !wallCutAt(H.x + 2, H.y + H.h - 1, (H.y + H.h - 1) * MW + H.x + 2, 0);
+  const behind = silHidden(H.x + H.w / 2, H.y - 1), front = silHidden(H.x + H.w / 2, H.y + H.h + 1.5);
+  return {lower, upper, otherCut, outside, behind, front};
+})()`);
+check('в своём доме срезаны нижние стены, верхние — в полный рост', wl.lower && wl.upper, wl);
+check('чужие дома и свой снаружи — стены не срезаются', !wl.otherCut && wl.outside, wl);
+check('за домом — контур, перед домом — нет', wl.behind && !wl.front, wl);
+
 console.log('Живая игра 15 секунд');
 await fresh("['coward']");
 await D("P.weapon = mkItem('shotgun'); P.weapon.mag = 2; P.inv.push(mkItem('shells')); gameMin += 14 * 60; for (let i = 0; i < 25; i++) spawnZombie(4, false);");
