@@ -73,18 +73,7 @@ const SFX = (() => {
     radio() { noise(.18, .35, 'bandpass', 1800, .6, 0, .02); for (let k = 0; k < 5; k++) tone(.05, .08, 'sawtooth', 300 + Math.random() * 500, null, .3 + k * .09); },
     pickup() { this.rustle(); },
     thunder(v) { noise(.7 * v, 2.2, 'lowpass', 140, .8, 0, .05, 60); noise(.4 * v, .4, 'lowpass', 600, 1, 0, .01); tone(.3 * v, 1.6, 'sine', 45, 30, .05, .05); },
-    horn() {                                                                  // два тона в терцию с хрипотцой, как у настоящей машины
-      if (!ac || ACTIVE_SND >= MAX_SND - 3) return;
-      const t = ac.currentTime, v = vol(), bp = ac.createBiquadFilter(), lp = ac.createBiquadFilter(), g = ac.createGain();
-      bp.type = 'bandpass'; bp.frequency.value = 1400; bp.Q.value = .7; lp.type = 'lowpass'; lp.frequency.value = 3200;
-      g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(.3 * v, t + .015); g.gain.setValueAtTime(.3 * v, t + .5); g.gain.linearRampToValueAtTime(.0001, t + .58);
-      bp.connect(lp); lp.connect(g); g.connect(out);
-      for (const [f, k] of [[370, 1], [466, .85], [740, .25]]) {
-        const o = ac.createOscillator(), og = ac.createGain(); o.type = 'sawtooth'; o.frequency.value = f * (1 + (Math.random() - .5) * .004);
-        const w = ac.createOscillator(), wg = ac.createGain(); w.frequency.value = 31; wg.gain.value = f * .006; w.connect(wg); wg.connect(o.frequency);   // дребезг мембраны
-        og.gain.value = k * .5; o.connect(og); og.connect(bp); sndStart(o, t); w.start(t); o.stop(t + .62); w.stop(t + .62);
-      }
-    },
+    horn() { carHorn(); },                                                    // готовый буфер (92-car-sound)
     caw(x, y) { const v = Math.max(.25, at(x, y)); for (let k = 0; k < 3; k++) voice(.16 * v, .2, 950 + Math.random() * 200, 640, k * .22 + Math.random() * .05, 1700); for (let k = 0; k < 8; k++) noise(.05 * v, .06, 'bandpass', 700, 1.5, k * .05); },
     shots() { const n = 1 + Math.floor(Math.random() * 4); for (let k = 0; k < n; k++) { const d = k * (.18 + Math.random() * .5); noise(.22, .18, 'lowpass', 1300, .8, d, .002, 220); noise(.1, 1.1, 'lowpass', 260, .6, d + .06, .08); } },
     scream() { voice(.12, 1.3, 760, 420, 0, 1300); voice(.06, .8, 900, 500, 1.1, 1500); },
@@ -93,7 +82,6 @@ const SFX = (() => {
     boom() { noise(.45, 2.6, 'lowpass', 120, .7, 0, .02, 50); tone(.3, 1.8, 'sine', 50, 28, 0, .02); },
     sneeze() { noise(.12, .05, 'bandpass', 1800, 2); voice(.16, .35, 520, 300, .04, 1500); noise(.2, .25, 'highpass', 2600, .8, .1, .01); },
     carAlarm(x, y) { const v = Math.max(.12, at(x, y)); tone(.13 * v, .26, 'square', 720, 1450, 0, .01); tone(.1 * v, .24, 'square', 1450, 760, .27, .01); },
-    engine(k) { tone(.07 + .05 * k, .13, 'sawtooth', 48 + k * 70 + Math.random() * 3, null, 0, .02); noise(.03 + .03 * k, .1, 'lowpass', 220 + k * 400, 1); },
     fizz(x, y) { const v = at(x, y); noise(.12 * v, 1.2, 'highpass', 3000, .5, 0, .05); },
     heli(v) { if (v < .02) return; noise(.5 * v, .07, 'lowpass', 160, 1.2, 0, .004); tone(.25 * v, .06, 'sine', 70, 45); noise(.06 * v, .05, 'highpass', 2500, .5); },
     gen(x, y) { const v = at(x, y); if (v < .03) return; tone(.06 * v, .15, 'sawtooth', 58 + Math.random() * 4, null, 0, .02); noise(.04 * v, .14, 'lowpass', 300, 1); },
