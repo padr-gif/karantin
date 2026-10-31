@@ -169,7 +169,6 @@ function charFrame(name, palKey, pal, force) {
   if (c && c.cv) c.cv._st = true;
   return c;
 }
-const SIL = {on:false, q:[]};                                                 // кадры героя и мертвецов за этот кадр — для контура за стеной
 function drawChar(ent, name, palKey, pal, wx, wy, zoff, flash, alpha, force) {
   const c = charFrame(name, palKey, pal, force) || ent._lc; if (!c) return;
   ent._lc = c;
@@ -179,7 +178,6 @@ function drawChar(ent, name, palKey, pal, wx, wy, zoff, flash, alpha, force) {
   ctx.imageSmoothingEnabled = CS > 1 && HDQ > 1; ctx.imageSmoothingQuality = 'high';
   if (alpha != null && alpha < 1) ctx.globalAlpha = alpha;
   ctx.drawImage(c.cv, dx, dy, c.w / CS, c.h / CS);
-  if (SIL.on && (ent === P || (ent && ent.hp > 0 && !corpses.includes(ent)))) SIL.q.push({ent, cv:c.cv, dx, dy, w:c.w / CS, h:c.h / CS});   // контур за стеной (89-silhouettes)
   if (flash) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .4; ctx.drawImage(c.cv, dx, dy, c.w / CS, c.h / CS); ctx.globalCompositeOperation = 'source-over'; }
   ctx.globalAlpha = 1; ctx.imageSmoothingEnabled = false;
 }

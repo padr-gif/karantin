@@ -9,16 +9,8 @@ function occInsideHouse() {
   if (mode !== 'menu') for (let k = 0; k < houses.length; k++) { const Hs = houses[k]; if (P.x > Hs.ix0 && P.x < Hs.ix1 && P.y > Hs.iy0 && P.y < Hs.iy1) occInside = k + 1; }
   return occInside;
 }
-// срезана ли стена: только у дома, в котором стоит герой, — внутренние перегородки и нижние внешние стены
-// (нижняя и правая на экране). Верхние внешние стены и стены всех остальных домов — всегда в полный рост.
-function wallCutAt(x, y, i, ins) {
-  if (mode === 'menu' || !ins || hAt[i] !== ins) return false;
-  const H = houses[ins - 1]; if (!H) return false;
-  const inner = x > H.x && y > H.y && x < H.x + H.w - 1 && y < H.y + H.h - 1;
-  return inner || y === H.y + H.h - 1 || x === H.x + H.w - 1;
-}
-// та же высота, что у стены на экране: срезанная — низкая
-function occWallTop(x, y, i) { return wallCutAt(x, y, i, occInsideHouse()) ? U * .32 : WH; }
+// высота стены для выреза мебели: стены всегда в полный рост; полупрозрачная (91-house-view) мебель не прячет
+function occWallTop(x, y, i) { return wallAlphaAt(x, y, i) < .99 ? 0 : WH; }
 // куски стены клетки (прямоугольники в координатах карты)
 function occPieces(x, y) {
   const i = y * MW + x, t = map[i];
@@ -48,6 +40,7 @@ function occMasks(f) {
       const behind = s[3] <= R[1] + e || s[2] <= R[0] + e;
       if (!front || behind) continue;
       if (top < 0) top = occWallTop(x, y, y * MW + x);
+      if (top <= 0) continue;                                                     // полупрозрачная стена мебель не прячет
       const pts = [];
       for (const [px, py] of [[s[0], s[1]], [s[2], s[1]], [s[0], s[3]], [s[2], s[3]]]) for (const z of [0, top]) pts.push([SX(px, py), SY(px, py, z)]);
       out.push(hull(pts));

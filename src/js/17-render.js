@@ -46,10 +46,7 @@ function render(dt) {
   let inside = 0;
   if (mode !== 'menu') for (let k = 0; k < houses.length; k++) { const Hs = houses[k]; if (P.x > Hs.ix0 && P.x < Hs.ix1 && P.y > Hs.iy0 && P.y < Hs.iy1) inside = k + 1; }
   const pD = P.x + P.y;
-  for (let k = 0; k < houses.length; k++) {
-    const Hs = houses[k];
-    Hs.mode = (k + 1 === inside) ? 1 : 0;                                       // крыша снята только у дома, где герой; чужие не просвечивают
-  }
+  houseViewUpdate(dt, inside);                                               // 91-house-view: дом открывается плавно, крыша растворяется
   const dl = [];
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
     if (!inView(x, y)) continue;
@@ -90,13 +87,11 @@ function render(dt) {
 
   const tgtF = curAct && curAct.f, leafTint = seasonTint();
   const pAtk = P.atkT != null && P.atkT < P.atkDur ? P.atkT / P.atkDur : -1;
-  SIL.q.length = 0; SIL.on = mode === 'play';
   for (const e of RD.objects ? dl : []) {
     if (e.k === 99) { e.fn(); continue; }
     if (e.k === 1) {
-      const cut = wallCutAt(e.x, e.y, e.i, inside);                               // 57-occlusion: срез только в своём доме
-      const door = map[e.i] === DOOR, bw = door ? 1.5 : 1.1;
-      sprite('w' + e.i, wallKey(e.x, e.y, e.i, cut), e.x, e.y, Math.floor(-bw * U), Math.floor(-WH - .25 * U), Math.ceil(bw * U), Math.ceil((door ? 1.5 : 1.15) * U), () => drawWallTile(e.x, e.y, e.i, cut));
+      const door = map[e.i] === DOOR, bw = door ? 1.5 : 1.1;                     // стены в полный рост; прозрачность — 91-house-view
+      drawWallView(e, a => sprite('w' + e.i, wallKey(e.x, e.y, e.i, false), e.x, e.y, Math.floor(-bw * U), Math.floor(-WH - .25 * U), Math.ceil(bw * U), Math.ceil((door ? 1.5 : 1.15) * U), () => drawWallTile(e.x, e.y, e.i, false), a));
     } else if (e.k === 2) {
       const fade = !e.oob && mode !== 'menu' && occludes(e.x, e.y, U * 3.2), f = e.oob ? .24 : fogF(e.i), a = fade ? .3 : 1;
       const pine = hash(e.x * 3, e.y * 7) > .62, v = pine ? (hash(e.x, e.y * 5) < .5 ? 0 : 1) : Math.floor(hash(e.y, e.x) * 3);
@@ -113,8 +108,8 @@ function render(dt) {
       else if (tgtF && tgtF.type === 'stove' && fu === tgtF) drawHi(fu);
     } else if (e.k === 4) {
       const Hs = e.Hs, b = roofBounds(Hs);
-      sprite('R' + e.hi, 'r' + snowLvl(), Hs.x, Hs.y, b[0], b[1], b[2], b[3], () => { for (let y = Hs.y; y < Hs.y + Hs.h; y++) for (let x = Hs.x; x < Hs.x + Hs.w; x++) drawRoof(x, y, Hs, 1); }, Hs.mode === 2 ? .22 : 1);
-      if (Hs.sign) drawShopSign(Hs, Hs.mode === 2 ? .3 : 1);
+      sprite('R' + e.hi, 'r' + snowLvl(), Hs.x, Hs.y, b[0], b[1], b[2], b[3], () => { for (let y = Hs.y; y < Hs.y + Hs.h; y++) for (let x = Hs.x; x < Hs.x + Hs.w; x++) drawRoof(x, y, Hs, 1); }, 1 - (Hs.open || 0));
+      if (Hs.sign) drawShopSign(Hs, 1 - (Hs.open || 0));
     } else if (e.k === 5) {
       const z = e.z, [an, fi] = zombieAnim(z);
       drawZombie(z, an, fi, zAlpha(z));
@@ -163,7 +158,6 @@ function render(dt) {
       drawPlayer(an, fi, vaultZ());
     }
   }
-  SIL.on = false;
   if (P.sleep && !P.bed) { const sx = SX(P.x, P.y), sy = SY(P.x, P.y, 0); ctx.fillStyle = '#3c6e78'; ctx.strokeStyle = 'rgba(16,14,12,.85)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.ellipse(sx, sy, 15, 7, 0, 0, 6.283); ctx.fill(); ctx.stroke(); }
   if (P.sleep) { const bed = P.bed, lk = P.look || look; drawChar(P, 'p' + lk.g + '_death_' + dirOf(bed ? Math.atan2(-bed.wd[1], -bed.wd[0]) : P.face) + '_' + (AN('p', 'death') - 1), 'P' + lk.g + lk.skin + lk.hair + lk.shirt + lk.pants, lookPal(lk), bed ? bed.cx : P.x, bed ? bed.cy : P.y, bed ? 15 : 3); }
   ctx.fillStyle = 'rgba(10,10,10,.9)';

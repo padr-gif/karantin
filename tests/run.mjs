@@ -363,22 +363,24 @@ check('отдых сидя поднимает бодрость только до
 check('потолок 0 — герой вырубается на месте', wk.out, wk);
 await fresh();
 
-console.log('Стены, крыши, контуры');
+console.log('Стены и крыши: дом открывается, стены перед героем прозрачные');
 await fresh();
 const wl = await D(`(() => {
-  const H = houses[spawnHouse - 1], k = spawnHouse;
-  P.x = (H.ix0 + H.ix1) / 2; P.y = (H.iy0 + H.iy1) / 2;
-  const cut = (x, y) => wallCutAt(x, y, y * MW + x, k);
-  const lower = cut(H.x + 2, H.y + H.h - 1) && cut(H.x + H.w - 1, H.y + 2), upper = !cut(H.x + 2, H.y) && !cut(H.x, H.y + 2);
-  const other = houses.findIndex((h, i) => i + 1 !== k && h.kind === 'house'), O = houses[other];
-  const otherCut = wallCutAt(O.x + 2, O.y + O.h - 1, (O.y + O.h - 1) * MW + O.x + 2, k);
-  const outside = !wallCutAt(H.x + 2, H.y + H.h - 1, (H.y + H.h - 1) * MW + H.x + 2, 0);
-  const behind = silHidden(H.x + H.w / 2, H.y - 1), front = silHidden(H.x + H.w / 2, H.y + H.h + 1.5);
-  return {lower, upper, otherCut, outside, behind, front};
+  const H = houses[spawnHouse - 1], k = spawnHouse, ins = () => { let r = 0; houses.forEach((h, i) => { if (P.x > h.ix0 && P.x < h.ix1 && P.y > h.iy0 && P.y < h.iy1) r = i + 1; }); return r; };
+  const al = (h, x, y) => wallAlphaAt(x, y, y * MW + x);
+  P.x = (H.ix0 + H.ix1) / 2; P.y = (H.iy0 + H.iy1) / 2; houseViewUpdate(1, ins());
+  const open = H.open === 1, lower = al(H, H.x + 2, H.y + H.h - 1) < .5 && al(H, H.x + H.w - 1, H.y + 2) < .5, upper = al(H, H.x + 2, H.y) === 1 && al(H, H.x, H.y + 2) === 1;
+  const O = houses.find((h, i) => i + 1 !== k && h.kind === 'house'), other = O.open === 0 && al(O, O.x + 2, O.y + O.h - 1) === 1;
+  P.x = H.x + H.w / 2; P.y = H.y + H.h + 3; for (let q = 0; q < 30; q++) houseViewUpdate(.05, ins());
+  const front = H.open === 0, frontWall = al(H, H.x + 2, H.y + H.h - 1) === 1;
+  P.x = H.x + H.w / 2; P.y = H.y - 1; houseViewUpdate(.05, ins());
+  const fading = H.open > 0 && H.open < 1; for (let q = 0; q < 30; q++) houseViewUpdate(.05, ins());
+  const behind = H.open === 1;
+  return {open, lower, upper, other, front, frontWall, fading, behind};
 })()`);
-check('в своём доме срезаны нижние стены, верхние — в полный рост', wl.lower && wl.upper, wl);
-check('чужие дома и свой снаружи — стены не срезаются', !wl.otherCut && wl.outside, wl);
-check('за домом — контур, перед домом — нет', wl.behind && !wl.front, wl);
+check('внутри: крыши нет, передние стены полупрозрачные, задние — целые', wl.open && wl.lower && wl.upper, wl);
+check('чужие дома закрыты и не прозрачные', wl.other, wl);
+check('перед домом — дом целый; за домом — открывается плавно', wl.front && wl.frontWall && wl.fading && wl.behind, wl);
 
 console.log('Живая игра 15 секунд');
 await fresh("['coward']");
