@@ -93,7 +93,7 @@ function driveUpdate(dt, wx, wy, mag) {
     } else { const l = d || 1; z.x += (z.x - qx) / l * .09 + dx * p.v * dt; z.y += (z.y - qy) / l * .09 + dy * p.v * dt; p.v *= .97; }
   }
   p.nT = (p.nT || 0) - dt; if (p.nT <= 0 && p.engine) { p.nT = 1; noise(p.cx, p.cy, 6 + Math.abs(p.v) * 1.4); }
-  p.sT = (p.sT || 0) - dt; if (p.sT <= 0 && p.engine) { p.sT = .11; SFX.engine(Math.abs(p.v) / 8.5); }
+  p.thr = thr;                                                               // газ для звука мотора (92-car-sound)
 }
 function drawCarDyn(p, f) {
   const a = p.ang, dx = Math.cos(a), dy = Math.sin(a), ax = p.cx - dx * CAR_L / 2, ay = p.cy - dy * CAR_L / 2;

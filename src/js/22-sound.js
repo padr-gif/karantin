@@ -73,7 +73,18 @@ const SFX = (() => {
     radio() { noise(.18, .35, 'bandpass', 1800, .6, 0, .02); for (let k = 0; k < 5; k++) tone(.05, .08, 'sawtooth', 300 + Math.random() * 500, null, .3 + k * .09); },
     pickup() { this.rustle(); },
     thunder(v) { noise(.7 * v, 2.2, 'lowpass', 140, .8, 0, .05, 60); noise(.4 * v, .4, 'lowpass', 600, 1, 0, .01); tone(.3 * v, 1.6, 'sine', 45, 30, .05, .05); },
-    horn() { tone(.22, .5, 'square', 392, null, 0, .02); tone(.18, .5, 'square', 494, null, 0, .02); },
+    horn() {                                                                  // два тона в терцию с хрипотцой, как у настоящей машины
+      if (!ac || ACTIVE_SND >= MAX_SND - 3) return;
+      const t = ac.currentTime, v = vol(), bp = ac.createBiquadFilter(), lp = ac.createBiquadFilter(), g = ac.createGain();
+      bp.type = 'bandpass'; bp.frequency.value = 1400; bp.Q.value = .7; lp.type = 'lowpass'; lp.frequency.value = 3200;
+      g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(.3 * v, t + .015); g.gain.setValueAtTime(.3 * v, t + .5); g.gain.linearRampToValueAtTime(.0001, t + .58);
+      bp.connect(lp); lp.connect(g); g.connect(out);
+      for (const [f, k] of [[370, 1], [466, .85], [740, .25]]) {
+        const o = ac.createOscillator(), og = ac.createGain(); o.type = 'sawtooth'; o.frequency.value = f * (1 + (Math.random() - .5) * .004);
+        const w = ac.createOscillator(), wg = ac.createGain(); w.frequency.value = 31; wg.gain.value = f * .006; w.connect(wg); wg.connect(o.frequency);   // дребезг мембраны
+        og.gain.value = k * .5; o.connect(og); og.connect(bp); sndStart(o, t); w.start(t); o.stop(t + .62); w.stop(t + .62);
+      }
+    },
     caw(x, y) { const v = Math.max(.25, at(x, y)); for (let k = 0; k < 3; k++) voice(.16 * v, .2, 950 + Math.random() * 200, 640, k * .22 + Math.random() * .05, 1700); for (let k = 0; k < 8; k++) noise(.05 * v, .06, 'bandpass', 700, 1.5, k * .05); },
     shots() { const n = 1 + Math.floor(Math.random() * 4); for (let k = 0; k < n; k++) { const d = k * (.18 + Math.random() * .5); noise(.22, .18, 'lowpass', 1300, .8, d, .002, 220); noise(.1, 1.1, 'lowpass', 260, .6, d + .06, .08); } },
     scream() { voice(.12, 1.3, 760, 420, 0, 1300); voice(.06, .8, 900, 500, 1.1, 1500); },
