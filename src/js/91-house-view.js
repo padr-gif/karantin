@@ -4,9 +4,9 @@
 //     вплотную к нему (ближе HV_NEAR клеток) или зашёл за него так, что дом заслоняет его на экране.
 //     Крыша рисуется с прозрачностью 1 − open и растворяется за ~0.3 с, а не пропадает рывком.
 //   • У открытого дома передние стены (нижняя и правая на экране) и перегородки перед героем полупрозрачные.
-//   • Любая стена прямо перед героем (ближе к камере) получает круглое прозрачное окно вокруг него.
+//   • Любая стена прямо перед героем (ближе к камере) рядом с ним на экране — полупрозрачная целиком (wallSeeAt).
 // Обе графики, пиксельная и детальная.
-const HV_NEAR = 1.4, HV_FRONT_A = .34, HV_HOLE_A = .2, HV_SPEED = 7;
+const HV_NEAR = 1.4, HV_FRONT_A = .34, HV_SEE_A = .3, HV_SPEED = 7;
 const HV = {inside:0, pD:0, hx:0, hy:0, rx:0, ry:0, on:false};
 
 // заслоняет ли дом героя на экране: герой позади дома (не перед его нижним и правым краем) и под его силуэтом
@@ -45,17 +45,13 @@ function wallAlphaAt(x, y, i) {
   if (!front && !(inner && x + y + 1 > HV.pD + .3)) return 1;
   return 1 - (1 - HV_FRONT_A) * H.open;
 }
-// стена перед героем, которая на экране задевает окно вокруг него
-function wallHoleAt(x, y) {
-  if (!HV.on || x + y + 1 < HV.pD + .45) return false;
+// стена перед героем, которая на экране рядом с ним: полупрозрачная целиком (без вырезанного окна).
+// Ближе к герою — прозрачнее, дальше — плавно до обычной: соседние клетки стены не обрываются резко
+function wallSeeAt(x, y) {
+  if (!HV.on || x + y + 1 < HV.pD + .45) return 1;
   const cx = SX(x + .5, y + .5), cy = SY(x + .5, y + .5, WH * .5);
-  return Math.abs(cx - HV.hx) < HV.rx + U && Math.abs(cy - HV.hy) < HV.ry + WH * .6;
+  const d = Math.hypot((cx - HV.hx) / (HV.rx + U * .9), (cy - HV.hy) / (HV.ry + WH * .5));
+  if (d >= 1.5) return 1;
+  return d <= 1 ? HV_SEE_A : HV_SEE_A + (1 - HV_SEE_A) * (d - 1) / .5;
 }
-// стена: обычный спрайт; рядом с героем — дважды, снаружи окна и внутри него (прозрачнее)
-function drawWallView(e, draw) {
-  const a = wallAlphaAt(e.x, e.y, e.i);
-  if (!wallHoleAt(e.x, e.y)) return draw(a);
-  const ell = () => { ctx.moveTo(HV.hx + HV.rx, HV.hy); ctx.ellipse(HV.hx, HV.hy, HV.rx, HV.ry, 0, 0, 6.283); };
-  ctx.save(); ctx.beginPath(); ctx.rect(-1e5, -1e5, 2e5, 2e5); ell(); ctx.clip('evenodd'); draw(a); ctx.restore();
-  ctx.save(); ctx.beginPath(); ell(); ctx.clip(); draw(Math.min(a, HV_HOLE_A)); ctx.restore();
-}
+function drawWallView(e, draw) { draw(Math.min(wallAlphaAt(e.x, e.y, e.i), wallSeeAt(e.x, e.y))); }
