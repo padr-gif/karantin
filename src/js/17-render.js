@@ -169,7 +169,7 @@ function render(dt) {
     for (let q = 0; q < 3; q++) { const a = animT * (3 + q) + q * 2 + c.seed * 9; const fx = c.x + Math.cos(a) * .3, fy = c.y + Math.sin(a * 1.3) * .25; ctx.fillRect(Math.round(SX(fx, fy)), Math.round(SY(fx, fy, U * (.35 + Math.sin(a * 2) * .15))), 1, 1); }
   }
   drawParts();
-  drawBreath(); drawBustle(); drawEvac(); drawScreamFx(); drawLootMarks(); drawV23(); drawEditMarks(); for (const fn of OVERLAYS) fn(); drawFog(); if (tapMark) tapMark.t -= dt;
+  drawBreath(); drawBustle(); drawScreamFx(); drawLootMarks(); drawV23(); drawEditMarks(); for (const fn of OVERLAYS) fn(); drawFog(); if (tapMark) tapMark.t -= dt;
 
   // time-of-day tint
   const hr = hourOf(), L = lightLevel();

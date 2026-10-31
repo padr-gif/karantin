@@ -181,7 +181,6 @@ function finishUse(a) {
 // ---- radio ----
 function radioNews() {
   const hrs = m => Math.max(1, Math.round(m / 60)), out = [];
-  if (world.evac) { world.evac.told = true; out.push(['Штаб эвакуации', 'Внимание! Эвакуация гражданских: ' + evacWhere() + ', день ' + evDay() + ', с 12:00 до 15:00. Вертолёт ждёт три часа. Двигайтесь осторожно: шум винтов поднимет всех заражённых.']); }
   out.push(['Метеослужба', rainTarget || rain > .5 ? `Дождь продлится ещё около ${hrs(weatherTimer)} ч. Выставьте бочки на улицу.` : `Ближайшие ${hrs(weatherTimer)} ч без осадков, потом возможен дождь.`]);
   out.push(['Энергосеть', powerOn() ? `Электричество пока подаётся. Отключение ожидается через ${fmtDur(powerOffAt - gameMin)}. Холодильники перестанут работать.` : 'Энергосистема обесточена. Света больше не будет. Берегите батарейки.']);
   out.push(['Водоканал', waterOn() ? `Водопровод проработает ещё около ${fmtDur(waterOffAt - gameMin)}. Наберите воду во все бутылки.` : 'Насосные станции остановлены. Пейте дождевую воду из бочек.']);
@@ -243,7 +242,6 @@ function drawMapCanvas(c) {
     const cx = (H.ix0 + H.ix1) / 2, cy = (H.iy0 + H.iy1) / 2, [qx, qy] = dot(cx, cy, 4.6, '#3f8a4a');
     g.strokeStyle = '#eaf7e4'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(qx - 2.2, qy); g.lineTo(qx - .6, qy + 1.8); g.lineTo(qx + 2.4, qy - 1.8); g.stroke();
   }
-  if (world.evac && world.evac.told) { const [qx, qy] = dot(world.evac.x, world.evac.y, 5.5, '#6fdc5f'); g.strokeStyle = '#eaffe4'; g.lineWidth = 1.6; g.beginPath(); g.arc(qx, qy, 8 + Math.sin(animT * 4) * 1.5, 0, 6.283); g.stroke(); g.font = '700 10px "PT Sans", sans-serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(10,12,14,.9)'; g.strokeText('Эвакуация · день ' + evDay(), qx, qy - 11); g.fillStyle = '#c9ffbf'; g.fillText('Эвакуация · день ' + evDay(), qx, qy - 11); }
   const [px, py] = dot(P.x, P.y, 4.2, '#e8473a');
   g.strokeStyle = '#e8473a'; g.lineWidth = 2; g.beginPath(); g.moveTo(px, py);
   g.lineTo(px + (Math.cos(P.face) - Math.sin(P.face)) * 7, py + (Math.cos(P.face) + Math.sin(P.face)) * 3.5); g.stroke();

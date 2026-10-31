@@ -207,7 +207,7 @@ function doTravel(side, nx, ny) {
     stored = pickDist(JSON.parse(JSON.stringify(serialize())));
   }
   delete dist[toKey];
-  const d = Object.assign({}, cur, stored, {seed, incar:-1, evac:null});
+  const d = Object.assign({}, cur, stored, {seed, incar:-1});
   d.x49 = Object.assign({}, cur.x49 || {}, {caches:stored.x49.caches, cats:stored.x49.cats});
   d.x50 = {root, dx:nx, dy:ny, dist, vis:(cur.x50 && cur.x50.vis || 1) + (fresh ? 1 : 0)};
   applySave(d);
