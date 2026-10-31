@@ -80,13 +80,13 @@ function drawWallTile(x, y, i, cut) {
       const wk = o.ang == null ? (o.open ? 1 : 0) : o.ang;   // 0 shut … 1 lower sash fully raised (animated)
       if (!o.broken && wk > .02) {
         const mid = (sill + lint) / 2, z0 = sill + (mid - sill) * wk;
-        plane(z0, lint, night ? `rgba(255,206,120,${.7 * f})` : `rgba(120,160,192,${.62 * f})`);
+        plane(z0, lint, night ? `rgba(255,206,120,${.62 * f})` : `rgba(160,192,210,${.4 * f})`);
         ctx.strokeStyle = C(COL.frame, f * .9); ctx.lineWidth = Math.max(1.5, U * .04); ctx.beginPath();
         if (ax) { line3(x + .5, y + .5, z0, x + .5, y + .5, lint); line3(x + .06, y + .5, mid, x + .94, y + .5, mid); line3(x + .06, y + .5, z0, x + .94, y + .5, z0); }
         else { line3(x + .5, y + .5, z0, x + .5, y + .5, lint); line3(x + .5, y + .06, mid, x + .5, y + .94, mid); line3(x + .5, y + .06, z0, x + .5, y + .94, z0); }
         ctx.stroke();
       } else if (!o.broken) {
-        plane(sill, lint, night ? `rgba(255,206,120,${.7 * f})` : `rgba(120,160,192,${.62 * f})`);
+        plane(sill, lint, night ? `rgba(255,206,120,${.62 * f})` : `rgba(160,192,210,${.4 * f})`);
         if (!night) { ctx.strokeStyle = `rgba(255,255,255,${.4 * f})`; ctx.lineWidth = 1.5; ctx.beginPath();
           if (ax) { line3(x + .25, y + .5, sill + U * .15, x + .45, y + .5, lint - U * .15); line3(x + .35, y + .5, sill + U * .1, x + .5, y + .5, sill + U * .5); }
           else { line3(x + .5, y + .25, sill + U * .15, x + .5, y + .45, lint - U * .15); line3(x + .5, y + .35, sill + U * .1, x + .5, y + .5, sill + U * .5); }
@@ -105,7 +105,7 @@ function drawWallTile(x, y, i, cut) {
       }
       if (ax) wallPiece(x + .93, y + .5 - h, x + 1, y + .5 + h, sill, lint, Hs); else wallPiece(x + .5 - h, y + .93, x + .5 + h, y + 1, sill, lint, Hs);
       band(lint, WH);
-      casing(sill - U * .02, lint, .07);                                       // наличник вокруг окна
+      if (WT_OPEN) casing(sill - U * .02, lint, .07);                          // наличник — только в слое проёма у открытого дома (91-house-view)
       if (ax) box(x + .02, y + .5 - h - .01, x + .98, y + .5 + h + .04, sill - U * .06, sill, COL.frame, f * .95);
       else box(x + .5 - h - .01, y + .02, x + .5 + h + .04, y + .98, sill - U * .06, sill, COL.frame, f * .95);
       for (let k = 0; k < planks; k++) plankBar(sill + U * (.22 + k * .36), k % 2 ? -1 : 1);
@@ -135,7 +135,7 @@ function drawWallTile(x, y, i, cut) {
     if (ax) { wallPiece(x, y + .5 - h, x + .06, y + .5 + h, 0, lint, Hs); wallPiece(x + .94, y + .5 - h, x + 1, y + .5 + h, 0, lint, Hs); }
     else { wallPiece(x + .5 - h, y, x + .5 + h, y + .06, 0, lint, Hs); wallPiece(x + .5 - h, y + .94, x + .5 + h, y + 1, 0, lint, Hs); }
     band(lint, WH);
-    casing(0, lint, .06);                                                      // наличник вокруг двери
+    if (WT_OPEN) casing(0, lint, .06);                                         // наличник — только в слое проёма у открытого дома
     for (let k = 0; k < planks; k++) plankBar(U * (.35 + k * .45), k % 2 ? -1 : 1);
     metal(U * .12, lint * .94);
   } else {
