@@ -137,8 +137,8 @@ function invSection(title, sub, frac, list, onlyBag) {
   const hd = mk('div', 'secrow'), t = mk('div', 'sect', title); t.appendChild(mk('small', '', sub)); hd.appendChild(t);
   const cap = mk('div', 'capbar' + (frac > 1 ? ' over' : '')), ci = mk('i'); ci.style.width = Math.min(100, Math.round(frac * 100)) + '%'; cap.appendChild(ci); hd.appendChild(cap);
   box.appendChild(hd);
-  const groups = groupItems(P.inv).filter(g => !!g.it.bp === onlyBag).sort((a, b) => CATS.indexOf(catOf(a.it.id)) - CATS.indexOf(catOf(b.it.id)));
-  box.appendChild(gridOf(groups, g => { panel.sel = panel.sel === g.key ? null : g.key; renderPanel(); }, Math.max(4, groups.length + (4 - groups.length % 4) % 4), panel.sel));
+  const groups = groupItems(P.inv).filter(g => !!g.it.bp === onlyBag && invFltOk(g.it)).sort((a, b) => CATS.indexOf(catOf(a.it.id)) - CATS.indexOf(catOf(b.it.id)));
+  box.appendChild(gridOf(groups, g => invTap(g), Math.max(4, groups.length + (4 - groups.length % 4) % 4), panel.sel));
   const g = box.querySelector('.grid'); if (!g) return box;
   for (const v of [...g.querySelectorAll('.cell.void')]) v.remove();                // пустые ячейки — до полного ряда из 4
   const n = g.children.length, need = Math.max(4, Math.ceil(n / 4) * 4) - n;

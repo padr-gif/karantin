@@ -1297,3 +1297,18 @@ body.ctledit #actAlt.ceSel .act{outline:2px solid #e7c531!important;outline-offs
 #bldBar .done{background:rgba(159,196,138,.18);border-color:rgba(159,196,138,.5)}
 #bBuild.on{background:var(--amber);color:var(--ink)}
 @media (max-width:760px){#bldBar{max-width:calc(100% - var(--sx) - var(--sxr) - 70px)}#bldBar .bq{display:none}#bldBar button{padding:4px 7px;font-size:11px}}
+/* v83: рюкзак полупрозрачный — мир за ним видно; фильтры по видам вещей */
+#panel.glass{background:rgba(6,8,8,.16)}
+/* кнопки и полоски игры под прозрачным рюкзаком не просвечивают — видно только мир */
+body.invglass>*:not(#game):not(#vig):not(#panel):not(#toasts):not(svg){visibility:hidden}
+#panel.glass .sheet{background:rgba(16,20,18,.78);box-shadow:0 12px 40px rgba(0,0,0,.35)}
+#panel.glass .pcol,#panel.glass .dollside{background:rgba(0,0,0,.16)}
+#panel.glass .cell{background:radial-gradient(circle at 50% 38%,rgba(43,48,44,.88),rgba(24,27,25,.82) 78%)}
+#panel.glass .cell.void{background:rgba(255,255,255,.03)}
+#panel.glass .pickhint{opacity:.8}
+.invflt{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;flex:none;padding-bottom:2px}
+.invflt::-webkit-scrollbar{display:none}
+.invflt button{flex:none;display:flex;align-items:center;gap:5px;font:600 12px var(--f-body);color:var(--paper);background:rgba(255,255,255,.05);border:1px solid var(--edge);border-radius:999px;padding:5px 10px;cursor:pointer}
+.invflt button small{font:700 10px var(--f-mono);color:var(--muted)}
+.invflt button.on{background:var(--paper);color:var(--ink);border-color:var(--paper)}
+.invflt button.on small{color:var(--ink);opacity:.7}

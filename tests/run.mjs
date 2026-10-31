@@ -382,6 +382,30 @@ const wl = await D(`(() => {
 check('внутри: крыши нет, передние стены полупрозрачные, задние — целые', wl.open && wl.lower && wl.upper, wl);
 check('чужие дома закрыты и не прозрачные', wl.other, wl);
 check('перед домом — дом целый; за домом — открывается плавно', wl.front && wl.frontWall && wl.fading && wl.behind, wl);
+const pk = await D(`(() => {
+  const ins = () => { let r = 0; houses.forEach((h, i) => { if (P.x > h.ix0 && P.x < h.ix1 && P.y > h.iy0 && P.y < h.iy1) r = i + 1; }); return r; };
+  for (let hi = 0; hi < houses.length; hi++) { const H = houses[hi]; if (H.kind !== 'house') continue;
+    for (const [nx, ny] of [[1, 0], [0, 1]]) {                                     // правая и нижняя стены: окно и глухой кусок
+      const c = nx ? H.x + H.w - 1 : H.y + H.h - 1, tiles = [];
+      for (let k = (nx ? H.y : H.x) + 1; k < (nx ? H.y + H.h : H.x + H.w) - 1; k++) tiles.push([nx ? c : k, nx ? k : c]);
+      const win = tiles.find(([x, y]) => map[y * MW + x] === WIN), wall = tiles.find(([x, y]) => map[y * MW + x] === WALL && !tiles.some(([a, b]) => map[b * MW + a] === WIN && Math.hypot(a - x, b - y) < 3));
+      if (!win || !wall) continue;
+      const at = ([x, y], f) => { P.x = x + .5 + nx * .95; P.y = y + .5 + ny * .95; P.face = f; HV.peekT = 0; for (let q = 0; q < 40; q++) houseViewUpdate(.05, ins()); return H.open; };
+      const into = Math.atan2(-ny, -nx);
+      return {wallFace:at(wall, into), winFace:at(win, into), winAway:at(win, into + Math.PI)};
+    } }
+  return {skip:true};
+})()`);
+check('у стены дом не открывается; заглянул в окно — открылся; отвернулся — закрылся', pk.skip || (pk.wallFace === 0 && pk.winFace === 1 && pk.winAway === 0), pk);
+const iq = await D(`(() => {
+  P.inv.length = 0; const w = mkItem('water'); P.inv.push(w, mkItem('bat')); openPanel('inv'); panel.tab = 'items'; renderPanel();
+  const cats = [...document.querySelectorAll('.invflt button')].map(b => b.firstChild.textContent);
+  INV_FLT.cat = 'Питьё'; renderPanel(); const only = document.querySelectorAll('#pnBody .grid .cell:not(.void)').length;
+  INV_FLT.cat = null; const g = groupItems(P.inv).find(g => g.it === w); invTap(g); invTap(g);
+  const drinking = !!P.act; P.act = null; closePanel();
+  return {cats, only, drinking, glass:true};
+})()`);
+check('рюкзак: фильтры по видам вещей, двойной тап пьёт воду', iq.cats.includes('Питьё') && iq.only === 1 && iq.drinking, iq);
 const occ = await D(`(() => {
   const ins = () => { let r = 0; houses.forEach((h, i) => { if (P.x > h.ix0 && P.x < h.ix1 && P.y > h.iy0 && P.y < h.iy1) r = i + 1; }); return r; };
   const fu = furns.find(f => { const H = houses[hAt[f.y * MW + f.x] - 1]; return H && f.r && occMasks(f).length && ['wardrobe', 'fridge', 'shelf', 'bookshelf', 'hanger'].includes(f.type); });

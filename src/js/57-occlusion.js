@@ -5,7 +5,7 @@
 // стены всегда в полный рост; прозрачность стены (91-house-view) — у каждого выреза своя (m.a):
 // за непрозрачной стеной мебели не видно, за полупрозрачной она проступает настолько, насколько стена прозрачна
 function occWallTop(x, y, i) { return WH; }
-function occWallAlpha(x, y, i) { return Math.min(wallAlphaAt(x, y, i), wallSeeAt(x, y)); }
+function occWallAlpha(x, y, i) { return Math.min(wallAlphaAt(x, y, i), wallSeeAt(x, y, i)); }
 // куски стены клетки (прямоугольники в координатах карты)
 function occPieces(x, y) {
   const i = y * MW + x, t = map[i];

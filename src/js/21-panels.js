@@ -31,7 +31,7 @@ function openPanel(kind, opt) {
     const tab = kind === 'inv' ? (panel && panel.kind === 'inv' ? panel.tab : 'items') : null;
     panel = Object.assign({kind, tab}, opt || {});
     paused = true; P.act = null; atkHeld = false; joy.id = null; joy.x = joy.y = 0; $('stick').hidden = true;
-    $('panel').hidden = false; $('panel').classList.toggle('live', kind === 'loot');
+    $('panel').hidden = false; $('panel').classList.toggle('live', kind === 'loot'); $('panel').classList.toggle('glass', kind === 'inv'); document.body.classList.toggle('invglass', kind === 'inv');
     if (kind === 'loot') paused = false;
     renderPanel();
   }
@@ -42,7 +42,7 @@ function openPanel(kind, opt) {
 function closePanel() {
   if (markPick) { markPick.remove(); markPick = null; }                     // выбор метки на карте
   const src = panel && panel.kind === 'loot' && panel.src;
-  if (panel) { panel = null; $('panel').hidden = true; if ($('pause').hidden) paused = false; }
+  if (panel) { panel = null; $('panel').hidden = true; document.body.classList.remove('invglass'); if ($('pause').hidden) paused = false; }
   if (src && src.type && src.type !== 'pile') SFX.contClose(src.type);
 }
 function renderInv() { if (panel) renderPanel(); }

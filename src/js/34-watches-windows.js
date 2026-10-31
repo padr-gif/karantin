@@ -191,13 +191,13 @@ function buildInvDoll(body) {
   D.appendChild(colL); D.appendChild(mid); D.appendChild(colR);
   const tot = mk('div', 'kgline' + (invOver() > 0 ? ' over' : ''));
   tot.appendChild(mk('b', '', 'Несёшь ' + fmtKg(invKg()) + ' кг')); tot.appendChild(mk('span', '', 'из ' + fmtKg(invCapKg()) + (invOver() > 0 ? ' · перегруз' : '')));
-  R.appendChild(tot);
+  R.appendChild(tot); invFilterRow(R);
   const pk = pocketKgUsed(), pc = pocketKg() * strK();
   R.appendChild(invSection('Карманы', fmtKg(pk) + ' / ' + fmtKg(pc) + ' кг', pk / pc, P.inv, false));
   if (P.bag) { const bk = bagKgUsed(), bc = bagCapKg(); R.appendChild(invSection(ITEMS[P.bag.id].name, fmtKg(bk) + ' / ' + fmtKg(bc) + ' кг', bk / bc, P.inv, true)); }
   else R.appendChild(mk('div', 'nobag', 'Рюкзака нет. Найди его в шкафах, машинах и на вешалках'));
   lay.appendChild(D); lay.appendChild(R); lay.appendChild(Dd); body.appendChild(lay);
   invDetail(Dd);
-  if (!Dd.children.length) Dd.appendChild(pickHint(P.inv.length ? 'Тапни вещь или ячейку одежды, чтобы увидеть описание и действия' : 'Рюкзак пуст. Обыщи дома и машины поблизости'));
+  if (!Dd.children.length) Dd.appendChild(pickHint(P.inv.length ? 'Тапни вещь или одежду — описание и действия. Двойной тап — сразу съесть, выпить, надеть или взять в руки' : 'Рюкзак пуст. Обыщи дома и машины поблизости'));
   drawDoll();
 }
