@@ -147,9 +147,29 @@ function paintCanopy(name, b, pine) {
 // Видимые грани выбираются по обходу на экране, свет — сверху и со стороны +y, как у стен.
 function paintCar(name, b, ci, dir) {
   const S = 3, w = b[3] * S, h = b[4] * S, ax = b[5] * S, ay = b[6] * S;
+  const rot = {px:(u, v) => [u, v], nx:(u, v) => [-u, -v], py:(u, v) => [-v, u], ny:(u, v) => [v, -u]}[dir];
+  const key = 'painted:' + name; ART.imgs[key] = carModel(w, h, ax, ay, S, ci, rot);
+  return [key, 0, 0, w, h, ax, ay, S];
+}
+// машина под любым углом (за рулём, 26-driving): 64 направления, каждое рисуется один раз при первой нужде.
+// Масштаб — как у детальной графики (HDQ, обычно 2): кадр ~140 КБ; храним не больше CARDYN_MAX, старые вытесняем
+const CAR_DIRS = 64, CARDYN_MAX = 96, CARDYN = new Map();
+function carDynFrame(ci, ang) {
+  const S = Math.max(2, HDQ), k = ((Math.round(ang / (Math.PI * 2) * CAR_DIRS) % CAR_DIRS) + CAR_DIRS) % CAR_DIRS;
+  const key = 'painted:cardyn_' + ci + '_' + k + '@' + S;
+  let fr = CARDYN.get(key);
+  if (fr !== undefined) { CARDYN.delete(key); CARDYN.set(key, fr); return fr; }
+  const w = 104 * S, h = 84 * S, ax = 52 * S, ay = 54 * S, a = k / CAR_DIRS * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
+  try { ART.imgs[key] = carModel(w, h, ax, ay, S, ci, (u, v) => [u * c - v * s, u * s + v * c]); fr = [key, 0, 0, w, h, ax, ay, S]; }
+  catch (e) { logErr(e, 'painted car'); fr = null; }
+  CARDYN.set(key, fr);
+  if (CARDYN.size > CARDYN_MAX) { const old = CARDYN.keys().next().value; CARDYN.delete(old); delete ART.imgs[old]; }
+  return fr;
+}
+// модель машины: холст w×h, точка опоры (центр машины на земле) ax,ay, масштаб S, поворот rot(u,v) → (x,y) мира
+function carModel(w, h, ax, ay, S, ci, rot) {
   const cv = mkCanvas(w, h), g = cv.getContext('2d');
   const col = CARC[ci] || [120, 120, 120];
-  const rot = {px:(u, v) => [u, v], nx:(u, v) => [-u, -v], py:(u, v) => [-v, u], ny:(u, v) => [v, -u]}[dir];
   const P3 = (u, v, z) => { const [x, y] = rot(u, v); return [ax + (x - y) * 30 * S, ay + ((x + y) * 15 - z) * S]; };
   const rgb = (c, k, a) => `rgba(${Math.min(255, c[0] * k) | 0},${Math.min(255, c[1] * k) | 0},${Math.min(255, c[2] * k) | 0},${a == null ? 1 : a})`;
   const area = pts => { let s = 0; for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; s += p[0] * q[1] - q[0] * p[1]; } return s; };
@@ -203,7 +223,10 @@ function paintCar(name, b, ci, dir) {
   // кузов: низ со скосом к порогам и капот/багажник
   const sideDeco = (front) => (at, k) => {                                    // борт: арки, стыки дверей, ручки, молдинг
     g.fillStyle = 'rgba(0,0,0,.55)';
-    for (const s of [.2, .8]) { const c = at(s, .05); g.beginPath(); g.ellipse(c[0], c[1], 8.5 * S, 7.5 * S, 0, Math.PI, 0); g.fill(); }
+    for (const sc of [.2, .8]) {                                              // арка в плоскости борта: полуокружность от низа грани
+      const pts = []; for (let k = 0; k <= 14; k++) { const a = Math.PI * k / 14; pts.push(at(sc + Math.cos(a) * .145, Math.sin(a) * .9)); }
+      path(pts); g.fill();
+    }
     g.strokeStyle = rgb(col, k * .55); g.lineWidth = .9 * S;
     for (const s of [.36, .62]) { const a = at(s, .12), c = at(s, .95); g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(c[0], c[1]); g.stroke(); }
     g.strokeStyle = 'rgba(220,224,226,.7)'; g.lineWidth = .7 * S; { const a = at(.06, .55), c = at(.94, .55); g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(c[0], c[1]); g.stroke(); }
@@ -242,6 +265,16 @@ function paintCar(name, b, ci, dir) {
   for (const u of [-.56, .56]) for (const s of [1, -1]) if (vis(0, s)) wheel(u, s);
   // мягкость: лёгкое размытие краёв, как у остальных детальных кадров
   const out = mkCanvas(w, h), og = out.getContext('2d'); og.filter = `blur(${(S * .28).toFixed(2)}px)`; og.drawImage(cv, 0, 0);
-  const key = 'painted:' + name; ART.imgs[key] = out;
-  return [key, 0, 0, w, h, ax, ay, S];
+  return out;
+}
+
+// рисованный кадр с точкой опоры в (wx, wy) — как objAtDraw (50-detail): туман через hdFogged, привязка к пикселю экрана
+function drawPaintedAt(fr, wx, wy, f) {
+  if (!fr) return false;
+  const s = fr[7] || 1, src = f >= .99 ? ART.imgs[fr[0]] : hdFogged(fr, f);
+  const q = DPR || 1, x = Math.round((SX(wx, wy) - fr[5] / s) * q) / q, y = Math.round((SY(wx, wy, 0) - fr[6] / s) * q) / q;
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(src, x, y, fr[3] / s, fr[4] / s);
+  ctx.imageSmoothingEnabled = false;
+  return true;
 }

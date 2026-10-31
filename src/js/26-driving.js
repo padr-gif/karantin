@@ -96,16 +96,19 @@ function driveUpdate(dt, wx, wy, mag) {
 function drawCarDyn(p, f) {
   const a = p.ang, dx = Math.cos(a), dy = Math.sin(a), ax = p.cx - dx * CAR_L / 2, ay = p.cy - dy * CAR_L / 2;
   const col = CARC[p.ci] || [120, 120, 120], nx = -dy, ny = dx;
-  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath();
-  const sh = [[ax + nx * .5, ay + ny * .5], [ax + dx * CAR_L + nx * .5, ay + dy * CAR_L + ny * .5], [ax + dx * CAR_L - nx * .5, ay + dy * CAR_L - ny * .5], [ax - nx * .5, ay - ny * .5]];
-  sh.forEach(([x, y], k) => k ? ctx.lineTo(SX(x, y), SY(x, y, 0)) : ctx.moveTo(SX(x, y), SY(x, y, 0))); ctx.closePath(); ctx.fill();
-  for (const [u, s] of [[.32, 1], [.32, -1], [1.55, 1], [1.55, -1]]) obox(ax + dx * u + nx * s * .38 - dx * .15, ay + dy * u + ny * s * .38 - dy * .15, dx, dy, .3, .14, 0, 7, [24, 24, 26], f);
-  obox(ax, ay, dx, dy, CAR_L, CAR_W, 4, 15, col, f);
-  obox(ax + dx * .5, ay + dy * .5, dx, dy, .92, CAR_W * .84, 15, 24, [52, 64, 76], f);
-  obox(ax + dx * .56, ay + dy * .56, dx, dy, .8, CAR_W * .8, 24, 26, col, f);
+  const painted = HDQ > 1 && drawPaintedAt(carDynFrame(p.ci, a), p.cx, p.cy, f);   // детальная графика: рисованная модель (90-painted)
+  if (!painted) {
+    ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath();
+    const sh = [[ax + nx * .5, ay + ny * .5], [ax + dx * CAR_L + nx * .5, ay + dy * CAR_L + ny * .5], [ax + dx * CAR_L - nx * .5, ay + dy * CAR_L - ny * .5], [ax - nx * .5, ay - ny * .5]];
+    sh.forEach(([x, y], k) => k ? ctx.lineTo(SX(x, y), SY(x, y, 0)) : ctx.moveTo(SX(x, y), SY(x, y, 0))); ctx.closePath(); ctx.fill();
+    for (const [u, s] of [[.32, 1], [.32, -1], [1.55, 1], [1.55, -1]]) obox(ax + dx * u + nx * s * .38 - dx * .15, ay + dy * u + ny * s * .38 - dy * .15, dx, dy, .3, .14, 0, 7, [24, 24, 26], f);
+    obox(ax, ay, dx, dy, CAR_L, CAR_W, 4, 15, col, f);
+    obox(ax + dx * .5, ay + dy * .5, dx, dy, .92, CAR_W * .84, 15, 24, [52, 64, 76], f);
+    obox(ax + dx * .56, ay + dy * .56, dx, dy, .8, CAR_W * .8, 24, 26, col, f);
+  }
   if (p.police) { const zx = SX(p.cx, p.cy), zy = SY(p.cx, p.cy, 28); ctx.fillStyle = Math.floor(animT * 5) % 2 ? '#ff3b30' : '#3d7bff'; ctx.fillRect(zx - 3, zy - 1.5, 6, 2); }
   const lights = p.engine ? '#ffe9a8' : C([200, 196, 170], f);
-  for (const s of [1, -1]) {
+  if (!painted || p.engine) for (const s of [1, -1]) {                       // у рисованной модели фары свои — поверх только горящие
     const fx = ax + dx * (CAR_L - .02) + nx * s * .3, fy = ay + dy * (CAR_L - .02) + ny * s * .3, bx = ax + dx * .02 + nx * s * .3, by = ay + dy * .02 + ny * s * .3;
     ctx.fillStyle = lights; ctx.fillRect(SX(fx, fy) - 1.2, SY(fx, fy, 11) - 1, 2.4, 2);
     ctx.fillStyle = p.engine && p.v < -.1 ? '#ffffff' : '#c0281e'; ctx.fillRect(SX(bx, by) - 1.2, SY(bx, by, 11) - 1, 2.4, 2);

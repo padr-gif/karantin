@@ -7,7 +7,7 @@
 // ---- кадры повышенной детализации ----
 const hdFrame = name => HDQ > 1 && (ART.meta.frames['hd_' + name] || paintedFrame(name));   // нет готового — рисованный (кроны, 90-painted)
 function hdFogged(fr, f, tint) {
-  const fq = Math.round(f * 20) / 20, k = fr[1] + ',' + fr[2] + '|' + fq + '|' + (tint || '');
+  const fq = Math.round(f * 20) / 20, k = fr[0] + ':' + fr[1] + ',' + fr[2] + '|' + fq + '|' + (tint || '');   // лист в ключе: у рисованных кадров (90-painted) свои холсты, все с 0,0
   let c = HDFOG.get(k);
   if (c) { HDFOG.delete(k); HDFOG.set(k, c); c._st = true; return c; }
   c = mkCanvas(fr[3], fr[4]); c._st = true; const g = c.getContext('2d');
