@@ -91,7 +91,9 @@ function render(dt) {
     if (e.k === 99) { e.fn(); continue; }
     if (e.k === 1) {
       const door = map[e.i] === DOOR, bw = door ? 1.5 : 1.1;                     // стены в полный рост; прозрачность — 91-house-view
-      drawWallView(e, a => sprite('w' + e.i, wallKey(e.x, e.y, e.i, false), e.x, e.y, Math.floor(-bw * U), Math.floor(-WH - .25 * U), Math.ceil(bw * U), Math.ceil((door ? 1.5 : 1.15) * U), () => drawWallTile(e.x, e.y, e.i, false), a));
+      const bx = [Math.floor(-bw * U), Math.floor(-WH - .25 * U), Math.ceil(bw * U), Math.ceil((door ? 1.5 : 1.15) * U)], wk = wallKey(e.x, e.y, e.i, false);
+      drawWallView(e, a => sprite('w' + e.i, wk, e.x, e.y, ...bx, () => drawWallTile(e.x, e.y, e.i, false), a),
+        a => sprite('wo' + e.i, wk + '|o', e.x, e.y, ...bx, () => { WT_OPEN = true; try { drawWallTile(e.x, e.y, e.i, false); } finally { WT_OPEN = false; } }, a));   // проём поверх прозрачной стены
     } else if (e.k === 2) {
       const fade = !e.oob && mode !== 'menu' && occludes(e.x, e.y, U * 3.2), f = e.oob ? .24 : fogF(e.i), a = fade ? .3 : 1;
       const pine = hash(e.x * 3, e.y * 7) > .62, v = pine ? (hash(e.x, e.y * 5) < .5 ? 0 : 1) : Math.floor(hash(e.y, e.x) * 3);

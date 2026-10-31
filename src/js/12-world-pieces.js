@@ -10,6 +10,7 @@ function faceTex(Hs, px, py) {
   return [TX.siding(Hs.wallC), false];
 }
 function wallPiece(x0, y0, x1, y1, z0, z1, Hs) {
+  if (WT_OPEN) return;                                                       // слой «только проём» (91-house-view): без стены
   const [sT] = faceTex(Hs, (x0 + x1) / 2, y1 + .05), [eT] = faceTex(Hs, x1 + .05, (y0 + y1) / 2);
   const fS = fogAt(Math.floor((x0 + x1) / 2), Math.floor(y1 + .05)), fE = fogAt(Math.floor(x1 + .05), Math.floor((y0 + y1) / 2));
   vface(x0, y1, x1, y1, z0, z1, sT, 1 - fS * .92);
@@ -38,6 +39,13 @@ function drawWallTile(x, y, i, cut) {
   const plane = (z0, z1, fill, k) => { k = k || 0;
     if (ax) poly4(x + .06, y + .5 + k, z0, x + .94, y + .5 + k, z0, x + .94, y + .5 + k, z1, x + .06, y + .5 + k, z1, fill);
     else poly4(x + .5 + k, y + .06, z0, x + .5 + k, y + .94, z0, x + .5 + k, y + .94, z1, x + .5 + k, y + .06, z1, fill); };
+  // наличник: светлая планка на видимой грани стены (u — вдоль клетки 0…1, z — высота)
+  const trim = (u0, u1, z0, z1, k) => { const q = h + (k || .014), fill = C([238, 234, 224], f * .97);
+    if (ax) poly4(x + u0, y + .5 + q, z0, x + u1, y + .5 + q, z0, x + u1, y + .5 + q, z1, x + u0, y + .5 + q, z1, fill);
+    else poly4(x + .5 + q, y + u0, z0, x + .5 + q, y + u1, z0, x + .5 + q, y + u1, z1, x + .5 + q, y + u0, z1, fill); };
+  const casing = (z0, z1, w) => { trim(.0, w, z0, z1 + U * .08); trim(1 - w, 1, z0, z1 + U * .08); trim(0, 1, z1, z1 + U * .09);   // боковины и верхняя планка
+    const sh = C([0, 0, 0], 1, Math.round(f * 4) * .045); if (ax) poly4(x + w, y + .5 + h + .016, z1 - U * .05, x + 1 - w, y + .5 + h + .016, z1 - U * .05, x + 1 - w, y + .5 + h + .016, z1, x + w, y + .5 + h + .016, z1, sh);
+    else poly4(x + .5 + h + .016, y + w, z1 - U * .05, x + .5 + h + .016, y + 1 - w, z1 - U * .05, x + .5 + h + .016, y + 1 - w, z1, x + .5 + h + .016, y + w, z1, sh); };
   const planks = o.bhp > 0 ? Math.ceil(o.bhp / 45) : 0;
   const plankBar = (zc, tilt) => {
     const k = h + .03, d = tilt * U * .22, th = U * .13;
@@ -72,13 +80,13 @@ function drawWallTile(x, y, i, cut) {
       const wk = o.ang == null ? (o.open ? 1 : 0) : o.ang;   // 0 shut … 1 lower sash fully raised (animated)
       if (!o.broken && wk > .02) {
         const mid = (sill + lint) / 2, z0 = sill + (mid - sill) * wk;
-        plane(z0, lint, night ? `rgba(255,206,120,${.62 * f})` : `rgba(160,192,210,${.4 * f})`);
+        plane(z0, lint, night ? `rgba(255,206,120,${.7 * f})` : `rgba(120,160,192,${.62 * f})`);
         ctx.strokeStyle = C(COL.frame, f * .9); ctx.lineWidth = Math.max(1.5, U * .04); ctx.beginPath();
         if (ax) { line3(x + .5, y + .5, z0, x + .5, y + .5, lint); line3(x + .06, y + .5, mid, x + .94, y + .5, mid); line3(x + .06, y + .5, z0, x + .94, y + .5, z0); }
         else { line3(x + .5, y + .5, z0, x + .5, y + .5, lint); line3(x + .5, y + .06, mid, x + .5, y + .94, mid); line3(x + .5, y + .06, z0, x + .5, y + .94, z0); }
         ctx.stroke();
       } else if (!o.broken) {
-        plane(sill, lint, night ? `rgba(255,206,120,${.62 * f})` : `rgba(160,192,210,${.4 * f})`);
+        plane(sill, lint, night ? `rgba(255,206,120,${.7 * f})` : `rgba(120,160,192,${.62 * f})`);
         if (!night) { ctx.strokeStyle = `rgba(255,255,255,${.4 * f})`; ctx.lineWidth = 1.5; ctx.beginPath();
           if (ax) { line3(x + .25, y + .5, sill + U * .15, x + .45, y + .5, lint - U * .15); line3(x + .35, y + .5, sill + U * .1, x + .5, y + .5, sill + U * .5); }
           else { line3(x + .5, y + .25, sill + U * .15, x + .5, y + .45, lint - U * .15); line3(x + .5, y + .35, sill + U * .1, x + .5, y + .5, sill + U * .5); }
@@ -97,6 +105,7 @@ function drawWallTile(x, y, i, cut) {
       }
       if (ax) wallPiece(x + .93, y + .5 - h, x + 1, y + .5 + h, sill, lint, Hs); else wallPiece(x + .5 - h, y + .93, x + .5 + h, y + 1, sill, lint, Hs);
       band(lint, WH);
+      casing(sill - U * .02, lint, .07);                                       // наличник вокруг окна
       if (ax) box(x + .02, y + .5 - h - .01, x + .98, y + .5 + h + .04, sill - U * .06, sill, COL.frame, f * .95);
       else box(x + .5 - h - .01, y + .02, x + .5 + h + .04, y + .98, sill - U * .06, sill, COL.frame, f * .95);
       for (let k = 0; k < planks; k++) plankBar(sill + U * (.22 + k * .36), k % 2 ? -1 : 1);
@@ -126,6 +135,7 @@ function drawWallTile(x, y, i, cut) {
     if (ax) { wallPiece(x, y + .5 - h, x + .06, y + .5 + h, 0, lint, Hs); wallPiece(x + .94, y + .5 - h, x + 1, y + .5 + h, 0, lint, Hs); }
     else { wallPiece(x + .5 - h, y, x + .5 + h, y + .06, 0, lint, Hs); wallPiece(x + .5 - h, y + .94, x + .5 + h, y + 1, 0, lint, Hs); }
     band(lint, WH);
+    casing(0, lint, .06);                                                      // наличник вокруг двери
     for (let k = 0; k < planks; k++) plankBar(U * (.35 + k * .45), k % 2 ? -1 : 1);
     metal(U * .12, lint * .94);
   } else {

@@ -5,8 +5,11 @@
 //     Крыша рисуется с прозрачностью 1 − open и растворяется за ~0.3 с, а не пропадает рывком.
 //   • У открытого дома передние стены (нижняя и правая на экране) и перегородки перед героем полупрозрачные.
 //   • Любая стена прямо перед героем (ближе к камере) рядом с ним на экране — полупрозрачная целиком (wallSeeAt).
+//   • Окна и двери в полупрозрачной стене не бледнеют: поверх рисуется слой «только проём» (наличник, стекло, рама,
+//     подоконник, полотно двери, доски) почти непрозрачным — HV_OPEN_A. Как в Zomboid: стены нет, проёмы видно.
 // Обе графики, пиксельная и детальная.
-const HV_NEAR = 1.4, HV_FRONT_A = .34, HV_SEE_A = .3, HV_SPEED = 7;
+const HV_NEAR = 1.4, HV_FRONT_A = .34, HV_SEE_A = .3, HV_OPEN_A = .92, HV_SPEED = 7;
+let WT_OPEN = false;                                                          // drawWallTile рисует только проём (окно, дверь), без стены
 const HV = {inside:0, pD:0, hx:0, hy:0, rx:0, ry:0, on:false};
 
 // заслоняет ли дом героя на экране: герой позади дома (не перед его нижним и правым краем) и под его силуэтом
@@ -54,4 +57,7 @@ function wallSeeAt(x, y) {
   if (d >= 1.5) return 1;
   return d <= 1 ? HV_SEE_A : HV_SEE_A + (1 - HV_SEE_A) * (d - 1) / .5;
 }
-function drawWallView(e, draw) { draw(Math.min(wallAlphaAt(e.x, e.y, e.i), wallSeeAt(e.x, e.y))); }
+function drawWallView(e, draw, open) {
+  const a = Math.min(wallAlphaAt(e.x, e.y, e.i), wallSeeAt(e.x, e.y)); draw(a);
+  const t = map[e.i]; if (a < .98 && (t === WIN || t === DOOR)) open(Math.max(HV_OPEN_A, a));
+}
