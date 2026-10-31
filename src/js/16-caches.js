@@ -135,6 +135,7 @@ function drawGroundRange(gx0, gy0, gx1, gy1) {
     } else if (t === WATER) { blitObj('g_grass_' + Math.floor(hv * 4), sx, sy); drawWaterTile(x, y); }
     else { blitObj('g_grass_' + Math.floor(hv * 4), sx, sy); if (soil[y * MW + x]) drawSoil(x, y, soil[y * MW + x]); }
   }
+  paintedGrass(x0, y0, x1, y1);                                              // травинки (детальный режим, 90-painted)
   for (const Hs of houses) {
     if (Hs.x > x1 + 1 || Hs.x + Hs.w < x0 - 1 || Hs.y > y1 + 1 || Hs.y + Hs.h < y0 - 1) continue;
     const floorTiles = (name, rx0, ry0, rx1, ry1) => {
@@ -169,13 +170,9 @@ function drawGroundRange(gx0, gy0, gx1, gy1) {
     for (const d of Hs.decor || []) blitObj('dec_' + d.k + '_' + d.v, SX(d.x, d.y), SY(d.x, d.y, 0));   // мелочи на полу (53-room-logic)
     resetT();
   }
+  softWallShadow(x0, y0, x1, y1);                                           // тень у основания стен (90-painted)
   groundT(0);
   ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath();
-  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
-    const i = y * MW + x; if (map[i] !== WALL) continue;
-    for (const r of wpV[i]) ctx.rect(x + r[0] - .08, y + r[1] - .08, r[2] - r[0] + .16, r[3] - r[1] + .16);
-  }
-  ctx.fill(); ctx.beginPath();
   for (const fu of furns) { if (fu.x < x0 - 1 || fu.x > x1 + 1 || fu.y < y0 - 1 || fu.y > y1 + 1) continue; ctx.rect(fu.r[0] - .04, fu.r[1] - .04, fu.r[2] - fu.r[0] + .12, fu.r[3] - fu.r[1] + .12); }
   ctx.fill();
   resetT();

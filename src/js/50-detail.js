@@ -5,7 +5,7 @@
 // всё как раньше. Детальный режим — это прежний «гладкий» (стены и полы тоньше) плюс эти кадры.
 
 // ---- кадры повышенной детализации ----
-const hdFrame = name => HDQ > 1 && ART.meta.frames['hd_' + name];
+const hdFrame = name => HDQ > 1 && (ART.meta.frames['hd_' + name] || paintedFrame(name));   // нет готового — рисованный (кроны, 90-painted)
 function hdFogged(fr, f, tint) {
   const fq = Math.round(f * 20) / 20, k = fr[1] + ',' + fr[2] + '|' + fq + '|' + (tint || '');
   let c = HDFOG.get(k);

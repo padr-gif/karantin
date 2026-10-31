@@ -32,7 +32,24 @@ TX.paper = (rgb, style) => detail('paper' + rgb + style, () => TX30.paper(rgb, s
   return shadeC(rgb, k);
 });
 // сайдинг: доски внахлёст, тень под нижним краем каждой, волокна, редкие торцевые стыки
+// снизу — цоколь из дикого камня (y < 15 ≈ пятая часть стены) с бетонным отливом над ним (мягкий стиль, 90-painted)
+const PLINTH = 15;
+function plinthPx(x, y) {
+  if (y > PLINTH - 1.6) {                                                     // отлив: светлая кромка, тень под ней
+    const t = (y - (PLINTH - 1.6)) / 1.6;
+    return shadeC([196, 192, 182], (.78 + .3 * t) * (1 + (nz(x / 2, y, 128) - .5) * .06));
+  }
+  const rh = 4.6, row = Math.floor(y / rh), yy = md(y, rh);
+  const w = 7 + hash(row, 11) * 5, off = hash(row, 23) * 40, bx = x + off, col = Math.floor(bx / w), xx = md(bx, w);
+  const w2 = w * (.86 + hash(col, row + 3) * .14);                             // разная ширина камней в ряду
+  const ex = Math.min(xx, Math.max(0, w2 - xx));
+  const m = Math.min(smo(ex, .2, 1.1), smo(yy, .25, 1), smo(rh - yy, .2, .9));
+  const t = hash(col, row), g = 112 + t * 52;
+  const stone = shadeC([g + 6, g + 3, g - 6], (.9 + .14 * smo(yy, 2.6, 4.2)) * (1 + (nz(x / 1.3, y / 1.3, 197) - .5) * .16));
+  return mix([70, 68, 64], stone, xx > w2 ? 0 : m);
+}
 TX.siding = rgb => detail('siding' + rgb, () => TX30.siding(rgb), (x, y) => {
+  if (y < PLINTH) return plinthPx(x, y);
   const row = Math.floor(y / 8), yy = md(y, 8);
   let k = .86 + .16 * (yy / 8) + (nz(x / 22, y / 2.5 + row * 7, 12) - .5) * .06 + (nz(x / 3, y / 1.5, 85) - .5) * .025;
   k *= .6 + .4 * smo(yy, 0, 1.4);                                             // тень от верхней доски
