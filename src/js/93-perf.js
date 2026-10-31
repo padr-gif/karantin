@@ -53,3 +53,18 @@ onUpdate(() => {
     if (!CARF.has(key)) { carFrame(p.ci, k / CAR_DIRS * Math.PI * 2); return; }
   }
 });
+
+// ---- выгрузка листов героя (v85) ----
+// Листы героя (pchar_*, 4096² — около 64 МБ каждый в раскрытом виде) раскрываются по требованию (needSheet). В игре
+// нужен один вариант одежды; переоделся, сменил героя — прежние листы так и лежали в памяти. Теперь лист, к которому
+// не обращались 30 с, отпускается: исходник (сжатый PNG/WebP) остаётся, при нужде лист раскроется снова.
+// Уже перекрашенные кадры живут в кэше SPR и от листа не зависят. Лист мебели furn3 не трогаем: его пересборка дороже.
+const SHEET_IDLE = 30;
+let sheetT = 0;
+onUpdate(dt => {
+  if ((sheetT -= dt) > 0) return; sheetT = 5;
+  for (const n of Object.keys(ART.imgs)) {
+    if (!/^pchar_/.test(n) || !ART.src[n] || ART.pend.has(n)) continue;
+    if (performance.now() / 1000 - (ART.used[n] || 0) > SHEET_IDLE) delete ART.imgs[n];
+  }
+});

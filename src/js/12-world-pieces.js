@@ -86,15 +86,27 @@ function drawWallTile(x, y, i, cut) {
         else { line3(x + .5, y + .5, z0, x + .5, y + .5, lint); line3(x + .5, y + .06, mid, x + .5, y + .94, mid); line3(x + .5, y + .06, z0, x + .5, y + .94, z0); }
         ctx.stroke();
       } else if (!o.broken) {
-        plane(sill, lint, night ? `rgba(255,206,120,${.62 * f})` : `rgba(160,192,210,${.4 * f})`);
-        if (!night) { ctx.strokeStyle = `rgba(255,255,255,${.4 * f})`; ctx.lineWidth = 1.5; ctx.beginPath();
-          if (ax) { line3(x + .25, y + .5, sill + U * .15, x + .45, y + .5, lint - U * .15); line3(x + .35, y + .5, sill + U * .1, x + .5, y + .5, sill + U * .5); }
-          else { line3(x + .5, y + .25, sill + U * .15, x + .5, y + .45, lint - U * .15); line3(x + .5, y + .35, sill + U * .1, x + .5, y + .5, sill + U * .5); }
-          ctx.stroke(); }
-        // mullion
-        ctx.strokeStyle = C(COL.frame, f * .9); ctx.lineWidth = Math.max(1.5, U * .04); ctx.beginPath();
-        if (ax) { line3(x + .5, y + .5, sill, x + .5, y + .5, lint); line3(x + .06, y + .5, (sill + lint) / 2, x + .94, y + .5, (sill + lint) / 2); }
-        else { line3(x + .5, y + .5, sill, x + .5, y + .5, lint); line3(x + .5, y + .06, (sill + lint) / 2, x + .5, y + .94, (sill + lint) / 2); }
+        // v85: стекло с глубиной — внизу темнее (комната), вверху отражение неба; рама по контуру, толстая перекладина
+        // между створками и горбыльки в каждой створке (окно «два на два»)
+        const mid = (sill + lint) / 2;
+        if (night) plane(sill, lint, `rgba(255,206,120,${.62 * f})`);
+        else {
+          plane(sill, lint, `rgba(34,48,58,${.72 * f})`);
+          plane(mid + (lint - mid) * .25, lint, `rgba(176,204,222,${.32 * f})`);
+          plane(sill, sill + (mid - sill) * .45, `rgba(176,204,222,${.12 * f})`);
+          ctx.strokeStyle = `rgba(255,255,255,${.38 * f})`; ctx.lineWidth = Math.max(1, U * .03); ctx.beginPath();
+          if (ax) { line3(x + .2, y + .5, mid + U * .06, x + .34, y + .5, lint - U * .06); line3(x + .62, y + .5, sill + U * .05, x + .74, y + .5, mid - U * .06); }
+          else { line3(x + .5, y + .2, mid + U * .06, x + .5, y + .34, lint - U * .06); line3(x + .5, y + .62, sill + U * .05, x + .5, y + .74, mid - U * .06); }
+          ctx.stroke();
+        }
+        const fr = C(COL.frame, f * .95);
+        ctx.strokeStyle = fr; ctx.lineWidth = Math.max(2, U * .06); ctx.beginPath();          // рама и перекладина
+        if (ax) { line3(x + .07, y + .5, sill, x + .07, y + .5, lint); line3(x + .93, y + .5, sill, x + .93, y + .5, lint); line3(x + .07, y + .5, lint, x + .93, y + .5, lint); line3(x + .07, y + .5, mid, x + .93, y + .5, mid); }
+        else { line3(x + .5, y + .07, sill, x + .5, y + .07, lint); line3(x + .5, y + .93, sill, x + .5, y + .93, lint); line3(x + .5, y + .07, lint, x + .5, y + .93, lint); line3(x + .5, y + .07, mid, x + .5, y + .93, mid); }
+        ctx.stroke();
+        ctx.lineWidth = Math.max(1, U * .028); ctx.beginPath();                                  // горбыльки
+        if (ax) { line3(x + .5, y + .5, sill, x + .5, y + .5, lint); line3(x + .07, y + .5, (sill + mid) / 2, x + .93, y + .5, (sill + mid) / 2); line3(x + .07, y + .5, (mid + lint) / 2, x + .93, y + .5, (mid + lint) / 2); }
+        else { line3(x + .5, y + .5, sill, x + .5, y + .5, lint); line3(x + .5, y + .07, (sill + mid) / 2, x + .5, y + .93, (sill + mid) / 2); line3(x + .5, y + .07, (mid + lint) / 2, x + .5, y + .93, (mid + lint) / 2); }
         ctx.stroke();
       } else if (!o.cleared) {   // jagged glass left in the frame (gone once the shards are cleared out)
         ctx.fillStyle = `rgba(190,215,225,${.45 * f})`; ctx.beginPath();

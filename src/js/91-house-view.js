@@ -11,7 +11,7 @@
 //     рисуется слой «только проём» (наличник, стекло, рама, подоконник, полотно двери, доски) с прозрачностью HV_OPEN_A.
 //     У закрытого дома и снаружи окна и двери как обычно.
 // Обе графики, пиксельная и детальная.
-const HV_PEEK_R = 1.45, HV_PEEK_COS = .6, HV_FRONT_A = .34, HV_SEE_A = .3, HV_OPEN_A = .62, HV_SPEED = 7;
+const HV_PEEK_R = 1.25, HV_PEEK_COS = .72, HV_FRONT_A = .34, HV_SEE_A = .3, HV_OPEN_A = .62, HV_SPEED = 7;
 let WT_OPEN = false;                                                          // drawWallTile рисует только проём (окно, дверь), без стены
 const HV = {inside:0, pD:0, hx:0, hy:0, rx:0, ry:0, on:false, peek:0, peekT:0};
 
@@ -35,23 +35,42 @@ function peekHouse(dt) {
 }
 
 // заслоняет ли дом героя на экране: герой позади дома (не перед его нижним и правым краем) и под его силуэтом
+// v85: дом открывается, только когда действительно заслоняет героя: туловище (пояс и грудь) внутри силуэта дома
+// на экране — выпуклой оболочки углов дома у земли и под крышей. Рядом с домом и у его угла дом цел.
+function houseHull(Hs) {
+  if (Hs._hull && Hs._hullU === U) return Hs._hull;
+  const pts = [];
+  for (const [wx, wy] of [[Hs.x - .2, Hs.y - .2], [Hs.x + Hs.w + .2, Hs.y - .2], [Hs.x + Hs.w + .2, Hs.y + Hs.h + .2], [Hs.x - .2, Hs.y + Hs.h + .2]])
+    for (const z of [0, WH + U * .9]) pts.push([SX(wx, wy) - SX(Hs.x, Hs.y), SY(wx, wy, z) - SY(Hs.x, Hs.y, 0)]);
+  pts.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cr = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]), lo = [], up = [];
+  for (const q of pts) { while (lo.length > 1 && cr(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop(); lo.push(q); }
+  for (const q of pts.slice().reverse()) { while (up.length > 1 && cr(up[up.length - 2], up[up.length - 1], q) <= 0) up.pop(); up.push(q); }
+  Hs._hull = lo.slice(0, -1).concat(up.slice(0, -1)); Hs._hullU = U;
+  return Hs._hull;
+}
+function inHull(h, x, y) { for (let k = 0; k < h.length; k++) { const a = h[k], b = h[(k + 1) % h.length]; if ((b[0] - a[0]) * (y - a[1]) - (b[1] - a[1]) * (x - a[0]) < 0) return false; } return true; }
 function houseHidesHero(Hs) {
   if (P.x >= Hs.x + Hs.w + .2 || P.y >= Hs.y + Hs.h + .2) return false;      // перед домом — не заслоняет
   if (P.x < Hs.x - 4 || P.y < Hs.y - 4) return false;
-  const b = roofBounds(Hs), sx = SX(P.x, P.y) - SX(Hs.x, Hs.y), sy = SY(P.x, P.y, U * .9) - SY(Hs.x, Hs.y, 0);
-  return sx > b[0] && sx < b[2] && sy > b[1] && sy < b[3];
+  const h = houseHull(Hs), ox = SX(Hs.x, Hs.y), oy = SY(Hs.x, Hs.y, 0), sx = SX(P.x, P.y) - ox;
+  return inHull(h, sx, SY(P.x, P.y, U * .55) - oy) && inHull(h, sx, SY(P.x, P.y, U * 1.1) - oy);   // скрыто туловище, а не только макушка
 }
 function houseOpenTarget(Hs, k) {
   if (mode === 'menu') return 0;
   if (k + 1 === HV.inside) return 1;
   if (k + 1 === HV.peek) return 1;                                            // заглядывает в окно
-  return houseHidesHero(Hs) ? 1 : 0;
+  if (!houseHidesHero(Hs)) return 0;
+  // v85: стоит у задней стены (ближе 1.5 клетки) — дом цел, а герой просвечивает сквозь него силуэтом;
+  // зашёл за дом дальше — дом открывается, как раньше
+  if (Math.max(Hs.x - P.x, Hs.y - P.y) < 1.5) { HV.ghost = true; return 0; }
+  return 1;
 }
 // раз в кадр, до списка рисования: открытость домов, точка и размер прозрачного окна вокруг героя
 function houseViewUpdate(dt, inside) {
   HV.inside = inside; HV.pD = P.x + P.y; HV.on = mode !== 'menu' && !P.sleep && !P.car;
   HV.hx = SX(P.x, P.y); HV.hy = SY(P.x, P.y, U * .95); HV.rx = U * 1.35; HV.ry = U * 1.7;
-  peekHouse(dt);
+  peekHouse(dt); HV.ghost = false;
   const k = Math.min(1, (dt || 0) * HV_SPEED);
   for (let i = 0; i < houses.length; i++) {
     const Hs = houses[i], t = houseOpenTarget(Hs, i);
@@ -94,3 +113,11 @@ function hiddenInside(x, y, i) {
   const H = houses[hAt[i] - 1];
   return x > H.x && y > H.y && x < H.x + H.w - 1 && y < H.y + H.h - 1;
 }
+
+// ---- герой у задней стены закрытого дома: просвечивает силуэтом поверх дома (дом не раскрывается) ----
+onDraw(() => {
+  if (!HV.ghost || !HV.on || mode !== 'play' || P.car || P.sleep) return;
+  const pAtk = P.atkT != null && P.atkT < P.atkDur ? P.atkT / P.atkDur : -1, [an, fi] = playerAnim(pAtk), a = ctx.globalAlpha;
+  ctx.globalAlpha = .42;
+  try { withPose(P.x, P.y, playerPose(an), () => drawHeroSprite(an, fi, vaultZ())); } finally { ctx.globalAlpha = a; }
+});

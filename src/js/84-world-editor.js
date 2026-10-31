@@ -100,6 +100,7 @@ onDraw(() => {
   ctx.stroke();
   if (L && L.t > 0) { L.t -= 1 / 60; const a = Math.min(1, L.t); quad(L.x - L.r, L.y - L.r, L.x + L.r + 1 + (WED.tool === 'car' ? 1 : 0), L.y + L.r + 1, L.ok ? `rgba(130,220,120,${.25 * a})` : `rgba(230,80,60,${.25 * a})`, L.ok ? `rgba(191,240,168,${a})` : `rgba(255,138,118,${a})`); }
 });
+DIST_FIELDS.push('x84');                                                    // v85: правки — свои у каждого района, а не одни на все
 onSave(d => { d.x84 = world.wed || []; });
 onLoad(d => { world.wed = (d && d.x84) || []; wedReplay(world.wed); });
 onNewWorld(o => { if (!o || !o.save) world.wed = []; WED.on = false; if ($('wedBar')) wedUI(); });

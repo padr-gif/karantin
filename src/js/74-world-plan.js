@@ -105,9 +105,22 @@ function w5Paths() {
   W5PATH = new Set();
   for (const H of houses) if (H.kind === 'house' && H.rooms) { const p = pathToDoor(H); H._path = p; if (p) for (const [x, y] of pathSpine(H, p)) W5PATH.add(y * MW + x); }
 }
+// не у каждого дома одно и то же: у большинства ящик, у кого-то урна у тротуара, у кого-то ничего
 function w5Mail() {
-  for (const H of houses) { if (H.kind === 'house' && H.rooms && H._path) mailboxAt(H, H._path); delete H._path; }
+  for (const H of houses) {
+    if (H.kind === 'house' && H.rooms && H._path) { const r = rng(); if (r < .62) mailboxAt(H, H._path); else if (r < .82) curbBin(H, H._path); }
+    delete H._path;
+  }
   W5PATH = null;
+}
+function curbBin(H, p) {                                                     // урна на тротуаре рядом с выходом дорожки
+  const [ex, ey] = p.end;
+  for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1], [2, 0], [-2, 0], [0, 2], [0, -2]]) {
+    const x = ex + a, y = ey + b, i = y * MW + x;
+    if (!inMap(x, y, 1) || map[i] !== WALK || propAt[i] || furn[i] || W5PATH.has(i) || !curbOk(x, y)) continue;
+    return !!addProp({type:'bin', cx:x + .5, cy:y + .5, solid:true, r:[x + .3, y + .3, x + .7, y + .7], ci:ri(0, 2)}, [[x, y]]);
+  }
+  return false;
 }
 
 // ---- парк: дорожка кольцом, пруд, скамейки, качели, деревья ----
@@ -192,4 +205,95 @@ function countyGrid() {
     g.appendChild(c);
   }
   return g;
+}
+
+// ---- перекрёстки, тротуары, концы трассы ----
+// клетки перекрёстков (дорога тянется и вдоль x, и вдоль y дальше ширины улицы) с запасом m клеток вокруг
+function crossMask(m) {
+  const out = new Uint8Array(NT), run = (x, y, dx, dy) => { let n = 0; for (let k = 1; k <= RW + 2; k++) { if (get(x + dx * k, y + dy * k) !== ROAD) break; n++; } return n; };
+  for (let y = 1; y < MH - 1; y++) for (let x = 1; x < MW - 1; x++) {
+    if (map[y * MW + x] !== ROAD) continue;
+    if (run(x, y, 1, 0) + run(x, y, -1, 0) < RW + 1 || run(x, y, 0, 1) + run(x, y, 0, -1) < RW + 1) continue;
+    for (let b = -m; b <= m; b++) for (let a = -m; a <= m; a++) if (inMap(x + a, y + b, 0)) out[(y + b) * MW + x + a] = 1;
+  }
+  return out;
+}
+// урна — только на тротуаре у самой дороги, не у входа в дом и не на углу
+function curbOk(x, y) {
+  if (!D4.some(([a, b]) => get(x + a, y + b) === ROAD)) return false;
+  if (D8.some(([a, b]) => get(x + a, y + b) === DOOR || (W5PATH && W5PATH.has((y + b) * MW + x + a)))) return false;
+  return true;
+}
+// конец трассы у края района: там ни деревьев, ни кустов — дорога видна до самого перехода
+function hwEnd(x, y) {
+  const e = Math.min(x, y, MW - 1 - x, MH - 1 - y); if (e > 12) return false;
+  const c = EXIT_R + RW / 2, d = 6 + RW / 2;
+  return (Math.abs(y + .5 - c) < d && (x < 12 || x > MW - 13)) || (Math.abs(x + .5 - c) < d && (y < 12 || y > MH - 13));
+}
+
+// ---- интерьеры общественных зданий (gen 5): не только мебель вдоль стен, а планировка как в жизни ----
+// магазин, аптека, хозтовары, библиотека, склад — ряды стеллажей с проходами; у входа — касса или стойка;
+// школа и контора — ряды столов со стульями; поликлиника — стойка регистрации, стулья ожидания, палата с койками;
+// полиция — стойка дежурного и столы; пожарная часть — шкафчики и спальня; кафе — столики со стульями.
+// Каждая вещь ставится через placeFree: если мешает проходу или подходу к другой мебели — не ставится.
+function w5Interior(Hs) {
+  if (!Hs || !COMM.has(Hs.kind) || Hs.w < 7 || Hs.h < 6 || !Hs.doors.length) return;
+  const room = {x0:Hs.x + 1, y0:Hs.y + 1, x1:Hs.x + Hs.w - 2, y1:Hs.y + Hs.h - 2};
+  const d = Hs.doors[0], inw = [[0, 1], [0, -1], [1, 0], [-1, 0]][d.s];
+  const put = (t, cx, cy, wd) => {                                          // только на свободные клетки: вещи не делят клетку
+    const sz = fsizeOf(t); if (!sz) return null;
+    const sx = wd[1] !== 0 ? sz[0] : sz[1], sy = wd[1] !== 0 ? sz[1] : sz[0];
+    for (let y = Math.floor(cy - sy / 2); y <= Math.floor(cy + sy / 2 - 1e-3); y++) for (let x = Math.floor(cx - sx / 2); x <= Math.floor(cx + sx / 2 - 1e-3); x++) if (furn[y * MW + x]) return null;
+    return placeFree(Hs, room, t, cx, cy, wd);
+  };
+  const X = Hs.w >= Hs.h;                                                    // ряды — вдоль длинной стороны
+  const nearDoor = (c, y) => Math.abs(c - d.x) + Math.abs(y - d.y) < 4;
+  // стойка у входа: в двух шагах внутрь, чуть в сторону; спиной в зал
+  const desk = t => { const s = (d.s < 2 ? d.x : d.y) - (d.s < 2 ? Hs.x : Hs.y) > (d.s < 2 ? Hs.w : Hs.h) / 2 ? -1 : 1;
+    return put(t, d.x + .5 + inw[0] * 2 + (inw[1] ? s * 1.5 : 0), d.y + .5 + inw[1] * 2 + (inw[0] ? s * 1.5 : 0), inw); };
+  // ряды стеллажей: через ряд проход, посередине поперечный проход; ряды повёрнуты спинами друг к другу через один
+  const aisles = (t, from) => {
+    const a0 = X ? room.y0 + 2 : room.x0 + 2, a1 = X ? room.y1 - 2 : room.x1 - 2, b0 = X ? room.x0 + 2 : room.y0 + 2, b1 = X ? room.x1 - 2 : room.y1 - 2, mid = (b0 + b1) >> 1;
+    let n = 0;
+    for (let a = from != null ? from : a0, k = 0; a <= a1; a += 2, k++) for (let b = b0; b <= b1; b++) {
+      if (b === mid && b1 - b0 > 4) continue;
+      const x = X ? b : a, y = X ? a : b; if (nearDoor(x, y)) continue;
+      if (put(t, x + .5, y + .5, X ? [0, k % 2 ? 1 : -1] : [k % 2 ? 1 : -1, 0])) n++;
+    }
+    return n;
+  };
+  // столы рядами, у каждого стул; dir — куда смотрят сидящие (к «доске» у дальней от входа стены)
+  // стол спиной к «доске» (дальняя от входа стена), стул перед ним со стороны входа — сидящий смотрит к доске
+  const small = Math.min(Hs.w, Hs.h) <= 8, ins = small ? 1 : 2;
+  const desks = (t, chair, part) => {
+    const x0 = room.x0 + ins, x1 = room.x1 - ins, y0 = room.y0 + ins, y1 = room.y1 - ins;
+    for (let y = y0; y <= y1; y += 2) for (let x = x0; x <= x1; x += 2) {
+      if (part && !part(x, y)) continue; if (nearDoor(x, y)) continue;
+      const f = put(t, x + .5, y + .5, inw); if (f && chair) put('chair', x + .5 - inw[0], y + .5 - inw[1], inw.map(v => -v));
+    }
+  };
+  // ряд вдоль стены с дверью, через клетку от неё: стулья ожидания, лицом в зал
+  const row = (t, depth) => {
+    const along = d.s < 2 ? [1, 0] : [0, 1], a0 = d.s < 2 ? room.x0 + 1 : room.y0 + 1, a1 = d.s < 2 ? room.x1 - 1 : room.y1 - 1, dp = d.s < 2 ? d.x : d.y;
+    const base = d.s === 0 ? room.y0 : d.s === 1 ? room.y1 : d.s === 2 ? room.x0 : room.x1;
+    for (let a = a0; a <= a1; a++) { if (Math.abs(a - dp) < 3) continue;
+      const c = base + inw[0] * depth + inw[1] * depth; put(t, (d.s < 2 ? a : c) + .5, (d.s < 2 ? c : a) + .5, inw.map(v => -v)); }
+  };
+  const backHalf = (x, y) => (inw[0] ? (x - d.x) * inw[0] : (y - d.y) * inw[1]) > (inw[0] ? Hs.w : Hs.h) / 2;
+  const frontHalf = (x, y) => !backHalf(x, y);
+  switch (Hs.kind) {
+    case 'store': case 'selpo': case 'gas': desk('counter'); aisles('shelf'); break;
+    case 'pharmacy': desk('counter'); aisles('medshelf'); break;
+    case 'hardware': desk('counter'); aisles('toolrack'); break;
+    case 'library': desk('desk'); aisles('bookshelf'); put('plant', d.x + .5 + inw[0] * 1.2 + (inw[1] ? -1.5 : 0), d.y + .5 + inw[1] * 1.2 + (inw[0] ? -1.5 : 0), inw); break;
+    case 'post': desk('counter'); aisles('boxes'); break;
+    case 'warehouse': aisles('shelf'); break;
+    case 'school': case 'office': desks('wdesk', true); break;
+    case 'police': desk('counter'); desks('wdesk', true); break;
+    case 'clinic': desk('counter'); row('chair', 1); desks('bed', false, backHalf); put('plant', d.x + .5 + inw[0] * 1.2 + (inw[1] ? 1.5 : 0), d.y + .5 + inw[1] * 1.2 + (inw[0] ? 1.5 : 0), inw); break;
+    case 'fire': aisles('locker'); desks('bed', false, backHalf); break;
+    case 'cafe': desks('table', false); for (const f of furns.filter(f => f.type === 'table' && hAt[f.y * MW + f.x] === houses.indexOf(Hs) + 1)) { put('chair', f.cx + .75, f.cy, [1, 0]); put('chair', f.cx - .75, f.cy, [-1, 0]); } break;
+    case 'factory': aisles('toolrack'); break;
+    case 'autoshop': desk('counter'); break;
+  }
 }

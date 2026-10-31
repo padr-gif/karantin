@@ -84,7 +84,7 @@ function frameBody(t) {
   frameNo++; animT += dt;
   if (!$('create').hidden && ART.ready) drawPreview();
   if (panel && panel.kind === 'inv' && panel.tab === 'items' && ART.ready && frameNo % 2 === 0) drawDoll();
-  if (mode === 'play' && !paused) { const t0 = performance.now(); if (!logicOff) update(dt); FT.u = performance.now() - t0; updateParts(dt); } else FT.u = 0;
+  if (mode === 'play' && !paused) { const t0 = performance.now(); if (!logicOff) for (let s = 0; s < TSPD.n; s++) update(dt); /* ускорение времени (96-time-speed) */ FT.u = performance.now() - t0; updateParts(dt); } else FT.u = 0;
   if (mode === 'dead') { P.fall = (P.fall || 0) + dt * 2.2; updateParts(dt); camX += (P.x - camX) * .05; camY += (P.y - camY) * .05; }
   else if (mode === 'menu') menuTick(dt);                                        // живая сцена меню (82-menu)
   else if (mode === 'dead') { camX += (P.x - camX) * .05; camY += (P.y - camY) * .05; }

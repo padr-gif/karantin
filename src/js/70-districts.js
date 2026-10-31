@@ -115,6 +115,11 @@ function blockClimbPlan(dx, dy) {
 // ---- край карты: уйти в соседний район ----
 function edgeSide() {
   if (!P || world.dtype === 'tut') return null;                              // в обучении соседних районов нет
+  if (W5()) {                                                               // gen 5: на трассе — заранее, упираться в край не надо
+    const z = world.dtype === 'town' ? FEN - 5 : 5, c = EXIT_R + RW / 2, band = RW / 2 + 1.5;
+    if (Math.abs(P.y - c) < band) { if (P.x < z) return 'w'; if (P.x > MW - z) return 'e'; }
+    if (Math.abs(P.x - c) < band) { if (P.y < z) return 'n'; if (P.y > MH - z) return 's'; }
+  }
   const m = .75;
   if (P.x < m) return 'w'; if (P.x > MW - m) return 'e'; if (P.y < m) return 'n'; if (P.y > MH - m) return 's';
   return null;

@@ -67,6 +67,7 @@ function driveUpdate(dt, wx, wy, mag) {
   const tr = Math.abs(p.v) < .1 ? 0 : 2.6 * Math.max(.3, Math.min(1, Math.abs(p.v) / 2)) * (Math.abs(p.v) > 6 ? .75 : 1);
   const na = p.ang + steer * tr * Math.sign(p.v) * dt;
   const nx = p.cx + Math.cos(na) * p.v * dt, ny = p.cy + Math.sin(na) * p.v * dt;
+  carKnock(nx, ny, na, p.v);                                                // ящики и урны на пути — сбить (97-knock)
   if (!carBlocked(nx, ny, na)) { p.cx = nx; p.cy = ny; p.ang = na; }
   else if (!carBlocked(p.cx, p.cy, na)) { p.ang = na; p.v *= .5; }
   else {
@@ -131,9 +132,11 @@ function growCars() {
       const i = ty * MW + tx, t = map[i];
       if (isWallish(t) || t === TREE || t === WATER || furn[i] || (propAt[i] && propAt[i] !== id)) return false;
       if (strict && t !== ROAD) return false;
+      if (cross && cross[i]) return false;                                    // gen 5: не в перекрёстке и не у самого края его
     }
     return true;
   };
+  const cross = W5() ? crossMask(2) : null;
   const shifts = [];                                                          // поперёк — ближе к середине дороги, вдоль — до 1.5 клетки
   for (const al of [0, .5, -.5, 1, -1, 1.5, -1.5]) for (const ac of [0, .4, -.4, .8, -.8]) shifts.push([al, ac]);
   for (let k = 0; k < props.length; k++) {

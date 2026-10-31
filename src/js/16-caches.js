@@ -287,6 +287,8 @@ function playerAnim(pAtk) {
   // обыск низкой мебели и вещей на полу — присев
   if (r[0] === 'search' && A && A.f && AN('p', 'searchlow') > 1 && (LOW_FURN.has(A.f.type) || A.f.type === 'pile' || !A.f.type)) return pmLoop('searchlow');
   if (A && act === 'use' && A.an === 'read' && AN('p', 'read') > 1) return pmLoop('read');
+  if (A && act === 'use' && A.an === 'bandage' && AN('p', 'read') > 1) return pmLoop('read', 1.4);   // перевязка: руки у груди, голова опущена
+  if (A && act === 'use' && A.an === 'smoke' && AN('p', 'eat') > 1) return smokeFrame('eat');        // затяжки: рука ко рту и обратно
   { const h = !A && holdAnim(r); if (h) return h; }                        // с оружием в руках — своя стойка и походка
   if (r[0] === 'idle' || r[0] === 'search' || r[0] === 'work') return pmLoop(r[0]);   // живые циклы стояния и работы
   return r;
@@ -299,6 +301,8 @@ function playerAnimBase(pAtk) {
   const act = P.act && P.act.kind;
   if (P.thrT > 0) { const n = AN('p', 'punch'); return ['punch', Math.min(n - 1, Math.floor((1 - P.thrT / .32) * n))]; }
   if (act === 'use' && P.act.an === 'read') return ['eat', 1];
+  if (act === 'use' && P.act.an === 'bandage') return ['work', Math.floor(animT * 5) % AN('p', 'work')];
+  if (act === 'use' && P.act.an === 'smoke') return smokeFrame('eat');
   if (act === 'use') { const an = P.act.an, n = AN('p', an); if (an === 'work') return ['work', Math.floor(animT * 6) % n]; return [an, Math.min(n - 1, Math.floor(P.act.t / P.act.dur * n))]; }
   if (act === 'pickup') { const n = AN('p', 'pickup'); return ['pickup', Math.min(n - 1, Math.floor(P.act.t / P.act.dur * n))]; }
   if (act === 'search' || act === 'cook' || act === 'cookx' || act === 'forage') return ['search', Math.floor(animT * 7) % AN('p', 'search')];

@@ -1337,3 +1337,6 @@ body.invglass>*:not(#game):not(#vig):not(#panel):not(#toasts):not(svg){visibilit
 .county .cty.here{border-color:#e8473a;background:rgba(232,71,58,.12)}
 .county .cty b{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .county .cty small{display:block;color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* ускорение времени (96-time-speed) */
+.zoom .tspd{font-family:var(--f-mono);font-size:12px;font-weight:700;min-width:34px}
+.zoom .tspd.on{color:#1b1b1b;background:var(--amber);border-color:var(--amber)}

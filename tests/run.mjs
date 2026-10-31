@@ -374,14 +374,16 @@ const wl = await D(`(() => {
   const O = houses.find((h, i) => i + 1 !== k && h.kind === 'house'), other = O.open === 0 && al(O, O.x + 2, O.y + O.h - 1) === 1;
   P.x = H.x + H.w / 2; P.y = H.y + H.h + 3; for (let q = 0; q < 30; q++) houseViewUpdate(.05, ins());
   const front = H.open === 0, frontWall = al(H, H.x + 2, H.y + H.h - 1) === 1;
-  P.x = H.x + H.w / 2; P.y = H.y - 1; houseViewUpdate(.05, ins());
+  P.x = H.x + H.w / 2; P.y = H.y - .9; for (let q = 0; q < 30; q++) houseViewUpdate(.05, ins());
+  const wall = H.open === 0 && HV.ghost;                                     // v85: у задней стены дом цел, герой просвечивает
+  P.x = H.x + H.w / 2; P.y = H.y - 2.2; houseViewUpdate(.05, ins());
   const fading = H.open > 0 && H.open < 1; for (let q = 0; q < 30; q++) houseViewUpdate(.05, ins());
   const behind = H.open === 1;
-  return {open, lower, upper, other, front, frontWall, fading, behind};
+  return {open, lower, upper, other, front, frontWall, wall, fading, behind};
 })()`);
 check('внутри: крыши нет, передние стены полупрозрачные, задние — целые', wl.open && wl.lower && wl.upper, wl);
 check('чужие дома закрыты и не прозрачные', wl.other, wl);
-check('перед домом — дом целый; за домом — открывается плавно', wl.front && wl.frontWall && wl.fading && wl.behind, wl);
+check('перед домом и у задней стены — дом целый (герой просвечивает); за домом — открывается плавно', wl.front && wl.frontWall && wl.wall && wl.fading && wl.behind, wl);
 const pk = await D(`(() => {
   const ins = () => { let r = 0; houses.forEach((h, i) => { if (P.x > h.ix0 && P.x < h.ix1 && P.y > h.iy0 && P.y < h.iy1) r = i + 1; }); return r; };
   for (let hi = 0; hi < houses.length; hi++) { const H = houses[hi]; if (H.kind !== 'house') continue;
@@ -441,7 +443,7 @@ check('новая игра — gen 5; карта та же, добыча дру�
 check('в городке все здания: школа, поликлиника, автосервис, почта, библиотека, пожарная часть, полиция…',
   ['school', 'clinic', 'autoshop', 'post', 'library', 'fire', 'police', 'pharmacy', 'hardware', 'store', 'cafe', 'office', 'gas', 'warehouse', 'farm'].every(k => wB.kinds.includes(k)), wB.kinds);
 check('парк: скамейки и качели; у автосервиса машины на ремонте', wB.benches >= 4 && wB.swing && wB.shop >= 1, {b:wB.benches, s:wB.swing, shop:wB.shop});
-check('к домам ведут дорожки (≥ 90%), почтовые ящики у дороги и не у двери', wB.path >= wB.homes * .9 && wB.mails >= wB.homes * .8 && wB.mailOk === wB.mails, {homes:wB.homes, path:wB.path, mails:wB.mails, ok:wB.mailOk});
+check('к домам ведут дорожки (≥ 90%), почтовые ящики у дороги и не у двери, но не у каждого дома', wB.path >= wB.homes * .9 && wB.mails >= wB.homes * .35 && wB.mails <= wB.homes * .8 && wB.mailOk === wB.mails, {homes:wB.homes, path:wB.path, mails:wB.mails, ok:wB.mailOk});
 const wSave = await D(`(() => { const L = furns.map(f => (f.items || []).map(i => i.id).join(',')).join(';'); applySave(JSON.parse(JSON.stringify(serialize()))); return L === furns.map(f => (f.items || []).map(i => i.id).join(',')).join(';'); })()`);
 check('сохранение и загрузка: добыча та же', wSave);
 const wD = {};
@@ -457,6 +459,28 @@ check('за пределами округа дорог нет, назад — м
 const wMap = await D(`(() => { world.mapCo = true; openPanel('map'); const n = document.querySelectorAll('#pnBody .county .cty').length, here = (document.querySelector('#pnBody .county .cty.here b') || {}).textContent; world.mapCo = false; closePanel(); return {n, here}; })()`);
 check('на карте — схема округа из пяти районов', wMap.n === 5 && wMap.here === 'Берёзовка', wMap);
 await D(`delete NEWCFG.lootSeed`);
+
+console.log('v85: живой город, ускорение, сбить ящик, курение, интерьеры');
+await fresh();
+const v85 = await D(`(() => {
+  const r = {};
+  const cm = crossMask(0); r.carsInCross = props.filter(p => p.type === 'car' && p.big && cm[Math.floor(p.cy) * MW + Math.floor(p.cx)]).length;
+  r.binsOff = props.filter(p => p.type === 'bin' && !p.dead).filter(p => !D4.some(([a, b]) => get(Math.floor(p.cx) + a, Math.floor(p.cy) + b) === ROAD)).length;
+  const m = props.find(p => p.type === 'mail' && !p.down); P.x = m.cx - .9; P.y = m.cy; P.car = null;
+  r.knock = knockProp(knockNear(), 0, 6) && m.down === 1 && !m.solid;
+  const sv = JSON.parse(JSON.stringify(serialize())); applySave(sv); r.knockSaved = props[props.indexOf(props.find(p => p.down))] ? props.some(p => p.down && p.type === 'mail') : false;
+  setTimeSpeed(1); cycleTimeSpeed(); r.speed2 = TSPD.n === 2; P.hurt = .3; update(.016); r.speedReset = TSPD.n === 1; P.hurt = 0;
+  if (!P.inv.some(i => i.id === 'cigs')) P.inv.push(mkItem('cigs')); if (!P.inv.some(i => i.id === 'lighter')) P.inv.push(mkItem('lighter'));
+  P.act = null; beginUse(P.inv.findIndex(i => i.id === 'cigs')); r.smoke = P.act && P.act.an === 'smoke'; P.act = null;
+  const st = houses.find(h => h.kind === 'store'), si = houses.indexOf(st) + 1; r.storeMid = furns.filter(f => !f.gone && f.center && hAt[f.y * MW + f.x] === si && f.type === 'shelf').length;
+  const sc = houses.find(h => h.kind === 'school'), ci = houses.indexOf(sc) + 1; r.schoolDesks = furns.filter(f => !f.gone && f.center && hAt[f.y * MW + f.x] === ci && f.type === 'wdesk').length;
+  return r;
+})()`);
+check('машины не стоят в перекрёстках, урны — только у дороги', v85.carsInCross === 0 && v85.binsOff === 0, v85);
+check('почтовый ящик можно опрокинуть, он лежит и после загрузки', v85.knock && v85.knockSaved, v85);
+check('ускорение времени ×2, опасность возвращает ×1', v85.speed2 && v85.speedReset, v85);
+check('курение — анимация с затяжками', v85.smoke, v85);
+check('интерьеры: в магазине ряды стеллажей, в школе ряды парт', v85.storeMid >= 4 && v85.schoolDesks >= 4, v85);
 
 console.log('Итог смерти и прошлые жизни');
 await fresh();

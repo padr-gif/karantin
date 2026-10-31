@@ -7,8 +7,9 @@ const ART = {meta:null, imgs:{}, ready:false, failed:false};
 // память раскрываются при первом обращении: needSheet(n) → true, если уже готов; иначе начинает раскрывать и false
 // (кадр пропускается и ничего пустого не кэшируется). На планшете все 34 листа сразу — ~600 МБ, и игра тормозила.
 const ART_LAZY = n => /^pchar_/.test(n) || (n === 'furn3' && !(typeof settings !== 'undefined' && settings.smooth));   // детальная включена — furn3 сразу
-ART.src = {}; ART.pend = new Set();
+ART.src = {}; ART.pend = new Set(); ART.used = {};
 function needSheet(n) {
+  ART.used[n] = performance.now() / 1000;                                                     // когда лист нужен был последний раз (выгрузка — 93-perf)
   if (ART.imgs[n]) return true;
   const src = ART.src[n]; if (!src || ART.pend.has(n)) return false;
   ART.pend.add(n);

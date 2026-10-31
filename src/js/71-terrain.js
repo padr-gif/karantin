@@ -117,6 +117,7 @@ function bld(x, y, w, h, kind, sides) {
   buildHouse(x, y, w, h, kind, sides ? {sides} : null);
   const H = houses[n];
   if (H && BLOOK[kind]) Object.assign(H, BLOOK[kind]);
+  if (H && W5()) w5Interior(H);                                             // gen 5: планировка общественных зданий (74-world-plan)
   return H;
 }
 // дорожка от двери к ближайшей дороге (по прямой, только по траве)
@@ -178,15 +179,15 @@ function genFinish(o) {
   for (const H of houses) for (let y = H.y - 2; y <= H.y + H.h + 1; y++) for (let x = H.x - 2; x <= H.x + H.w + 1; x++) if (inMap(x, y, 0)) near[y * MW + x] = 1;
   const nearRoad = (x, y) => { for (let yy = y - 1; yy <= y + 1; yy++) for (let xx = x - 1; xx <= x + 1; xx++) { const t = get(xx, yy); if (t === ROAD || t === WALK || t === WATER) return true; } return false; };
   for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) {
-    const i = y * MW + x; if (map[i] !== GRASS || near[i] || propAt[i] || furn[i] || soil[i] || nearRoad(x, y)) continue;
+    const i = y * MW + x; if (map[i] !== GRASS || near[i] || propAt[i] || furn[i] || soil[i] || nearRoad(x, y) || (W5() && hwEnd(x, y))) continue;
     if (rng() < o.tree(x, y, hash(x * 7 + 3, y * 5 + 1))) set(x, y, TREE);
   }
   for (let i = 0; i < NT; i++) if (map[i] === WALL) { const x = i % MW, y = (i / MW) | 0; wpC[i] = pieces(x, y, HWC); wpV[i] = pieces(x, y, HWV); } else { wpC[i] = wpV[i] = null; }
   for (let i = 0; i < NT; i++) {
     if (propAt[i] || furn[i]) continue;
     const x = i % MW, y = (i / MW) | 0;
-    if (map[i] === WALK && rng() < (o.bins || .012) && !(W5PATH && W5PATH.has(i))) addProp({type:'bin', cx:x + .5, cy:y + .5, solid:true, r:[x + .3, y + .3, x + .7, y + .7], ci:ri(0, 2)}, [[x, y]]);
-    else if (map[i] === GRASS && !soil[i] && rng() < (o.bush || .04)) addProp({type:'bush', cx:x + .5, cy:y + .5, solid:false, s:.6 + rng() * .5}, [[x, y]]);
+    if (map[i] === WALK && rng() < (o.bins || .012) && !(W5PATH && (W5PATH.has(i) || !curbOk(x, y)))) addProp({type:'bin', cx:x + .5, cy:y + .5, solid:true, r:[x + .3, y + .3, x + .7, y + .7], ci:ri(0, 2)}, [[x, y]]);
+    else if (map[i] === GRASS && !soil[i] && rng() < (o.bush || .04) && !(W5() && hwEnd(x, y))) addProp({type:'bush', cx:x + .5, cy:y + .5, solid:false, s:.6 + rng() * .5}, [[x, y]]);
   }
   if (W5()) w5Mail();                                                        // gen 5: ящик сбоку от дорожки, у самой дороги
   else for (const Hs of houses) {

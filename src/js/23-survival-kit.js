@@ -145,13 +145,14 @@ function updateThrown(dt) {
 }
 // ---- timed use (eat / drink / heal) ----
 function useKind(it) {
-  if (it.id === 'rag') return ['work', 2.2]; if (it.id === 'splint') return ['work', 3];
+  if (it.id === 'rag') return ['bandage', 2.2]; if (it.id === 'splint') return ['bandage', 3];
   const d = ITEMS[it.id];
+  if (d.kind === 'smoke') return fireTool() ? ['smoke', 4] : null;            // нечем прикурить — сразу скажет об этом                                // v85: закуривает — пара затяжек, дым
   if (d.kind === 'book') return ['read', 6];
   if (d.kind === 'fun') return ['read', d.dur];
   if (d.kind === 'food') return ['eat', 1.7];
   if (d.kind === 'drink' || d.kind === 'canteen') return ['drink', 1.4];
-  if (d.kind === 'heal') return d.anim ? [d.anim, d.dur || 2] : it.id === 'bandage' ? ['work', 1.8] : ['eat', 1.1];
+  if (d.kind === 'heal') return d.anim ? [d.anim, d.dur || 2] : it.id === 'bandage' ? ['bandage', 2.2] : ['eat', 1.1];
   return null;
 }
 function beginUse(k) {
