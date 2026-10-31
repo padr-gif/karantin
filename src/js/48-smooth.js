@@ -4,7 +4,7 @@
 // are drawn HDQ times finer, textures are generated at the same density and everything is scaled with smoothing.
 let HDQ = 1;
 const hdOn = () => !!settings.smooth;
-const HD_CH_MAX = 22;   // finer chunks take HDQ² more memory: keep fewer of them
+const HD_CH_MAX = 36;   // детальные куски в HDQ² раз тяжелее (~2 МБ); 22 не хватало даже на экран — пересобирались на ходу
 // about one cache pixel per screen pixel: finer costs speed for no visible gain
 function hdQ() { return hdOn() ? Math.min(3, Math.max(2, Math.round(SCALE))) : 1; }
 // canvases stop switching smoothing off while smooth mode is on
@@ -18,7 +18,7 @@ hdCtx(mainCtx);
 const HDFOG = new Map();                       // затемнённые туманом копии: кадр в полном разрешении, LRU (50-detail)
 const RUGTEX = new Map();                      // текстуры ковров (51-surfaces)
 function hdReset() { clearCaches(); texCache.clear(); fogDirty = true; HDFOG.clear(); RUGTEX.clear(); }
-function hdApply() { const q = hdQ(); if (q !== HDQ) { HDQ = q; hdReset(); } }
+function hdApply() { const q = hdQ(); if (q !== HDQ) { HDQ = q; hdReset(); } if (HDQ > 1 && typeof needSheet === 'function' && ART.meta) needSheet('furn3'); }   // мебель детальной — раскрыть заранее
 
 // (кусок земли в детальной графике HDQ× крупнее — уменьшает mainCtx.drawImage, 73-stability)
 

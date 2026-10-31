@@ -6,7 +6,7 @@ const ART = {meta:null, imgs:{}, ready:false, failed:false};
 // мебель детальной графики (furn3) — только в детальной. Такие листы скачиваются как все (для игры без сети), но в
 // память раскрываются при первом обращении: needSheet(n) → true, если уже готов; иначе начинает раскрывать и false
 // (кадр пропускается и ничего пустого не кэшируется). На планшете все 34 листа сразу — ~600 МБ, и игра тормозила.
-const ART_LAZY = n => /^pchar_/.test(n) || n === 'furn3';
+const ART_LAZY = n => /^pchar_/.test(n) || (n === 'furn3' && !(typeof settings !== 'undefined' && settings.smooth));   // детальная включена — furn3 сразу
 ART.src = {}; ART.pend = new Set();
 function needSheet(n) {
   if (ART.imgs[n]) return true;
@@ -15,7 +15,10 @@ function needSheet(n) {
   const im = new Image(), url = typeof src === 'string' ? src : URL.createObjectURL(src);
   im.onload = () => (im.decode ? im.decode().catch(() => {}) : Promise.resolve()).then(() => {
     ART.imgs[n] = im; ART.pend.delete(n);
-    if (n === 'furn3' && typeof clearCaches === 'function') clearCaches();          // мебель была нарисована запасным способом
+    if (n === 'furn3' && typeof SPR !== 'undefined') {                        // мебель была нарисована запасным способом — пересобрать только её
+      for (const k of [...SPR.keys()]) if (typeof k === 'string' && k[0] === 'F') SPR.delete(k);
+      if (typeof HDFOG !== 'undefined') HDFOG.clear();
+    }
   });
   im.onerror = () => {                                                         // нет WebP — берём PNG; совсем не открылся — больше не пробуем
     ART.pend.delete(n);

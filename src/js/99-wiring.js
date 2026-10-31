@@ -89,6 +89,7 @@ function frameBody(t) {
   else if (mode === 'dead') { camX += (P.x - camX) * .05; camY += (P.y - camY) * .05; }
   { const t0 = performance.now(); if (renderOff) { mainCtx.setTransform(1, 0, 0, 1, 0, 0); mainCtx.fillStyle = '#0c0f12'; mainCtx.fillRect(0, 0, cv.width, cv.height); } else render(dt); FT.r = performance.now() - t0; }
   FPS.rt += FT.r; FPS.ut += FT.u;
+  if (mode === 'play' && !paused && !renderOff && FT.r + FT.u < 12) chunkAhead();   // кадр лёгкий — следующий кусок земли заранее (93-perf)
   // adaptive resolution: drop the backing-store density if the device can't keep up
   if (mode === 'play' && !paused && !resLock && raw > 0 && raw < .5) {
     if (raw > 1 / 38) { slowT += raw; fastT = 0; } else { fastT += raw; if (fastT > 4) slowT = 0; }

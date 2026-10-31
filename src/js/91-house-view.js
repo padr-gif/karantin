@@ -63,3 +63,12 @@ function drawWallView(e, draw, open) {
   const t = map[e.i], H = houses[hAt[e.i] - 1];                               // проём выделяем только у открытого дома (крыши нет)
   if (a < .98 && (t === WIN || t === DOOR) && H && H.open > .01) open(a + (Math.max(HV_OPEN_A, a) - a) * H.open);
 }
+
+// закрытый дом (крыша на месте): мебель и перегородки внутри не видны — их не рисуем (93-perf: это была самая
+// большая лишняя работа за рулём). Наружные стены рисуются всегда.
+const closedAt = i => { const h = hAt[i]; return h > 0 && mode !== 'menu' && !(houses[h - 1].open > .01); };
+function hiddenInside(x, y, i) {
+  if (!closedAt(i)) return false;
+  const H = houses[hAt[i] - 1];
+  return x > H.x && y > H.y && x < H.x + H.w - 1 && y < H.y + H.h - 1;
+}

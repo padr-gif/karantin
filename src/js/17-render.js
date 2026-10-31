@@ -51,9 +51,9 @@ function render(dt) {
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
     if (!inView(x, y)) continue;
     const i = y * MW + x, t = map[i];
-    if (isWallish(t)) dl.push({d:x + y + 1, k:1, x, y, i});
+    if (isWallish(t)) { if (!hiddenInside(x, y, i)) dl.push({d:x + y + 1, k:1, x, y, i}); }   // перегородки закрытого дома не видно — не рисуем
     else if (t === TREE) dl.push({d:x + y + 1, k:2, x, y, i});
-    if (furn[i]) { const fu = furns[furn[i] - 1]; if (fu.dt == null ? seen[i] : fu.dt === i && fu.tiles.some(t => seen[t])) dl.push({d:furnDepth(fu), k:3, x, y, i, fu}); }   // big furniture: drawn once, from its front tile
+    if (furn[i] && !closedAt(i)) { const fu = furns[furn[i] - 1]; if (fu.dt == null ? seen[i] : fu.dt === i && fu.tiles.some(t => seen[t])) dl.push({d:furnDepth(fu), k:3, x, y, i, fu}); }   // мебель закрытого дома — под крышей   // big furniture: drawn once, from its front tile
     if (propAt[i]) { const p = props[propAt[i] - 1]; if (p._f !== frameNo && !p.dyn) { p._f = frameNo; dl.push({d:p.cx + p.cy + (p.type === 'car' ? .3 : 0) + (p.dz || 0), k:7, p, i, pid:propAt[i]}); } }
   }
   {

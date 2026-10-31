@@ -13,8 +13,11 @@ function houseTex(H) {
     if (!P || mode !== 'play') return;
     scanT -= dt;
     if (scanT <= 0) {                                                          // раз в 2 с: что понадобится рядом
-      scanT = 2; const k = HDQ + ':' + Math.round(P.x / 12) + ',' + Math.round(P.y / 12);
-      if (k !== qKey) { qKey = k; queue = []; for (const H of houses) if (Math.abs(H.x + H.w / 2 - P.x) < 40 && Math.abs(H.y + H.h / 2 - P.y) < 40) queue.push(...houseTex(H)); }
+      scanT = 1; const k = HDQ + ':' + Math.round(P.x / 12) + ',' + Math.round(P.y / 12);
+      if (k !== qKey) {                                                        // ближние дома первыми; дальше 56 клеток — за рулём успеваем до них
+        qKey = k; queue = []; const d = H => Math.hypot(H.x + H.w / 2 - P.x, H.y + H.h / 2 - P.y);
+        for (const H of houses.filter(H => d(H) < 56).sort((a, b) => d(a) - d(b))) queue.push(...houseTex(H));
+      }
     }
     const t0 = performance.now(), more = () => performance.now() - t0 < 4;
     while (more()) {

@@ -147,7 +147,7 @@ function paintCanopy(name, b, pine) {
 // кадр машины цвета ci под углом ang (статичные — 4 угла, за рулём — любые из CAR_DIRS). Обе графики: в детальной
 // масштаб 2 со смягчением, в пиксельной — 1 без смягчения. Кадр 184×140 пикселей мира (~400 КБ при 2×): храним
 // не больше CARF_MAX, старые вытесняем
-const CAR_DIRS = 64, CARF_MAX = 40, CARF = new Map();
+const CAR_DIRS = 48, CARF_MAX = 80, CARF = new Map();                        // 48 углов (шаг 7.5°) помещаются в кэш целиком: за рулём не пересобираются
 function carFrame(ci, ang) {
   const S = HDQ > 1 ? 2 : 1, k = ((Math.round(ang / (Math.PI * 2) * CAR_DIRS) % CAR_DIRS) + CAR_DIRS) % CAR_DIRS;
   const key = 'painted:car_' + ci + '_' + k + '@' + S;
