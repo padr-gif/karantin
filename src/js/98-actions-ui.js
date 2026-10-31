@@ -77,6 +77,9 @@ body.popon #bAct{visibility:hidden}
     ctx = ga; ox = sox - rx / k; oy = soy - ry / k; resetT();
     try { ok = drawAlone(a); } catch (e) { ok = false; } finally { ctx = sc; ox = sox; oy = soy; resetT(); }
     if (!ok) return;
+    { const im = ga.getImageData(0, 0, rw, rh), d = im.data;                      // силуэт — только плотные пиксели: мягкая тень под машиной
+      for (let i = 3; i < d.length; i += 4) d[i] = d[i] > 150 ? 255 : 0;           // и мебелью не обводится (была светящаяся плита под машиной)
+      ga.putImageData(im, 0, 0); }
     gb.setTransform(1, 0, 0, 1, 0, 0); gb.globalCompositeOperation = 'source-over'; gb.clearRect(0, 0, rw, rh); gb.drawImage(A, 0, 0);
     gb.globalCompositeOperation = 'source-in'; gb.fillStyle = '#ffd88a'; gb.fillRect(0, 0, rw, rh); gb.globalCompositeOperation = 'source-over';
     const d = Math.max(1.5, k * 1.1);

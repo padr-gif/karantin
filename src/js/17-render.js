@@ -83,6 +83,7 @@ function render(dt) {
   for (const a of airdrops) { if (a.landed && !vis[Math.floor(a.y) * MW + Math.floor(a.x)]) continue; dl.push({d:a.landed ? a.x + a.y - .2 : a.x + a.y + 2, k:14, a}); }
   if (typeof extraDl === 'function') extraDl(dl);                         // свои объекты (собака) — в общей сортировке по глубине
   if (mode !== 'menu') dl.push({d:pD + .02, k:6});
+  carDepthFix(dl);                                                           // столбы и люди у длинной машины (26-driving)
   dl.sort((a, b) => a.d - b.d);
 
   const tgtF = curAct && curAct.f, leafTint = seasonTint();

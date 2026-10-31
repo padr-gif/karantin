@@ -153,3 +153,28 @@ function growCars() {
     for (let ty = Math.floor(p.r[1]); ty <= Math.floor(p.r[3] - 1e-3); ty++) for (let tx = Math.floor(p.r[0]); tx <= Math.floor(p.r[2] - 1e-3); tx++) propAt[ty * MW + tx] = id;
   }
 }
+
+// ---- порядок рисования рядом с машиной (v82) ----
+// Машина длинная (CAR_L), а в общей сортировке у неё одна глубина — по центру. Столб, человек или куст у её переднего
+// края по этой глубине оказывались «ближе» и рисовались поверх кузова, хотя стоят сбоку и позади. Здесь для всего,
+// что рядом (≤3 клеток), порядок решается по положению относительно кузова: позади кузова — до машины, перед — после.
+// Ось выбирается по тому, за какую грань кузова точка выступает дальше; работает и для машины под углом.
+function carDepthFix(dl) {
+  let cars = null;
+  for (const e of dl) if (e.k === 16 || (e.k === 7 && e.p.type === 'car')) (cars || (cars = [])).push(e);
+  if (!cars) return;
+  const pos = e => e.k === 5 ? [e.z.x, e.z.y] : e.k === 6 ? [P.x, P.y] : e.k === 7 ? [e.p.cx, e.p.cy] : e.k === 2 ? [e.x + .5, e.y + .5] : e.k === 8 ? [e.c.x, e.c.y] : e.k === 10 ? [e.p.x, e.p.y] : null;
+  for (const c of cars) {
+    const p = c.p, a = p.dyn ? p.ang : carAng(p), dx = Math.cos(a), dy = Math.sin(a), nx = -dy, ny = dx;
+    for (const e of dl) {
+      if (e === c || (e.k === 7 && e.p.type === 'car') || e.k === 16) continue;
+      const q = pos(e); if (!q) continue;
+      const rx = q[0] - p.cx, ry = q[1] - p.cy; if (rx * rx + ry * ry > 9) continue;
+      const u = rx * dx + ry * dy, v = rx * nx + ry * ny, eu = Math.abs(u) - CAR_L / 2, ev = Math.abs(v) - CAR_W / 2;
+      if (eu <= 0 && ev <= 0) continue;                                       // внутри кузова (сидит в машине) — как есть
+      const side = eu > ev ? Math.sign(u) * (dx + dy) : Math.sign(v) * (nx + ny);   // > 0 — со стороны камеры
+      if (side < -1e-3 && e.d > c.d) e.d = c.d - .001;
+      else if (side > 1e-3 && e.d < c.d) e.d = c.d + .001;
+    }
+  }
+}
