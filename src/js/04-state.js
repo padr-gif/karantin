@@ -42,6 +42,7 @@ function newGameCore(o) {
   rng = mulberry32(world.seed);
   generate();
   { const Lm = DIFF[world.diff].loot; for (const c of furns.filter(f => CONT[f.type].loot).concat(props.filter(p => p.type === 'car'))) { if (Lm > 1 && rng() < Lm - 1) c.items.push(mkItem(pick(CONT[c.type].loot))); if (Lm < 1) c.items = c.items.filter(() => rng() < Lm + .1); } }
+  growCars();                                                                 // машины в полный размер (26-driving): после раздачи добычи — она тратит случайные числа по числу машин
   const homes = houses.map((h, i) => [h, i]).filter(([h]) => h.kind === 'house' && !h.hideout && h.rooms);
   const [Hs, hi] = pick(homes); spawnHouse = hi + 1;
   for (const d of Hs.doors) { const o = obs[d.y * MW + d.x]; if (o) o.locked = false; }

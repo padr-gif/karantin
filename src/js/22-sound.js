@@ -228,16 +228,17 @@ function drawShopSign(Hs, a) {
   ctx.globalAlpha = 1;
 }
 function drawCarExtras(p, f) {
+  // размеры — под машину CAR_L × CAR_W (v80): мигалка на крыше (z ≈ 45), тент военных — над задней половиной
   if (p.police) {
-    const on = Math.floor(animT * 5) % 2, zx = SX(p.cx, p.cy), zy = SY(p.cx, p.cy, 25);
-    ctx.fillStyle = C([30, 30, 34], f); ctx.fillRect(zx - 5, zy - 1, 10, 3);
-    ctx.fillStyle = on ? '#ff3b30' : '#6a1a16'; ctx.fillRect(zx - 4.5, zy - 1.5, 4, 2);
-    ctx.fillStyle = on ? '#1c3f8a' : '#3d7bff'; ctx.fillRect(zx + .5, zy - 1.5, 4, 2);
-    if (lightLevel() < .7) { ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(zx, zy, 0, zx, zy, 22); g.addColorStop(0, on ? 'rgba(255,60,50,.35)' : 'rgba(60,110,255,.35)'); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(zx, zy, 22, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; }
+    const on = Math.floor(animT * 5) % 2, zx = SX(p.cx, p.cy), zy = SY(p.cx, p.cy, 46);
+    ctx.fillStyle = C([30, 30, 34], f); ctx.fillRect(zx - 9, zy - 2, 18, 5);
+    ctx.fillStyle = on ? '#ff3b30' : '#6a1a16'; ctx.fillRect(zx - 8, zy - 2.5, 7.5, 3.5);
+    ctx.fillStyle = on ? '#1c3f8a' : '#3d7bff'; ctx.fillRect(zx + .5, zy - 2.5, 7.5, 3.5);
+    if (lightLevel() < .7) { ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(zx, zy, 0, zx, zy, 40); g.addColorStop(0, on ? 'rgba(255,60,50,.35)' : 'rgba(60,110,255,.35)'); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(zx, zy, 40, 0, 6.283); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; }
   }
   if (p.army) {
-    const back = p.flip ? 1 : -1;
-    if (p.dir === 'x') { const xa = p.cx + back * .05, xb = p.cx + back * .92; box(Math.min(xa, xb), p.cy - .4, Math.max(xa, xb), p.cy + .4, 12, 36, [86, 100, 70], f); }
-    else { const ya = p.cy + back * .05, yb = p.cy + back * .92; box(p.cx - .4, Math.min(ya, yb), p.cx + .4, Math.max(ya, yb), 12, 36, [86, 100, 70], f); }
+    const back = p.flip ? 1 : -1, hw = CAR_W / 2 - .04;
+    if (p.dir === 'x') { const xa = p.cx + back * .1, xb = p.cx + back * (CAR_L / 2 - .08); box(Math.min(xa, xb), p.cy - hw, Math.max(xa, xb), p.cy + hw, 22, 66, [86, 100, 70], f); }
+    else { const ya = p.cy + back * .1, yb = p.cy + back * (CAR_L / 2 - .08); box(p.cx - hw, Math.min(ya, yb), p.cx + hw, Math.max(ya, yb), 22, 66, [86, 100, 70], f); }
   }
 }

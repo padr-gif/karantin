@@ -110,7 +110,7 @@ function drawLootMarks() {
     if (Math.abs(f.cx - P.x) > 9 || Math.abs(f.cy - P.y) > 9 || !vis[f.y * MW + f.x]) continue;
     mark(f.cx, f.cy, 38, `rgba(232,180,70,${pulse})`);
   }
-  for (const p of near.p) if (p.type === 'car' && !p.searched && Math.abs(p.cx - P.x) < 9 && Math.abs(p.cy - P.y) < 9 && vis[Math.floor(p.cy) * MW + Math.floor(p.cx)]) mark(p.cx, p.cy, 34, `rgba(232,180,70,${pulse})`);
+  for (const p of near.p) if (p.type === 'car' && !p.searched && Math.abs(p.cx - P.x) < 9 && Math.abs(p.cy - P.y) < 9 && vis[Math.floor(p.cy) * MW + Math.floor(p.cx)]) mark(p.cx, p.cy, 58, `rgba(232,180,70,${pulse})`);
   if (tapMark && tapMark.t > 0) { const sx = SX(tapMark.x, tapMark.y), sy = SY(tapMark.x, tapMark.y, 0); ctx.strokeStyle = `rgba(232,180,70,${tapMark.t})`; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(sx, sy, 10 * (1.4 - tapMark.t * .5), 5 * (1.4 - tapMark.t * .5), 0, 0, 6.283); ctx.stroke(); }
   if (goTo) { const sx = SX(goTo.x, goTo.y), sy = SY(goTo.x, goTo.y, 0); ctx.strokeStyle = 'rgba(232,180,70,.8)'; ctx.setLineDash([2, 2]); ctx.lineWidth = .8; ctx.beginPath(); ctx.moveTo(SX(P.x, P.y), SY(P.x, P.y, 0)); ctx.lineTo(sx, sy); ctx.stroke(); ctx.setLineDash([]); }
 }

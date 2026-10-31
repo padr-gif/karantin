@@ -120,7 +120,7 @@ function render(dt) {
     } else if (e.k === 7) {
       const p = e.p, f = fogF(e.i);
       const on = p.type === 'lamp' && powerOn() && lightLevel() < .6 && !(p.flick && Math.sin(animT * 23 + p.cx) > .7);
-      if (p.proc) drawProc(p, f); else { objAt('P' + e.pid, propName(p, on), p.cx, p.cy, f, null, 0, p.type === 'bush' ? leafTint : null); if (p.type === 'car' && (p.police || p.army)) drawCarExtras(p, f); }
+      if (p.proc) drawProc(p, f); else if (p.type === 'car') { drawCarProp(p, f) || objAt('P' + e.pid, propName(p, on), p.cx, p.cy, f); if (p.police || p.army) drawCarExtras(p, f); } else objAt('P' + e.pid, propName(p, on), p.cx, p.cy, f, null, 0, p.type === 'bush' ? leafTint : null);
       if (p === tgtF) drawHi(p);
     } else if (e.k === 9) {
       const fi = e.fi;
@@ -191,7 +191,7 @@ function render(dt) {
     { const dk = mode === 'play' && L < .75 && inside && !roomLitAt(P.x, P.y); hole(SX(P.x, P.y) / 2, SY(P.x, P.y, U * .9) / 2, dk ? vr * .55 : vr, dk ? .55 : 1); }   // свет выключен — темно
     const fireGlow = [];
     for (const fi of fires) if (!fi.out) { const sx = SX(fi.x, fi.y), sy = SY(fi.x, fi.y, 6); if (sx > -200 && sx < W + 200 && sy > -200 && sy < H + 200) { const fl2 = 1 + Math.sin(animT * 11 + fi.seed * 7) * .06; hole(sx / 2, sy / 2, U * 2.6 * fl2, .95); fireGlow.push([sx, sy, fl2]); } }
-    for (const p of dynCars) if (p.engine) for (let q = 1; q <= 3; q++) { const bx = p.cx + Math.cos(p.ang) * (q * 1.4 + .6), by = p.cy + Math.sin(p.ang) * (q * 1.4 + .6); hole(SX(bx, by) / 2, SY(bx, by, 0) / 2, U * (.8 + q * .5), .9); }
+    for (const p of dynCars) if (p.engine) for (let q = 1; q <= 3; q++) { const bx = p.cx + Math.cos(p.ang) * (q * 1.4 + 1.5), by = p.cy + Math.sin(p.ang) * (q * 1.4 + 1.5); hole(SX(bx, by) / 2, SY(bx, by, 0) / 2, U * (.8 + q * .5), .9); }
     for (const f of flares) { const sx = SX(f.x, f.y), sy = SY(f.x, f.y, 4); hole(sx / 2, sy / 2, U * 3, .9); }
     for (const s of gunFx) hole(SX(s.x0, s.y0) / 2, SY(s.x0, s.y0, U) / 2, U * 2.8, Math.min(.95, s.t * 9));
     for (const b of blazes) { const sx = SX(b.x, b.y), sy = SY(b.x, b.y, 6); hole(sx / 2, sy / 2, U * 3.4, .95); fireGlow.push([sx, sy, 1.4]); }

@@ -77,9 +77,8 @@ function paintedFrame(name) {
   if (fr !== undefined) return fr;
   fr = null;
   const m = /^(pine|tree)_\d+_c$/.exec(name), base = ART.meta.frames[name];
-  const car = /^car_(\d+)_(px|py|nx|ny)$/.exec(name);
-  if (base && ART.imgs[base[0]]) {
-    try { fr = m ? paintCanopy(name, base, m[1] === 'pine') : car ? paintCar(name, base, +car[1], car[2]) : null; }
+  if (m && base && ART.imgs[base[0]]) {
+    try { fr = paintCanopy(name, base, m[1] === 'pine'); }
     catch (e) { fr = null; logErr(e, 'painted ' + name); }
   }
   PAINTED.set(name, fr);
@@ -145,37 +144,36 @@ function paintCanopy(name, b, pine) {
 // фары, решётка, бамперы, стыки дверей, мягкая тень. Машина строится в своих осях (u — вдоль, перёд на +u; v — поперёк;
 // z — высота в пикселях мира) и поворачивается под кадр: px — вдоль x передом к +x, nx — передом к −x, py/ny — то же по y.
 // Видимые грани выбираются по обходу на экране, свет — сверху и со стороны +y, как у стен.
-function paintCar(name, b, ci, dir) {
-  const S = 3, w = b[3] * S, h = b[4] * S, ax = b[5] * S, ay = b[6] * S;
-  const rot = {px:(u, v) => [u, v], nx:(u, v) => [-u, -v], py:(u, v) => [-v, u], ny:(u, v) => [v, -u]}[dir];
-  const key = 'painted:' + name; ART.imgs[key] = carModel(w, h, ax, ay, S, ci, rot);
-  return [key, 0, 0, w, h, ax, ay, S];
-}
-// машина под любым углом (за рулём, 26-driving): 64 направления, каждое рисуется один раз при первой нужде.
-// Масштаб — как у детальной графики (HDQ, обычно 2): кадр ~140 КБ; храним не больше CARDYN_MAX, старые вытесняем
-const CAR_DIRS = 64, CARDYN_MAX = 96, CARDYN = new Map();
-function carDynFrame(ci, ang) {
-  const S = Math.max(2, HDQ), k = ((Math.round(ang / (Math.PI * 2) * CAR_DIRS) % CAR_DIRS) + CAR_DIRS) % CAR_DIRS;
-  const key = 'painted:cardyn_' + ci + '_' + k + '@' + S;
-  let fr = CARDYN.get(key);
-  if (fr !== undefined) { CARDYN.delete(key); CARDYN.set(key, fr); return fr; }
-  const w = 104 * S, h = 84 * S, ax = 52 * S, ay = 54 * S, a = k / CAR_DIRS * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
+// кадр машины цвета ci под углом ang (статичные — 4 угла, за рулём — любые из CAR_DIRS). Обе графики: в детальной
+// масштаб 2 со смягчением, в пиксельной — 1 без смягчения. Кадр 184×140 пикселей мира (~400 КБ при 2×): храним
+// не больше CARF_MAX, старые вытесняем
+const CAR_DIRS = 64, CARF_MAX = 40, CARF = new Map();
+function carFrame(ci, ang) {
+  const S = HDQ > 1 ? 2 : 1, k = ((Math.round(ang / (Math.PI * 2) * CAR_DIRS) % CAR_DIRS) + CAR_DIRS) % CAR_DIRS;
+  const key = 'painted:car_' + ci + '_' + k + '@' + S;
+  let fr = CARF.get(key);
+  if (fr !== undefined) { CARF.delete(key); CARF.set(key, fr); return fr; }
+  const w = 184 * S, h = 140 * S, ax = 92 * S, ay = 94 * S, a = k / CAR_DIRS * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
   try { ART.imgs[key] = carModel(w, h, ax, ay, S, ci, (u, v) => [u * c - v * s, u * s + v * c]); fr = [key, 0, 0, w, h, ax, ay, S]; }
   catch (e) { logErr(e, 'painted car'); fr = null; }
-  CARDYN.set(key, fr);
-  if (CARDYN.size > CARDYN_MAX) { const old = CARDYN.keys().next().value; CARDYN.delete(old); delete ART.imgs[old]; }
+  CARF.set(key, fr);
+  if (CARF.size > CARF_MAX) { const old = CARF.keys().next().value; CARF.delete(old); delete ART.imgs[old]; }
   return fr;
 }
+// неподвижная машина (17-render, 98-actions-ui): та же модель, что за рулём
+function drawCarProp(p, f) { return drawPaintedAt(carFrame(p.ci, carAng(p)), p.cx, p.cy, f); }
 // модель машины: холст w×h, точка опоры (центр машины на земле) ax,ay, масштаб S, поворот rot(u,v) → (x,y) мира
-function carModel(w, h, ax, ay, S, ci, rot) {
+// Модель описана в «малых» единицах (длина 1.86, крыша 25) и растягивается: по земле ×2, по высоте ×1.8 (CAR_L × CAR_W);
+// S — масштаб проекции, толщины линий, фары и размытие — ×1.9 от него
+function carModel(w, h, ax, ay, PS, ci, rot0) {
   const cv = mkCanvas(w, h), g = cv.getContext('2d');
-  const col = CARC[ci] || [120, 120, 120];
-  const P3 = (u, v, z) => { const [x, y] = rot(u, v); return [ax + (x - y) * 30 * S, ay + ((x + y) * 15 - z) * S]; };
+  const col = CARC[ci] || [120, 120, 120], KZ = 1.8, S = PS * 1.9, rot = (u, v) => rot0(u * 2, v * 2);
+  const P3 = (u, v, z) => { const [x, y] = rot(u, v); return [ax + (x - y) * 30 * PS, ay + ((x + y) * 15 - z * KZ) * PS]; };
   const rgb = (c, k, a) => `rgba(${Math.min(255, c[0] * k) | 0},${Math.min(255, c[1] * k) | 0},${Math.min(255, c[2] * k) | 0},${a == null ? 1 : a})`;
   const area = pts => { let s = 0; for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; s += p[0] * q[1] - q[0] * p[1]; } return s; };
   // свет грани по её нормали (в осях мира, высота в «клетках» ≈ z/32)
   const light = q => {
-    const W3 = q.map(([u, v, z]) => { const [x, y] = rot(u, v); return [x, y, z / 32]; });
+    const W3 = q.map(([u, v, z]) => { const [x, y] = rot(u, v); return [x, y, z * KZ / 32]; });
     const a = W3[1].map((c, i) => c - W3[0][i]), c2 = W3[W3.length - 1].map((c, i) => c - W3[0][i]);
     let n = [a[1] * c2[2] - a[2] * c2[1], a[2] * c2[0] - a[0] * c2[2], a[0] * c2[1] - a[1] * c2[0]];
     const l = Math.hypot(...n) || 1; n = n.map(c => c / l);
@@ -264,7 +262,8 @@ function carModel(w, h, ax, ay, S, ci, rot) {
   prism([-.48, .42, -Wd + .05, Wd - .05, 16.5], [-.32, .2, -Wd + .1, Wd - .1, 25], col, [winSide, winEnd, winSide, winEnd, null], .1);
   for (const u of [-.56, .56]) for (const s of [1, -1]) if (vis(0, s)) wheel(u, s);
   // мягкость: лёгкое размытие краёв, как у остальных детальных кадров
-  const out = mkCanvas(w, h), og = out.getContext('2d'); og.filter = `blur(${(S * .28).toFixed(2)}px)`; og.drawImage(cv, 0, 0);
+  if (PS <= 1) return cv;                                                     // пиксельная графика: без смягчения
+  const out = mkCanvas(w, h), og = out.getContext('2d'); og.filter = `blur(${(PS * .28).toFixed(2)}px)`; og.drawImage(cv, 0, 0);
   return out;
 }
 
@@ -273,7 +272,7 @@ function drawPaintedAt(fr, wx, wy, f) {
   if (!fr) return false;
   const s = fr[7] || 1, src = f >= .99 ? ART.imgs[fr[0]] : hdFogged(fr, f);
   const q = DPR || 1, x = Math.round((SX(wx, wy) - fr[5] / s) * q) / q, y = Math.round((SY(wx, wy, 0) - fr[6] / s) * q) / q;
-  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  ctx.imageSmoothingEnabled = s > 1; ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(src, x, y, fr[3] / s, fr[4] / s);
   ctx.imageSmoothingEnabled = false;
   return true;

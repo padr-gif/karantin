@@ -1,15 +1,15 @@
 // ================= driving =================
-const CAR_L = 1.9, CAR_W = .84;
+const CAR_L = 3.8, CAR_W = 1.64;                                             // ~4.2 × 1.8 м: машина по плечо герою (v80: была вдвое меньше)
 let dynCars = [];
 const wrapA = a => Math.atan2(Math.sin(a), Math.cos(a));
 function carIdx(p) { return props.indexOf(p) + 1; }
 function carAng(p) { return p.ang != null ? p.ang : p.dir === 'x' ? (p.flip ? Math.PI : 0) : (p.flip ? -Math.PI / 2 : Math.PI / 2); }
-function carCircles(x, y, a) { const dx = Math.cos(a), dy = Math.sin(a); return [-.62, 0, .62].map(k => [x + dx * k, y + dy * k]); }
+function carCircles(x, y, a) { const dx = Math.cos(a), dy = Math.sin(a); return [-1.28, -.43, .43, 1.28].map(k => [x + dx * k, y + dy * k]); }
 function carBlocked(x, y, a) {
   const dx = Math.cos(a), dy = Math.sin(a), nx = -dy, ny = dx;
-  for (const [cx, cy] of carCircles(x, y, a)) if (blocked(cx, cy, .36)) return true;
-  for (const u of [-.93, -.45, 0, .45, .93]) for (const w of [-.4, .4]) if (blocked(x + dx * u + nx * w, y + dy * u + ny * w, .05)) return true;
-  for (const w of [-.2, .2]) for (const u of [-.95, .95]) if (blocked(x + dx * u + nx * w, y + dy * u + ny * w, .05)) return true;
+  for (const [cx, cy] of carCircles(x, y, a)) if (blocked(cx, cy, .72)) return true;
+  for (const u of [-1.86, -1.4, -.93, -.47, 0, .47, .93, 1.4, 1.86]) for (const w of [-.8, .8]) if (blocked(x + dx * u + nx * w, y + dy * u + ny * w, .05)) return true;
+  for (const w of [-.55, 0, .55]) for (const u of [-1.9, 1.9]) if (blocked(x + dx * u + nx * w, y + dy * u + ny * w, .05)) return true;
   return false;
 }
 function unparkCar(p) {
@@ -20,9 +20,10 @@ function parkCar(p) {
   const id = carIdx(p), a = p.ang, cs = carCircles(p.cx, p.cy, a);
   let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
   for (const [cx, cy] of cs) {
-    x0 = Math.min(x0, cx - .38); y0 = Math.min(y0, cy - .38); x1 = Math.max(x1, cx + .38); y1 = Math.max(y1, cy + .38);
-    const tx = Math.floor(cx), ty = Math.floor(cy), i = ty * MW + tx;
-    if (tx >= 0 && ty >= 0 && tx < MW && ty < MH && !propAt[i]) propAt[i] = id;
+    x0 = Math.min(x0, cx - .7); y0 = Math.min(y0, cy - .7); x1 = Math.max(x1, cx + .7); y1 = Math.max(y1, cy + .7);
+  }
+  for (let ty = Math.floor(y0); ty <= Math.floor(y1 - 1e-3); ty++) for (let tx = Math.floor(x0); tx <= Math.floor(x1 - 1e-3); tx++) {
+    const i = ty * MW + tx; if (tx >= 0 && ty >= 0 && tx < MW && ty < MH && !propAt[i]) propAt[i] = id;
   }
   p.r = [x0, y0, x1, y1];
 }
@@ -39,7 +40,8 @@ function exitCar() {
   const p = P.car; if (!p) return;
   if (Math.abs(p.v) > 2) { toast('Сначала остановись'); return; }
   const a = p.ang, nx = -Math.sin(a), ny = Math.cos(a);
-  const spots = [[nx * 1.05, ny * 1.05], [-nx * 1.05, -ny * 1.05], [Math.cos(a) * 1.5, Math.sin(a) * 1.5], [-Math.cos(a) * 1.5, -Math.sin(a) * 1.5], [nx * 1.6, ny * 1.6], [-nx * 1.6, -ny * 1.6]];
+  const fx = Math.cos(a), fy = Math.sin(a);                                  // у двери водителя, у пассажирской, спереди, сзади, чуть дальше
+  const spots = [[nx * 1.25 + fx * .3, ny * 1.25 + fy * .3], [-nx * 1.25 + fx * .3, -ny * 1.25 + fy * .3], [fx * 2.4, fy * 2.4], [-fx * 2.4, -fy * 2.4], [nx * 1.8, ny * 1.8], [-nx * 1.8, -ny * 1.8]];
   const s = spots.find(([ox, oy]) => !blocked(p.cx + ox, p.cy + oy, .27));
   if (!s) { toast('Двери не открыть: вокруг тесно'); return; }
   p.v = 0; p.engine = false; P.car = null;
@@ -77,9 +79,9 @@ function driveUpdate(dt, wx, wy, mag) {
   // zombies: ram at speed, get pushed at low speed
   const dx = Math.cos(p.ang), dy = Math.sin(p.ang);
   for (const z of zs.slice()) {
-    const rx = z.x - p.cx, ry = z.y - p.cy, along = Math.max(-.95, Math.min(.95, rx * dx + ry * dy));
+    const rx = z.x - p.cx, ry = z.y - p.cy, along = Math.max(-CAR_L / 2, Math.min(CAR_L / 2, rx * dx + ry * dy));
     const qx = p.cx + dx * along, qy = p.cy + dy * along, d = Math.hypot(z.x - qx, z.y - qy);
-    if (d > .44 + z.r) continue;
+    if (d > CAR_W / 2 + z.r) continue;
     const sp = Math.abs(p.v);
     if (sp > 1.2) {
       const dmg = sp * sp * 1.6 + sp * 3; z.hp -= dmg; z.stun = .6;
@@ -96,7 +98,7 @@ function driveUpdate(dt, wx, wy, mag) {
 function drawCarDyn(p, f) {
   const a = p.ang, dx = Math.cos(a), dy = Math.sin(a), ax = p.cx - dx * CAR_L / 2, ay = p.cy - dy * CAR_L / 2;
   const col = CARC[p.ci] || [120, 120, 120], nx = -dy, ny = dx;
-  const painted = HDQ > 1 && drawPaintedAt(carDynFrame(p.ci, a), p.cx, p.cy, f);   // детальная графика: рисованная модель (90-painted)
+  const painted = drawPaintedAt(carFrame(p.ci, a), p.cx, p.cy, f);           // рисованная модель, обе графики (90-painted)
   if (!painted) {
     ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath();
     const sh = [[ax + nx * .5, ay + ny * .5], [ax + dx * CAR_L + nx * .5, ay + dy * CAR_L + ny * .5], [ax + dx * CAR_L - nx * .5, ay + dy * CAR_L - ny * .5], [ax - nx * .5, ay - ny * .5]];
@@ -106,7 +108,7 @@ function drawCarDyn(p, f) {
     obox(ax + dx * .5, ay + dy * .5, dx, dy, .92, CAR_W * .84, 15, 24, [52, 64, 76], f);
     obox(ax + dx * .56, ay + dy * .56, dx, dy, .8, CAR_W * .8, 24, 26, col, f);
   }
-  if (p.police) { const zx = SX(p.cx, p.cy), zy = SY(p.cx, p.cy, 28); ctx.fillStyle = Math.floor(animT * 5) % 2 ? '#ff3b30' : '#3d7bff'; ctx.fillRect(zx - 3, zy - 1.5, 6, 2); }
+  if (p.police) { const zx = SX(p.cx, p.cy), zy = SY(p.cx, p.cy, 47); ctx.fillStyle = Math.floor(animT * 5) % 2 ? "#ff3b30" : "#3d7bff"; ctx.fillRect(zx - 7, zy - 2.5, 14, 4); }
   const lights = p.engine ? '#ffe9a8' : C([200, 196, 170], f);
   if (!painted || p.engine) for (const s of [1, -1]) {                       // у рисованной модели фары свои — поверх только горящие
     const fx = ax + dx * (CAR_L - .02) + nx * s * .3, fy = ay + dy * (CAR_L - .02) + ny * s * .3, bx = ax + dx * .02 + nx * s * .3, by = ay + dy * .02 + ny * s * .3;
@@ -114,4 +116,40 @@ function drawCarDyn(p, f) {
     ctx.fillStyle = p.engine && p.v < -.1 ? '#ffffff' : '#c0281e'; ctx.fillRect(SX(bx, by) - 1.2, SY(bx, by, 11) - 1, 2.4, 2);
   }
   if (p.hp < 40) { if (!reduceMotion && Math.random() < .15) emit('smoke', ax + dx * CAR_L, ay + dy * CAR_L, .5, 1, null, 0, .3); }
+}
+
+// ---- машины крупнее (v80) ----
+// Генерация мира ставит машину на 2 клетки (1.9 × 0.84). Её не трогаем: номера объектов и случайные числа те же,
+// старые сохранения (машины в них — по номеру) грузятся как раньше. После генерации каждую машину увеличиваем
+// вокруг центра до CAR_L × CAR_W, двигаем поперёк, чтобы стояла на дороге, и вдоль, если налезает на соседку.
+// Если места нет совсем — машина убирается (type 'gone'), но остаётся в списке, чтобы номера остальных не сдвинулись.
+function carRectAt(cx, cy, dir) { const a = CAR_L / 2, b = CAR_W / 2; return dir === 'x' ? [cx - a, cy - b, cx + a, cy + b] : [cx - b, cy - a, cx + b, cy + a]; }
+function growCars() {
+  const fitTiles = (R, id, strict) => {
+    for (let ty = Math.floor(R[1]); ty <= Math.floor(R[3] - 1e-3); ty++) for (let tx = Math.floor(R[0]); tx <= Math.floor(R[2] - 1e-3); tx++) {
+      if (tx < 0 || ty < 0 || tx >= MW || ty >= MH) return false;
+      const i = ty * MW + tx, t = map[i];
+      if (isWallish(t) || t === TREE || t === WATER || furn[i] || (propAt[i] && propAt[i] !== id)) return false;
+      if (strict && t !== ROAD) return false;
+    }
+    return true;
+  };
+  const shifts = [];                                                          // поперёк — ближе к середине дороги, вдоль — до 1.5 клетки
+  for (const al of [0, .5, -.5, 1, -1, 1.5, -1.5]) for (const ac of [0, .4, -.4, .8, -.8]) shifts.push([al, ac]);
+  for (let k = 0; k < props.length; k++) {
+    const p = props[k]; if (p.type !== 'car' || p.big) continue;
+    const id = k + 1, onRoad = get(Math.floor(p.cx), Math.floor(p.cy)) === ROAD;
+    for (let i = 0; i < NT; i++) if (propAt[i] === id) propAt[i] = 0;
+    let best = null;
+    for (const strict of onRoad ? [true, false] : [false]) {
+      for (const [al, ac] of shifts) {
+        const cx = p.cx + (p.dir === 'x' ? al : ac), cy = p.cy + (p.dir === 'x' ? ac : al), R = carRectAt(cx, cy, p.dir);
+        if (fitTiles(R, id, strict)) { best = [cx, cy, R]; break; }
+      }
+      if (best) break;
+    }
+    if (!best) { p.type = 'gone'; p.solid = false; continue; }                 // не влезла: убрать, номер оставить
+    p.cx = best[0]; p.cy = best[1]; p.r = best[2]; p.big = true;
+    for (let ty = Math.floor(p.r[1]); ty <= Math.floor(p.r[3] - 1e-3); ty++) for (let tx = Math.floor(p.r[0]); tx <= Math.floor(p.r[2] - 1e-3); tx++) propAt[ty * MW + tx] = id;
+  }
 }

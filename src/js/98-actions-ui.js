@@ -60,7 +60,7 @@ body.popon #bAct{visibility:hidden}
     const f = a.f; if (!f) return false;
     if (f.wd && furns.includes(f)) { if (f._fi == null || furns[f._fi] !== f) f._fi = furns.indexOf(f); objAtDraw('F' + (f._fi + 1), furnName(f), f.cx, f.cy, 1, 1); return true; }
     if (typeof dynCars !== 'undefined' && dynCars.includes(f)) { drawCarDyn(f, 1); return true; }
-    if (props.includes(f)) { if (f.proc) drawProc(f, 1); else { if (f._pi == null || props[f._pi] !== f) f._pi = props.indexOf(f); objAt('P' + (f._pi + 1), propName(f, false), f.cx, f.cy, 1, null, 0, null); } return true; }
+    if (props.includes(f)) { if (f.proc) drawProc(f, 1); else if (f.type === 'car' && drawCarProp(f, 1)) { if (f.police || f.army) drawCarExtras(f, 1); } else { if (f._pi == null || props[f._pi] !== f) f._pi = props.indexOf(f); objAt('P' + (f._pi + 1), propName(f, false), f.cx, f.cy, 1, null, 0, null); } return true; }
     return false;
   }
   // кольцо считается один раз на цель (и раз в полсекунды — вдруг дверь открылась), а каждый кадр только
