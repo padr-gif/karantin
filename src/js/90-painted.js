@@ -277,3 +277,10 @@ function drawPaintedAt(fr, wx, wy, f) {
   ctx.imageSmoothingEnabled = false;
   return true;
 }
+
+// лист героя раскрываем заранее (15-art: листы по требованию), чтобы в начале игры он не пропадал на полсекунды
+function preloadHeroSheets() {
+  try { const lk = P && P.look || look, f = ART.meta && ART.meta.frames['p' + lk.g + heroVar(lk) + '_idle_0_0']; if (f) { needSheet(f[0]); needSheet(f[0] + 'r'); } } catch (e) {}
+}
+onStartNew(preloadHeroSheets); onLoad(preloadHeroSheets);
+onUpdate(() => { if (frameNo % 60 === 0) preloadHeroSheets(); });             // сменил одежду — нужный лист подтянется заранее

@@ -2,6 +2,28 @@
 // Sprites live in art/*.png with rects in art/atlas.json (made by gen.py). Character sheets are
 // palette-key encoded (R = slot*16+8, G = shade*64+32) and recoloured here per palette.
 const ART = {meta:null, imgs:{}, ready:false, failed:false};
+// ---- листы по требованию (v81): героев 24 листа (оба пола × одежда, ~400 МБ в памяти), а в игре нужны 2;
+// мебель детальной графики (furn3) — только в детальной. Такие листы скачиваются как все (для игры без сети), но в
+// память раскрываются при первом обращении: needSheet(n) → true, если уже готов; иначе начинает раскрывать и false
+// (кадр пропускается и ничего пустого не кэшируется). На планшете все 34 листа сразу — ~600 МБ, и игра тормозила.
+const ART_LAZY = n => /^pchar_/.test(n) || n === 'furn3';
+ART.src = {}; ART.pend = new Set();
+function needSheet(n) {
+  if (ART.imgs[n]) return true;
+  const src = ART.src[n]; if (!src || ART.pend.has(n)) return false;
+  ART.pend.add(n);
+  const im = new Image(), url = typeof src === 'string' ? src : URL.createObjectURL(src);
+  im.onload = () => (im.decode ? im.decode().catch(() => {}) : Promise.resolve()).then(() => {
+    ART.imgs[n] = im; ART.pend.delete(n);
+    if (n === 'furn3' && typeof clearCaches === 'function') clearCaches();          // мебель была нарисована запасным способом
+  });
+  im.onerror = () => {                                                         // нет WebP — берём PNG; совсем не открылся — больше не пробуем
+    ART.pend.delete(n);
+    ART.src[n] = typeof src !== 'string' && ART_EMBED && ART_EMBED.alt && ART_EMBED.alt[n] ? ART_EMBED.alt[n] : null;
+    if (typeof logErr === 'function' && !ART.src[n]) logErr(new Error('лист ' + n + ' не открылся'), 'needSheet');
+  };
+  im.src = url; return false;
+}
 const SHADE = [.58, .72, .86, 1];
 /*@@ART_EMBED@@*/
 // Sheets are decoded two at a time with progress on the loading screen; a sheet that fails is retried once.
@@ -10,10 +32,10 @@ const SHADE = [.58, .72, .86, 1];
 // a slow connection is never cut off (only 25 s with no bytes at all counts as a failure), each sheet gets three tries,
 // and a sheet already loaded is kept when the player presses "retry".
 function loadArtFiles() {
-  const names = Object.keys(ART_EMBED.png).filter(n => !ART.imgs[n]), size = ART_EMBED.size || {};
+  const names = Object.keys(ART_EMBED.png).filter(n => !ART.imgs[n] && !ART.src[n]), size = ART_EMBED.size || {};
   const boot = (k, t) => { try { window.__boot && window.__boot(k, t); } catch (e) {} };
   const total = Object.values(size).reduce((a, b) => a + b, 0) || 1, mb = v => (v / 1048576).toFixed(1).replace('.', ',');
-  let got = Object.keys(ART.imgs).reduce((a, n) => a + (size[n] || 0), 0), done = Object.keys(ART.imgs).length;
+  let got = Object.keys(ART.imgs).concat(Object.keys(ART.src)).reduce((a, n) => a + (size[n] || 0), 0), done = Object.keys(ART.imgs).length + Object.keys(ART.src).length;
   const N = Object.keys(ART_EMBED.png).length;
   const show = () => boot(.08 + .84 * Math.min(1, got / total), done < N ? 'Загружаю спрайты: ' + mb(got) + ' из ' + mb(total) + ' МБ' : 'Почти готово…');
   show();
@@ -43,8 +65,8 @@ function loadArtFiles() {
   const one = (n, tries, alt) => {
     const url = alt ? ART_EMBED.alt[n] : ART_EMBED.png[n];
     return download(n, url, tries === 0 && !alt)
-      .then(b => (decoding = decoding.catch(() => {}).then(() => decode(b))))
-      .then(im => { ART.imgs[n] = im; done++; show(); }, e => {
+      .then(b => ART_LAZY(n) ? (ART.src[n] = b, null) : (decoding = decoding.catch(() => {}).then(() => decode(b))))   // по требованию: только скачать
+      .then(im => { if (im) ART.imgs[n] = im; done++; show(); }, e => {
         if (!alt && ART_EMBED.alt && /не открылся|код 4/.test(e.message)) return one(n, tries, true);   // no WebP here (or no such file): take the PNG
         if (tries < 2) return one(n, tries + 1, alt);
         throw new Error('спрайт ' + n + ' не загрузился (' + e.message + ')');
@@ -62,7 +84,8 @@ function loadArtSheets() {
   const names = ART_EMBED ? Object.keys(ART_EMBED.png) : ['obj'];
   if (ART_EMBED && ART_EMBED.alt) return loadArtFiles();
   if (ART_EMBED) {
-    const N = names.length, q = names.slice(); let done = 0;
+    for (const n of names) if (ART_LAZY(n)) ART.src[n] = ART_EMBED.png[n];      // по требованию: раскроем, когда понадобится
+    const q = names.filter(n => !ART_LAZY(n)), N = q.length; let done = 0;
     const boot = (k, t) => { try { window.__boot && window.__boot(k, t); } catch (e) {} };
     boot(.12, 'Распаковываю спрайты…');
     const one = n => new Promise((res, rej) => {
@@ -122,7 +145,7 @@ const rd = v => Math.round(v * DPR) / DPR;
 function frameOf(name) { return ART.meta.frames[name]; }
 function blitObj(name, sx, sy) {
   const h = HDQ > 1 && ART.meta.frames['hd_' + name];                          // детальный кадр, если есть
-  if (h) {
+  if (h && needSheet(h[0])) {
     const s = h[7] || 1, sm = ctx.imageSmoothingEnabled;
     ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(ART.imgs[h[0]], h[1], h[2], h[3], h[4], sx - h[5] / s, sy - h[6] / s, h[3] / s, h[4] / s);
@@ -163,6 +186,8 @@ function charFrame(name, palKey, pal, force) {
   if (c) { frameCache.delete(k); frameCache.set(k, c); c.cv._st = true; return c; }
   if (!force && recolorsThisFrame > RECOLOR_MAX) return null;
   const f = ART.meta.frames[name]; if (!f) return null;
+  if (!needSheet(f[0])) return null;                                          // лист ещё раскрывается (по требованию)
+  { const rn = f[0] + 'r'; if (pal && pal.outfit && (ART.src[rn] || ART.imgs[rn]) && !needSheet(rn)) return null; }
   recolorsThisFrame++;
   c = recolor8(f, pal); frameCache.set(k, c);
   if (frameCache.size > FRAME_MAX) { let n = 200; for (const key of frameCache.keys()) { frameCache.delete(key); if (--n <= 0) break; } }
@@ -255,7 +280,7 @@ const PACK_STRAP = {bag_school:'#26406e', sportbag:'#1c1d22', bag:'#6e3416', mil
 const TORSO = new Map();
 function torsoOf(name) {
   if (TORSO.has(name)) return TORSO.get(name);
-  const f = ART.meta.frames[name], rimg = f && ART.imgs[f[0] + 'r']; if (!rimg) return null;   // карта ещё грузится
+  const f = ART.meta.frames[name], rimg = f && needSheet(f[0] + 'r') && ART.imgs[f[0] + 'r']; if (!rimg) return null;   // карта ещё грузится
   const w = f[3], h = f[4], c = mkCanvas(w, h), g = c.getContext('2d', {willReadFrequently:true}); g.drawImage(rimg, f[1], f[2], w, h, 0, 0, w, h);
   const R = g.getImageData(0, 0, w, h).data; let x0 = w, x1 = -1, y0 = h, y1 = -1, sx = 0, n = 0;
   for (let p = 0; p < w * h; p++) if (R[p * 4 + 3] >= 128 && (R[p * 4] >> 4) === 1) { const x = p % w, y = (p / w) | 0; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; sx += x; n++; }

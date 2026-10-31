@@ -9,8 +9,10 @@ function occInsideHouse() {
   if (mode !== 'menu') for (let k = 0; k < houses.length; k++) { const Hs = houses[k]; if (P.x > Hs.ix0 && P.x < Hs.ix1 && P.y > Hs.iy0 && P.y < Hs.iy1) occInside = k + 1; }
   return occInside;
 }
-// высота стены для выреза мебели: стены всегда в полный рост; полупрозрачная (91-house-view) мебель не прячет
-function occWallTop(x, y, i) { return wallAlphaAt(x, y, i) < .99 ? 0 : WH; }
+// стены всегда в полный рост; прозрачность стены (91-house-view) — у каждого выреза своя (m.a):
+// за непрозрачной стеной мебели не видно, за полупрозрачной она проступает настолько, насколько стена прозрачна
+function occWallTop(x, y, i) { return WH; }
+function occWallAlpha(x, y, i) { return Math.min(wallAlphaAt(x, y, i), wallSeeAt(x, y)); }
 // куски стены клетки (прямоугольники в координатах карты)
 function occPieces(x, y) {
   const i = y * MW + x, t = map[i];
@@ -40,10 +42,9 @@ function occMasks(f) {
       const behind = s[3] <= R[1] + e || s[2] <= R[0] + e;
       if (!front || behind) continue;
       if (top < 0) top = occWallTop(x, y, y * MW + x);
-      if (top <= 0) continue;                                                     // полупрозрачная стена мебель не прячет
       const pts = [];
       for (const [px, py] of [[s[0], s[1]], [s[2], s[1]], [s[0], s[3]], [s[2], s[3]]]) for (const z of [0, top]) pts.push([SX(px, py), SY(px, py, z)]);
-      out.push(hull(pts));
+      const m = hull(pts); m.a = occWallAlpha(x, y, y * MW + x); out.push(m);
     }
   }
   return out;
@@ -61,7 +62,17 @@ function objAtClip(id, name, wx, wy, f, alpha, offX, tint) {
     ctx.moveTo(m[0][0], m[0][1]); for (let k = 1; k < m.length; k++) ctx.lineTo(m[k][0], m[k][1]); ctx.closePath();
     ctx.clip('evenodd');
   }
-  try { return objAtDraw(id, name, wx, wy, f, alpha, offX, tint); } finally { ctx.restore(); }
+  try { objAtDraw(id, name, wx, wy, f, alpha, offX, tint); } finally { ctx.restore(); }
+  occSeeThrough(masks, () => objAtDraw(id, name, wx, wy, f, (alpha == null ? 1 : alpha) * (1 - occMinA(masks)), offX, tint));
+}
+// часть мебели под полупрозрачными стенами: та же картинка внутри их вырезов, слабее (1 − прозрачность стены)
+const occMinA = masks => masks.reduce((a, m) => Math.min(a, m.a == null ? 1 : m.a), 1);
+function occSeeThrough(masks, draw) {
+  const see = masks.filter(m => m.a != null && m.a < .98); if (!see.length) return;
+  ctx.save(); ctx.beginPath();
+  for (const m of see) { ctx.moveTo(m[0][0], m[0][1]); for (let k = 1; k < m.length; k++) ctx.lineTo(m[k][0], m[k][1]); ctx.closePath(); }
+  ctx.clip();
+  try { draw(); } finally { ctx.restore(); }
 }
 
 // ---- глубина мебели: мебель, задвинутая к стене, стоит своей частью в клетке этой стены. Стена такой клетки

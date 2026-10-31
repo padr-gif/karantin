@@ -3,7 +3,7 @@
 // Если основное не читается или не загружается, игра берёт запасное. Сохранение можно выгрузить файлом и загрузить
 // из файла (перенести игру на другой телефон). Ошибки кадра и скрипта пишутся в журнал; в паузе — «Отчёт об ошибках».
 
-const GAME_VER = '0.80';
+const GAME_VER = '0.81';
 const PKEY = s => LKEY(s) + '-prev';
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } };
@@ -277,14 +277,15 @@ function objAt(id, name, wx, wy, f, alpha, offX, tint) {
   if (!masks.length) return objAtDraw(id, name, wx, wy, f, alpha, offX, tint);
   const box = occBox(name, fu, wx, wy); if (!box) return objAtClip(id, name, wx, wy, f, alpha, offX, tint);
   const bx = SX(wx, wy), by = SY(wx, wy, 0), q = v => Math.round(v * 2) / 2;
-  const rel = masks.map(m => m.map(p => [q(p[0] - bx), q(p[1] - by)]));
-  const key = 'occ|' + name + '|' + Math.round(f * 40) + '|' + (tint || '') + '|' + (offX || 0) + '|' + (fu.items ? fu.items.length > 0 : 0) + '|' + (fu.v || 0) + '|' + fu.r.map(v => Math.round(v * 100)).join(',') + '|' + rel.map(m => m.join(' ')).join(';');
+  const rel = masks.map(m => { const r = m.map(p => [q(p[0] - bx), q(p[1] - by)]); r.a = Math.round((m.a == null ? 1 : m.a) * 10) / 10; return r; });
+  const key = 'occ|' + name + '|' + Math.round(f * 40) + '|' + (tint || '') + '|' + (offX || 0) + '|' + (fu.items ? fu.items.length > 0 : 0) + '|' + (fu.v || 0) + '|' + fu.r.map(v => Math.round(v * 100)).join(',') + '|' + rel.map(m => m.a + ':' + m.join(' ')).join(';');
   sprite(id + 'o', key, wx, wy, box[0], box[1], box[2], box[3], () => {
     objAtDraw(id, name, wx, wy, f, 1, offX, tint);
     resetT(); ctx.globalCompositeOperation = 'destination-out'; ctx.fillStyle = '#000';
     const cx = SX(wx, wy), cy = SY(wx, wy, 0);
-    for (const m of rel) { ctx.beginPath(); ctx.moveTo(cx + m[0][0], cy + m[0][1]); for (let k = 1; k < m.length; k++) ctx.lineTo(cx + m[k][0], cy + m[k][1]); ctx.closePath(); ctx.fill(); }
-    ctx.globalCompositeOperation = 'source-over';
+    // за непрозрачной стеной — вырезаем целиком; за полупрозрачной — оставляем (1 − прозрачность стены): мебель проступает
+    for (const m of rel) { ctx.globalAlpha = Math.min(1, m.a); ctx.beginPath(); ctx.moveTo(cx + m[0][0], cy + m[0][1]); for (let k = 1; k < m.length; k++) ctx.lineTo(cx + m[k][0], cy + m[k][1]); ctx.closePath(); ctx.fill(); }
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   }, alpha, 0);
 }
 

@@ -381,6 +381,18 @@ const wl = await D(`(() => {
 check('внутри: крыши нет, передние стены полупрозрачные, задние — целые', wl.open && wl.lower && wl.upper, wl);
 check('чужие дома закрыты и не прозрачные', wl.other, wl);
 check('перед домом — дом целый; за домом — открывается плавно', wl.front && wl.frontWall && wl.fading && wl.behind, wl);
+const occ = await D(`(() => {
+  const ins = () => { let r = 0; houses.forEach((h, i) => { if (P.x > h.ix0 && P.x < h.ix1 && P.y > h.iy0 && P.y < h.iy1) r = i + 1; }); return r; };
+  const fu = furns.find(f => { const H = houses[hAt[f.y * MW + f.x] - 1]; return H && f.r && occMasks(f).length && ['wardrobe', 'fridge', 'shelf', 'bookshelf', 'hanger'].includes(f.type); });
+  if (!fu) return {skip:true};
+  const H = houses[hAt[fu.y * MW + fu.x] - 1];
+  P.x = H.x + H.w / 2; P.y = H.y + H.h + 6; for (let q = 0; q < 40; q++) houseViewUpdate(.05, ins());
+  const closed = occMasks(fu).every(m => m.a === 1);
+  P.x = (H.ix0 + H.ix1) / 2; P.y = (H.iy0 + H.iy1) / 2; for (let q = 0; q < 40; q++) houseViewUpdate(.05, ins());
+  const open = occMasks(fu).some(m => m.a < 1);
+  return {closed, open, type:fu.type};
+})()`);
+check('мебель у передней стены: у закрытого дома не вылезает, у открытого — видна сквозь стену', occ.skip || (occ.closed && occ.open), occ);
 
 console.log('Живая игра 15 секунд');
 await fresh("['coward']");

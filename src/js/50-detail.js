@@ -5,7 +5,8 @@
 // всё как раньше. Детальный режим — это прежний «гладкий» (стены и полы тоньше) плюс эти кадры.
 
 // ---- кадры повышенной детализации ----
-const hdFrame = name => HDQ > 1 && (ART.meta.frames['hd_' + name] || paintedFrame(name));   // нет готового — рисованный (кроны, 90-painted)
+// детальный кадр: готовый (лист раскрывается по требованию — пока нет, рисуем запасной), иначе рисованный (кроны, 90-painted)
+const hdFrame = name => { if (HDQ <= 1) return false; const f = ART.meta.frames['hd_' + name]; return f ? (needSheet(f[0]) ? f : false) : paintedFrame(name); };
 function hdFogged(fr, f, tint) {
   const fq = Math.round(f * 20) / 20, k = fr[0] + ':' + fr[1] + ',' + fr[2] + '|' + fq + '|' + (tint || '');   // лист в ключе: у рисованных кадров (90-painted) свои холсты, все с 0,0
   let c = HDFOG.get(k);
