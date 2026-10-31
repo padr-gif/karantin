@@ -14,6 +14,7 @@ const distKey = (dx, dy) => dx + ',' + dy;
 function distSeed(dx, dy) { return dx === 0 && dy === 0 ? world.root : mix32(world.root, dx * 7919 + 13, dy * 104729 + 7); }
 function distName(dx, dy) {
   if (!dx && !dy) return 'Родной район';
+  if (W5() && W5_DIST[distKey(dx, dy)]) return W5_DIST[distKey(dx, dy)].name;
   const L = DTYPES[distType(dx, dy)].names;
   return L[mix32(world.root || 1, dx + 500, dy + 900) % L.length];
 }
@@ -123,6 +124,11 @@ function closeTravelAsk() { if (travelAsk) { travelAsk.remove(); travelAsk = nul
 function askTravel(side) {
   if (travelAsk) return;
   const [ox, oy] = SIDE_D[side], nx = (world.dx || 0) + ox, ny = (world.dy || 0) + oy, key = distKey(nx, ny);
+  if (!distAllowed(nx, ny)) {                                               // gen 5: округ — пять районов, дальше дорог нет
+    P._edgeHold = true;
+    if ((P._edgeMsgT || 0) < gameMin) { P._edgeMsgT = gameMin + 30; toast('Дальше дороги нет: трассу перекрыли военные. Округ — пять районов'); }
+    return;
+  }
   const known = !!(world.dist && world.dist[key]) || (nx === 0 && ny === 0), ring = distRing(nx, ny);
   paused = true; atkHeld = false; joy.id = null; joy.x = joy.y = 0; $('stick').hidden = true; P.moving = false;
   const box = travelAsk = mk('div', 'travelask');

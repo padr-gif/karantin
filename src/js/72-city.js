@@ -131,7 +131,7 @@ function genCity(t) {
     for (let i = 0; i < w * h * .22; i++) { const xx = ri(sp.x, sp.x + w - 1), yy = ri(sp.y, sp.y + h - 1); if (get(xx, yy) === GRASS && !D8.some(([ox, oy]) => get(xx + ox, yy + oy) === WATER)) set(xx, yy, TREE); }
   }
   // общественные здания
-  const comm = DT ? ['police', 'pharmacy', 'pharmacy', 'clinic', 'hardware', 'gas', 'store', 'store', 'store', 'cafe', 'cafe', 'office', 'office', 'school']
+  const comm = DT ? ['police', 'pharmacy', 'pharmacy', 'clinic', 'hardware', 'gas', 'store', 'store', 'store', 'cafe', 'cafe', 'office', 'office', 'school'].concat(W5() ? ['autoshop', 'post', 'library', 'fire'] : [])
                   : ['police', 'pharmacy', 'hardware', 'gas', 'store', 'store'].concat(shuffle(['school', 'cafe', 'clinic', 'office']).slice(0, ri(1, 3)));
   for (const k of comm) {
     const [w, h] = CSIZE[k], sp = streetSpot(w, h, k === 'gas' ? 3 : 0); if (!sp) continue;
@@ -278,7 +278,7 @@ const VEG_LOOT = [['potato', 'potato', 'carrot'], ['carrot', 'cabbage', 'potato'
 
 // ---- включение: новые игры строят города новым генератором ----
 { onStartNew(() => {
-}, () => { world.gen = 4; world.townN = 320; }); }   // v73: 4 — тот же городок, но плотнее и с меньшим лесом   // v72: город крупнее — 320×320   // 3 — городок в духе Project Zomboid (74-county); 2 — сетка этого файла
+}, () => { world.gen = 5; world.townN = 320; }); }   // v84: 5 — один округ для всех (74-world-plan); v73: 4 — тот же городок, но плотнее и с меньшим лесом   // v72: город крупнее — 320×320   // 3 — городок в духе Project Zomboid (74-county); 2 — сетка этого файла
 DIST_FIELDS.push('x53v');
 { onSave(d => { d.x53 = {gen:world.gen || 1, n:world.townN || 256}; d.x53v = {dug:props.map((p, k) => p.type === 'veg' && p.dug ? k : -1).filter(k => k >= 0)};
 }); }

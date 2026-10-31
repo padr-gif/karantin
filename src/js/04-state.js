@@ -40,6 +40,7 @@ function newGameCore(o) {
   world.diff = o.diff || 'normal';
   rng = mulberry32(world.seed);
   generate();
+  rollLoot();                                                               // gen 5: карта одна, добыча своя в каждой игре (74-world-plan)
   { const Lm = DIFF[world.diff].loot; for (const c of furns.filter(f => CONT[f.type].loot).concat(props.filter(p => p.type === 'car'))) { if (Lm > 1 && rng() < Lm - 1) c.items.push(mkItem(pick(CONT[c.type].loot))); if (Lm < 1) c.items = c.items.filter(() => rng() < Lm + .1); } }
   growCars(); mergeFences();                                                 // машины в полный размер (26-driving), двойные заборы соседних дворов — в один (72-city)                                                                 // машины в полный размер (26-driving): после раздачи добычи — она тратит случайные числа по числу машин
   const homes = houses.map((h, i) => [h, i]).filter(([h]) => h.kind === 'house' && !h.hideout && h.rooms);
@@ -69,6 +70,7 @@ function newGameCore(o) {
   camX = P.x; camY = P.y;
   buildFlow(); computeVis(); fogDirty = true; parts = [];
   clearCaches();
+  w5AfterWorld();
 }
 function spawnZombie(minD, init) {
   if (!init && weekMod() === 'calm' && rng() < .45) return;                 // тихая неделя

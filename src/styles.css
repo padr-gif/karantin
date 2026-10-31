@@ -1330,3 +1330,10 @@ body.invglass>*:not(#game):not(#vig):not(#panel):not(#toasts):not(svg){visibilit
   #dead .card>#dAch,#dead .card>#dLives{grid-column:2}
   #dead .lives ul{max-height:42vh}
 }
+/* схема округа на карте (74-world-plan) */
+.county{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin:6px 0 0;max-width:420px}
+.county .cty{padding:5px 7px;border:1px dashed var(--line);border-radius:6px;opacity:.65;min-width:0}
+.county .cty.been{border-style:solid;opacity:1}
+.county .cty.here{border-color:#e8473a;background:rgba(232,71,58,.12)}
+.county .cty b{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.county .cty small{display:block;color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

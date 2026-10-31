@@ -55,7 +55,7 @@ function drawSoil(x, y, k) {
 // ---- городок вдоль трассы ----
 function genCounty() {
   genReset(); cityMask = new Uint8Array(NT);
-  const G4 = world.gen >= 4;                                                  // v73: город плотнее и длиннее, хуторов больше, леса меньше (старые сохранения — как было)
+  const G4 = world.gen >= 4, G5 = world.gen >= 5;                                                  // v73: город плотнее и длиннее, хуторов больше, леса меньше (старые сохранения — как было)
   const V = rng() < .5;                                                       // главная трасса вдоль y (true) или вдоль x
   const H0 = EXIT_R, H1 = EXIT_R + RW - 1;
   // в абстрактных координатах: a — вдоль главной трассы, c — поперёк (трасса на c = H0..H1)
@@ -154,12 +154,14 @@ function genCounty() {
   const mainSt = streets.filter(s => s.main), sideSt = streets.filter(s => !s.main);
 
   // общественные здания: очередь; главная улица заполняется ими при нарезке кварталов (ниже), остаток — где придётся
-  const commQ = shuffle(['store', 'pharmacy', 'hardware', 'police']).concat(shuffle(['store', 'cafe', 'office']), shuffle(['school', 'clinic', 'cafe']).slice(0, ri(1, 2)));
+  const commQ = G5 ? shuffle(['store', 'pharmacy', 'hardware', 'police', 'post']).concat(shuffle(['store', 'cafe', 'office', 'library']), shuffle(W5_COMM.filter(k => k !== 'post' && k !== 'library')))
+                   : shuffle(['store', 'pharmacy', 'hardware', 'police']).concat(shuffle(['store', 'cafe', 'office']), shuffle(['school', 'clinic', 'cafe']).slice(0, ri(1, 2)));
   const putComm = (k, x, y, w, h, front) => {
     const Hs = bld(x, y, w, h, k, sidesOf(front));
     const mx = x + w / 2, my = y + h / 2;
     if (k === 'police') SPECIAL.push({x:mx, y:my, pi:10, n:4});
     if (k === 'pharmacy' || k === 'clinic') SPECIAL.push({x:mx, y:my, pi:11, n:k === 'clinic' ? 5 : 3});
+    if (k === 'autoshop' && Hs) for (let q = 0; q < 2; q++) { const s = streets.find(s => s.vert ? Math.abs(s.p - x) < 16 : Math.abs(s.p - y) < 16); if (!s) break; const a = Math.max(s.lo + 1, Math.min(s.hi - 3, (s.vert ? y : x) + q * 4 + 1)); s.vert ? parkCarAt(s.p + (s.p < x ? RW - 1 : 0), a, 'y', {shop:true}) : parkCarAt(a, s.p + (s.p < y ? RW - 1 : 0), 'x', {shop:true}); }
     if (k === 'police' && Hs) for (let q = 0; q < 2; q++) { const s = streets.find(s => s.vert ? Math.abs(s.p - x) < 16 : Math.abs(s.p - y) < 16); if (!s) break; const a = Math.max(s.lo + 1, Math.min(s.hi - 3, (s.vert ? y : x) + ri(0, 6))); s.vert ? parkCarAt(s.p + (q ? RW - 1 : 0), a, 'y', {ci:2, police:true}) : parkCarAt(a, s.p + (q ? RW - 1 : 0), 'x', {ci:2, police:true}); }
     return Hs;
   };
@@ -189,6 +191,11 @@ function genCounty() {
   const rowMid = r => { const [x, y] = r.at(r.Lp >> 1, r.q0); return Math.abs((V ? y : x) - TC); };
   for (const r of rowsAll.filter(r => r.main).sort((p, q) => rowMid(p) - rowMid(q))) commRow(r);   // центр города — магазины
   for (const r of rowsAll) if (!r.main && commQ.length) commRow(r);
+  if (G5) for (const [w, h] of [[20, 16], [18, 14], [16, 13]]) {            // gen 5: парк всегда, до жилых домов — кольцо дорожек, пруд, скамейки, качели
+    const sp = spot(w, h, 0, sideSt) || spot(w, h, 0, streets); if (!sp) continue;
+    for (let yy = sp.y; yy < sp.y + h; yy++) for (let xx = sp.x; xx < sp.x + w; xx++) cityMask[yy * MW + xx] = 1;
+    parkW5(sp.x, sp.y, w, h); break;
+  }
   for (const r of rowsAll) for (let p = 1; p < r.Lp - 8;) {
     const wp = Math.min(ri(8, 10), r.Lp - 1 - p); if (wp < 8) break;
     const [x, y] = r.at(p, r.q0), [w, h] = r.alongX ? [wp, r.d] : [r.d, wp];
@@ -198,7 +205,7 @@ function genCounty() {
   }
   for (const k of commQ.splice(0)) { const [w, h] = CSIZE[k], sp = spot(w, h, 0, streets); if (sp) putComm(k, sp.x, sp.y, w, h, sp.s); }
   // сквер с прудом
-  if (rng() < .7) { const w = ri(14, 20), h = ri(12, 16), sp = spot(w, h, 0, sideSt); if (sp) {
+  if (!G5 && rng() < .7) { const w = ri(14, 20), h = ri(12, 16), sp = spot(w, h, 0, sideSt); if (sp) {
     for (let yy = sp.y; yy < sp.y + h; yy++) for (let xx = sp.x; xx < sp.x + w; xx++) cityMask[yy * MW + xx] = 1;
     pond(sp.x + w / 2, sp.y + h / 2, 2.5 + rng() * 2, 2 + rng() * 1.5);
     for (let i = 0; i < w * h * .18; i++) { const xx = ri(sp.x, sp.x + w - 1), yy = ri(sp.y, sp.y + h - 1); if (get(xx, yy) === GRASS && !D8.some(([ox, oy]) => get(xx + ox, yy + oy) === WATER)) set(xx, yy, TREE); }
@@ -206,7 +213,7 @@ function genCounty() {
   // иногда многоэтажка на задней улице, если осталось место
   for (let k = 0, n = rng() < .4 ? 1 : 0; k < n; k++) { const nn = 3, sp = spot(6 * nn + 1, 14, 1, sideSt); if (sp) buildFlats(sp.x, sp.y, nn); }
   const homes = houses.filter(H => H.kind === 'house');
-  for (const H of homes) if (rng() < .3) yardGarage(H);
+  for (const H of homes) if (rng() < (G5 ? .55 : .3)) yardGarage(H);
   for (const H of homes) if (rng() < .5) yardFence(H);
   for (const H of homes) if (rng() < .35) yardGarden(H);
   // тупики-грунтовки с краю города: 1–3 дома на отшибе

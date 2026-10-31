@@ -43,6 +43,7 @@ function wakeTick(gm) {
 function restFurnNear() {
   let best = null, bd = 1.5;
   for (const f of furns) if (!f.gone && REST_FURN.has(f.type)) { const d = Math.hypot(f.cx - P.x, f.cy - P.y); if (d < bd) { bd = d; best = f; } }
+  for (const p of props) if (p.type === 'bench' && !p.dead) { const d = Math.hypot(p.cx - P.x, p.cy - P.y); if (d < bd) { bd = d; best = p; } }   // скамейки в парке (74-world-plan)
   return best;
 }
 addActions(out => {
