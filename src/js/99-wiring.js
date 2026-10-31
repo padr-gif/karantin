@@ -51,6 +51,7 @@ function die() {
   { const L = (P.log || []).filter(e => !/^Умер/.test(e[1])), l = L[L.length - 1], el = $('dLast'); if (el) el.textContent = l ? '«' + l[1] + '»' : '—'; }
   $('dCause').textContent = lastCause;
   $('dRec').textContent = fmtDur(best);
+  deathSummary(lived);
   $('ctrl').hidden = true;
   setTimeout(() => { if (mode === 'dead') show('dead'); }, 1400);
 }

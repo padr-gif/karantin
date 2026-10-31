@@ -1312,3 +1312,21 @@ body.invglass>*:not(#game):not(#vig):not(#panel):not(#toasts):not(svg){visibilit
 .invflt button small{font:700 10px var(--f-mono);color:var(--muted)}
 .invflt button.on{background:var(--paper);color:var(--ink);border-color:var(--paper)}
 .invflt button.on small{color:var(--ink);opacity:.7}
+/* прошлые жизни и достижения этой жизни (95-lives) */
+.lives h3,.dead-ach h3{margin:0 0 6px;font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.lives ul{list-style:none;margin:0;padding:0;display:grid;gap:4px;max-height:30vh;overflow:auto}
+.lives li{padding:6px 10px;border:1px solid var(--line);border-radius:6px}
+.lives li b{display:block;font-size:13px}
+.lives li small{color:var(--muted);font-size:12px;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.lives li.best b{color:#f0c477}
+.lives li.now{border-color:rgba(168,53,42,.6);background:rgba(120,20,10,.18)}
+.dachs{display:flex;flex-wrap:wrap;gap:6px}
+.dachs span{padding:3px 9px;border:1px solid rgba(201,154,46,.6);border-radius:999px;font-size:12px;color:#f0c477}
+/* телефон горизонтально: итог слева, достижения и прошлые жизни справа — кнопки остаются на экране */
+@media (min-width:700px) and (max-height:520px){
+  #dead .card{width:min(900px,100%);grid-template-columns:1fr 1fr;column-gap:22px;row-gap:12px;align-items:start;padding:18px 20px 16px}
+  #dead .card>*{grid-column:1/-1}
+  #dead .card>.facts{grid-column:1;grid-row:span 3}
+  #dead .card>#dAch,#dead .card>#dLives{grid-column:2}
+  #dead .lives ul{max-height:42vh}
+}

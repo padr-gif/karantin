@@ -419,6 +419,24 @@ const occ = await D(`(() => {
 })()`);
 check('мебель у передней стены: у закрытого дома не вылезает, у открытого — видна сквозь стену', occ.skip || (occ.closed && occ.open), occ);
 
+console.log('Итог смерти и прошлые жизни');
+await fresh();
+const life = await D(`(() => {
+  localStorage.removeItem('karantin-lives'); delete achDone.nomad10; delete achDone.day100;
+  world.visited = 10; startMin = gameMin - 101 * 1440; checkAch();
+  const got = achRun.slice();
+  kills = 7; lastCause = 'Голод'; P.hp = 0; die();
+  const L = JSON.parse(localStorage.getItem('karantin-lives') || '[]');
+  const r = {got, n:L.length, last:L[L.length - 1], ach:$('dAch').textContent, achShown:!$('dAch').hidden,
+    rows:$('dLives').querySelectorAll('li').length, now:!!$('dLives').querySelector('li.now'), dist:$('dDist').textContent, runLeft:achRun.length};
+  renderAch(); r.achLives = $('achLives').querySelectorAll('li').length;
+  return r;
+})()`);
+check('долгие цели: 10 районов и 100 дней дают достижения', life.got.includes('nomad10') && life.got.includes('day100'), life);
+check('экран смерти: районы, новые достижения этой жизни', life.dist.startsWith('10') && life.achShown && /Дорога без конца/.test(life.ach) && life.runLeft === 0, life);
+check('жизнь записана в «Прошлые жизни» и видна на экране смерти и в достижениях', life.n === 1 && life.last.kills === 7 && life.last.cause === 'Голод' && life.last.dists === 10 && life.rows === 1 && life.now && life.achLives === 1, life);
+await D(`localStorage.removeItem('karantin-lives'); show(null)`);
+
 console.log('Живая игра 15 секунд');
 await fresh("['coward']");
 await D("P.weapon = mkItem('shotgun'); P.weapon.mag = 2; P.inv.push(mkItem('shells')); gameMin += 14 * 60; for (let i = 0; i < 25; i++) spawnZombie(4, false);");

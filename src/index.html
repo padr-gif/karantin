@@ -266,6 +266,7 @@
   <div class="card wide">
     <div class="card-head"><h2 class="h2s">Достижения</h2><span class="rec" id="achCount"></span></div>
     <div class="achs" id="achList"></div>
+    <div class="lives" id="achLives" hidden></div>
     <div class="row-btns"><button class="go" id="achBack" type="button">Назад</button></div>
   </div>
 </section>
@@ -300,10 +301,13 @@
     <dl class="facts">
       <dt>Продержался</dt><dd id="dTime">—</dd>
       <dt>Убито мертвецов</dt><dd id="dKills">0</dd>
+      <dt>Районов</dt><dd id="dDist">1</dd>
       <dt>Причина</dt><dd id="dCause">—</dd>
       <dt>Рекорд</dt><dd id="dRec">—</dd>
       <dt>Последняя запись</dt><dd id="dLast">—</dd>
     </dl>
+    <div class="dead-ach" id="dAch" hidden></div>
+    <div class="lives" id="dLives" hidden></div>
     <div class="row-btns"><button class="go" id="bAgain" type="button">Новая игра</button><button class="mbtn" id="dLoad" type="button">Загрузить</button><button class="mbtn" id="dMenu" type="button">Главное меню</button></div>
   </div>
 </section>

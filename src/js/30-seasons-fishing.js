@@ -66,6 +66,7 @@ function ach(id) {
   if (achDone[id]) return; achDone[id] = Date.now();
   try { localStorage.setItem('karantin-ach', JSON.stringify(achDone)); } catch (e) {}
   const a = ACH.find(a => a[0] === id); if (!a) return;
+  achRun.push(id);                                                    // для экрана смерти (95-lives)
   eventBanner('Достижение: ' + a[1], a[2], 'gold', 'i-star');
   SFX.equip();
   logEv('Достижение: «' + a[1] + '»');
@@ -81,6 +82,7 @@ function checkAch() {
   const hi = hAt[Math.floor(P.y) * MW + Math.floor(P.x)]; if (hi && houses[hi - 1] && houses[hi - 1].hideout && insideHouse(P.x, P.y)) ach('hide');
   if (P.hordeSurv && gameMin > P.hordeSurv) { P.hordeSurv = 0; ach('horde'); }
   if (P.cold > 85) P.wasCold = true; else if (P.wasCold && P.cold < 20) { P.wasCold = false; ach('cold'); }
+  checkAchLong();
 }
 const stat = (k, n) => { P.stats = P.stats || {}; P.stats[k] = (P.stats[k] || 0) + (n || 1); };
 function renderAch() {
@@ -88,4 +90,5 @@ function renderAch() {
   const n = ACH.filter(a => achDone[a[0]]).length; $('achCount').textContent = `${n} из ${ACH.length}`;
   { const bar = mk('div', 'achbar'), f = mk('i'); f.style.width = Math.round(n / ACH.length * 100) + '%'; bar.appendChild(f); box.appendChild(bar); }   // прогресс, полученные — первыми
   for (const [id, t, d] of ACH.slice().sort((a, b) => !!achDone[b[0]] - !!achDone[a[0]])) { const r = mk('div', 'achi' + (achDone[id] ? ' on' : '')); r.appendChild(mk('b', '', (achDone[id] ? '★ ' : '☆ ') + t)); r.appendChild(mk('small', '', d)); box.appendChild(r); }
+  renderLives($('achLives'), false);
 }
