@@ -24,7 +24,6 @@ const SX = (x, y) => ox + (x - y) * U;
 const SY = (x, y, z) => oy + (x + y) * hh - z;
 const resetT = () => ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 const groundT = (z) => ctx.setTransform(DPR * U, DPR * hh, -DPR * U, DPR * hh, DPR * ox, DPR * (oy - (z || 0)));
-let gAlpha = 1;
 // vertical face from p0 to p1 (world), between heights z0..z1 (px); fill = colour or pattern; dark = 0..1 overlay
 function vface(p0x, p0y, p1x, p1y, z0, z1, fill, dark, grain) {
   const dx = p1x - p0x, dy = p1y - p0y, len = Math.hypot(dx, dy); if (len < 1e-4 || z1 <= z0) return;

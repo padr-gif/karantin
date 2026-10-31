@@ -71,7 +71,6 @@ defUse(it => it.id === 'candle', it => {
   if (!it.on) useFireTool(); it.on = !it.on; toast(it.on ? 'Свеча горит' : 'Свеча потушена'); SFX.fireUp(); renderInv(); updateHud();
 });
 defUse(it => it.id === 'cansalarm', () => toast('Подойди к двери и выбери «Повесить банки»'));
-const clothProt = () => { let p = 0; for (const s of ['torso', 'head']) { const c = P.cloth && P.cloth[s]; if (c && ITEMS[c.id].prot) p += ITEMS[c.id].prot; } return Math.min(.6, p); };
 
 // ---- door alarm made of bottles ----
 function doorAlarmAction(o) { const ob = obs[o.i]; if (ob.t !== 'door' || ob.dead) return null; if (ob.alarm) return {kind:'unalarm', label:'Снять банки', o, tk:'al' + o.i}; if (countItem('cansalarm')) return {kind:'alarm', label:'Повесить банки', o, tk:'al' + o.i}; return null; }
@@ -117,7 +116,6 @@ function drawScreamFx() {
 
 // ---- dismantling furniture into planks (editor) ----
 const PLANKS = {bed:3, sofa:2, wardrobe:3, dresser:3, bookshelf:3, table:2, nightstand:1, desk:2, shelf:2, crate:2, cabinet:2, counter:2, hanger:1, tv:0, locker:0, toolrack:1};
-const canBreak = () => hasTool('hammer') || hasTool('axe') || hasTool('hatchet') || hasTool('crowbar') || hasTool('sledge');
 // v73: техника и сантехника — на металлолом, провод и трубы; инструмент свой (tools), выход — give
 const METAL_T = ['wrench', 'crowbar', 'sledge'];
 const SALVAGE = {
@@ -175,15 +173,6 @@ function ragoutCard(src) {
   return recipeCard('Рагу', [{id:'meat', ok:have('meat')}, {id:'potato', ok:have('potato')}, {id:'carrot', ok:have('carrot')}, {id:'pot', ok:pot}, {id:'water', ok:water, label:'вода'}, {id:src.type === 'fire' ? 'campfire' : src.type === 'burner' ? 'burner' : null, label:'Электричество', ok:heat}], 'ragout', [b], 'мясо, картошка и морковь в кастрюле с водой');
 }
 
-// ---- evacuation: the way out ----
-function setupEvac() {
-  if (!CHECKPOINTS.length) return;
-  const c = CHECKPOINTS[Math.floor(rng() * CHECKPOINTS.length)], cx = MW / 2, cy = MH / 2;
-  let x = c.x, y = c.y; const d = Math.hypot(cx - x, cy - y);
-  for (let s = 3; s < 14; s++) { const qx = c.x + (cx - c.x) / d * s, qy = c.y + (cy - c.y) / d * s; if (!navBlocked(Math.floor(qx), Math.floor(qy))) { x = Math.floor(qx) + .5; y = Math.floor(qy) + .5; if (s >= 6) break; } }
-  const day = 7 + ri(0, 2);
-  world.evac = {x, y, at:(day - 1) * 1440 + 12 * 60, told:false, rem:false, side:c.side};
-}
 const EV = {h:null, nT:0, smoke:0};
 const evDay = () => Math.floor(world.evac.at / 1440) + 1;
 function evacWhere() { const e = world.evac; const sx = e.x < MW / 3 ? 'западный' : e.x > MW * 2 / 3 ? 'восточный' : '', sy = e.y < MH / 3 ? 'северный' : e.y > MH * 2 / 3 ? 'южный' : ''; return ((sy || sx) ? (sy && sx ? sy.replace('ый', 'о') + '-' + sx : sy || sx) + ' ' : '') + 'блокпост'; }

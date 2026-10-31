@@ -4,15 +4,19 @@ const MAGS = {
   farm:{series:'«Сад и огород»', base:'book_farm'}, fight:{series:'«Самооборона»', base:'book_fight'},
 };
 const MAG_TIER = {1:[0, 1], 2:[2, 3], 3:[4, 4]};
-for (const k in MAGS) {
-  const m = MAGS[k];
-  for (const n of [1, 2, 3]) {
-    const id = n === 1 ? m.base : m.base + n;
-    ITEMS[id] = {name:'Журнал ' + m.series + ' №' + n, sh:'Журнал №' + n, kind:'book', skill:k, vol:n, verb:'Читать'};
-    if (n > 1) ICONA[id] = m.base;
-    DESC[id] = 'Журнал для ' + (n === 1 ? 'новичков' : n === 2 ? 'опытных' : 'мастеров') + ' о навыке «' + SKILLS[k].name + '». Подходит на уровнях ' + MAG_TIER[n][0] + '–' + (MAG_TIER[n][1] + 1) + '. Прочитав, учишься втрое быстрее, пока не перерастёшь журнал.';
+// журналы навыка: три тома на каждый навык (43-injuries-traits добавляет ещё три навыка)
+function defMags(keys) {
+  for (const k of keys) {
+    const m = MAGS[k];
+    for (const n of [1, 2, 3]) {
+      const id = n === 1 ? m.base : m.base + n;
+      ITEMS[id] = {name:'Журнал ' + m.series + ' №' + n, sh:'Журнал №' + n, kind:'book', skill:k, vol:n, verb:'Читать'};
+      if (n > 1) ICONA[id] = m.base;
+      DESC[id] = 'Журнал для ' + (n === 1 ? 'новичков' : n === 2 ? 'опытных' : 'мастеров') + ' о навыке «' + SKILLS[k].name + '». Подходит на уровнях ' + MAG_TIER[n][0] + '–' + (MAG_TIER[n][1] + 1) + '. Прочитав, учишься втрое быстрее, пока не перерастёшь журнал.';
+    }
   }
 }
+defMags(Object.keys(MAGS));
 { const add = (k, ...ids) => CONT[k] && CONT[k].loot.push(...ids);
   add('bookshelf', 'book_carp2', 'book_cook2', 'book_farm2', 'book_fight2', 'book_carp3', 'book_cook3', 'book_farm3', 'book_fight3');
   add('desk', 'book_fight2', 'book_cook2'); add('nightstand', 'book_cook2', 'book_farm2'); add('crate', 'book_carp2', 'book_carp3', 'book_farm2');

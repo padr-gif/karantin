@@ -32,7 +32,6 @@ function mkZombie(x, y, pal, hp, spd) {
   zs.push(z); return z;
 }
 let fires = [], barrels = [];
-const PPAL = {skin:[214,176,138], cloth:[56,92,128], pants:[48,52,64], hair:[60,44,30], shoes:[44,38,34], blood:0, pack:true};
 
 function newGame(o) { return runHooked('newWorld', newGameCore, o); }
 function newGameCore(o) {

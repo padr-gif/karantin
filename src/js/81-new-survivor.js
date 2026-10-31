@@ -70,7 +70,6 @@ const NG_PRESETS = {
 };
 const NG_PKEYS = ['zk', 'zspd', 'fastK', 'dmgk', 'lootk', 'hordeK'];
 const ngPreset = () => Object.keys(NG_PRESETS).find(k => NG_PKEYS.every(q => NG_PRESETS[k][q] === NEWCFG[q])) || 'own';
-const ngMods = () => true;
 const FIXED_SEED = 2718;                                                      // город один и тот же: проверенная раскладка домов и вещей
 
 // ---- превью: поворачивается сам, стрелками — вручную; идёт или стоит ----

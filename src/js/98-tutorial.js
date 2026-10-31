@@ -49,27 +49,10 @@ const TUT = {on:false, dead:false, step:-1, wait:false, t0:0, d:{}, iv:0, ui:nul
 }
 
 // ---- что считается «дома», где ящик, есть ли вещь ----
-const tutTile = (x, y) => Math.floor(y) * MW + Math.floor(x);
-const tutHome = () => P && spawnHouse && hAt[tutTile(P.x, P.y)] === spawnHouse;
 const tutHas = id => P && (P.inv.some(i => i && i.id === id) || (P.weapon && P.weapon.id === id));
 const tutCount = id => P ? P.inv.filter(i => i && i.id === id).length : 0;
 // мертвец обучения: где-то во дворе (как будто перелез) или на дороге за воротами (road)
 const tutInYard = (x, y) => x > TUT_FENCE.x0 && x < TUT_FENCE.x1 && y > TUT_FENCE.y0 && y < TUT_FENCE.y1;
-function tutZombie(dmin, dmax, hp, spd, road) {
-  const gate = props.find(p => p.type === 'hfence' && p.gate);
-  for (let k = 0; k < 120; k++) {
-    let x, y;
-    if (road && gate) { x = gate.cx + (Math.random() - .5) * 16; y = TUT_FENCE.y1 + 2 + Math.random() * 5; }
-    else { const a = Math.random() * 6.283, d = dmin + Math.random() * (dmax - dmin); x = P.x + Math.cos(a) * d; y = P.y + Math.sin(a) * d; }
-    const tx = Math.floor(x), ty = Math.floor(y);
-    if (tx < 2 || ty < 2 || tx >= MW - 2 || ty >= MH - 2 || navBlocked(tx, ty) || hAt[ty * MW + tx]) continue;
-    if (!road && !tutInYard(tx, ty)) continue;
-    const z = mkZombie(tx + .5, ty + .5, {pi:Math.floor(Math.random() * 10), b:Math.random() < .4 ? 'f' : 'm', blood:Math.floor(Math.random() * 2)}, hp, spd);
-    z.crawl = false; z.tut = true; z.state = 'chase'; z.lost = 0; z.aw = 0; z.tx = P.x; z.ty = P.y;
-    return z;
-  }
-  return null;
-}
 
 // открыл другую мебель, а не отмеченную — вещи обучения переезжают туда, чтобы не искать их по дому
 function tutHere() {

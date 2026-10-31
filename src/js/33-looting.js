@@ -1,6 +1,5 @@
 // ================= live looting (timed transfers, use from containers), map slot, searched houses =================
 const xferQ = [];
-let xferKey = 0;
 function sameStack(a, b) { if (a === b) return true; const d = ITEMS[a.id]; if (!d || d.kind === 'weapon' || d.kind === 'light' || d.uses) return false; return a.id === b.id && isRotten(a) === isRotten(b); }
 function xferDur(it) {
   const d = ITEMS[it.id] || {}, k = d.kind;
@@ -32,7 +31,6 @@ function tickXfer(dt) {
   if (xferQ.length && Math.random() < .5) SFX.rustle();
   renderPanel(); updateHud();
 }
-function xferRow() { return mk('span'); }
 function markQueued(grid, groups, owner) {
   const cells = grid.children, cur = xferQ[0];
   groups.forEach((g, i) => {

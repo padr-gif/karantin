@@ -49,4 +49,3 @@ COOK.push({id:'porridge', raw:'oatmeal', tool:'pot', toolName:'кастрюля'
 // ---- starting season ----
 const SEASONS = {autumn:{name:'Осень', off:0, info:'15 сентября. Тепло, но впереди долгая зима.'}, winter:{name:'Зима', off:91, info:'15 декабря. Мороз, снег, короткие дни. Жёсткий старт.'}, spring:{name:'Весна', off:181, info:'15 марта. Снег тает, скоро можно сажать огород.'}, summer:{name:'Лето', off:273, info:'15 июня. Жара, ягоды и долгие светлые вечера.'}};
 NEWCFG.season = 'autumn';
-const dayOff = () => (world && world.dayOff) || 0;

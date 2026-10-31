@@ -61,13 +61,6 @@ function groupItems(list) {
   });
   return groups;
 }
-function itemRow_unused(it, n, buttons, eq) {
-  const d = ITEMS[it.id], r = mk('div', 'row' + (eq ? ' eq' : ''));
-  const nm = mk('div', 'nm'); nm.appendChild(document.createTextNode(d.name + (n > 1 ? ' ×' + n : '')));
-  const sm = mk('small'); sm.innerHTML = (eq ? 'В руках · ' : '') + itemInfo(it); nm.appendChild(sm);
-  const a = mk('div', 'acts'); for (const b of buttons) a.appendChild(b);
-  r.appendChild(nm); r.appendChild(a); return r;
-}
 function takeOne(c, k) {
   if (invFull()) { toast('Слишком тяжело — не унести'); return; }
   const it = c.items.splice(k, 1)[0]; if (!it) return; SFX.rustle();
@@ -75,7 +68,6 @@ function takeOne(c, k) {
   if (ITEMS[it.id].kind === 'weapon' && !P.weapon) P.weapon = it; else P.inv.push(it);
   renderPanel(); updateHud();
 }
-function takeAll(c) { while (c.items.length && !invFull()) takeOne(c, 0); if (c.items.length) toast('Слишком тяжело — не унести'); renderPanel(); }
 function putOne(c, k) { if (c.items.length >= capOf(c)) { toast('Сюда больше не влезет: ' + capOf(c) + ' мест'); return; } const it = P.inv.splice(k, 1)[0]; if (it) c.items.push(it); renderPanel(); }
 function heatOk(src) { return src.type === 'fire' ? src.t > 0 && !src.out : src.type === 'burner' ? src.it.uses > 0 && P.inv.includes(src.it) : poweredAt(src.cx, src.cy); }
 function waterOk() { return nearTap() || countItem('water') > 0; }

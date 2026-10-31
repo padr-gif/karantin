@@ -187,7 +187,6 @@ function dressFrame(f, cv, reg) {
   g.putImageData(D, 0, 0);
   return {cv, ax:f[5], ay:f[6], w, h, s:f[7] || 1};
 }
-const playerLookPal34 = playerLookPal;
 playerLookPal = function (lk) {
   if (heroRig(lk)) return {pal:{outfit:outfitRegs(null, lk)}, key:heroPre(lk).toUpperCase() + '|' + outfitKey(null, lk)};
   // старые палитровые кадры: верх, штаны, шапка цветом вещей; без вещи — кожа / бельё

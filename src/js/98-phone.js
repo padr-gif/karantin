@@ -473,7 +473,7 @@ function placePhones() {
     car:props.filter(p => p.type === 'car' && !p.army),
     army:furns.filter(f => !f.gone && f.type === 'armybox').concat(props.filter(p => p.type === 'car' && p.army)),
   };
-  const fill = c => { if (!c.items) { c.items = []; const C = CONT[c.type]; if (C && C.loot) for (let n = ri(C.n[0], C.n[1]); n > 0; n--) c.items.push(mkItem(pick(C.loot))); } };
+  const fill = fillCont;
   const home = !world.dx && !world.dy, got = world.phGot || [];
   let ids = Object.keys(PH_STORIES).filter(k => PH_STORIES[k].at !== 'tut');
   if (!home) { const rest = ids.filter(k => !got.includes(k)); ids = shuffle(rest.length ? rest : ids).slice(0, ri(1, 2)); }

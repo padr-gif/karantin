@@ -17,11 +17,6 @@ function getActions() {
   for (const f of ACT_SOURCES) f(list);
   return list;
 }
-function getActionAt(x, y) { const sx = P.x, sy = P.y; P.x = x; P.y = y; try { return getAction(); } finally { P.x = sx; P.y = sy; } }
-const ACT_LABEL = a => {
-  const name = a.f && a.f.type && CONT[a.f.type] ? CONT[a.f.type].name : a.o ? (obs[a.o.i].t === 'door' ? 'Дверь' : 'Окно') : '';
-  return {name, verb:a.label.charAt(0).toUpperCase() + a.label.slice(1)};
-};
 // ---- action list popup ----
 function openActMenu() {
   const list = getActions(), box = $('actMenu');
@@ -38,24 +33,6 @@ function openActMenu() {
 }
 // ---- tap / click on the world ----
 let goTo = null;
-function pathBlocked(x, y) { if (!navBlocked(x, y)) return false; const i = y * MW + x, o = obs[i]; return !(map[i] === DOOR && o && !o.locked && !(o.bhp > 0) && !o.dead && !furn[i]); }
-function findPath(tx, ty) {
-  const sx = Math.floor(P.x), sy = Math.floor(P.y), R = 22, key = (x, y) => y * MW + x;
-  const goal = new Set(); for (const [ox, oy] of [[0,0],...D8]) { const x = Math.floor(tx) + ox, y = Math.floor(ty) + oy; if (!pathBlocked(x, y)) goal.add(key(x, y)); }
-  if (!goal.size) return null;
-  const prev = new Map([[key(sx, sy), -1]]), q = [key(sx, sy)];
-  for (let h = 0; h < q.length; h++) {
-    const i = q[h]; if (goal.has(i)) { const path = []; let c = i; while (c !== -1) { path.push([c % MW + .5, ((c / MW) | 0) + .5]); c = prev.get(c); } return path.reverse().slice(1); }
-    const x = i % MW, y = (i / MW) | 0;
-    for (const [ox, oy] of D8) {
-      const nx = x + ox, ny = y + oy, j = key(nx, ny);
-      if (Math.abs(nx - sx) > R || Math.abs(ny - sy) > R || prev.has(j) || pathBlocked(nx, ny)) continue;
-      if (ox && oy && (navBlocked(x + ox, y) || navBlocked(x, y + oy) || map[j] === DOOR || map[i] === DOOR)) continue;
-      prev.set(j, i); q.push(j);
-    }
-  }
-  return null;
-}
 function worldFromScreen(cx, cy) { const r = cv.getBoundingClientRect(), k = DEV / SCALE; return screenToWorld((cx - r.left) * k, (cy - r.top) * k + U * .9 * 0); }
 function tapWorld(cx, cy) {
   if (EDIT.on) return editorTap(cx, cy);                                     // обустройство: тап выбирает и ставит мебель
@@ -70,7 +47,6 @@ function tapWorld(cx, cy) {
   return false;
 }
 let tapMark = null;
-function showTapMark(x, y) { tapMark = {x, y, t:.8}; }
 function updateGoTo(dt) {
   if (!goTo) return null;
   goTo.time -= dt;

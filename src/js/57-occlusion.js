@@ -2,13 +2,6 @@
 // Мебель рисуется одним спрайтом, а стены — по клеткам. Высокий спрайт (телевизор, шкаф, холодильник) за стеной
 // мог оказаться поверх соседних клеток той же стены, которые нарисованы раньше. Теперь перед рисованием мебели
 // вырезаем из картинки все куски стен, стоящие между ней и камерой: что за стеной — то за стеной.
-let occFrame = -1, occInside = 0;
-function occInsideHouse() {
-  if (occFrame === frameNo) return occInside;
-  occFrame = frameNo; occInside = 0;
-  if (mode !== 'menu') for (let k = 0; k < houses.length; k++) { const Hs = houses[k]; if (P.x > Hs.ix0 && P.x < Hs.ix1 && P.y > Hs.iy0 && P.y < Hs.iy1) occInside = k + 1; }
-  return occInside;
-}
 // стены всегда в полный рост; прозрачность стены (91-house-view) — у каждого выреза своя (m.a):
 // за непрозрачной стеной мебели не видно, за полупрозрачной она проступает настолько, насколько стена прозрачна
 function occWallTop(x, y, i) { return WH; }

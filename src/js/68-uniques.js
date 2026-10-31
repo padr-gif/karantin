@@ -18,7 +18,7 @@ function uniqOf(it) { return it && it.u && UNIQ.find(q => q.u === it.u); }
 function mkUniq(q) { const it = mkItem(q.id); it.u = q.u; if (q.u === 'flask') it.w = 6; if (q.u === 'flash') it.ch = 100; if (q.u === 'radio') it.ch = 100; if (q.u === 'lighter') it.uses = 99; return it; }
 function placeUniques() {
   const kindOf = f => { const H = houses[hAt[f.y * MW + f.x] - 1]; return H ? H.kind : null; };
-  const fill = c => { if (!c.items) { c.items = []; const C = CONT[c.type]; if (C && C.loot) for (let n = ri(C.n[0], C.n[1]); n > 0; n--) c.items.push(mkItem(pick(C.loot))); } };
+  const fill = fillCont;
   const used = new Set();
   for (const q of UNIQ) {
     let L = [];

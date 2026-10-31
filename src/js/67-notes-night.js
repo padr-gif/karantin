@@ -1,4 +1,6 @@
 // ================= сюжет в записках (без концовки) и ночные звуки =================
+// контейнер без вещей (ещё не открывали) — наполнить как при генерации (записки, уникальные вещи, тайники телефонов)
+function fillCont(c) { if (!c.items) { c.items = []; const C = CONT[c.type]; if (C && C.loot) for (let n = ri(C.n[0], C.n[1]); n > 0; n--) c.items.push(mkItem(pick(C.loot))); } }
 
 // ---- записки: 19 штук, пять линий. Разложены по городу при создании мира; прочитанные собираются в дневнике ----
 const STORY_LINES = {hosp:'Больница', army:'Военные', people:'Люди', lab:'Лаборатория', rumor:'Слухи'};
@@ -33,7 +35,7 @@ function placeStoryNotes() {
     army:furns.filter(f => !f.gone && f.type === 'armybox'),
     car:props.filter(p => p.type === 'car'),
   };
-  const fill = c => { if (!c.items) { c.items = []; const C = CONT[c.type]; if (C && C.loot) for (let n = ri(C.n[0], C.n[1]); n > 0; n--) c.items.push(mkItem(pick(C.loot))); } };
+  const fill = fillCont;
   const used = new Set();
   for (const n of STORY_NOTES) {
     let L = (pool[n.at] && pool[n.at].length ? pool[n.at] : pool.home).filter(c => !used.has(c));

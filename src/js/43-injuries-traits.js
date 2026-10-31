@@ -8,15 +8,7 @@ Object.assign(SKILLS, {
   mech:{name:'Механика', per:'чинишь машины, сливаешь бензин, заводишь без ключа'},
 });
 Object.assign(MAGS, {med:{series:'«Скорая помощь»', base:'book_med'}, tail:{series:'«Кройка и шитьё»', base:'book_tail'}, mech:{series:'«За рулём»', base:'book_mech'}});
-for (const k of ['med', 'tail', 'mech']) {
-  const m = MAGS[k];
-  for (const n of [1, 2, 3]) {
-    const id = n === 1 ? m.base : m.base + n;
-    ITEMS[id] = {name:'Журнал ' + m.series + ' №' + n, sh:'Журнал №' + n, kind:'book', skill:k, vol:n, verb:'Читать'};
-    if (n > 1) ICONA[id] = m.base;
-    DESC[id] = 'Журнал для ' + (n === 1 ? 'новичков' : n === 2 ? 'опытных' : 'мастеров') + ' о навыке «' + SKILLS[k].name + '». Подходит на уровнях ' + MAG_TIER[n][0] + '–' + (MAG_TIER[n][1] + 1) + '. Прочитав, учишься втрое быстрее, пока не перерастёшь журнал.';
-  }
-}
+defMags(['med', 'tail', 'mech']);
 PROFS.medic.sk = {med:3};
 PROFS.medic.info = 'Первая помощь 3, раны заживают в 1,5 раза быстрее. С собой бинты и антибиотики.';
 PROFS.tailor = {name:'Портной', info:'Портняжное дело 3. С собой набор для шитья и тряпки.', sk:{tail:3}, items:['sewkit', 'rag', 'rag']};
@@ -320,13 +312,6 @@ function tailorButtons(it, worn) {
     }, {reopen:'items', sel:null}), 'ghost'); b.disabled = !ok; out.push(b);
   }
   return out;
-}
-function selItem() {
-  const sel = panel && panel.sel; if (!sel) return [null, false];
-  if (sel.startsWith('cl_')) return [P.cloth && P.cloth[sel.slice(3)], true];
-  if (sel === 'hand') return [P.weapon, true];
-  if (sel === 'armor') return [P.armor, true];
-  const g = groupItems(P.inv).find(g => g.key === sel); return [g ? g.it : null, false];
 }
 
 // ================= firearms =================

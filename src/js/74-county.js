@@ -357,10 +357,7 @@ function genCounty() {
   // карантин: блокпосты на трассах и забор
   for (const side of ['w', 'e', 'n', 's']) checkpoint(side);
   const F2 = MW - 1 - FEN;
-  for (let v = FEN; v <= F2; v++) {
-    for (const x of [FEN, F2]) if (get(x, v) !== ROAD && get(x, v) !== WATER && !propAt[v * MW + x]) { if (get(x, v) === TREE) set(x, v, GRASS); addProp({type:'fence', proc:true, ax:'y', cx:x + .5, cy:v + .5, solid:true, r:[x + .42, v, x + .58, v + 1], sign:(v % 9) === 4}, [[x, v]]); }
-    for (const y of [FEN, F2]) if (get(v, y) !== ROAD && get(v, y) !== WATER && !propAt[y * MW + v]) { if (get(v, y) === TREE) set(v, y, GRASS); addProp({type:'fence', proc:true, ax:'x', cx:v + .5, cy:y + .5, solid:true, r:[v, y + .42, v + 1, y + .58], sign:(v % 9) === 4}, [[v, y]]); }
-  }
+  quarantineFence(F2, true);
   const nearCP = (x, y) => (Math.abs(x - EXIT_R - 2) < 10 && (y < FEN + 10 || y > MH - FEN - 11)) || (Math.abs(y - EXIT_R - 2) < 10 && (x < FEN + 10 || x > MW - FEN - 11));
   const nearYard = (x, y) => { for (let b = -2; b <= 2; b++) for (let a = -2; a <= 2; a++) { const id = propAt[(y + b) * MW + x + a]; if (id && props[id - 1].type === 'pfence') return true; } return false; };
   genFinish({tree:(x, y, n) => {

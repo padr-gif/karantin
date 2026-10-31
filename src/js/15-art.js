@@ -27,7 +27,6 @@ function needSheet(n) {
   };
   im.src = url; return false;
 }
-const SHADE = [.58, .72, .86, 1];
 /*@@ART_EMBED@@*/
 // Sheets are decoded two at a time with progress on the loading screen; a sheet that fails is retried once.
 // (Ten big images at once used to stall weak phones, and a single 20-second cap for all of them was too tight.)
@@ -104,21 +103,9 @@ function loadArtSheets() {
     Promise.all(names.map(n => new Promise((res, rej) => { const im = new Image(); im.onload = () => { ART.imgs[n] = im; res(); }; im.onerror = rej; im.src = 'art/' + n + '.png'; })))
       .then(() => { ART.meta = meta; ART.ready = true; }));
 }
-const recolored = new Map();
-function keyedSheet(sheet, palKey, pal) {
-  const k = sheet + '|' + palKey; let c = recolored.get(k); if (c) return c;
-  const im = ART.imgs[sheet]; c = mkCanvas(im.width, im.height); const g = c.getContext('2d');
-  g.drawImage(im, 0, 0);
-  const d = g.getImageData(0, 0, im.width, im.height), a = d.data;
-  const lut = new Uint8Array(64 * 3);
-  for (let s = 0; s < 16; s++) for (let q = 0; q < 4; q++) { const col = pal[s] || [255, 0, 255], m = s === 0 || s === 7 || s === 8 ? 1 : SHADE[q]; for (let j = 0; j < 3; j++) lut[(s * 4 + q) * 3 + j] = Math.min(255, col[j] * m); }
-  for (let i = 0; i < a.length; i += 4) { if (!a[i + 3]) continue; const o = ((a[i] >> 4) * 4 + (a[i + 1] >> 6)) * 3; a[i] = lut[o]; a[i + 1] = lut[o + 1]; a[i + 2] = lut[o + 2]; }
-  g.putImageData(d, 0, 0); recolored.set(k, c); return c;
-}
 // palettes: slot -> rgb (0 outline,1 skin,2 hair,3 shirt,4 sleeve,5 pants,6 shoes,7 eye,8 mouth,9 blood,10 pack,11 handle,12 head,13 belt)
 const PBASE = {0:[24,20,18], 1:[214,176,138], 2:[60,44,30], 3:[56,92,128], 4:[56,92,128], 5:[48,52,64], 6:[44,38,34], 7:[30,24,20], 8:[90,20,16], 9:[56,92,128], 10:[108,86,56], 11:[40,36,34], 12:[150,156,162], 13:[36,32,30]};
 const WCOL = {pan:[[46,46,48],[74,76,80]], crowbar:[[160,40,34],[62,64,68]], knife:[[40,36,34],[200,204,208]], hammer:[[122,88,56],[120,124,130]], bat:[[176,132,82],[176,132,82]], pipe:[[125,130,136],[125,130,136]], axe:[[122,88,56],[160,166,172]]};
-const WCLS = {pan:'s', crowbar:'l', knife:'s', hammer:'s', bat:'l', pipe:'l', axe:'l'};
 const ZPALS = [];
 {
   const r = mulberry32(99);

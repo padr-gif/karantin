@@ -81,6 +81,25 @@ function genReset() {
   map.fill(GRASS); soil.fill(0); furn.fill(0); hAt.fill(0); propAt.fill(0); seen.fill(0); vis.fill(0);
   obs = new Array(NT).fill(null); houses = []; furns = []; props = []; SPECIAL = []; CHECKPOINTS = [];
 }
+// карантинный забор по границе района (F2 — дальняя линия); через воду (county) не ставим
+function quarantineFence(F2, skipWater) {
+  for (let v = FEN; v <= F2; v++) {
+    for (const x of [FEN, F2]) { const t = get(x, v); if (t !== ROAD && !(skipWater && t === WATER) && !propAt[v * MW + x]) { if (t === TREE) set(x, v, GRASS); addProp({type:'fence', proc:true, ax:'y', cx:x + .5, cy:v + .5, solid:true, r:[x + .42, v, x + .58, v + 1], sign:(v % 9) === 4}, [[x, v]]); } }
+    for (const y of [FEN, F2]) { const t = get(v, y); if (t !== ROAD && !(skipWater && t === WATER) && !propAt[y * MW + v]) { if (t === TREE) set(v, y, GRASS); addProp({type:'fence', proc:true, ax:'x', cx:v + .5, cy:y + .5, solid:true, r:[v, y + .42, v + 1, y + .58], sign:(v % 9) === 4}, [[v, y]]); } }
+  }
+}
+// машины: вещи, бензин, ключи, целость; молоток и две доски — в ящиках (или шкафах). Порядок случайных чисел — как был
+function stockCarsAndTools() {
+  for (const p of props) if (p.type === 'car') {
+    p.items = []; p.searched = false; p.fuel = rng() < .25 ? 0 : ri(5, 70); p.key = rng() < (p.army || p.police ? .55 : .3); p.hp = ri(60, 100);
+    const L = p.army ? CONT.armybox.loot : p.police ? CONT.locker.loot : CONT.car.loot;
+    for (let n = ri(p.army || p.police ? 1 : 0, 3); n > 0; n--) p.items.push(mkItem(pick(L)));
+  }
+  const crates = furns.filter(f => f.type === 'crate');
+  const pool = crates.length ? crates : furns.filter(f => f.type === 'cabinet' || f.type === 'wardrobe');
+  if (pool.length && !furns.some(f => f.items.some(it => it.id === 'hammer'))) pick(pool).items.push(mkItem('hammer'));
+  if (pool.length) { const c = pick(pool); c.items.push(mkItem('plank'), mkItem('plank')); }
+}
 const inMap = (x, y, m) => x >= m && y >= m && x < MW - m && y < MH - m;
 function rectFree(x, y, w, h, m) {
   if (!inMap(x - m, y - m, 2) || !inMap(x + w + m - 1, y + h + m - 1, 2)) return false;
@@ -173,15 +192,7 @@ function genFinish(o) {
     const mx = d.x + out[0] * 2 + (out[0] ? 0 : 1), my = d.y + out[1] * 2 + (out[1] ? 0 : 1);
     if (get(mx, my) === GRASS && !propAt[my * MW + mx]) addProp({type:'mail', cx:mx + .5, cy:my + .5, solid:true, r:[mx + .4, my + .4, mx + .6, my + .6]}, [[mx, my]]);
   }
-  for (const p of props) if (p.type === 'car') {
-    p.items = []; p.searched = false; p.fuel = rng() < .25 ? 0 : ri(5, 70); p.key = rng() < (p.army || p.police ? .55 : .3); p.hp = ri(60, 100);
-    const L = p.army ? CONT.armybox.loot : p.police ? CONT.locker.loot : CONT.car.loot;
-    for (let n = ri(p.army || p.police ? 1 : 0, 3); n > 0; n--) p.items.push(mkItem(pick(L)));
-  }
-  const crates = furns.filter(f => f.type === 'crate');
-  const pool = crates.length ? crates : furns.filter(f => f.type === 'cabinet' || f.type === 'wardrobe');
-  if (pool.length && !furns.some(f => f.items.some(it => it.id === 'hammer'))) pick(pool).items.push(mkItem('hammer'));
-  if (pool.length) { const c = pick(pool); c.items.push(mkItem('plank'), mkItem('plank')); }
+  stockCarsAndTools();
   { const homes = shuffle(houses.filter(H => H.kind === 'house' && H.rooms && H.w >= 8)); for (const H of homes.slice(0, o.hideouts || 1)) stockHideout(H); }
 }
 // дом на участке у дороги: сам дом, сарай, сад; side — с какой стороны дорога

@@ -136,7 +136,6 @@ function houseOk(Hs) {
 // ---- residential houses with rooms ----
 const FSZ = {stove:[.8,.7], fridge:[.72,.72], sink:[.8,.7], cabinet:[.84,.72], bed:[.86,.86], wardrobe:[.8,.6], shelf:[.8,.56], crate:[.62,.62],
   toilet:[.5,.7], bath:[.9,.9], medcab:[.66,.5], table:[.78,.78], sofa:[.92,.72], tv:[.8,.5], nightstand:[.46,.42], dresser:[.84,.42], bookshelf:[.8,.42], hanger:[.34,.34], counter2:[.88,.6]};
-const ROOMN = {kitchen:'Кухня', hall:'Прихожая', living:'Гостиная', bedroom:'Спальня', bath:'Ванная'};
 function addFurnIn(Hs, type, room, center) {
   const cand = [];
   for (let y = room.y0; y <= room.y1; y++) for (let x = room.x0; x <= room.x1; x++) {
@@ -377,8 +376,7 @@ let GCFG = {};                                            // настройки 
 // старый город (квартальная сетка ROADS): дома, улицы, особые здания; затем крупная мебель и вещи в комнатах
 function genTown() {
   const G = Object.assign({roles:['police', 'pharmacy', 'hardware', 'gas', 'store', 'store', 'park', 'park'], per:4, gap:2, cars:90, lamp:8, cabins:4, greens:900}, GCFG);
-  map.fill(GRASS); soil.fill(0); furn.fill(0); hAt.fill(0); propAt.fill(0); seen.fill(0); vis.fill(0);
-  obs = new Array(NT).fill(null); houses = []; furns = []; props = []; SPECIAL = []; CHECKPOINTS = [];
+  genReset();                                                                 // 71-terrain
   const RL = ROADS[ROADS.length - 1] + RW - 1;
   // city streets
   for (const r of ROADS) for (let i = CITY0; i <= RL; i++) for (let k = 0; k < RW; k++) { set(i, r + k, ROAD); set(r + k, i, ROAD); }
@@ -463,10 +461,7 @@ function genTown() {
   for (const side of ['w', 'e', 'n', 's']) checkpoint(side);
   // quarantine fence all around the town
   const F2 = MW - 1 - FEN;
-  for (let v = FEN; v <= F2; v++) {
-    for (const x of [FEN, F2]) if (get(x, v) !== ROAD && !propAt[v * MW + x]) { if (get(x, v) === TREE) set(x, v, GRASS); addProp({type:'fence', proc:true, ax:'y', cx:x + .5, cy:v + .5, solid:true, r:[x + .42, v, x + .58, v + 1], sign:(v % 9) === 4}, [[x, v]]); }
-    for (const y of [FEN, F2]) if (get(v, y) !== ROAD && !propAt[y * MW + v]) { if (get(v, y) === TREE) set(v, y, GRASS); addProp({type:'fence', proc:true, ax:'x', cx:v + .5, cy:y + .5, solid:true, r:[v, y + .42, v + 1, y + .58], sign:(v % 9) === 4}, [[v, y]]); }
-  }
+  quarantineFence(F2, false);
   // parked cars in town
   for (let t = 0; t < G.cars; t++) {
     const r = pick(ROADS), lane = r + pick([0, RW - 1]);
@@ -508,15 +503,7 @@ function genTown() {
       if (get(x, y) === GRASS && !hAt[y * MW + x] && rng() < .14) addProp({type:'bush', cx:x + .5, cy:y + .5, solid:false, s:.55 + rng() * .4}, [[x, y]]);
     }
   }
-  for (const p of props) if (p.type === 'car') {
-    p.items = []; p.searched = false; p.fuel = rng() < .25 ? 0 : ri(5, 70); p.key = rng() < (p.army || p.police ? .55 : .3); p.hp = ri(60, 100);
-    const L = p.army ? CONT.armybox.loot : p.police ? CONT.locker.loot : CONT.car.loot;
-    for (let n = ri(p.army || p.police ? 1 : 0, 3); n > 0; n--) p.items.push(mkItem(pick(L)));
-  }
-  const crates = furns.filter(f => f.type === 'crate');
-  const pool = crates.length ? crates : furns.filter(f => f.type === 'cabinet' || f.type === 'wardrobe');
-  if (pool.length && !furns.some(f => f.items.some(it => it.id === 'hammer'))) pick(pool).items.push(mkItem('hammer'));
-  if (pool.length) { const c = pick(pool); c.items.push(mkItem('plank'), mkItem('plank')); }
+  stockCarsAndTools();
   growFurniture();
 }
 // exit checkpoint: concrete blocks across the road at the fence, sandbags, a booth, an army truck, a jam of cars

@@ -344,7 +344,6 @@ function doBarricade() {
   if (!o) { toast(hasTool('hammer') ? (countItem('plank') ? 'Подойди к окну или двери' : 'Нужны доски') : 'Нужен молоток и доски'); return; }
   P.act = {kind:'bar', t:0, dur:2.5 * (1 - .08 * skillLv('carp')), o};
 }
-function hasCookable() { return P.inv.some(it => ITEMS[it.id].raw); }
 function nearTap() { return waterOn() && furns.some(f => f.type === 'sink' && Math.hypot(f.cx - P.x, f.cy - P.y) < 3); }
 function cook(src) {
   if (src.type === 'fire' && src.t <= 0) { toast('Костёр погас'); return; }
@@ -528,7 +527,6 @@ function useItemBase(it, k, d) {
   }
   renderInv(); updateHud();
 }
-function dropItem(k) { const it = P.inv[k]; if (!it) return; P.inv.splice(k, 1); toast('Выброшено: ' + ITEMS[it.id].name); renderInv(); }
 function unequip() {
   if (!P.weapon) return;
   if (invFull()) { toast('Слишком тяжело — не унести'); return; }

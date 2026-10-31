@@ -3,7 +3,6 @@
 // ---- ещё одна жизнь: новый выживший в том же городе. Дом, тайники, заколоченные окна — всё как было.
 // Прежний герой бродит мертвецом в своей одежде; упокоишь — его вещи останутся на земле ----
 const GHOST_PI0 = 60;
-function houseAt(x, y) { const hi = hAt[Math.floor(y) * MW + Math.floor(x)]; return hi ? houses[hi - 1] : null; }
 function ghostPal(lk, cloth) {
   const skin = (LOOK.skin[lk.skin] || [200, 170, 140]).map((v, k) => Math.round(v * .62 + [120, 128, 104][k] * .38));   // кожа мертвеца
   const col = s => cloth && cloth[s] && ITEMS[cloth[s].id] && ITEMS[cloth[s].id].col;

@@ -1,12 +1,3 @@
-// ================= action stack, new car controls, no-scroll panels, in-cell transfer progress =================
-function compactRecipe(r) {
-  const ingr = r.querySelector('.ingr'), out = ingr && ingr.querySelector('.cell.out'), nm = r.querySelector('.nm'), acts = r.querySelector('.acts');
-  if (!ingr || !out || !nm) return;
-  const need = nm.querySelector('small'); if (need) { r.title = need.textContent; need.remove(); }
-  const arrow = ingr.querySelector('.arrow'); if (arrow) arrow.remove(); out.remove();
-  const mid = mk('div', 'rmid'); mid.appendChild(nm); mid.appendChild(ingr);
-  r.textContent = ''; r.classList.add('rc3'); r.appendChild(out); r.appendChild(mid); if (acts) r.appendChild(acts);
-}
 // recipes: list on the left, the chosen recipe with every requirement on the right
 function recipeSplit(body) {
   const cards = [...body.querySelectorAll(':scope > .recipe')]; if (!cards.length) return;
@@ -38,11 +29,6 @@ function lootTap(c, side, g) {
   if (lootTapK === k && now - lootTapT < 380) { lootTapK = ''; queueXfer(c, [g.it], side === 'c' ? 'take' : 'put'); return; }
   lootTapK = k; lootTapT = now;
   panel.sel = panel.sel === k ? null : k; renderPanel();
-}
-function takeUseful(c) {
-  const want = c.items.filter(it => { const d = ITEMS[it.id]; if (!d || isRotten(it)) return false; const cat = catOf(it.id); return cat === 'Еда' || cat === 'Питьё' || cat === 'Медицина' || d.kind === 'weapon' && !P.weapon; });
-  if (!want.length) { toast('Ничего нужного: ни еды, ни воды, ни лекарств'); return; }
-  queueXfer(c, want, 'take');
 }
 // transfer progress lives inside the item's own cell
 function fitGrid(g) {

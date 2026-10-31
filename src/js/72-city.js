@@ -186,10 +186,7 @@ function genCity(t) {
   // карантин: блокпосты на трассе и забор
   for (const side of ['w', 'e', 'n', 's']) checkpoint(side);
   const F2 = MW - 1 - FEN;
-  for (let v = FEN; v <= F2; v++) {
-    for (const x of [FEN, F2]) if (get(x, v) !== ROAD && !propAt[v * MW + x]) { if (get(x, v) === TREE) set(x, v, GRASS); addProp({type:'fence', proc:true, ax:'y', cx:x + .5, cy:v + .5, solid:true, r:[x + .42, v, x + .58, v + 1], sign:(v % 9) === 4}, [[x, v]]); }
-    for (const y of [FEN, F2]) if (get(v, y) !== ROAD && !propAt[y * MW + v]) { if (get(v, y) === TREE) set(v, y, GRASS); addProp({type:'fence', proc:true, ax:'x', cx:v + .5, cy:y + .5, solid:true, r:[v, y + .42, v + 1, y + .58], sign:(v % 9) === 4}, [[v, y]]); }
-  }
+  quarantineFence(F2, false);
   const nearCP = (x, y) => (Math.abs(x - EXIT_R - 2) < 10 && (y < FEN + 10 || y > MH - FEN - 11)) || (Math.abs(y - EXIT_R - 2) < 10 && (x < FEN + 10 || x > MW - FEN - 11));
   genFinish({tree:(x, y, n) => {
     if (nearCP(x, y) || cityMask[y * MW + x]) return 0;
