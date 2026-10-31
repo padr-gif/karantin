@@ -287,3 +287,19 @@ DIST_FIELDS.push('x53v');
 }); }
 { onLoad((d) => { for (const k of (d && d.x53v && d.x53v.dug) || []) if (props[k] && props[k].type === 'veg') props[k].dug = true;
 }, d => { world.gen = (d && d.x53 && d.x53.gen) || 1; world.townN = (d && d.x53 && d.x53.n) || 256; }); }
+// ---- соседние дворы: два забора вплотную — один (v82) ----
+// Каждый дом ставит забор вокруг своего двора сам, и между соседями выходили два параллельных забора через клетку.
+// После генерации (без случайных чисел, 04-state) второй из такой пары убираем: type 'gone', номер объекта остаётся
+// (сохранения ссылаются на объекты по номеру). На стыке и в калитках забор не трогаем — только параллельные пары.
+function mergeFences() {
+  for (let k = 0; k < props.length; k++) {
+    const p = props[k]; if (p.type !== 'pfence') continue;
+    const x = Math.floor(p.cx), y = Math.floor(p.cy);
+    for (const d of [1, -1]) {
+      const nx = p.ax === 'x' ? x : x + d, ny = p.ax === 'x' ? y + d : y; if (!inMap(nx, ny, 0)) continue;
+      const j = propAt[ny * MW + nx] - 1, q = props[j];
+      if (!q || j <= k || q.type !== 'pfence' || q.ax !== p.ax) continue;
+      q.type = 'gone'; q.solid = false; propAt[ny * MW + nx] = 0;
+    }
+  }
+}
