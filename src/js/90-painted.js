@@ -76,8 +76,12 @@ function paintedFrame(name) {
   let fr = PAINTED.get(name);
   if (fr !== undefined) return fr;
   fr = null;
-  const m = /^(pine|tree)_\d+_c$/.exec(name), base = m && ART.meta.frames[name];
-  if (base && ART.imgs[base[0]]) { try { fr = paintCanopy(name, base, m[1] === 'pine'); } catch (e) { fr = null; } }
+  const m = /^(pine|tree)_\d+_c$/.exec(name), base = ART.meta.frames[name];
+  const car = /^car_(\d+)_(px|py|nx|ny)$/.exec(name);
+  if (base && ART.imgs[base[0]]) {
+    try { fr = m ? paintCanopy(name, base, m[1] === 'pine') : car ? paintCar(name, base, +car[1], car[2]) : null; }
+    catch (e) { fr = null; logErr(e, 'painted ' + name); }
+  }
   PAINTED.set(name, fr);
   return fr;
 }
@@ -103,20 +107,141 @@ function paintCanopy(name, b, pine) {
     pts.push([y, x, l, k]);
   }
   pts.sort((a, c) => a[0] - c[0]);                                            // сверху вниз: нижние мазки ложатся поверх
+  // мазки копим пачками (цвет × ступень света) и заливаем пачку одним вызовом — в разы быстрее, чем по одному.
+  // Порядок «сверху вниз» сохраняем полосами: каждая полоса по высоте — свой проход по пачкам
+  const STEPS = 7, BAND = 24 * S;
+  let band = -1, packs = null;
+  const flush = () => {
+    if (!packs) return;
+    packs.forEach((pk, idx) => {
+      if (!pk) return;
+      const c = pal[idx % pal.length], kk = .5 + Math.floor(idx / pal.length) / (STEPS - 1) * .95;
+      const st = `rgb(${Math.min(255, c[0] * kk) | 0},${Math.min(255, c[1] * kk) | 0},${Math.min(255, c[2] * kk) | 0})`;
+      if (pine) { g.strokeStyle = st; g.lineWidth = 2.1; g.lineCap = 'round'; g.stroke(pk); } else { g.fillStyle = st; g.fill(pk); }
+    });
+    packs = null;
+  };
   for (const [y, x, l, k] of pts) {
+    if (Math.floor(y / BAND) !== band) { flush(); band = Math.floor(y / BAND); packs = []; }
     const lit = (l - avg) / 60 + (1 - y / h) * .25 - (x - w * .45) / w * .3;  // свет сверху слева
     const kk = Math.max(.5, Math.min(1.45, 1 + lit * .55 + (hash(k, 5) - .5) * .25));
-    const c = pal[Math.floor(hash(k, 7) * pal.length)];
-    g.fillStyle = `rgb(${Math.min(255, c[0] * kk) | 0},${Math.min(255, c[1] * kk) | 0},${Math.min(255, c[2] * kk) | 0})`;
+    const idx = Math.round((kk - .5) / .95 * (STEPS - 1)) * pal.length + Math.floor(hash(k, 7) * pal.length);
+    const pk = packs[idx] || (packs[idx] = new Path2D());
     if (pine) {                                                               // иголки: от оси наружу и вниз
       const side = x < cxAxis ? -1 : 1, len = 5 + hash(k, 9) * 7, a = side < 0 ? Math.PI - .5 - hash(k, 11) * .5 : .5 + hash(k, 11) * .5;
-      g.strokeStyle = g.fillStyle; g.lineWidth = 1.6 + hash(k, 13); g.lineCap = 'round';
-      g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len * .8); g.stroke();
+      pk.moveTo(x, y); pk.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len * .8);
     } else {                                                                  // листок-ромбик
       const s = 3 + hash(k, 9) * 4, a = hash(k, 11) * Math.PI, dx = Math.cos(a) * s, dy = Math.sin(a) * s * .6;
-      g.beginPath(); g.moveTo(x - dx, y - dy); g.lineTo(x + dy * .45, y - dx * .3); g.lineTo(x + dx, y + dy); g.lineTo(x - dy * .45, y + dx * .3); g.closePath(); g.fill();
+      pk.moveTo(x - dx, y - dy); pk.lineTo(x + dy * .45, y - dx * .3); pk.lineTo(x + dx, y + dy); pk.lineTo(x - dy * .45, y + dx * .3); pk.closePath();
     }
   }
+  flush();
   const key = 'painted:' + name; ART.imgs[key] = out;
   return [key, 0, 0, w, h, b[5] * S, b[6] * S, S];
+}
+
+// ---- рисованные машины ----
+// Седан из объёмных частей вместо воксельного спрайта: кузов со скосами, кабина со скошенными стёклами, колёса в арках,
+// фары, решётка, бамперы, стыки дверей, мягкая тень. Машина строится в своих осях (u — вдоль, перёд на +u; v — поперёк;
+// z — высота в пикселях мира) и поворачивается под кадр: px — вдоль x передом к +x, nx — передом к −x, py/ny — то же по y.
+// Видимые грани выбираются по обходу на экране, свет — сверху и со стороны +y, как у стен.
+function paintCar(name, b, ci, dir) {
+  const S = 3, w = b[3] * S, h = b[4] * S, ax = b[5] * S, ay = b[6] * S;
+  const cv = mkCanvas(w, h), g = cv.getContext('2d');
+  const col = CARC[ci] || [120, 120, 120];
+  const rot = {px:(u, v) => [u, v], nx:(u, v) => [-u, -v], py:(u, v) => [-v, u], ny:(u, v) => [v, -u]}[dir];
+  const P3 = (u, v, z) => { const [x, y] = rot(u, v); return [ax + (x - y) * 30 * S, ay + ((x + y) * 15 - z) * S]; };
+  const rgb = (c, k, a) => `rgba(${Math.min(255, c[0] * k) | 0},${Math.min(255, c[1] * k) | 0},${Math.min(255, c[2] * k) | 0},${a == null ? 1 : a})`;
+  const area = pts => { let s = 0; for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; s += p[0] * q[1] - q[0] * p[1]; } return s; };
+  // свет грани по её нормали (в осях мира, высота в «клетках» ≈ z/32)
+  const light = q => {
+    const W3 = q.map(([u, v, z]) => { const [x, y] = rot(u, v); return [x, y, z / 32]; });
+    const a = W3[1].map((c, i) => c - W3[0][i]), c2 = W3[W3.length - 1].map((c, i) => c - W3[0][i]);
+    let n = [a[1] * c2[2] - a[2] * c2[1], a[2] * c2[0] - a[0] * c2[2], a[0] * c2[1] - a[1] * c2[0]];
+    const l = Math.hypot(...n) || 1; n = n.map(c => c / l);
+    const L = [.25, .6, 1], ll = Math.hypot(...L);
+    return .55 + .45 * Math.max(0, (n[0] * L[0] + n[1] * L[1] + n[2] * L[2]) / ll);
+  };
+  const path = pts => { g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); };
+  // грань q (точки u,v,z против часовой снаружи); видна — красим; fn(lerp) дорисовывает детали в её координатах
+  const face = (q, c, fn, gloss) => {
+    const pts = q.map(p => P3(...p)); if (area(pts) <= 0) return false;
+    const k = light(q); path(pts); g.fillStyle = rgb(c, k); g.fill();
+    if (gloss) {                                                              // блик: светлее у верхнего края грани
+      const top = pts.reduce((m, p) => p[1] < m[1] ? p : m), bot = pts.reduce((m, p) => p[1] > m[1] ? p : m);
+      const gr = g.createLinearGradient(top[0], top[1], bot[0], bot[1]); gr.addColorStop(0, `rgba(255,255,255,${gloss})`); gr.addColorStop(.6, 'rgba(255,255,255,0)');
+      path(pts); g.fillStyle = gr; g.fill();
+    }
+    if (fn) { const at = (s, t) => { const a = [0, 1, 2].map(i => q[0][i] + (q[1][i] - q[0][i]) * s), d = [0, 1, 2].map(i => q[3][i] + (q[2][i] - q[3][i]) * s); return P3(...[0, 1, 2].map(i => a[i] + (d[i] - a[i]) * t)); }; fn(at, k); }
+    return true;
+  };
+  const quadIn = (at, s0, s1, t0, t1) => [at(s0, t0), at(s1, t0), at(s1, t1), at(s0, t1)];
+  const fillQ = (pts, style) => { path(pts); g.fillStyle = style; g.fill(); };
+  // призма: нижний и верхний прямоугольники (u0,u1,v0,v1,z) → грани
+  const prism = (B, T, c, deco, gloss) => {
+    const bq = [[B[0], B[2]], [B[1], B[2]], [B[1], B[3]], [B[0], B[3]]], tq = [[T[0], T[2]], [T[1], T[2]], [T[1], T[3]], [T[0], T[3]]];
+    const zb = B[4], zt = T[4];
+    for (let i = 0; i < 4; i++) {                                             // бока: снизу по контуру, сверху обратно
+      const j = (i + 1) % 4, q = [[...bq[i], zb], [...bq[j], zb], [...tq[j], zt], [...tq[i], zt]];
+      face(q, c, deco && deco[i], gloss);
+    }
+    face([[...tq[0], zt], [...tq[1], zt], [...tq[2], zt], [...tq[3], zt]], c, deco && deco[4], gloss);
+  };
+  const L = .93, Wd = .41;
+  // тень
+  g.save(); g.filter = `blur(${2.2 * S}px)`; g.fillStyle = 'rgba(0,0,0,.42)';
+  path([P3(-L - .06, -Wd - .02, 0), P3(L + .1, -Wd - .02, 0), P3(L + .1, Wd + .12, 0), P3(-L - .06, Wd + .12, 0)]); g.fill(); g.restore();
+  // колёса: окружность в плоскости борта
+  const wheel = (u, side) => {
+    const v = side * (Wd - .02), r = 6.4, rt = r / 32;
+    const ring = (rr, dv) => { const pts = []; for (let k = 0; k < 20; k++) { const a = k / 20 * Math.PI * 2; pts.push(P3(u + Math.cos(a) * rr / 32, v + dv, 6.6 + Math.sin(a) * rr)); } return pts; };
+    fillQ(ring(r, 0), '#17171a'); fillQ(ring(r * .98, side * .05), '#202024');
+    fillQ(ring(r * .55, side * .055), side > 0 ? '#9a9ea2' : '#5e6266'); fillQ(ring(r * .22, side * .06), '#3a3c40');
+  };
+  const vis = (u, v) => { const [x, y] = rot(u, v); return x + y > 0; };     // борт со стороны камеры
+  for (const u of [-.56, .56]) for (const s of [1, -1]) if (!vis(0, s)) wheel(u, s);
+  // кузов: низ со скосом к порогам и капот/багажник
+  const sideDeco = (front) => (at, k) => {                                    // борт: арки, стыки дверей, ручки, молдинг
+    g.fillStyle = 'rgba(0,0,0,.55)';
+    for (const s of [.2, .8]) { const c = at(s, .05); g.beginPath(); g.ellipse(c[0], c[1], 8.5 * S, 7.5 * S, 0, Math.PI, 0); g.fill(); }
+    g.strokeStyle = rgb(col, k * .55); g.lineWidth = .9 * S;
+    for (const s of [.36, .62]) { const a = at(s, .12), c = at(s, .95); g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(c[0], c[1]); g.stroke(); }
+    g.strokeStyle = 'rgba(220,224,226,.7)'; g.lineWidth = .7 * S; { const a = at(.06, .55), c = at(.94, .55); g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(c[0], c[1]); g.stroke(); }
+    g.fillStyle = 'rgba(30,30,30,.6)'; for (const s of [.42, .68]) { const a = at(s, .72), c = at(s + .05, .72); g.fillRect(Math.min(a[0], c[0]), Math.min(a[1], c[1]) - .4 * S, Math.abs(c[0] - a[0]) + 1, 1.1 * S); }
+  };
+  const endDeco = (front) => (at, k) => {                                     // перёд: фары, решётка; зад: фонари; бампер
+    fillQ(quadIn(at, 0, 1, 0, .26), 'rgb(58,60,64)');
+    fillQ(quadIn(at, .02, .98, .26, .36), 'rgba(196,200,204,.95)');
+    if (front) {
+      fillQ(quadIn(at, .3, .7, .45, .85), 'rgb(34,36,40)');
+      g.strokeStyle = 'rgba(150,154,158,.8)'; g.lineWidth = .5 * S; for (let t = .5; t < .85; t += .09) { const a = at(.31, t), c = at(.69, t); g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(c[0], c[1]); g.stroke(); }
+      for (const s of [.15, .85]) { const c = at(s, .64); g.fillStyle = 'rgb(236,232,210)'; g.beginPath(); g.ellipse(c[0], c[1], 2.4 * S, 2.6 * S, 0, 0, 6.283); g.fill(); g.fillStyle = 'rgba(255,255,255,.9)'; g.beginPath(); g.ellipse(c[0] - .6 * S, c[1] - .7 * S, .9 * S, .9 * S, 0, 0, 6.283); g.fill(); }
+    } else {
+      for (const s of [[.04, .26], [.74, .96]]) fillQ(quadIn(at, s[0], s[1], .5, .82), 'rgb(176,36,30)');
+      fillQ(quadIn(at, .38, .62, .5, .74), 'rgba(222,214,170,.9)');
+    }
+  };
+  // порядок граней призмы: 0 — борт v−, 1 — торец u+, 2 — борт v+, 3 — торец u−, 4 — верх
+  const sd = [sideDeco(), endDeco(true), sideDeco(), endDeco(false), null];
+  prism([-L + .05, L - .05, -Wd + .03, Wd - .03, 3.2], [-L, L, -Wd, Wd, 8], [70, 72, 76], null);   // порог/днище
+  prism([-L, L, -Wd, Wd, 8], [-L + .04, L - .02, -Wd + .02, Wd - .02, 16.5], col, sd, .14);
+  // кабина: скошенные лобовое и заднее стекло
+  const glass = [64, 80, 96];
+  const winSide = (at, k) => {                                                // боковые стёкла: два окна и стойка
+    const fr = 'rgba(30,32,36,.85)';
+    for (const [s0, s1] of [[.08, .47], [.53, .9]]) {
+      const q = quadIn(at, s0, s1, .1, .88); fillQ(q, fr);
+      const qi = quadIn(at, s0 + .02, s1 - .02, .16, .84); fillQ(qi, rgb(glass, k * 1.05));
+      const a = at(s0 + .1, .16), c = at(s0 + .2, .84), d = at(s0 + .27, .84), e = at(s0 + .17, .16);
+      fillQ([a, c, d, e], 'rgba(220,232,240,.22)');                          // отблеск
+    }
+  };
+  const winEnd = (at, k) => { fillQ(quadIn(at, .06, .94, .08, .9), 'rgba(30,32,36,.85)'); fillQ(quadIn(at, .1, .9, .14, .86), rgb(glass, k * 1.1));
+    const a = at(.2, .14), c = at(.45, .86), d = at(.58, .86), e = at(.33, .14); fillQ([a, c, d, e], 'rgba(220,232,240,.2)'); };
+  prism([-.48, .42, -Wd + .05, Wd - .05, 16.5], [-.32, .2, -Wd + .1, Wd - .1, 25], col, [winSide, winEnd, winSide, winEnd, null], .1);
+  for (const u of [-.56, .56]) for (const s of [1, -1]) if (vis(0, s)) wheel(u, s);
+  // мягкость: лёгкое размытие краёв, как у остальных детальных кадров
+  const out = mkCanvas(w, h), og = out.getContext('2d'); og.filter = `blur(${(S * .28).toFixed(2)}px)`; og.drawImage(cv, 0, 0);
+  const key = 'painted:' + name; ART.imgs[key] = out;
+  return [key, 0, 0, w, h, ax, ay, S];
 }
