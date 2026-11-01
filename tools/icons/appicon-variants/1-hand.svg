@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<!-- Кровавая ладонь: один крупный знак, читается и в 48 px -->
+<defs><radialGradient id="bg" cx=".5" cy=".42" r=".75"><stop offset="0" stop-color="#2b3034"/><stop offset="1" stop-color="#0c0e10"/></radialGradient></defs>
+<rect width="512" height="512" fill="url(#bg)"/>
+<g fill="#b8170e">
+  <ellipse cx="258" cy="306" rx="84" ry="92"/>
+  <rect x="166" y="148" width="40" height="150" rx="20" transform="rotate(-9 186 223)"/>
+  <rect x="214" y="104" width="42" height="180" rx="21" transform="rotate(-3 235 194)"/>
+  <rect x="264" y="100" width="42" height="184" rx="21" transform="rotate(3 285 192)"/>
+  <rect x="312" y="128" width="38" height="164" rx="19" transform="rotate(10 331 210)"/>
+  <rect x="330" y="246" width="40" height="120" rx="20" transform="rotate(48 350 306)"/>
+  <rect x="208" y="370" width="16" height="74" rx="8"/><circle cx="216" cy="446" r="11"/>
+  <rect x="262" y="384" width="12" height="44" rx="6"/><circle cx="268" cy="430" r="8"/>
+  <rect x="296" y="372" width="14" height="96" rx="7"/><circle cx="303" cy="468" r="10"/>
+</g>
+<g fill="#e8452e" opacity=".35"><ellipse cx="236" cy="286" rx="30" ry="26"/><ellipse cx="236" cy="150" rx="12" ry="22"/><ellipse cx="284" cy="146" rx="12" ry="22"/></g>
+</svg>

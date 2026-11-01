@@ -169,7 +169,7 @@ function render(dt) {
     for (let q = 0; q < 3; q++) { const a = animT * (3 + q) + q * 2 + c.seed * 9; const fx = c.x + Math.cos(a) * .3, fy = c.y + Math.sin(a * 1.3) * .25; ctx.fillRect(Math.round(SX(fx, fy)), Math.round(SY(fx, fy, U * (.35 + Math.sin(a * 2) * .15))), 1, 1); }
   }
   drawParts();
-  drawBreath(); drawBustle(); drawEvac(); drawScreamFx(); drawLootMarks(); drawV23(); drawEditMarks(); for (const fn of OVERLAYS) fn(); drawFog(); if (tapMark) tapMark.t -= dt;
+  drawBreath(); drawBustle(); drawScreamFx(); drawLootMarks(); drawV23(); drawEditMarks(); for (const fn of OVERLAYS) fn(); drawFog(); if (tapMark) tapMark.t -= dt;
 
   // time-of-day tint
   const hr = hourOf(), L = lightLevel();
@@ -260,7 +260,7 @@ function render(dt) {
     } else if (curAct && !paused) {
       let label, tx, ty;
       if (curAct.f) { label = (actName(curAct) || 'Тут') + ' · ' + curAct.label.toLowerCase(); tx = curAct.f.cx != null ? curAct.f.cx : curAct.f.x; ty = curAct.f.cy != null ? curAct.f.cy : curAct.f.y; }
-      else { tx = curAct.o.x + .5; ty = curAct.o.y + .5; label = (obs[curAct.o.i].t === 'door' ? 'Дверь' : 'Окно') + ' · ' + curAct.label.toLowerCase(); }
+      else { tx = curAct.o.x + .5; ty = curAct.o.y + .5; label = ((obs[curAct.o.i] || {}).t === 'door' ? 'Дверь' : 'Окно') + ' · ' + curAct.label.toLowerCase(); }
       if (isTouch) { const lx = SX(tx, ty) * K, ly = SY(tx, ty, U * 2.1) * K + Math.sin(animT * 5) * 2 * DEV, r = 5 * DEV; mainCtx.fillStyle = '#f0c477'; mainCtx.strokeStyle = 'rgba(0,0,0,.7)'; mainCtx.lineWidth = 2 * DEV; mainCtx.beginPath(); mainCtx.moveTo(lx - r, ly - r); mainCtx.lineTo(lx + r, ly - r); mainCtx.lineTo(lx, ly + r * .6); mainCtx.closePath(); mainCtx.stroke(); mainCtx.fill(); label = ''; }
       const fs = 13 * DEV;
       if (label) { mainCtx.font = `700 ${fs}px "PT Sans", sans-serif`; mainCtx.textAlign = 'center';

@@ -53,7 +53,7 @@ function updateCore(dt) {
   let mag = Math.min(1, Math.hypot(ix, iy));
   if (mag < .15) mag = 0;
   if (panel) { mag = 0; goTo = null; }
-  tickXfer(dt); tickAlarm(); tickBustle(dt); tickScreamers(dt); tickEvac(dt); tickWinterFx(dt); tickFlu(dt * settings.dayLen * (P.sleep ? 40 : 1)); tickV23(dt, gm);
+  tickXfer(dt); tickAlarm(); tickBustle(dt); tickScreamers(dt); tickWinterFx(dt); tickFlu(dt * settings.dayLen * (P.sleep ? 40 : 1)); tickV23(dt, gm);
   if (P.act && P.act.kind === 'vault') { mag = 0; const A = P.act, k = Math.min(1, A.t / A.dur), e = k * k * (3 - 2 * k); P.x = A.fx + (A.tx - A.fx) * e; P.y = A.fy + (A.ty - A.fy) * e; }
   let wx = 0, wy = 0;
   if (mag) { const a = ix, b = 2 * iy; wx = (a + b) / 2; wy = (b - a) / 2; const l = Math.hypot(wx, wy) || 1; wx /= l; wy /= l; }

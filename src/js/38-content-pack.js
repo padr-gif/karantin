@@ -1,4 +1,4 @@
-// ================= big content pack — items, recipes, zombie types, evacuation ending, dismantling =================
+// ================= big content pack — items, recipes, zombie types, dismantling =================
 Object.assign(ITEMS, {
   cleaver:{name:'Тесак', kind:'weapon', dmg:34, range:1.15, cd:.5, cleave:1, dur:55, verb:'Взять в руки'},
   nailbat:{name:'Бита с гвоздями', sh:'Бита+', kind:'weapon', dmg:42, range:1.35, cd:.7, cleave:2, dur:40, verb:'Взять в руки'},
@@ -171,41 +171,4 @@ function ragoutCard(src) {
     SFX.sizzle();
   }); b.disabled = !ok;
   return recipeCard('Рагу', [{id:'meat', ok:have('meat')}, {id:'potato', ok:have('potato')}, {id:'carrot', ok:have('carrot')}, {id:'pot', ok:pot}, {id:'water', ok:water, label:'вода'}, {id:src.type === 'fire' ? 'campfire' : src.type === 'burner' ? 'burner' : null, label:'Электричество', ok:heat}], 'ragout', [b], 'мясо, картошка и морковь в кастрюле с водой');
-}
-
-const EV = {h:null, nT:0, smoke:0};
-const evDay = () => Math.floor(world.evac.at / 1440) + 1;
-function evacWhere() { const e = world.evac; const sx = e.x < MW / 3 ? 'западный' : e.x > MW * 2 / 3 ? 'восточный' : '', sy = e.y < MH / 3 ? 'северный' : e.y > MH * 2 / 3 ? 'южный' : ''; return ((sy || sx) ? (sy && sx ? sy.replace('ый', 'о') + '-' + sx : sy || sx) + ' ' : '') + 'блокпост'; }
-function tickEvac(dt) {
-  const e = world.evac; if (!e) return;
-  if (!e.told && gameMin >= e.at - 4 * 1440 + 10 * 60 - 720) { e.told = true; toast('📻 Экстренно: эвакуация! ' + evacWhere() + ', день ' + evDay() + ', 12:00–15:00. Отмечено на карте'); world.marks = world.marks || []; }
-  if (!e.rem && gameMin >= e.at - 360) { e.rem = true; toast('Сегодня эвакуация в 12:00. ' + evacWhere() + ' отмечен на карте'); }
-  const on = gameMin >= e.at - 20 && gameMin <= e.at + 180;
-  if (on) {
-    if (!EV.h) { EV.h = {x:e.x, y:e.y - 2, vx:0, vy:0, lx:e.x, ly:e.y, sa:0}; if (P.sleep) wake('Над городом гудит вертолёт эвакуации!'); toast('Вертолёт эвакуации над точкой! Беги к блокпосту'); }
-    EV.nT -= dt; if (EV.nT <= 0) { EV.nT = 1.4; noise(e.x, e.y, 26); SFX.heli && SFX.heli(Math.max(0, 1 - Math.hypot(e.x - P.x, e.y - P.y) / 48)); }
-    EV.smoke -= dt; if (EV.smoke <= 0) { EV.smoke = .12; BZ.evacPuffs = BZ.evacPuffs || []; BZ.evacPuffs.push({x:e.x + bzRand(-.3, .3), y:e.y + bzRand(-.3, .3), z:4, t:0, r:.3}); }
-    if (!P.car && mode === 'play' && Math.hypot(P.x - e.x, P.y - e.y) < 2.2) winGame();
-  } else if (EV.h && gameMin > e.at + 180) {
-    EV.h = null; e.at += 5 * 1440; e.told = true; e.rem = false;
-    toast('Вертолёт улетел без тебя. Следующая эвакуация — день ' + evDay() + ', 12:00');
-  }
-  if (BZ.evacPuffs) { for (const p of BZ.evacPuffs) { p.t += dt; p.z += dt * 30; p.r += dt * .5; p.x += dt * .4; } BZ.evacPuffs = BZ.evacPuffs.filter(p => p.t < 5); }
-}
-function drawEvac() {
-  const e = world.evac; if (!e) return;
-  for (const p of BZ.evacPuffs || []) { const a = (1 - p.t / 5) * .55, sx = SX(p.x, p.y), sy = SY(p.x, p.y, p.z); ctx.fillStyle = `rgba(120,230,110,${a})`; ctx.beginPath(); ctx.arc(sx, sy, U * p.r, 0, 6.283); ctx.fill(); }
-  if (!EV.h) return;
-  const sx = SX(e.x, e.y), sy = SY(e.x, e.y, 0);
-  ctx.strokeStyle = 'rgba(120,230,110,.85)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(sx, sy, U * 1.6, U * .8, 0, 0, 6.283); ctx.stroke();
-  ctx.strokeStyle = 'rgba(200,190,150,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(SX(EV.h.x, EV.h.y), SY(EV.h.x, EV.h.y, 160)); ctx.lineTo(sx, sy - 4); ctx.stroke();
-  const keep = heli; heli = EV.h; try { drawHeli(); } finally { heli = keep; }
-}
-function winGame() {
-  closePanel(); mode = 'win'; atkHeld = false; joy.id = null; $('stick').hidden = true; EV.h = null;
-  ach('evac'); const lived = gameMin - startMin;
-  $('wTime').textContent = fmtDur(lived); $('wKills').textContent = kills; $('wDays').textContent = 'день ' + (Math.floor(gameMin / 1440) + 1);
-  $('ctrl').hidden = true; $('hud').hidden = true; SFX.heli && SFX.heli(1);
-  try { if (settings.autosave) {} } catch (e) {}
-  setTimeout(() => show('win'), 600);
 }

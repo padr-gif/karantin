@@ -376,12 +376,14 @@ const wl = await D(`(() => {
   const front = H.open === 0, frontWall = al(H, H.x + 2, H.y + H.h - 1) === 1;
   P.x = H.x + H.w / 2; P.y = H.y - 1; houseViewUpdate(.05, ins());
   const fading = H.open > 0 && H.open < 1; for (let q = 0; q < 30; q++) houseViewUpdate(.05, ins());
-  const behind = H.open === 1;
-  return {open, lower, upper, other, front, frontWall, fading, behind};
+  const fi = furns.findIndex(f => !f.gone && hAt[f.y * MW + f.x] === k);
+  const behind = H.open === 1 && H.reveal === 0 && (fi < 0 || closedAt(furns[fi].y * MW + furns[fi].x));   // v86: крыши нет, а мебели не видно
+  const wall = true;
+  return {open, lower, upper, other, front, frontWall, wall, fading, behind};
 })()`);
 check('внутри: крыши нет, передние стены полупрозрачные, задние — целые', wl.open && wl.lower && wl.upper, wl);
 check('чужие дома закрыты и не прозрачные', wl.other, wl);
-check('перед домом — дом целый; за домом — открывается плавно', wl.front && wl.frontWall && wl.fading && wl.behind, wl);
+check('перед домом — дом целый; за домом — крыша уходит плавно, а мебель видно только в окно', wl.front && wl.frontWall && wl.fading && wl.behind, wl);
 const pk = await D(`(() => {
   const ins = () => { let r = 0; houses.forEach((h, i) => { if (P.x > h.ix0 && P.x < h.ix1 && P.y > h.iy0 && P.y < h.iy1) r = i + 1; }); return r; };
   for (let hi = 0; hi < houses.length; hi++) { const H = houses[hi]; if (H.kind !== 'house') continue;
@@ -418,6 +420,116 @@ const occ = await D(`(() => {
   return {closed, open, type:fu.type};
 })()`);
 check('мебель у передней стены: у закрытого дома не вылезает, у открытого — видна сквозь стену', occ.skip || (occ.closed && occ.open), occ);
+
+console.log('Один мир для всех: пять районов, карта одна, добыча своя');
+const W5S = `(() => {
+  let h = 0; for (let i = 0; i < NT; i++) h = (Math.imul(h, 31) + map[i] * 7 + (propAt[i] ? 3 : 0) + (furn[i] ? 5 : 0)) | 0;
+  const loot = furns.map(f => (f.items || []).map(i => i.id).join(',')).join(';');
+  const homes = houses.filter(H => H.kind === 'house' && H.rooms && H.doors.length);
+  const reach = H => { const d = H.doors[0], o = [[0,-1],[0,1],[-1,0],[1,0]][d.s], q = [[d.x + o[0], d.y + o[1], 0]], seen = new Set();
+    for (let k = 0; k < q.length; k++) { const [a, c, L] = q[k], t = get(a, c); if (t === ROAD || soil[c * MW + a] === 1) return true; if (L > 40) continue;
+      for (const [ox, oy] of D4) { const nx = a + ox, ny = c + oy, j = ny * MW + nx; if (seen.has(j)) continue; seen.add(j); const tt = get(nx, ny); if ((tt === WALK || tt === ROAD || soil[j] === 1) && !(propAt[j] && props[propAt[j] - 1].solid)) q.push([nx, ny, L + 1]); } }
+    return false; };
+  const mails = props.filter(p => p.type === 'mail');
+  const mailOk = mails.filter(p => { const x = Math.floor(p.cx), y = Math.floor(p.cy); return D4.some(([a, c]) => { const t = get(x + a, y + c); return t === ROAD || t === WALK || soil[(y + c) * MW + x + a] === 1; }) && !D8.some(([a, c]) => get(x + a, y + c) === DOOR); }).length;
+  const kinds = new Set(houses.map(H => H.kind));
+  return {h, loot, dtype:world.dtype, homes:homes.length, path:homes.filter(reach).length, mails:mails.length, mailOk, kinds:[...kinds], benches:props.filter(p => p.type === 'bench').length, swing:props.some(p => p.type === 'swing'), shop:props.filter(p => p.shop).length, gen:world.gen};
+})()`;
+await D(`NEWCFG.lootSeed = 11; newTraits = []; newProf = 'none'; startNew(); startPlayAfterStory(); zs.length = 0;`);
+const wA = await D(W5S);
+await D(`NEWCFG.lootSeed = 22; newTraits = []; newProf = 'none'; startNew(); startPlayAfterStory(); zs.length = 0;`);
+const wB = await D(W5S);
+check('новая игра — gen 5; карта та же, добыча другая', wA.gen === 5 && wA.h === wB.h && wA.loot !== wB.loot, {gen:wA.gen, same:wA.h === wB.h});
+check('в городке все здания: школа, поликлиника, автосервис, почта, библиотека, пожарная часть, полиция…',
+  ['school', 'clinic', 'autoshop', 'post', 'library', 'fire', 'police', 'pharmacy', 'hardware', 'store', 'cafe', 'office', 'gas', 'warehouse', 'farm'].every(k => wB.kinds.includes(k)), wB.kinds);
+check('парк: скамейки и качели; у автосервиса машины на ремонте', wB.benches >= 4 && wB.swing && wB.shop >= 1, {b:wB.benches, s:wB.swing, shop:wB.shop});
+check('к домам ведут дорожки (≥ 90%), почтовые ящики у дороги и не у двери, но не у каждого дома', wB.path >= wB.homes * .9 && wB.mails >= wB.homes * .35 && wB.mails <= wB.homes * .8 && wB.mailOk === wB.mails, {homes:wB.homes, path:wB.path, mails:wB.mails, ok:wB.mailOk});
+const wSave = await D(`(() => { const L = furns.map(f => (f.items || []).map(i => i.id).join(',')).join(';'); applySave(JSON.parse(JSON.stringify(serialize()))); return L === furns.map(f => (f.items || []).map(i => i.id).join(',')).join(';'); })()`);
+check('сохранение и загрузка: добыча та же', wSave);
+const wD = {};
+for (const sd of ['n', 'e', 's', 'w']) {
+  await D(`startNew(); startPlayAfterStory(); zs.length = 0; doTravel('${sd}', ...SIDE_D['${sd}'])`);
+  wD[sd] = await D(`({t:world.dtype, name:distName(world.dx, world.dy), h:${W5S}.h})`);
+}
+check('районы по сторонам: деревня, промзона, старый город, лес', wD.n.t === 'village' && wD.e.t === 'industrial' && wD.s.t === 'downtown' && wD.w.t === 'forest' && wD.n.name === 'Берёзовка', wD);
+await D(`startNew(); startPlayAfterStory(); zs.length = 0; doTravel('n', ...SIDE_D.n)`);
+check('соседний район строится одинаково', (await D(`${W5S}.h`)) === wD.n.h);
+const wEdge = await D(`(() => { closeTravelAsk(); const was = world.dy; askTravel('n'); const blocked = !travelAsk; closeTravelAsk(); askTravel('s'); const back = !!travelAsk; closeTravelAsk(); return {blocked, back, was, far:distAllowed(0, -2), diag:distAllowed(1, 1)}; })()`);
+check('за пределами округа дорог нет, назад — можно', wEdge.blocked && wEdge.back && !wEdge.far && !wEdge.diag, wEdge);
+const wMap = await D(`(() => { world.mapCo = true; openPanel('map'); const n = document.querySelectorAll('#pnBody .county .cty').length, here = (document.querySelector('#pnBody .county .cty.here b') || {}).textContent; world.mapCo = false; closePanel(); return {n, here}; })()`);
+check('на карте — схема округа из пяти районов', wMap.n === 5 && wMap.here === 'Берёзовка', wMap);
+await D(`delete NEWCFG.lootSeed`);
+
+console.log('v85: живой город, ускорение, сбить ящик, курение, интерьеры');
+await fresh();
+const v85 = await D(`(() => {
+  const r = {};
+  const cm = crossMask(0); r.carsInCross = props.filter(p => p.type === 'car' && p.big && cm[Math.floor(p.cy) * MW + Math.floor(p.cx)]).length;
+  r.binsOff = props.filter(p => p.type === 'bin' && !p.dead).filter(p => !D4.some(([a, b]) => get(Math.floor(p.cx) + a, Math.floor(p.cy) + b) === ROAD)).length;
+  const m = props.find(p => p.type === 'mail' && !p.down); P.x = m.cx - .9; P.y = m.cy; P.car = null;
+  r.knock = knockProp(knockNear(), 0, 6) && m.down === 1 && !m.solid;
+  const sv = JSON.parse(JSON.stringify(serialize())); applySave(sv); r.knockSaved = props[props.indexOf(props.find(p => p.down))] ? props.some(p => p.down && p.type === 'mail') : false;
+  setTimeSpeed(1); cycleTimeSpeed(); r.speed2 = TSPD.n === 2; P.hurt = .3; update(.016); r.speedReset = TSPD.n === 1; P.hurt = 0; zs.length = 0; for (let q = 0; q < 220; q++) update(.016); r.speedBack = TSPD.n === 2; TSPD.want = 1; setTimeSpeed(1);
+  P.inv.push(mkItem('cig')); if (!P.inv.some(i => i.id === 'lighter')) P.inv.push(mkItem('lighter'));
+  P.act = null; beginUse(P.inv.findIndex(i => i.id === 'cig')); r.smoke = P.act && P.act.an === 'smoke'; P.act = null;
+  const st = houses.find(h => h.kind === 'store'), si = houses.indexOf(st) + 1; r.storeMid = furns.filter(f => !f.gone && f.center && hAt[f.y * MW + f.x] === si && f.type === 'shelf').length;
+  const sc = houses.find(h => h.kind === 'school'), ci = houses.indexOf(sc) + 1; r.schoolDesks = furns.filter(f => !f.gone && f.center && hAt[f.y * MW + f.x] === ci && f.type === 'wdesk').length;
+  return r;
+})()`);
+check('машины не стоят в перекрёстках, урны — только у дороги', v85.carsInCross === 0 && v85.binsOff === 0, v85);
+check('почтовый ящик можно опрокинуть, он лежит и после загрузки', v85.knock && v85.knockSaved, v85);
+check('ускорение времени ×2, опасность — ×1, стало спокойно — снова ×2', v85.speed2 && v85.speedReset && v85.speedBack, v85);
+check('курение — анимация с затяжками', v85.smoke, v85);
+check('интерьеры: в магазине ряды стеллажей, в школе ряды парт', v85.storeMid >= 4 && v85.schoolDesks >= 4, v85);
+
+console.log('v86: сигарета, сбитое высыпается, двуручное в обеих руках');
+await fresh("['smoker']");
+const v86 = await D(`(() => {
+  const r = {}, pack = P.inv.find(i => i.id === 'cigs'), u0 = pack.uses;
+  useItem('cigs'); r.took = P.inv.some(i => i.id === 'cig') && pack.uses === u0 - 1;
+  if (!P.inv.some(i => i.id === 'lighter')) P.inv.push(mkItem('lighter'));
+  P.act = null; beginUse(P.inv.findIndex(i => i.id === 'cig')); r.anim = P.act && P.act.an === 'smoke';
+  const A = P.act; P.act = null; finishAct(A); r.used = !P.inv.some(i => i.id === 'cig');
+  const m = props.find(p => (p.type === 'mail' || p.type === 'bin') && !p.down && !p.searched); m.items = [mkItem('newspaper')]; m.searched = false;
+  const n0 = piles.length; knockProp(m, 0, 6); r.spill = piles.length > n0 || piles.some(p => p.items.some(i => i.id === 'newspaper'));
+  return r;
+})()`);
+check('пачка → сигарета, курится сигарета, пачка не тратится на затяжку', v86.took && v86.anim && v86.used, v86);
+check('сбитый ящик или урна — содержимое высыпается на землю', v86.spill, v86);
+
+console.log('v87: проезд по улицам, сигнализация, наружные стены без черноты');
+await fresh();
+const v87 = await D(`(() => {
+  const r = {}, cars = props.filter(p => p.type === 'car' && p.big);
+  r.opposite = 0;
+  for (const p of cars) for (const q of cars) if (p !== q && p.dir === q.dir) { const al = p.dir === 'x' ? Math.abs(p.cx - q.cx) : Math.abs(p.cy - q.cy), cr = p.dir === 'x' ? Math.abs(p.cy - q.cy) : Math.abs(p.cx - q.cx); if (al < CAR_L + .6 && cr > 1 && cr < RW + .5) r.opposite++; }
+  const c = cars.find(p => hasCarAlarm(p)); r.has = !!c;
+  if (c) { r.on = triggerCarAlarm(c); r.again = !triggerCarAlarm(c); const k = props.indexOf(c); applySave(JSON.parse(JSON.stringify(serialize()))); r.saved = !!props[k].alarmed; }
+  const H = houses.find(h => h.kind === 'house' && h.rooms), x = H.x + H.w, y = H.y + 2; for (let i = 0; i < NT; i++) { vis[i] = 0; seen[i] = 1; }
+  r.outFog = fogOut(x, y); r.inFog = fogAt(H.x + 2, H.y + 2);
+  return r;
+})()`);
+check('напротив стоящей машины другой нет — улицу можно проехать', v87.opposite === 0, v87);
+check('сигнализация: взлом машины включает вой один раз, после загрузки не повторяется', v87.has && v87.on && v87.again && v87.saved, v87);
+check('наружная стена не чернеет от тумана, внутри дома — как раньше', v87.outFog >= .9 && v87.inFog < .6, v87);
+
+console.log('Итог смерти и прошлые жизни');
+await fresh();
+const life = await D(`(() => {
+  localStorage.removeItem('karantin-lives'); delete achDone.kill500; delete achDone.day100;
+  world.visited = 4; kills = 500; startMin = gameMin - 101 * 1440; checkAch();
+  const got = achRun.slice();
+  kills = 7; lastCause = 'Голод'; P.hp = 0; die();
+  const L = JSON.parse(localStorage.getItem('karantin-lives') || '[]');
+  const r = {got, n:L.length, last:L[L.length - 1], ach:$('dAch').textContent, achShown:!$('dAch').hidden,
+    rows:$('dLives').querySelectorAll('li').length, now:!!$('dLives').querySelector('li.now'), dist:$('dDist').textContent, runLeft:achRun.length};
+  renderAch(); r.achLives = $('achLives').querySelectorAll('li').length;
+  return r;
+})()`);
+check('долгие цели: 500 мертвецов и 100 дней дают достижения', life.got.includes('kill500') && life.got.includes('day100'), life);
+check('экран смерти: районы, новые достижения этой жизни', life.dist.startsWith('4') && life.achShown && /Никто не встанет/.test(life.ach) && life.runLeft === 0, life);
+check('жизнь записана в «Прошлые жизни» и видна на экране смерти и в достижениях', life.n === 1 && life.last.kills === 7 && life.last.cause === 'Голод' && life.last.dists === 4 && life.rows === 1 && life.now && life.achLives === 1, life);
+await D(`localStorage.removeItem('karantin-lives'); show(null)`);
 
 console.log('Живая игра 15 секунд');
 await fresh("['coward']");

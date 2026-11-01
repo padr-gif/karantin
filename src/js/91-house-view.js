@@ -11,7 +11,7 @@
 //     рисуется слой «только проём» (наличник, стекло, рама, подоконник, полотно двери, доски) с прозрачностью HV_OPEN_A.
 //     У закрытого дома и снаружи окна и двери как обычно.
 // Обе графики, пиксельная и детальная.
-const HV_PEEK_R = 1.45, HV_PEEK_COS = .6, HV_FRONT_A = .34, HV_SEE_A = .3, HV_OPEN_A = .62, HV_SPEED = 7;
+const HV_PEEK_R = 1.25, HV_PEEK_COS = .72, HV_FRONT_A = .34, HV_SEE_A = .3, HV_OPEN_A = .62, HV_SPEED = 7;
 let WT_OPEN = false;                                                          // drawWallTile рисует только проём (окно, дверь), без стены
 const HV = {inside:0, pD:0, hx:0, hy:0, rx:0, ry:0, on:false, peek:0, peekT:0};
 
@@ -35,18 +35,35 @@ function peekHouse(dt) {
 }
 
 // заслоняет ли дом героя на экране: герой позади дома (не перед его нижним и правым краем) и под его силуэтом
+// v85: дом открывается, только когда действительно заслоняет героя: туловище (пояс и грудь) внутри силуэта дома
+// на экране — выпуклой оболочки углов дома у земли и под крышей. Рядом с домом и у его угла дом цел.
+function houseHull(Hs) {
+  if (Hs._hull && Hs._hullU === U) return Hs._hull;
+  const pts = [];
+  for (const [wx, wy] of [[Hs.x - .2, Hs.y - .2], [Hs.x + Hs.w + .2, Hs.y - .2], [Hs.x + Hs.w + .2, Hs.y + Hs.h + .2], [Hs.x - .2, Hs.y + Hs.h + .2]])
+    for (const z of [0, WH + U * .9]) pts.push([SX(wx, wy) - SX(Hs.x, Hs.y), SY(wx, wy, z) - SY(Hs.x, Hs.y, 0)]);
+  pts.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cr = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]), lo = [], up = [];
+  for (const q of pts) { while (lo.length > 1 && cr(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop(); lo.push(q); }
+  for (const q of pts.slice().reverse()) { while (up.length > 1 && cr(up[up.length - 2], up[up.length - 1], q) <= 0) up.pop(); up.push(q); }
+  Hs._hull = lo.slice(0, -1).concat(up.slice(0, -1)); Hs._hullU = U;
+  return Hs._hull;
+}
+function inHull(h, x, y) { for (let k = 0; k < h.length; k++) { const a = h[k], b = h[(k + 1) % h.length]; if ((b[0] - a[0]) * (y - a[1]) - (b[1] - a[1]) * (x - a[0]) < 0) return false; } return true; }
 function houseHidesHero(Hs) {
   if (P.x >= Hs.x + Hs.w + .2 || P.y >= Hs.y + Hs.h + .2) return false;      // перед домом — не заслоняет
   if (P.x < Hs.x - 4 || P.y < Hs.y - 4) return false;
-  const b = roofBounds(Hs), sx = SX(P.x, P.y) - SX(Hs.x, Hs.y), sy = SY(P.x, P.y, U * .9) - SY(Hs.x, Hs.y, 0);
-  return sx > b[0] && sx < b[2] && sy > b[1] && sy < b[3];
+  const h = houseHull(Hs), ox = SX(Hs.x, Hs.y), oy = SY(Hs.x, Hs.y, 0), sx = SX(P.x, P.y) - ox;
+  return inHull(h, sx, SY(P.x, P.y, U * .55) - oy) && inHull(h, sx, SY(P.x, P.y, U * 1.1) - oy);   // скрыто туловище, а не только макушка
 }
 function houseOpenTarget(Hs, k) {
   if (mode === 'menu') return 0;
   if (k + 1 === HV.inside) return 1;
   if (k + 1 === HV.peek) return 1;                                            // заглядывает в окно
-  return houseHidesHero(Hs) ? 1 : 0;
+  return houseHidesHero(Hs) ? 1 : 0;                                          // за домом — крыши нет (а внутри пусто, см. reveal)
 }
+// v86: что внутри (мебель, перегородки) — только изнутри или при взгляде в окно; за домом крыша уходит, а комнаты пустые
+const houseRevealTarget = k => mode === 'menu' ? 0 : (k + 1 === HV.inside || k + 1 === HV.peek) ? 1 : 0;
 // раз в кадр, до списка рисования: открытость домов, точка и размер прозрачного окна вокруг героя
 function houseViewUpdate(dt, inside) {
   HV.inside = inside; HV.pD = P.x + P.y; HV.on = mode !== 'menu' && !P.sleep && !P.car;
@@ -59,6 +76,7 @@ function houseViewUpdate(dt, inside) {
     else Hs.open += (t - Hs.open) * k;
     if (Math.abs(Hs.open - t) < .01) Hs.open = t;
     Hs.mode = Hs.open > .99 ? 1 : 0;                                          // 1 — крыши нет совсем (её и не кладём в список)
+    const r = houseRevealTarget(i); Hs.reveal = Hs.reveal == null || mode === 'menu' ? r : Hs.reveal + (r - Hs.reveal) * k; if (Math.abs(Hs.reveal - r) < .01) Hs.reveal = r;
   }
 }
 // прозрачность стены клетки: передние стены открытого дома и перегородки перед героем — полупрозрачные
@@ -88,9 +106,12 @@ function drawWallView(e, draw, open) {
 
 // закрытый дом (крыша на месте): мебель и перегородки внутри не видны — их не рисуем (93-perf: это была самая
 // большая лишняя работа за рулём). Наружные стены рисуются всегда.
-const closedAt = i => { const h = hAt[i]; return h > 0 && mode !== 'menu' && !(houses[h - 1].open > .01); };
+// v86: и у дома без крыши (герой за ним), пока внутрь не заглянул: Hs.reveal
+const closedAt = i => { const h = hAt[i]; return h > 0 && mode !== 'menu' && !(houses[h - 1].open > .01 && houses[h - 1].reveal > .01); };
 function hiddenInside(x, y, i) {
   if (!closedAt(i)) return false;
   const H = houses[hAt[i] - 1];
   return x > H.x && y > H.y && x < H.x + H.w - 1 && y < H.y + H.h - 1;
 }
+
+

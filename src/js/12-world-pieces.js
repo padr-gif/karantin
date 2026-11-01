@@ -9,10 +9,16 @@ function faceTex(Hs, px, py) {
   if (Hs.kind === 'shed') return [TX.planksV(Hs.wallC), false];
   return [TX.siding(Hs.wallC), false];
 }
+// v87: наружная грань стены смотрит на улицу — её не чернит туман той клетки (герой не видит её из-за самого дома,
+// и полдома выходило чёрным, как тень не к месту): видел — почти как днём, не видел — лишь приглушена
+function fogOut(x, y) {
+  const g = fogAt(x, y); if (x < 0 || y < 0 || x >= MW || y >= MH) return Math.max(g, .72);
+  const i = y * MW + x; return hAt[i] ? g : Math.max(g, seen[i] ? .92 : .72);
+}
 function wallPiece(x0, y0, x1, y1, z0, z1, Hs) {
   if (WT_OPEN) return;                                                       // слой «только проём» (91-house-view): без стены
   const [sT] = faceTex(Hs, (x0 + x1) / 2, y1 + .05), [eT] = faceTex(Hs, x1 + .05, (y0 + y1) / 2);
-  const fS = fogAt(Math.floor((x0 + x1) / 2), Math.floor(y1 + .05)), fE = fogAt(Math.floor(x1 + .05), Math.floor((y0 + y1) / 2));
+  const fS = fogOut(Math.floor((x0 + x1) / 2), Math.floor(y1 + .05)), fE = fogOut(Math.floor(x1 + .05), Math.floor((y0 + y1) / 2));
   vface(x0, y1, x1, y1, z0, z1, sT, 1 - fS * .92);
   vface(x1, y0, x1, y1, z0, z1, eT, 1 - fE * .74);
   resetT();
@@ -34,7 +40,7 @@ function drawWallTile(x, y, i, cut) {
   const top = cut ? U * .32 : WH;
   if (t === WALL) { for (const r of wpV[i]) wallPiece(x + r[0], y + r[1], x + r[2], y + r[3], 0, top, Hs); drawWallSwitch(x, y, i, cut); return; }
   const ax = alongX(x, y), o = obs[i], h = HWV;
-  const f = Math.max(fogAt(x + (ax ? 0 : 1), y + (ax ? 1 : 0)), fogF(i));
+  const f = Math.max(fogOut(x + (ax ? 0 : 1), y + (ax ? 1 : 0)), fogF(i));
   const band = (z0, z1) => ax ? wallPiece(x, y + .5 - h, x + 1, y + .5 + h, z0, z1, Hs) : wallPiece(x + .5 - h, y, x + .5 + h, y + 1, z0, z1, Hs);
   const plane = (z0, z1, fill, k) => { k = k || 0;
     if (ax) poly4(x + .06, y + .5 + k, z0, x + .94, y + .5 + k, z0, x + .94, y + .5 + k, z1, x + .06, y + .5 + k, z1, fill);
@@ -86,15 +92,27 @@ function drawWallTile(x, y, i, cut) {
         else { line3(x + .5, y + .5, z0, x + .5, y + .5, lint); line3(x + .5, y + .06, mid, x + .5, y + .94, mid); line3(x + .5, y + .06, z0, x + .5, y + .94, z0); }
         ctx.stroke();
       } else if (!o.broken) {
-        plane(sill, lint, night ? `rgba(255,206,120,${.62 * f})` : `rgba(160,192,210,${.4 * f})`);
-        if (!night) { ctx.strokeStyle = `rgba(255,255,255,${.4 * f})`; ctx.lineWidth = 1.5; ctx.beginPath();
-          if (ax) { line3(x + .25, y + .5, sill + U * .15, x + .45, y + .5, lint - U * .15); line3(x + .35, y + .5, sill + U * .1, x + .5, y + .5, sill + U * .5); }
-          else { line3(x + .5, y + .25, sill + U * .15, x + .5, y + .45, lint - U * .15); line3(x + .5, y + .35, sill + U * .1, x + .5, y + .5, sill + U * .5); }
-          ctx.stroke(); }
-        // mullion
-        ctx.strokeStyle = C(COL.frame, f * .9); ctx.lineWidth = Math.max(1.5, U * .04); ctx.beginPath();
-        if (ax) { line3(x + .5, y + .5, sill, x + .5, y + .5, lint); line3(x + .06, y + .5, (sill + lint) / 2, x + .94, y + .5, (sill + lint) / 2); }
-        else { line3(x + .5, y + .5, sill, x + .5, y + .5, lint); line3(x + .5, y + .06, (sill + lint) / 2, x + .5, y + .94, (sill + lint) / 2); }
+        // v85: стекло с глубиной — внизу темнее (комната), вверху отражение неба; рама по контуру, толстая перекладина
+        // между створками и горбыльки в каждой створке (окно «два на два»)
+        const mid = (sill + lint) / 2;
+        if (night) plane(sill, lint, `rgba(255,206,120,${.62 * f})`);
+        else {
+          plane(sill, lint, `rgba(34,48,58,${.72 * f})`);
+          plane(mid + (lint - mid) * .25, lint, `rgba(176,204,222,${.32 * f})`);
+          plane(sill, sill + (mid - sill) * .45, `rgba(176,204,222,${.12 * f})`);
+          ctx.strokeStyle = `rgba(255,255,255,${.38 * f})`; ctx.lineWidth = Math.max(1, U * .03); ctx.beginPath();
+          if (ax) { line3(x + .2, y + .5, mid + U * .06, x + .34, y + .5, lint - U * .06); line3(x + .62, y + .5, sill + U * .05, x + .74, y + .5, mid - U * .06); }
+          else { line3(x + .5, y + .2, mid + U * .06, x + .5, y + .34, lint - U * .06); line3(x + .5, y + .62, sill + U * .05, x + .5, y + .74, mid - U * .06); }
+          ctx.stroke();
+        }
+        const fr = C(COL.frame, f * .95);
+        ctx.strokeStyle = fr; ctx.lineWidth = Math.max(2, U * .06); ctx.beginPath();          // рама и перекладина
+        if (ax) { line3(x + .07, y + .5, sill, x + .07, y + .5, lint); line3(x + .93, y + .5, sill, x + .93, y + .5, lint); line3(x + .07, y + .5, lint, x + .93, y + .5, lint); line3(x + .07, y + .5, mid, x + .93, y + .5, mid); }
+        else { line3(x + .5, y + .07, sill, x + .5, y + .07, lint); line3(x + .5, y + .93, sill, x + .5, y + .93, lint); line3(x + .5, y + .07, lint, x + .5, y + .93, lint); line3(x + .5, y + .07, mid, x + .5, y + .93, mid); }
+        ctx.stroke();
+        ctx.lineWidth = Math.max(1, U * .028); ctx.beginPath();                                  // горбыльки
+        if (ax) { line3(x + .5, y + .5, sill, x + .5, y + .5, lint); line3(x + .07, y + .5, (sill + mid) / 2, x + .93, y + .5, (sill + mid) / 2); line3(x + .07, y + .5, (mid + lint) / 2, x + .93, y + .5, (mid + lint) / 2); }
+        else { line3(x + .5, y + .5, sill, x + .5, y + .5, lint); line3(x + .5, y + .07, (sill + mid) / 2, x + .5, y + .93, (sill + mid) / 2); line3(x + .5, y + .07, (mid + lint) / 2, x + .5, y + .93, (mid + lint) / 2); }
         ctx.stroke();
       } else if (!o.cleared) {   // jagged glass left in the frame (gone once the shards are cleared out)
         ctx.fillStyle = `rgba(190,215,225,${.45 * f})`; ctx.beginPath();

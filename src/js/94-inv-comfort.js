@@ -33,3 +33,14 @@ function invFilterRow(R) {
   for (const c of cats) chip(c, c, n[c]);
   R.appendChild(row);
 }
+
+// ---- окно закрывается само (v85): отошёл от шкафа — обыск закрылся; при открытом рюкзаке шаг (WASD, стрелки) закрывает его ----
+onUpdate(() => {
+  if (!panel || panel.kind !== 'loot' || !panel.src || P.car) return;
+  const s = panel.src, x = s.cx != null ? s.cx : s.x, y = s.cy != null ? s.cy : s.y;
+  if (x != null && Math.hypot(x - P.x, y - P.y) > 2.2) closePanel();
+});
+addEventListener('keydown', e => {
+  if (!panel || panel.kind !== 'inv' || mode !== 'play') return;
+  if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) closePanel();
+});

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<!-- Окно ночью: тёплый свет, в окне силуэт мертвеца с красными глазами (игра про дома и окна) -->
+<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#18263a"/><stop offset="1" stop-color="#0a1018"/></linearGradient>
+<linearGradient id="lit" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd27a"/><stop offset="1" stop-color="#e8962e"/></linearGradient>
+<clipPath id="pane"><rect x="116" y="96" width="280" height="320" rx="6"/></clipPath></defs>
+<rect width="512" height="512" fill="url(#bg)"/>
+<rect x="104" y="84" width="304" height="344" rx="12" fill="#2a1f16"/>
+<rect x="116" y="96" width="280" height="320" rx="6" fill="url(#lit)"/>
+<g clip-path="url(#pane)" fill="#120c08">
+  <path d="M150 420 C150 340 190 312 256 312 C322 312 362 340 362 420 Z"/>
+  <ellipse cx="256" cy="232" rx="70" ry="86"/>
+  <path d="M190 190 Q214 140 256 142 Q300 142 322 188 L304 176 L292 192 L270 170 L248 188 L228 168 L210 190 Z"/>
+</g>
+<g fill="#ff2a1f"><ellipse cx="230" cy="236" rx="13" ry="8"/><ellipse cx="282" cy="236" rx="13" ry="8"/></g>
+<rect x="249" y="96" width="14" height="320" fill="#2a1f16"/><rect x="116" y="249" width="280" height="14" fill="#2a1f16"/>
+<rect x="92" y="428" width="328" height="22" rx="6" fill="#3a2c20"/>
+</svg>

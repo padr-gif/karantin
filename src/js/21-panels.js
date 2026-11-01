@@ -271,7 +271,9 @@ function renderPanelCore() {
     zr.appendChild(zs2);
     const me = btn('Где я', () => { SFX.ui(); mapCenter(c); }, 'mapme'); zr.appendChild(me);
     const lgB = btn(world.mapLg ? 'Скрыть обозначения' : 'Обозначения', () => { world.mapLg = !world.mapLg; renderPanel(); }, 'maplg'); zr.appendChild(lgB);
+    if (W5() && !genTutMap) zr.appendChild(btn('Округ', () => { SFX.ui(); world.mapCo = !world.mapCo; renderPanel(); }, 'maplg' + (world.mapCo ? ' on' : '')));   // схема пяти районов (74-world-plan)
     body.appendChild(zr);
+    if (W5() && !genTutMap && world.mapCo) body.appendChild(countyGrid());
     const mw = mk('div', 'mapwrap' + (world.mapLg ? '' : ' big')), c = mk('canvas', 'mapc'); mw.appendChild(c); body.appendChild(mw);
     if (world.mapLg) {
       const lg = mk('div', 'legend');

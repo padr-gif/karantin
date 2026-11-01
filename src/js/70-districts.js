@@ -14,6 +14,7 @@ const distKey = (dx, dy) => dx + ',' + dy;
 function distSeed(dx, dy) { return dx === 0 && dy === 0 ? world.root : mix32(world.root, dx * 7919 + 13, dy * 104729 + 7); }
 function distName(dx, dy) {
   if (!dx && !dy) return 'Родной район';
+  if (W5() && W5_DIST[distKey(dx, dy)]) return W5_DIST[distKey(dx, dy)].name;
   const L = DTYPES[distType(dx, dy)].names;
   return L[mix32(world.root || 1, dx + 500, dy + 900) % L.length];
 }
@@ -114,6 +115,11 @@ function blockClimbPlan(dx, dy) {
 // ---- край карты: уйти в соседний район ----
 function edgeSide() {
   if (!P || world.dtype === 'tut') return null;                              // в обучении соседних районов нет
+  if (W5()) {                                                               // gen 5: на трассе — заранее, упираться в край не надо
+    const z = world.dtype === 'town' ? FEN - 5 : 5, c = EXIT_R + RW / 2, band = RW / 2 + 1.5;
+    if (Math.abs(P.y - c) < band) { if (P.x < z) return 'w'; if (P.x > MW - z) return 'e'; }
+    if (Math.abs(P.x - c) < band) { if (P.y < z) return 'n'; if (P.y > MH - z) return 's'; }
+  }
   const m = .75;
   if (P.x < m) return 'w'; if (P.x > MW - m) return 'e'; if (P.y < m) return 'n'; if (P.y > MH - m) return 's';
   return null;
@@ -123,6 +129,11 @@ function closeTravelAsk() { if (travelAsk) { travelAsk.remove(); travelAsk = nul
 function askTravel(side) {
   if (travelAsk) return;
   const [ox, oy] = SIDE_D[side], nx = (world.dx || 0) + ox, ny = (world.dy || 0) + oy, key = distKey(nx, ny);
+  if (!distAllowed(nx, ny)) {                                               // gen 5: округ — пять районов, дальше дорог нет
+    P._edgeHold = true;
+    if ((P._edgeMsgT || 0) < gameMin) { P._edgeMsgT = gameMin + 30; toast('Дальше дороги нет: трассу перекрыли военные. Округ — пять районов'); }
+    return;
+  }
   const known = !!(world.dist && world.dist[key]) || (nx === 0 && ny === 0), ring = distRing(nx, ny);
   paused = true; atkHeld = false; joy.id = null; joy.x = joy.y = 0; $('stick').hidden = true; P.moving = false;
   const box = travelAsk = mk('div', 'travelask');
@@ -207,7 +218,7 @@ function doTravel(side, nx, ny) {
     stored = pickDist(JSON.parse(JSON.stringify(serialize())));
   }
   delete dist[toKey];
-  const d = Object.assign({}, cur, stored, {seed, incar:-1, evac:null});
+  const d = Object.assign({}, cur, stored, {seed, incar:-1});
   d.x49 = Object.assign({}, cur.x49 || {}, {caches:stored.x49.caches, cats:stored.x49.cats});
   d.x50 = {root, dx:nx, dy:ny, dist, vis:(cur.x50 && cur.x50.vis || 1) + (fresh ? 1 : 0)};
   applySave(d);

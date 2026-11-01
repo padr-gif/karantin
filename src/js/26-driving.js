@@ -67,9 +67,11 @@ function driveUpdate(dt, wx, wy, mag) {
   const tr = Math.abs(p.v) < .1 ? 0 : 2.6 * Math.max(.3, Math.min(1, Math.abs(p.v) / 2)) * (Math.abs(p.v) > 6 ? .75 : 1);
   const na = p.ang + steer * tr * Math.sign(p.v) * dt;
   const nx = p.cx + Math.cos(na) * p.v * dt, ny = p.cy + Math.sin(na) * p.v * dt;
+  carKnock(nx, ny, na, p.v);                                                // ящики и урны на пути — сбить (97-knock)
   if (!carBlocked(nx, ny, na)) { p.cx = nx; p.cy = ny; p.ang = na; }
   else if (!carBlocked(p.cx, p.cy, na)) { p.ang = na; p.v *= .5; }
   else {
+    if (Math.abs(p.v) > 1.5) carCrashAlarm(p);                                // врезался в машину с сигнализацией — завоет (97-knock)
     if (Math.abs(p.v) > 3) { p.hp = Math.max(0, p.hp - Math.abs(p.v) * 1.6); SFX.knock(p.cx, p.cy); noise(p.cx, p.cy, 10); if (!reduceMotion && settings.shake) shake = .25; if (Math.abs(p.v) > 6.2) crashInjury(p.v); }
     p.v = -p.v * .25;
   }
@@ -131,9 +133,11 @@ function growCars() {
       const i = ty * MW + tx, t = map[i];
       if (isWallish(t) || t === TREE || t === WATER || furn[i] || (propAt[i] && propAt[i] !== id)) return false;
       if (strict && t !== ROAD) return false;
+      if (cross && cross[i]) return false;                                    // gen 5: не в перекрёстке и не у самого края его
     }
     return true;
   };
+  const cross = W5() ? crossMask(2) : null;
   const shifts = [];                                                          // поперёк — ближе к середине дороги, вдоль — до 1.5 клетки
   for (const al of [0, .5, -.5, 1, -1, 1.5, -1.5]) for (const ac of [0, .4, -.4, .8, -.8]) shifts.push([al, ac]);
   for (let k = 0; k < props.length; k++) {
@@ -151,6 +155,16 @@ function growCars() {
     if (!best) { p.type = 'gone'; p.solid = false; continue; }                 // не влезла: убрать, номер оставить
     p.cx = best[0]; p.cy = best[1]; p.r = best[2]; p.big = true;
     for (let ty = Math.floor(p.r[1]); ty <= Math.floor(p.r[3] - 1e-3); ty++) for (let tx = Math.floor(p.r[0]); tx <= Math.floor(p.r[2] - 1e-3); tx++) propAt[ty * MW + tx] = id;
+  }
+  // v87 (gen 5): улица в 4 клетки, машина — 1.64: две напротив друг друга перекрывают проезд. Напротив стоящей
+  // машины другую не оставляем — по каждому участку улицы проехать можно
+  if (W5()) {
+    const cars = props.filter(p => p.type === 'car' && p.big);
+    for (let a = 0; a < cars.length; a++) { const p = cars[a]; if (p.type !== 'car') continue;
+      for (let b = a + 1; b < cars.length; b++) { const q = cars[b]; if (q.type !== 'car' || q.dir !== p.dir) continue;
+        const al = p.dir === 'x' ? Math.abs(p.cx - q.cx) : Math.abs(p.cy - q.cy), cr = p.dir === 'x' ? Math.abs(p.cy - q.cy) : Math.abs(p.cx - q.cx);
+        if (al < CAR_L + .6 && cr > 1 && cr < RW + .5) { const id = props.indexOf(q) + 1; q.type = 'gone'; q.solid = false; for (let i = 0; i < NT; i++) if (propAt[i] === id) propAt[i] = 0; }
+      } }
   }
 }
 

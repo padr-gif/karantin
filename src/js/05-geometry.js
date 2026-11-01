@@ -9,7 +9,19 @@ function blocked(x, y, r) {
 }
 function move(e, dx, dy) {
   winSolid = e === P;
-  try { move0(e, dx, dy); } finally { winSolid = false; }
+  try {
+    const x0 = e.x, y0 = e.y;
+    move0(e, dx, dy);
+    // v85: герой у стены скользит вдоль неё с полной скоростью, а не с долей, что пришлась на ось вдоль стены
+    // (идти по экрану «вправо» вдоль стены дома — это наискосок по клеткам, одна ось упирается)
+    if (e === P) {
+      const L = Math.hypot(dx, dy), mx = e.x - x0, my = e.y - y0;
+      if (L > 1e-4 && Math.hypot(mx, my) < L * .9) {
+        if (!mx && Math.abs(dx) > L * .2 && Math.abs(my) > 1e-5) { const ex = Math.sign(my) * (L - Math.abs(my)); if (!blocked(e.x, e.y + ex, e.r)) e.y += ex; }
+        else if (!my && Math.abs(dy) > L * .2 && Math.abs(mx) > 1e-5) { const ex = Math.sign(mx) * (L - Math.abs(mx)); if (!blocked(e.x + ex, e.y, e.r)) e.x += ex; }
+      }
+    }
+  } finally { winSolid = false; }
 }
 function move0(e, dx, dy) {
   if (dx) {

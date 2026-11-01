@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<!-- Глаза в темноте: почти чёрный фон, тёмный силуэт головы, два красных прищуренных глаза со свечением -->
+<defs>
+  <radialGradient id="bg" cx=".5" cy=".55" r=".7"><stop offset="0" stop-color="#181c21"/><stop offset="1" stop-color="#07080a"/></radialGradient>
+  <filter id="glow" x="-60%" y="-120%" width="220%" height="340%"><feGaussianBlur stdDeviation="16"/></filter>
+</defs>
+<rect width="512" height="512" fill="url(#bg)"/>
+<path d="M118 512 C118 404 168 360 256 360 C344 360 394 404 394 512 Z" fill="#030405"/>
+<ellipse cx="256" cy="252" rx="118" ry="140" fill="#030405"/>
+<g fill="#ff2a1f" filter="url(#glow)" opacity=".75">
+  <path d="M150 238 Q200 206 238 236 Q196 262 150 238 Z"/><path d="M362 238 Q312 206 274 236 Q316 262 362 238 Z"/>
+</g>
+<g fill="#ff3a24">
+  <path d="M150 238 Q200 206 238 236 Q196 262 150 238 Z"/><path d="M362 238 Q312 206 274 236 Q316 262 362 238 Z"/>
+</g>
+<g fill="#ffd2a8"><circle cx="202" cy="236" r="6"/><circle cx="310" cy="236" r="6"/></g>
+</svg>

@@ -1,0 +1,25 @@
+# Автотесты на каждый пуш и пул-реквест: эталонная игра (golden) и все проверки механик
+name: Тесты
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Сборка с отладкой
+        run: node build.mjs --dev
+      - name: Эталон (golden)
+        run: node tests/golden.mjs
+      - name: Автотесты
+        run: node tests/run.mjs

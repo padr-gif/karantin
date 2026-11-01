@@ -95,7 +95,7 @@
       <div class="ct"><div class="time" id="time">09:00</div><div class="pod" id="pod" hidden>Утро</div><div class="day" id="day">День 1</div></div>
       <div class="cside"><span id="temp">14°</span><span id="kills">0</span></div>
     </div>
-    <div class="zoom" id="zoomBox"><button type="button" id="zOut" class="ibtn sm" aria-label="Отдалить"><svg class="ic"><use href="#i-minus"/></svg></button><button type="button" id="zIn" class="ibtn sm" aria-label="Приблизить"><svg class="ic"><use href="#i-plus"/></svg></button></div>
+    <div class="zoom" id="zoomBox"><button type="button" id="tSpd" class="ibtn sm tspd" aria-label="Скорость времени">×1</button><button type="button" id="zOut" class="ibtn sm" aria-label="Отдалить"><svg class="ic"><use href="#i-minus"/></svg></button><button type="button" id="zIn" class="ibtn sm" aria-label="Приблизить"><svg class="ic"><use href="#i-plus"/></svg></button></div>
   </div>
 </div>
 <div id="toasts"></div>
@@ -266,6 +266,7 @@
   <div class="card wide">
     <div class="card-head"><h2 class="h2s">Достижения</h2><span class="rec" id="achCount"></span></div>
     <div class="achs" id="achList"></div>
+    <div class="lives" id="achLives" hidden></div>
     <div class="row-btns"><button class="go" id="achBack" type="button">Назад</button></div>
   </div>
 </section>
@@ -300,10 +301,13 @@
     <dl class="facts">
       <dt>Продержался</dt><dd id="dTime">—</dd>
       <dt>Убито мертвецов</dt><dd id="dKills">0</dd>
+      <dt>Районов</dt><dd id="dDist">1</dd>
       <dt>Причина</dt><dd id="dCause">—</dd>
       <dt>Рекорд</dt><dd id="dRec">—</dd>
       <dt>Последняя запись</dt><dd id="dLast">—</dd>
     </dl>
+    <div class="dead-ach" id="dAch" hidden></div>
+    <div class="lives" id="dLives" hidden></div>
     <div class="row-btns"><button class="go" id="bAgain" type="button">Новая игра</button><button class="mbtn" id="dLoad" type="button">Загрузить</button><button class="mbtn" id="dMenu" type="button">Главное меню</button></div>
   </div>
 </section>
