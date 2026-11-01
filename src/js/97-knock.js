@@ -1,4 +1,4 @@
-// ================= сбить почтовый ящик, урну: машиной на ходу или ногой («Опрокинуть») =================
+// ================= сбить почтовый ящик, урну: машиной на ходу или ногой («Опрокинуть»); содержимое высыпается =================
 // Сбитый предмет лежит на земле (рисуется своим видом через defProc: p.proc = true), не мешает пройти и проехать,
 // гремит — мертвецы слышат. Обыскать его по-прежнему можно. Сбитые хранятся в сохранении (x97) и в районе.
 const KNOCK = new Set(['mail', 'bin']);
@@ -8,6 +8,10 @@ function knockProp(p, dir, loud) {
   p.dax = Math.abs(Math.cos(dir)) >= Math.abs(Math.sin(dir)) ? 'x' : 'y';
   p.dsg = (p.dax === 'x' ? Math.cos(dir) : Math.sin(dir)) < 0 ? -1 : 1;
   SFX.knock(p.cx, p.cy); noise(p.cx, p.cy, loud || 6);
+  // v86: что было внутри — высыпается на землю кучкой рядом (газеты из ящика, мусор из урны); подобрать можно
+  if (!p.searched) { fillCont(p); const ox = Math.cos(dir) * .55, oy = Math.sin(dir) * .55;
+    for (const it of p.items || []) addToPile(p.cx + ox, p.cy + oy, it);
+    p.items = []; p.searched = true; }
   emit('dust', p.cx, p.cy, .05, 4, null, 0, .6);
   if (typeof clearCaches === 'function') clearCaches();
   return true;
@@ -70,14 +74,38 @@ onUpdate(dt => {
     A._sT = (A._sT || 0) - dt;
     if (t > 1.05 && t < 1.6 && A._sT <= 0) { A._sT = .14; emit('smoke', hx, hy, 1.55, 1, null, 0, .25); }   // выдох
     if (t < .3 && !A._lit) { A._lit = true; if (A.t < .3) SFX.rustle && SFX.rustle(); }
+    A._wT = (A._wT || 0) - dt; if (A._wT <= 0 && (t < .45 || t > 1.5)) { A._wT = .5; emit('smoke', hx, hy, 1.05, 1, null, 0, .08); }   // тонкая струйка с кончика
   } else if (A.an === 'bandage') {
     A._bT = (A._bT || 0) - dt; if (A._bT <= 0) { A._bT = .7; SFX.rustle && SFX.rustle(); }
   }
 });
-onDraw(() => {                                                              // огонёк сигареты у руки или у губ
-  const A = P.act; if (!A || A.kind !== 'use' || A.an !== 'smoke' || P.car) return;
-  const t = A.t % 2, up = t < .5 ? t / .5 : t < 1 ? 1 : t < 1.4 ? 1 - (t - 1) / .4 : 0;
-  const fx = Math.cos(P.face), fy = Math.sin(P.face), x = P.x + fx * .2, y = P.y + fy * .2, z = U * (.95 + .55 * up);
-  const sx = SX(x, y), sy = SY(x, y, z), glow = t > .5 && t < 1 ? 1 : .55;
-  ctx.fillStyle = `rgba(255,${120 + 60 * glow},60,${.55 + .4 * glow})`; ctx.beginPath(); ctx.arc(sx, sy, U * .035 * (1 + glow), 0, 6.283); ctx.fill();
+// ---- сигарета (v86): отдельная вещь; пачка — «Достать сигарету»; в руке во время курения — сама сигарета ----
+Object.assign(ITEMS, {cig:{name:'Сигарета', kind:'smoke', uses:1, verb:'Закурить'}});
+DESC.cig = 'Одна сигарета. Нужен огонь — спички или зажигалка. Пара затяжек успокаивает нервы.';
+KG.cig = .005;
+ITEMS.cigs.verb = 'Достать сигарету';
+for (const c of ['bin', 'car', 'coffeetab', 'desk']) if (CONT[c] && CONT[c].loot) CONT[c].loot.push('cig');
+ZLOOT.push('cig', 'cig');
+defUse((it) => it.id === 'cigs', (it, k) => {                               // пачка: достать одну, в карман
+  if (invFull()) { toast('Некуда положить сигарету'); return; }
+  it.uses = (it.uses || 1) - 1; if (it.uses <= 0) P.inv.splice(k, 1);
+  P.inv.push(mkItem('cig')); SFX.rustle(); toast(it.uses > 0 ? 'Достал сигарету. В пачке ' + it.uses : 'Достал последнюю сигарету');
+  if (typeof invPlace === 'function') invPlace(); renderInv();
+});
+// где кисть с сигаретой: правая кисть текущего кадра героя (как рукоять оружия), направление — вдоль пальцев
+onDraw(() => {
+  const A = P.act; if (!A || A.kind !== 'use' || A.an !== 'smoke' || P.car || mode !== 'play') return;
+  const lk = P.look || look, [an, fi] = playerAnim(-1), name = 'p' + lk.g + heroVar(lk) + '_' + an + '_' + dirOf(P.fd != null ? P.fd : P.face) + '_' + fi;
+  const wm = ART.meta.wpn && ART.meta.wpn[name], t = A.t % 2, glow = t > .5 && t < 1 ? 1 : .45;
+  let hx, hy, ux, uy;
+  if (wm) { hx = SX(P.x, P.y) + wm[0]; hy = SY(P.x, P.y, 0) + wm[1]; const L = Math.hypot(wm[2], wm[3]) || 1; ux = wm[2] / L; uy = wm[3] / L; }
+  else { const up = t < .5 ? t / .5 : t < 1 ? 1 : t < 1.4 ? 1 - (t - 1) / .4 : 0, x = P.x + Math.cos(P.face) * .2, y = P.y + Math.sin(P.face) * .2; hx = SX(x, y); hy = SY(x, y, U * (.95 + .55 * up)); ux = .8; uy = -.6; }
+  const L = 4.2, fx = hx + ux * .6, fy = hy + uy * .6, ex = fx + ux * L, ey = fy + uy * L;
+  ctx.lineCap = 'butt';
+  ctx.strokeStyle = 'rgba(20,16,14,.75)'; ctx.lineWidth = 1.9; ctx.beginPath(); ctx.moveTo(fx - ux * .3, fy - uy * .3); ctx.lineTo(ex + ux * .3, ey + uy * .3); ctx.stroke();
+  ctx.strokeStyle = '#d58a3a'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(fx + ux * 1.3, fy + uy * 1.3); ctx.stroke();       // фильтр
+  ctx.strokeStyle = '#f4f1ea'; ctx.beginPath(); ctx.moveTo(fx + ux * 1.3, fy + uy * 1.3); ctx.lineTo(ex, ey); ctx.stroke();                          // бумага
+  ctx.fillStyle = `rgba(255,${110 + 70 * glow},50,${.6 + .4 * glow})`; ctx.beginPath(); ctx.arc(ex, ey, .75 + .45 * glow, 0, 6.283); ctx.fill();        // тлеет
+  if (glow > .9) { ctx.fillStyle = 'rgba(255,160,60,.25)'; ctx.beginPath(); ctx.arc(ex, ey, 2.4, 0, 6.283); ctx.fill(); }
+  A._ex = ex; A._ey = ey;
 });

@@ -50,7 +50,7 @@ node tests/run.mjs                              # «Все тесты пройд
 ## Как добавить предмет
 
 1. Описать в `ITEMS`, `DESC` и добавить в лут (`CONT.<контейнер>.loot`).
-2. Нарисовать иконку в `tools/icons/gen.py` (`@icon('id')`) и выполнить `npm run icons`.
+2. Нарисовать иконку в `tools/icons/gen.py` (`@icon('id')`) и дорисовать её в лист: `python3 tools/icons/add.py id`. **Не** `npm run icons`: полная пересборка теряет иконки, которых нет в `gen.py`.
 3. `npm test`, затем проверить руками в `npm run dev`.
 
 ## Отладка

@@ -208,7 +208,24 @@ const WSPEC = {
   crowbar:{segs:[[0, 10.5, .8, '#a62a22'], [10.5, 11.8, .8, '#3e4044']]},
   baton:{segs:[[0, 3, 1, '#2a2a2e'], [3, 9.5, .95, '#1c1c20']]},
 };
+// кисти на кадре героя: пиксели кисти (часть 5 на карте частей тела …r); левая — те, что подальше от правой (wm[0..1]),
+// цвет — средний цвет кистей на самом кадре (кожа или перчатки). Считается один раз на кадр
+const HANDS = new Map();
+function leftHand(name, wm) {
+  if (HANDS.has(name)) return HANDS.get(name);
+  const f = ART.meta.frames[name], rn = f && f[0] + 'r'; if (!f || !ART.src[rn] && !ART.imgs[rn]) { HANDS.set(name, null); return null; }
+  if (!needSheet(rn) || !needSheet(f[0])) return null;
+  const rd8 = img => { const c = mkCanvas(f[3], f[4]), g = c.getContext('2d', {willReadFrequently:true}); g.drawImage(img, f[1], f[2], f[3], f[4], 0, 0, f[3], f[4]); return g.getImageData(0, 0, f[3], f[4]).data; };
+  const R = rd8(ART.imgs[rn]), C8 = rd8(ART.imgs[f[0]]), s = f[7] || 1; let n = 0, sx = 0, sy = 0, m = 0; const col = [0, 0, 0];
+  for (let y = 0; y < f[4]; y++) for (let x = 0; x < f[3]; x++) { const q = (y * f[3] + x) * 4; if (R[q + 3] < 128 || (R[q] >> 4) !== 5) continue;
+    if (C8[q + 3] > 200) { col[0] += C8[q]; col[1] += C8[q + 1]; col[2] += C8[q + 2]; m++; }
+    const px = (x - f[5]) / s, py = (y - f[6]) / s; if (Math.hypot(px - wm[0], py - wm[1]) < 2.5) continue; n++; sx += px; sy += py; }
+  const r = {l:n >= 2 ? [sx / n, sy / n] : null, col:m ? col.map(v => Math.round(v / m)) : null}; HANDS.set(name, r); return r;
+}
+// кулак поверх рукояти: оружие зажато в руке, а не висит рядом
+function fist(x, y, col) { ctx.fillStyle = `rgb(${col[0]},${col[1]},${col[2]})`; ctx.strokeStyle = 'rgba(24,20,18,.6)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.ellipse(x, y, 1.7, 1.4, 0, 0, 6.283); ctx.fill(); ctx.stroke(); ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(x - 1.2, y + .2, 2.4, .8); }
 function drawWeapon(name, wid, wx, wy, zoff) {
+  const nm0 = name, wm0 = ART.meta.wpn && ART.meta.wpn[name];
   { const wm = ART.meta.wpn && ART.meta.wpn[name];                              // свободная рука (WPN_LOOSE): оружие смотрит туда, куда герой
     if (wm && WPN_LOOSE.test(name)) {
       const f = P.fd != null ? P.fd : P.face, fx = Math.cos(f), fy = Math.sin(f), long = TWO_H.has(wid);
@@ -218,7 +235,16 @@ function drawWeapon(name, wid, wx, wy, zoff) {
       name = '__w';
     } }
   const wm = ART.meta.wpn && ART.meta.wpn[name], sp = WSPEC[wid]; if (!wm || !sp) return;
-  const hx = SX(wx, wy) + wm[0], hy = SY(wx, wy, zoff || 0) + wm[1], dx = wm[2], dy = wm[3];
+  let hx = SX(wx, wy) + wm[0], hy = SY(wx, wy, zoff || 0) + wm[1], dx = wm[2], dy = wm[3];
+  // v86: двуручное — через обе ладони: направление от одной кисти к другой (левая — по карте частей тела кадра),
+  // рукоять между кистями; так лом и бита сидят в руках, а не торчат мимо
+  const HN = wm0 ? leftHand(nm0, wm0) : null, ox = SX(wx, wy), oy = SY(wx, wy, zoff || 0);
+  let fists = HN && HN.col ? [[hx, hy]] : null;
+  if (TWO_H.has(wid) && HN && HN.l && name !== '__w') { const lh = HN.l;
+    { let ux = lh[0] - wm[0], uy = lh[1] - wm[1]; const d = Math.hypot(ux, uy), L0 = Math.hypot(dx, dy) || 1;
+      if (d >= 2.5) { ux /= d; uy /= d; if (ux * dx + uy * dy < 0) { ux = -ux; uy = -uy; hx += lh[0] - wm[0]; hy += lh[1] - wm[1]; }   // от нижней кисти — к верхней
+        dx = ux * L0; dy = uy * L0; hx -= ux * Math.min(d, L0 * 1.2) * .15; hy -= uy * Math.min(d, L0 * 1.2) * .15;
+        if (fists) fists = [[ox + wm[0], oy + wm[1]], [ox + lh[0], oy + lh[1]]]; } } }
   const L = Math.hypot(dx, dy) || 1, px = -dy / L, py = dx / L;
   const pt = u => [hx + dx * (u - 1), hy + dy * (u - 1)];
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
@@ -230,6 +256,7 @@ function drawWeapon(name, wid, wx, wy, zoff) {
   if (sp.head) { const c = pt(sp.head.at); ctx.strokeStyle = 'rgba(16,14,12,.85)'; ctx.lineWidth = sp.head.w + .7; ctx.beginPath(); ctx.moveTo(c[0] - px * sp.head.len, c[1] - py * sp.head.len); ctx.lineTo(c[0] + px * sp.head.len, c[1] + py * sp.head.len); ctx.stroke(); ctx.strokeStyle = sp.head.col; ctx.lineWidth = sp.head.w; ctx.stroke(); }
   if (sp.blade) { const c = pt(sp.blade.at), e = pt(sp.blade.at + 2); ctx.fillStyle = sp.blade.col; ctx.strokeStyle = 'rgba(16,14,12,.85)'; ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(c[0], c[1]); ctx.lineTo(e[0], e[1]); ctx.lineTo(e[0] + px * 3, e[1] + py * 3); ctx.lineTo(c[0] + px * 2.2, c[1] + py * 2.2); ctx.closePath(); ctx.fill(); ctx.stroke(); }
   if (sp.disc) { const c = pt(sp.disc.at); ctx.fillStyle = sp.disc.col; ctx.strokeStyle = 'rgba(16,14,12,.9)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.ellipse(c[0], c[1], sp.disc.r * 1.3, sp.disc.r * .75, Math.atan2(dy, dx) * .3, 0, 6.283); ctx.fill(); ctx.stroke(); ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.beginPath(); ctx.ellipse(c[0] - .6, c[1] - .4, sp.disc.r * .6, sp.disc.r * .3, 0, 0, 6.283); ctx.fill(); }
+  if (fists) for (const [fx, fy] of fists) fist(fx, fy, HN.col);
 }
 // герой на экране: поза (наклон, отдача), полупрозрачный за стеклом душа, книга в руках при чтении
 function drawPlayer(an, fi, zoff) {

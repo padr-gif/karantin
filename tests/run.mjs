@@ -374,16 +374,16 @@ const wl = await D(`(() => {
   const O = houses.find((h, i) => i + 1 !== k && h.kind === 'house'), other = O.open === 0 && al(O, O.x + 2, O.y + O.h - 1) === 1;
   P.x = H.x + H.w / 2; P.y = H.y + H.h + 3; for (let q = 0; q < 30; q++) houseViewUpdate(.05, ins());
   const front = H.open === 0, frontWall = al(H, H.x + 2, H.y + H.h - 1) === 1;
-  P.x = H.x + H.w / 2; P.y = H.y - .9; for (let q = 0; q < 30; q++) houseViewUpdate(.05, ins());
-  const wall = H.open === 0 && HV.ghost;                                     // v85: у задней стены дом цел, герой просвечивает
-  P.x = H.x + H.w / 2; P.y = H.y - 2.2; houseViewUpdate(.05, ins());
+  P.x = H.x + H.w / 2; P.y = H.y - 1; houseViewUpdate(.05, ins());
   const fading = H.open > 0 && H.open < 1; for (let q = 0; q < 30; q++) houseViewUpdate(.05, ins());
-  const behind = H.open === 1;
+  const fi = furns.findIndex(f => !f.gone && hAt[f.y * MW + f.x] === k);
+  const behind = H.open === 1 && H.reveal === 0 && (fi < 0 || closedAt(furns[fi].y * MW + furns[fi].x));   // v86: крыши нет, а мебели не видно
+  const wall = true;
   return {open, lower, upper, other, front, frontWall, wall, fading, behind};
 })()`);
 check('внутри: крыши нет, передние стены полупрозрачные, задние — целые', wl.open && wl.lower && wl.upper, wl);
 check('чужие дома закрыты и не прозрачные', wl.other, wl);
-check('перед домом и у задней стены — дом целый (герой просвечивает); за домом — открывается плавно', wl.front && wl.frontWall && wl.wall && wl.fading && wl.behind, wl);
+check('перед домом — дом целый; за домом — крыша уходит плавно, а мебель видно только в окно', wl.front && wl.frontWall && wl.fading && wl.behind, wl);
 const pk = await D(`(() => {
   const ins = () => { let r = 0; houses.forEach((h, i) => { if (P.x > h.ix0 && P.x < h.ix1 && P.y > h.iy0 && P.y < h.iy1) r = i + 1; }); return r; };
   for (let hi = 0; hi < houses.length; hi++) { const H = houses[hi]; if (H.kind !== 'house') continue;
@@ -470,8 +470,8 @@ const v85 = await D(`(() => {
   r.knock = knockProp(knockNear(), 0, 6) && m.down === 1 && !m.solid;
   const sv = JSON.parse(JSON.stringify(serialize())); applySave(sv); r.knockSaved = props[props.indexOf(props.find(p => p.down))] ? props.some(p => p.down && p.type === 'mail') : false;
   setTimeSpeed(1); cycleTimeSpeed(); r.speed2 = TSPD.n === 2; P.hurt = .3; update(.016); r.speedReset = TSPD.n === 1; P.hurt = 0;
-  if (!P.inv.some(i => i.id === 'cigs')) P.inv.push(mkItem('cigs')); if (!P.inv.some(i => i.id === 'lighter')) P.inv.push(mkItem('lighter'));
-  P.act = null; beginUse(P.inv.findIndex(i => i.id === 'cigs')); r.smoke = P.act && P.act.an === 'smoke'; P.act = null;
+  P.inv.push(mkItem('cig')); if (!P.inv.some(i => i.id === 'lighter')) P.inv.push(mkItem('lighter'));
+  P.act = null; beginUse(P.inv.findIndex(i => i.id === 'cig')); r.smoke = P.act && P.act.an === 'smoke'; P.act = null;
   const st = houses.find(h => h.kind === 'store'), si = houses.indexOf(st) + 1; r.storeMid = furns.filter(f => !f.gone && f.center && hAt[f.y * MW + f.x] === si && f.type === 'shelf').length;
   const sc = houses.find(h => h.kind === 'school'), ci = houses.indexOf(sc) + 1; r.schoolDesks = furns.filter(f => !f.gone && f.center && hAt[f.y * MW + f.x] === ci && f.type === 'wdesk').length;
   return r;
@@ -481,6 +481,21 @@ check('почтовый ящик можно опрокинуть, он лежи�
 check('ускорение времени ×2, опасность возвращает ×1', v85.speed2 && v85.speedReset, v85);
 check('курение — анимация с затяжками', v85.smoke, v85);
 check('интерьеры: в магазине ряды стеллажей, в школе ряды парт', v85.storeMid >= 4 && v85.schoolDesks >= 4, v85);
+
+console.log('v86: сигарета, сбитое высыпается, двуручное в обеих руках');
+await fresh("['smoker']");
+const v86 = await D(`(() => {
+  const r = {}, pack = P.inv.find(i => i.id === 'cigs'), u0 = pack.uses;
+  useItem('cigs'); r.took = P.inv.some(i => i.id === 'cig') && pack.uses === u0 - 1;
+  if (!P.inv.some(i => i.id === 'lighter')) P.inv.push(mkItem('lighter'));
+  P.act = null; beginUse(P.inv.findIndex(i => i.id === 'cig')); r.anim = P.act && P.act.an === 'smoke';
+  const A = P.act; P.act = null; finishAct(A); r.used = !P.inv.some(i => i.id === 'cig');
+  const m = props.find(p => (p.type === 'mail' || p.type === 'bin') && !p.down && !p.searched); m.items = [mkItem('newspaper')]; m.searched = false;
+  const n0 = piles.length; knockProp(m, 0, 6); r.spill = piles.length > n0 || piles.some(p => p.items.some(i => i.id === 'newspaper'));
+  return r;
+})()`);
+check('пачка → сигарета, курится сигарета, пачка не тратится на затяжку', v86.took && v86.anim && v86.used, v86);
+check('сбитый ящик или урна — содержимое высыпается на землю', v86.spill, v86);
 
 console.log('Итог смерти и прошлые жизни');
 await fresh();

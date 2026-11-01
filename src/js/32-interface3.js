@@ -23,7 +23,7 @@ function actIcon(a) {
 function actName(a) {
   const d = a && ACT[a.kind]; if (d && d.name) return d.name(a);
   if (a && isShower(a.f)) return 'Душ';
-  if (a.o) return obs[a.o.i].t === 'door' ? 'Дверь' : 'Окно';
+  if (a.o) { const ob = obs[a.o.i]; return ob && ob.t === 'door' ? 'Дверь' : 'Окно'; }   // после перехода в другой район прежнего проёма нет
   const t = a.f && a.f.type;
   if (!t) return '';
   return (CONT[t] && CONT[t].name) || PROPN[t] || '';

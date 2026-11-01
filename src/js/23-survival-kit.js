@@ -147,7 +147,7 @@ function updateThrown(dt) {
 function useKind(it) {
   if (it.id === 'rag') return ['bandage', 2.2]; if (it.id === 'splint') return ['bandage', 3];
   const d = ITEMS[it.id];
-  if (d.kind === 'smoke') return fireTool() ? ['smoke', 4] : null;            // нечем прикурить — сразу скажет об этом                                // v85: закуривает — пара затяжек, дым
+  if (d.kind === 'smoke') return it.id !== 'cigs' && fireTool() ? ['smoke', 4] : null;   // пачка — «достать сигарету» сразу (97-knock)            // нечем прикурить — сразу скажет об этом                                // v85: закуривает — пара затяжек, дым
   if (d.kind === 'book') return ['read', 6];
   if (d.kind === 'fun') return ['read', d.dur];
   if (d.kind === 'food') return ['eat', 1.7];
