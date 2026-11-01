@@ -392,7 +392,8 @@ function finishAct(a) {
   if (a.kind === 'pry') { const ob = obs[a.o.i]; ob.locked = false; ob.open = true; ob.ang = 1; noise(P.x, P.y, 9); SFX.wood(a.o.x, a.o.y); toast('Дверь взломана'); addXp('carp', 1); return; }
   if (a.kind === 'use') { finishUse(a); return; }
   if (a.kind === 'pickup') { pickFromPile(a.f); return; }
-  if (a.kind === 'search') { if (a.f.air) ach('drop'); a.f.searched = true; { const H = furns.includes(a.f) && houseOf(a.f); if (H && !H._done && houseSearched(H)) toast('✓ Дом обыскан полностью. Отмечено на карте'); } noise(P.x, P.y, a.f.type === 'car' ? 4 : 2.5); openPanel('loot', {src:a.f}); if (a.f.type === 'car') toast(a.f.key ? 'В замке зажигания торчат ключи! Бензин: ' + Math.round(a.f.fuel) + '%' : 'Ключей нет. Бензин: ' + Math.round(a.f.fuel) + '%'); }
+  if (a.kind === 'search') { if (a.f.air) ach('drop'); if (a.f.type === 'car' && !a.f.searched) triggerCarAlarm(a.f);   // взлом машины с сигнализацией (97-knock)
+ a.f.searched = true; { const H = furns.includes(a.f) && houseOf(a.f); if (H && !H._done && houseSearched(H)) toast('✓ Дом обыскан полностью. Отмечено на карте'); } noise(P.x, P.y, a.f.type === 'car' ? 4 : 2.5); openPanel('loot', {src:a.f}); if (a.f.type === 'car') toast(a.f.key ? 'В замке зажигания торчат ключи! Бензин: ' + Math.round(a.f.fuel) + '%' : 'Ключей нет. Бензин: ' + Math.round(a.f.fuel) + '%'); }
   else if (a.kind === 'cook') cookRecipe(a.rc, a.n, a.src);
   else if (a.kind === 'bar') {
     const ob = obs[a.o.i];

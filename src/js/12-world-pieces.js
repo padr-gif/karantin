@@ -9,10 +9,16 @@ function faceTex(Hs, px, py) {
   if (Hs.kind === 'shed') return [TX.planksV(Hs.wallC), false];
   return [TX.siding(Hs.wallC), false];
 }
+// v87: наружная грань стены смотрит на улицу — её не чернит туман той клетки (герой не видит её из-за самого дома,
+// и полдома выходило чёрным, как тень не к месту): видел — почти как днём, не видел — лишь приглушена
+function fogOut(x, y) {
+  const g = fogAt(x, y); if (x < 0 || y < 0 || x >= MW || y >= MH) return Math.max(g, .72);
+  const i = y * MW + x; return hAt[i] ? g : Math.max(g, seen[i] ? .92 : .72);
+}
 function wallPiece(x0, y0, x1, y1, z0, z1, Hs) {
   if (WT_OPEN) return;                                                       // слой «только проём» (91-house-view): без стены
   const [sT] = faceTex(Hs, (x0 + x1) / 2, y1 + .05), [eT] = faceTex(Hs, x1 + .05, (y0 + y1) / 2);
-  const fS = fogAt(Math.floor((x0 + x1) / 2), Math.floor(y1 + .05)), fE = fogAt(Math.floor(x1 + .05), Math.floor((y0 + y1) / 2));
+  const fS = fogOut(Math.floor((x0 + x1) / 2), Math.floor(y1 + .05)), fE = fogOut(Math.floor(x1 + .05), Math.floor((y0 + y1) / 2));
   vface(x0, y1, x1, y1, z0, z1, sT, 1 - fS * .92);
   vface(x1, y0, x1, y1, z0, z1, eT, 1 - fE * .74);
   resetT();
@@ -34,7 +40,7 @@ function drawWallTile(x, y, i, cut) {
   const top = cut ? U * .32 : WH;
   if (t === WALL) { for (const r of wpV[i]) wallPiece(x + r[0], y + r[1], x + r[2], y + r[3], 0, top, Hs); drawWallSwitch(x, y, i, cut); return; }
   const ax = alongX(x, y), o = obs[i], h = HWV;
-  const f = Math.max(fogAt(x + (ax ? 0 : 1), y + (ax ? 1 : 0)), fogF(i));
+  const f = Math.max(fogOut(x + (ax ? 0 : 1), y + (ax ? 1 : 0)), fogF(i));
   const band = (z0, z1) => ax ? wallPiece(x, y + .5 - h, x + 1, y + .5 + h, z0, z1, Hs) : wallPiece(x + .5 - h, y, x + .5 + h, y + 1, z0, z1, Hs);
   const plane = (z0, z1, fill, k) => { k = k || 0;
     if (ax) poly4(x + .06, y + .5 + k, z0, x + .94, y + .5 + k, z0, x + .94, y + .5 + k, z1, x + .06, y + .5 + k, z1, fill);

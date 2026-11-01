@@ -109,3 +109,39 @@ onDraw(() => {
   if (glow > .9) { ctx.fillStyle = 'rgba(255,160,60,.25)'; ctx.beginPath(); ctx.arc(ex, ey, 2.4, 0, 6.283); ctx.fill(); }
   A._ex = ex; A._ey = ey;
 });
+
+// ================= автосигнализация (v87) =================
+// У части припаркованных машин (каждая пятая, не у полиции и армии) стоит сигнализация. Врезался на ходу или полез
+// обыскивать — воет 25 с, мигает фарами и шумит на всю округу (мертвецы идут на вой). Срабатывает один раз; в сохранении.
+const hasCarAlarm = p => p && p.type === 'car' && !p.police && !p.army && !p.shop && hash(props.indexOf(p) * 7 + 3, 13) < .2;
+let CALARM = [];
+function triggerCarAlarm(p) {
+  if (!hasCarAlarm(p) || p.alarmed || p === P.car) return false;
+  p.alarmed = 1; CALARM.push({p, t:25, n:0});
+  toast('Сработала сигнализация! Вой слышно на всю округу');
+  return true;
+}
+function carCrashAlarm(car) {                                                  // во что врезалась машина героя
+  for (const q of props) if (q !== car && q.type === 'car' && !q.alarmed && Math.hypot(q.cx - car.cx, q.cy - car.cy) < 4.2) triggerCarAlarm(q);
+}
+onUpdate(dt => {
+  if (!CALARM.length) return;
+  for (const a of CALARM) { a.t -= dt; a.n -= dt; if (a.n <= 0) { a.n = .7; SFX.alarm(a.p.cx, a.p.cy); noise(a.p.cx, a.p.cy, 22); } }
+  CALARM = CALARM.filter(a => a.t > 0 && a.p.type === 'car');
+});
+onDraw(() => {                                                                 // фары и поворотники мигают
+  if (!CALARM.length || Math.floor(animT * 3) % 2) return;
+  for (const a of CALARM) {
+    const p = a.p, ang = p.dyn ? p.ang : p.dir === 'x' ? (p.flip ? Math.PI : 0) : (p.flip ? -Math.PI / 2 : Math.PI / 2);
+    const fx = Math.cos(ang), fy = Math.sin(ang), nx = -fy, ny = fx;
+    for (const [u, s] of [[1.8, .55], [1.8, -.55], [-1.8, .55], [-1.8, -.55]]) {
+      const x = p.cx + fx * u + nx * s, y = p.cy + fy * u + ny * s, sx = SX(x, y), sy = SY(x, y, U * .45);
+      const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, U * .6); g.addColorStop(0, 'rgba(255,214,120,.85)'); g.addColorStop(1, 'rgba(255,190,80,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sx, sy, U * .6, 0, 6.283); ctx.fill();
+    }
+  }
+});
+DIST_FIELDS.push('x97a');
+onSave(d => { d.x97a = props.map((p, k) => p.alarmed ? k : -1).filter(k => k >= 0); });
+onLoad(d => { CALARM = []; for (const k of (d && d.x97a) || []) if (props[k]) props[k].alarmed = 1; });
+onNewWorld(() => { CALARM = []; });

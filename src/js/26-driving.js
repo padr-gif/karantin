@@ -71,6 +71,7 @@ function driveUpdate(dt, wx, wy, mag) {
   if (!carBlocked(nx, ny, na)) { p.cx = nx; p.cy = ny; p.ang = na; }
   else if (!carBlocked(p.cx, p.cy, na)) { p.ang = na; p.v *= .5; }
   else {
+    if (Math.abs(p.v) > 1.5) carCrashAlarm(p);                                // врезался в машину с сигнализацией — завоет (97-knock)
     if (Math.abs(p.v) > 3) { p.hp = Math.max(0, p.hp - Math.abs(p.v) * 1.6); SFX.knock(p.cx, p.cy); noise(p.cx, p.cy, 10); if (!reduceMotion && settings.shake) shake = .25; if (Math.abs(p.v) > 6.2) crashInjury(p.v); }
     p.v = -p.v * .25;
   }
@@ -154,6 +155,16 @@ function growCars() {
     if (!best) { p.type = 'gone'; p.solid = false; continue; }                 // не влезла: убрать, номер оставить
     p.cx = best[0]; p.cy = best[1]; p.r = best[2]; p.big = true;
     for (let ty = Math.floor(p.r[1]); ty <= Math.floor(p.r[3] - 1e-3); ty++) for (let tx = Math.floor(p.r[0]); tx <= Math.floor(p.r[2] - 1e-3); tx++) propAt[ty * MW + tx] = id;
+  }
+  // v87 (gen 5): улица в 4 клетки, машина — 1.64: две напротив друг друга перекрывают проезд. Напротив стоящей
+  // машины другую не оставляем — по каждому участку улицы проехать можно
+  if (W5()) {
+    const cars = props.filter(p => p.type === 'car' && p.big);
+    for (let a = 0; a < cars.length; a++) { const p = cars[a]; if (p.type !== 'car') continue;
+      for (let b = a + 1; b < cars.length; b++) { const q = cars[b]; if (q.type !== 'car' || q.dir !== p.dir) continue;
+        const al = p.dir === 'x' ? Math.abs(p.cx - q.cx) : Math.abs(p.cy - q.cy), cr = p.dir === 'x' ? Math.abs(p.cy - q.cy) : Math.abs(p.cx - q.cx);
+        if (al < CAR_L + .6 && cr > 1 && cr < RW + .5) { const id = props.indexOf(q) + 1; q.type = 'gone'; q.solid = false; for (let i = 0; i < NT; i++) if (propAt[i] === id) propAt[i] = 0; }
+      } }
   }
 }
 

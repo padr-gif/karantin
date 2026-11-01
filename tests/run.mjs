@@ -469,7 +469,7 @@ const v85 = await D(`(() => {
   const m = props.find(p => p.type === 'mail' && !p.down); P.x = m.cx - .9; P.y = m.cy; P.car = null;
   r.knock = knockProp(knockNear(), 0, 6) && m.down === 1 && !m.solid;
   const sv = JSON.parse(JSON.stringify(serialize())); applySave(sv); r.knockSaved = props[props.indexOf(props.find(p => p.down))] ? props.some(p => p.down && p.type === 'mail') : false;
-  setTimeSpeed(1); cycleTimeSpeed(); r.speed2 = TSPD.n === 2; P.hurt = .3; update(.016); r.speedReset = TSPD.n === 1; P.hurt = 0;
+  setTimeSpeed(1); cycleTimeSpeed(); r.speed2 = TSPD.n === 2; P.hurt = .3; update(.016); r.speedReset = TSPD.n === 1; P.hurt = 0; zs.length = 0; for (let q = 0; q < 220; q++) update(.016); r.speedBack = TSPD.n === 2; TSPD.want = 1; setTimeSpeed(1);
   P.inv.push(mkItem('cig')); if (!P.inv.some(i => i.id === 'lighter')) P.inv.push(mkItem('lighter'));
   P.act = null; beginUse(P.inv.findIndex(i => i.id === 'cig')); r.smoke = P.act && P.act.an === 'smoke'; P.act = null;
   const st = houses.find(h => h.kind === 'store'), si = houses.indexOf(st) + 1; r.storeMid = furns.filter(f => !f.gone && f.center && hAt[f.y * MW + f.x] === si && f.type === 'shelf').length;
@@ -478,7 +478,7 @@ const v85 = await D(`(() => {
 })()`);
 check('машины не стоят в перекрёстках, урны — только у дороги', v85.carsInCross === 0 && v85.binsOff === 0, v85);
 check('почтовый ящик можно опрокинуть, он лежит и после загрузки', v85.knock && v85.knockSaved, v85);
-check('ускорение времени ×2, опасность возвращает ×1', v85.speed2 && v85.speedReset, v85);
+check('ускорение времени ×2, опасность — ×1, стало спокойно — снова ×2', v85.speed2 && v85.speedReset && v85.speedBack, v85);
 check('курение — анимация с затяжками', v85.smoke, v85);
 check('интерьеры: в магазине ряды стеллажей, в школе ряды парт', v85.storeMid >= 4 && v85.schoolDesks >= 4, v85);
 
@@ -496,6 +496,22 @@ const v86 = await D(`(() => {
 })()`);
 check('пачка → сигарета, курится сигарета, пачка не тратится на затяжку', v86.took && v86.anim && v86.used, v86);
 check('сбитый ящик или урна — содержимое высыпается на землю', v86.spill, v86);
+
+console.log('v87: проезд по улицам, сигнализация, наружные стены без черноты');
+await fresh();
+const v87 = await D(`(() => {
+  const r = {}, cars = props.filter(p => p.type === 'car' && p.big);
+  r.opposite = 0;
+  for (const p of cars) for (const q of cars) if (p !== q && p.dir === q.dir) { const al = p.dir === 'x' ? Math.abs(p.cx - q.cx) : Math.abs(p.cy - q.cy), cr = p.dir === 'x' ? Math.abs(p.cy - q.cy) : Math.abs(p.cx - q.cx); if (al < CAR_L + .6 && cr > 1 && cr < RW + .5) r.opposite++; }
+  const c = cars.find(p => hasCarAlarm(p)); r.has = !!c;
+  if (c) { r.on = triggerCarAlarm(c); r.again = !triggerCarAlarm(c); const k = props.indexOf(c); applySave(JSON.parse(JSON.stringify(serialize()))); r.saved = !!props[k].alarmed; }
+  const H = houses.find(h => h.kind === 'house' && h.rooms), x = H.x + H.w, y = H.y + 2; for (let i = 0; i < NT; i++) { vis[i] = 0; seen[i] = 1; }
+  r.outFog = fogOut(x, y); r.inFog = fogAt(H.x + 2, H.y + 2);
+  return r;
+})()`);
+check('напротив стоящей машины другой нет — улицу можно проехать', v87.opposite === 0, v87);
+check('сигнализация: взлом машины включает вой один раз, после загрузки не повторяется', v87.has && v87.on && v87.again && v87.saved, v87);
+check('наружная стена не чернеет от тумана, внутри дома — как раньше', v87.outFog >= .9 && v87.inFog < .6, v87);
 
 console.log('Итог смерти и прошлые жизни');
 await fresh();

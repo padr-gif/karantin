@@ -260,7 +260,7 @@ function render(dt) {
     } else if (curAct && !paused) {
       let label, tx, ty;
       if (curAct.f) { label = (actName(curAct) || 'Тут') + ' · ' + curAct.label.toLowerCase(); tx = curAct.f.cx != null ? curAct.f.cx : curAct.f.x; ty = curAct.f.cy != null ? curAct.f.cy : curAct.f.y; }
-      else { tx = curAct.o.x + .5; ty = curAct.o.y + .5; label = (obs[curAct.o.i].t === 'door' ? 'Дверь' : 'Окно') + ' · ' + curAct.label.toLowerCase(); }
+      else { tx = curAct.o.x + .5; ty = curAct.o.y + .5; label = ((obs[curAct.o.i] || {}).t === 'door' ? 'Дверь' : 'Окно') + ' · ' + curAct.label.toLowerCase(); }
       if (isTouch) { const lx = SX(tx, ty) * K, ly = SY(tx, ty, U * 2.1) * K + Math.sin(animT * 5) * 2 * DEV, r = 5 * DEV; mainCtx.fillStyle = '#f0c477'; mainCtx.strokeStyle = 'rgba(0,0,0,.7)'; mainCtx.lineWidth = 2 * DEV; mainCtx.beginPath(); mainCtx.moveTo(lx - r, ly - r); mainCtx.lineTo(lx + r, ly - r); mainCtx.lineTo(lx, ly + r * .6); mainCtx.closePath(); mainCtx.stroke(); mainCtx.fill(); label = ''; }
       const fs = 13 * DEV;
       if (label) { mainCtx.font = `700 ${fs}px "PT Sans", sans-serif`; mainCtx.textAlign = 'center';
