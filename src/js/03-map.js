@@ -174,12 +174,13 @@ function buildResidential(Hs) {
   const hx = Hs.x, hy = Hs.y, w = Hs.w, h = Hs.h;
   const X0 = hx + 1, X1 = hx + w - 2, Y0 = hy + 1, Y1 = hy + h - 2, rows = h - 2;
   const leftW = Math.max(3, Math.min(w - 6, Math.round((w - 2) * (.42 + rng() * .12))));
-  const flip = rng() < .5;
+  const fr = Hs.front;                                                      // v84: сторона улицы (74-town) — прихожая и входная дверь к ней; без неё как раньше
+  const flip = fr === 2 ? false : fr === 3 ? true : rng() < .5;
   const vx = flip ? X1 - leftW : X0 + leftW;
   const L = flip ? [vx + 1, X1] : [X0, vx - 1], R = flip ? [X0, vx - 1] : [vx + 1, X1];
   for (let y = Y0; y <= Y1; y++) set(vx, y, WALL);
   Hs.inner = vx;
-  const kTop = rng() < .5, kRows = Math.min(rows - 4, ri(3, 4)), lwy = kTop ? Y0 + kRows : Y1 - kRows;
+  const kTop = fr === 0 ? false : fr === 1 ? true : rng() < .5, kRows = Math.min(rows - 4, ri(3, 4)), lwy = kTop ? Y0 + kRows : Y1 - kRows;
   for (let x = L[0]; x <= L[1]; x++) set(x, lwy, WALL);
   const kitchen = {x0:L[0], x1:L[1], y0:kTop ? Y0 : lwy + 1, y1:kTop ? lwy - 1 : Y1, type:'kitchen'};
   const hallRows = rows - kRows - 1, hall = {x0:L[0], x1:L[1], y0:kTop ? lwy + 1 : Y0, y1:kTop ? Y1 : lwy - 1, type:hallRows * (L[1] - L[0] + 1) >= 15 ? 'living' : 'hall'};
@@ -206,6 +207,10 @@ function buildResidential(Hs) {
   for (const r of Hs.rooms) if (r.type === 'bedroom' && rng() < .55) r.carpet = ri(0, 2);
   // exterior doors: front door from the hallway, sometimes a back door from the kitchen
   const outY = r => (r.y0 === Y0 ? 0 : 1), outX = flip ? hx + w - 1 : hx;
+  if (fr === 2 || fr === 3) {                                               // улица сбоку: входная дверь из прихожей в боковой стене, она первая
+    const ys = []; for (let y = hall.y0; y <= hall.y1; y++) if (get(outX, y - 1) === WALL && get(outX, y + 1) === WALL && get(outX + (flip ? -1 : 1), y) === FLOOR) ys.push(y);
+    if (ys.length) mkDoorAt(outX, ys[ys.length >> 1], fr, false, Hs);
+  }
   { const s = outY(hall); mkDoorAt(ri(L[0], L[1]), s ? hy + h - 1 : hy, s, false, Hs); }
   if (rng() < .45) { const s = outY(kitchen); const opts = []; for (let x = L[0]; x <= L[1]; x++) opts.push(x); mkDoorAt(pick(opts), s ? hy + h - 1 : hy, s, false, Hs); }
   else if (rng() < .3) { const y = ri(hall.y0, hall.y1); if (get(outX, y - 1) === WALL && get(outX, y + 1) === WALL) mkDoorAt(outX, y, flip ? 3 : 2, false, Hs); }
@@ -290,6 +295,7 @@ function buildHouse(hx, hy, w, h, kind, opts) {
     const border = x === hx || y === hy || x === hx + w - 1 || y === hy + h - 1;
     set(x, y, border ? WALL : FLOOR); hAt[y * MW + x] = idx;
   }
+  if (opts && opts.front != null) Hs.front = opts.front;
   if (kind === 'house') { buildResidential(Hs); return Hs; }
   let inner = -1;
   if (false) {

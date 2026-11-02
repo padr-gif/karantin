@@ -183,7 +183,7 @@ function genFinish(o) {
   for (let i = 0; i < NT; i++) {
     if (propAt[i] || furn[i]) continue;
     const x = i % MW, y = (i / MW) | 0;
-    if (map[i] === WALK && rng() < (o.bins || .012)) addProp({type:'bin', cx:x + .5, cy:y + .5, solid:true, r:[x + .3, y + .3, x + .7, y + .7], ci:ri(0, 2)}, [[x, y]]);
+    if (map[i] === WALK && rng() < (o.bins || .012) && (!o.binOK || o.binOK(x, y))) addProp({type:'bin', cx:x + .5, cy:y + .5, solid:true, r:[x + .3, y + .3, x + .7, y + .7], ci:ri(0, 2)}, [[x, y]]);
     else if (map[i] === GRASS && !soil[i] && rng() < (o.bush || .04)) addProp({type:'bush', cx:x + .5, cy:y + .5, solid:false, s:.6 + rng() * .5}, [[x, y]]);
   }
   for (const Hs of houses) {
@@ -359,6 +359,7 @@ function generate() {
   if (genTutMap) { setWorldSize(TUT_MW); world.dtype = 'tut'; GCFG = {}; genTutorial(); growFurniture(); return; }   // обучение: один двор за забором (86-tut-map)
   const t = curDType();
   setWorldSize(world.gen >= 3 && t === 'town' ? (world.townN || 256) : 184);   // новый городок — большая карта (v72: 320, старые сохранения — 256), остальные районы как были
+  if (world.gen >= 5 && t === 'town') { world.dtype = t; GCFG = {}; genTown5(); growFurniture(); return; }   // v84: городок по плану (74-town)
   if (world.gen >= 3 && t === 'town') { world.dtype = t; GCFG = {}; genCounty(); growFurniture(); return; }   // городок вдоль трассы с фермами (74-county)
   if (world.gen >= 2 && (t === 'town' || t === 'downtown')) { world.dtype = t; GCFG = {}; genCity(t); growFurniture(); return; }
   world.dtype = t; world.nofence = false;

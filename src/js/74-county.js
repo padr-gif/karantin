@@ -52,6 +52,142 @@ function drawSoil(x, y, k) {
   resetT();
 }
 
+// ---- за городом: общие куски для 74-county и 74-town (участки у трасс, заправка, склады, фермы, дома у дороги, озеро, домики) ----
+// nearTown(x, y, w, h, m) — участок не ближе m клеток к городу. Порядок случайных чисел — как был в genCounty
+function outskirtsKit(nearTown) {
+  const H0 = EXIT_R, H1 = EXIT_R + RW - 1;
+  const freeArea = (x, y, w, h, m) => {
+    if (!inMap(x - m, y - m, FEN + 3) || !inMap(x + w + m - 1, y + h + m - 1, FEN + 3) || nearTown(x, y, w, h, 3)) return false;
+    for (let yy = y - m; yy < y + h + m; yy++) for (let xx = x - m; xx < x + w + m; xx++) { const i = yy * MW + xx; if (map[i] !== GRASS || hAt[i] || propAt[i] || soil[i] || cityMask[i]) return false; }
+    return true;
+  };
+  const claim = (x, y, w, h) => { for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) cityMask[yy * MW + xx] = 1; };
+  // участок: u — вдоль ближнего края (0..FU-1), v — вглубь (0 — ближний край); vd — куда растёт v: 0 +y, 1 −y, 2 +x, 3 −x
+  const frame = (rx, ry, FU, FV, vd, mf) => {
+    const ax = vd < 2;
+    const L = (u, v) => { u = mf ? FU - 1 - u : u; return ax ? [rx + u, vd === 0 ? ry + v : ry + FV - 1 - v] : [vd === 2 ? rx + v : rx + FV - 1 - v, ry + u]; };
+    const LR = (u, v, lu, lv) => { const [x0, y0] = L(u, v), [x1, y1] = L(u + lu - 1, v + lv - 1); return [Math.min(x0, x1), Math.min(y0, y1), Math.abs(x1 - x0) + 1, Math.abs(y1 - y0) + 1]; };
+    const LS = (du, dv) => { const [x0, y0] = L(0, 0), [x1, y1] = L(du, dv), dx = x1 - x0, dy = y1 - y0; return dy < 0 ? 0 : dy > 0 ? 1 : dx < 0 ? 2 : 3; };
+    return {rect:[rx, ry, ax ? FU : FV, ax ? FV : FU], L, LR, LS};
+  };
+  // участок у трассы (отступ off от обочины) или где-то в лесу, лицом к ближайшей трассе
+  const hwFrame = (hd, sg, u0, FU, FV, off, mf) => hd === 'x' ? frame(u0, sg < 0 ? H0 - off - FV : H1 + 1 + off, FU, FV, sg < 0 ? 1 : 0, mf)
+                                                             : frame(sg < 0 ? H0 - off - FV : H1 + 1 + off, u0, FU, FV, sg < 0 ? 3 : 2, mf);
+  const findFrame = (FU, FV, off, m, pAdj, tries) => {
+    for (let t = 0; t < tries; t++) {
+      let F;
+      if (rng() < pAdj) F = hwFrame(rng() < .5 ? 'x' : 'y', rng() < .5 ? -1 : 1, ri(FEN + 4, MW - FEN - 5 - FU), FU, FV, off, rng() < .5);
+      else {                                                                  // в глубине: ближний край смотрит на ближайшую трассу
+        const ax = rng() < .5, w = ax ? FU : FV, h = ax ? FV : FU, rx = ri(FEN + 4, MW - FEN - 5 - w), ry = ri(FEN + 4, MH - FEN - 5 - h);
+        const cx = rx + w / 2, cy = ry + h / 2;
+        F = frame(rx, ry, FU, FV, ax ? (cy < H0 ? 1 : 0) : (cx < H0 ? 3 : 2), rng() < .5);
+      }
+      if (freeArea(...F.rect, m)) { claim(...F.rect); return F; }
+    }
+    return null;
+  };
+  const driveway = F => {                                                     // грунтовка от ближнего края к трассе
+    const [x0, y0] = F.L(1, -1), [x1, y1] = F.L(2, -1), sx = Math.min(x0, x1), sy = Math.min(y0, y1), [tx, ty] = toHighway(sx, sy);
+    const hx = Math.abs(tx - sx) > Math.abs(ty - sy);
+    hx ? soilRect(Math.min(sx, tx), sy, Math.max(sx, tx), sy + 1, 1) : soilRect(sx, Math.min(sy, ty), sx + 1, Math.max(sy, ty), 1);
+    if ((hx ? ty !== sy && ty !== sy + 1 : tx !== sx && tx !== sx + 1)) dirtTrack(sx, sy, tx, ty);
+  };
+  const putPump = (x, y) => addProp({type:'pump', proc:true, cx:x + .5, cy:y + .5, solid:true, r:[x + .3, y + .32, x + .7, y + .68]}, [[x, y]]);
+  const K = {freeArea, claim, frame, hwFrame, findFrame, driveway, putPump};
+  K.gas = () => {
+    // заправка: площадка с колонками у трассы, за ней здание
+    { const F = findFrame(12, 11, 1, 1, 1, 300); if (F) {
+      const [fx, fy, fw, fh] = F.LR(0, 0, 12, 4); carve(fx, fy, fx + fw - 1, fy + fh - 1, WALK);
+      for (const u of [3, 8]) putPump(...F.L(u, 2));
+      const [x, y, w, h] = F.LR(2, 5, 8, 6); bld(x, y, w, h, 'gas', [F.LS(0, -1)]);
+      SPECIAL.push({x:x + w / 2, y:y + h / 2, pi:12, n:2});
+    } }
+  };
+  K.depot = () => {
+    // склады: бетонный двор за забором, ворота и въезд к трассе
+    { const FU = ri(22, 28), FV = ri(17, 20), F = findFrame(FU, FV, 4, 1, 1, 300); if (F) {
+      const [x, y, w, h] = F.rect; carve(x, y, x + w - 1, y + h - 1, WALK);
+      const nW = FU >= 26 && rng() < .5 ? 2 : 1, bl = Math.floor((FU - 4) / nW) - (nW - 1) * 2;
+      for (let k = 0; k < nW; k++) {
+        const [bx, by, bw, bh] = F.LR(2 + k * (bl + 2), FV - 11, bl, 9);
+        carve(bx, by, bx + bw - 1, by + bh - 1, GRASS); bld(bx, by, bw, bh, 'warehouse', [F.LS(0, -1), F.LS(-1, 0), F.LS(1, 0)]);
+        SPECIAL.push({x:bx + bw / 2, y:by + bh / 2, pi:12, n:2});
+      }
+      for (let k = 0; k < 10; k++) { const [bx, by] = F.L(ri(1, FU - 2), ri(1, FV - 13)); yardBox(bx, by, 'crate'); }
+      { const [tx0, ty0] = F.L(ri(3, FU - 6), 3), [tx1, ty1] = F.L(0, 3), along = Math.abs(tx1 - tx0) > 0 ? 'x' : 'y', tx = along === 'x' ? Math.min(tx0, tx0 + (tx1 > tx0 ? 1 : -1)) : tx0, ty = along === 'y' ? Math.min(ty0, ty0 + (ty1 > ty0 ? 1 : -1)) : ty0;
+        const c2 = along === 'x' ? [tx + 1, ty] : [tx, ty + 1];
+        if (get(tx, ty) === WALK && get(...c2) === WALK && !propAt[ty * MW + tx] && !propAt[c2[1] * MW + c2[0]]) { set(tx, ty, ROAD); set(...c2, ROAD); if (!parkCarAt(tx, ty, along, {ci:5})) { set(tx, ty, WALK); set(...c2, WALK); } } }
+      const gf = F.LS(0, -1), mid = F.L(FU >> 1, 0), gx = mid[0], gy = mid[1];
+      fenceRun(x - 1, y - 1, x + w, y - 1, gf === 0 ? [[gx - 2, gx + 2]] : []); fenceRun(x - 1, y + h, x + w, y + h, gf === 1 ? [[gx - 2, gx + 2]] : []);
+      fenceRun(x - 1, y, x - 1, y + h - 1, gf === 2 ? [[gy - 2, gy + 2]] : []); fenceRun(x + w, y, x + w, y + h - 1, gf === 3 ? [[gy - 2, gy + 2]] : []);
+      { const [ax, ay, aw, ah] = F.LR((FU >> 1) - 2, -4, 5, 4); carve(ax, ay, ax + aw - 1, ay + ah - 1, WALK); }
+    } }
+  };
+  K.farms = nf => {
+    // фермы: дом и амбар рядом, двор, за ними пашня и пастбище, лесополоса; у трассы или в глубине, тогда к ним ведёт грунтовка
+    for (let f = 0; f < nf; f++) {
+      let FU = ri(30, 34), FV = ri(20, 23), F = findFrame(FU, FV, 2, 2, .5, 400);
+      if (!F) { FU = 30; FV = 19; F = findFrame(FU, FV, 2, 1, .5, 600); }
+      if (!F) break;
+      const {L, LR, LS} = F;
+      { const [x, y, w, h] = LR(4, 1, 10, 9); bld(x, y, w, h, 'house', [LS(0, 1), LS(0, -1)]); }
+      { const [x, y, w, h] = LR(15, 1, 14, 9); bld(x, y, w, h, 'farm', [LS(0, 1), LS(1, 0)]); SPECIAL.push({x:x + w / 2, y:y + h / 2, pi:ri(0, 9), n:2}); }
+      { const [x0, y0] = L(1, 0), [x1, y1] = L(2, FV - 2); soilRect(x0, y0, x1, y1, 1); driveway(F); }   // въезд вдоль участка и грунтовка к трассе
+      { const [x0, y0] = L(3, 10), [x1, y1] = L(FU - 2, 11); soilRect(x0, y0, x1, y1, 1); }               // двор перед домом и амбаром
+      for (const u of [17, 20, 23]) yardBox(...L(u, 11), 'crate');
+      const mid = 4 + ((FU - 6) >> 1), pasture = rng() < .5;
+      [[4, mid - 4], [mid + 1, FU - 2 - mid]].forEach(([u, lu], k) => {
+        const lv = FV - 15; if (lu < 5 || lv < 4) return;
+        const [x, y, w, h] = LR(u, 13, lu, lv);
+        if (k === 1 && pasture) {                                               // пастбище за изгородью, калитка со двора
+          const gs = LS(0, -1), g = gs < 2 ? x + (w >> 1) : y + (h >> 1);
+          fenceRun(x - 1, y - 1, x + w, y - 1, gs === 0 ? [[g - 1, g + 1]] : []); fenceRun(x - 1, y + h, x + w, y + h, gs === 1 ? [[g - 1, g + 1]] : []);
+          fenceRun(x - 1, y, x - 1, y + h - 1, gs === 2 ? [[g - 1, g + 1]] : []); fenceRun(x + w, y, x + w, y + h - 1, gs === 3 ? [[g - 1, g + 1]] : []);
+          return;
+        }
+        const kk = rng() < .5 ? 2 : 3; soilRect(x, y, x + w - 1, y + h - 1, kk);
+        for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) {   // кусты урожая вдоль борозд, редко — их можно выкопать
+          const row = kk === 2 ? yy - y : xx - x, col = kk === 2 ? xx - x : yy - y;
+          if (row % 3 === 1 && col % 3 === 0 && rng() < .55) addProp({type:'veg', proc:true, cx:xx + .5, cy:yy + .5, solid:false, r:[xx + .08, yy + .08, xx + .92, yy + .92], dug:false, v:ri(0, 2)}, [[xx, yy]]);
+        }
+      });
+      for (let u = -1; u <= FU; u++) { const [x, y] = L(u, FV + 1); if (inMap(x, y, FEN + 2) && get(x, y) === GRASS && !propAt[y * MW + x] && !soil[y * MW + x] && rng() < .85) set(x, y, TREE); }   // лесополоса
+    }
+  };
+  K.roadHouses = (nn, tries, G4) => {
+    // дома вдоль трасс за городом: город «растекается» по дороге
+    for (let n = 0, t = 0; n < nn && t < tries; t++) {
+      const FU = ri(9, 11), FV = ri(8, 9), F = findFrame(FU, FV, 3, 2, 1, 1); if (!F) continue;
+      const [x, y, w, h] = F.rect, H = bld(x, y, w, h, 'house', [F.LS(0, -1), F.LS(0, 1)]); if (!H) continue;
+      pathFromDoor(H); n++;
+      const farF = H.x - FEN >= 12 && H.y - FEN >= 12 && MW - FEN - H.x - H.w >= 12 && MH - FEN - H.y - H.h >= 12;   // у самого забора гараж упрётся воротами в сетку
+      if (rng() < .5) yardFence(H); if (rng() < .5) yardGarden(H); if (rng() < .3 && (!G4 || farF)) yardGarage(H);
+    }
+  };
+  K.lake = sides => {                                                        // sides — стороны дверей сарая (74-town: к грунтовке); без них — как было
+    // озеро с рыбацким домиком и грунтовкой
+    for (let t = 0; t < 120; t++) {
+      const rx = 7 + rng() * 5, ry = 5 + rng() * 4, cx = ri(FEN + 16, MW - FEN - 17), cy = ri(FEN + 14, MH - FEN - 15);
+      const x0 = Math.floor(cx - rx) - 4, y0 = Math.floor(cy - ry) - 4, w = Math.ceil(rx * 2) + 8, h = Math.ceil(ry * 2) + 8;
+      if (!freeArea(x0, y0, w, h, 2)) continue;
+      pond(cx, cy, rx, ry); claim(x0, y0, w, h);
+      const sx = Math.round(cx + (rng() < .5 ? -1 : 1) * (rx + 2)) - 2, sy = Math.round(cy) - 2;
+      if (rectFree(sx, sy, 5, 4, 0)) { bld(sx, sy, 5, 4, 'shed', sides); const [tx, ty] = toHighway(sx + 2, sy + 4); dirtTrack(sx + 2, sy + 4, tx, ty); }
+      break;
+    }
+  };
+  K.cabins = nc => {
+    // охотничьи домики в лесу, к двум из них — грунтовка
+    for (let n = 0, t = 0; n < nc && t < 400; t++) {
+      const x = ri(FEN + 4, MW - FEN - 10), y = ri(FEN + 4, MH - FEN - 10);
+      if (!freeArea(x, y, 5, 4, 4)) continue;
+      bld(x, y, 5, 4, 'shed'); n++;
+      if (n <= 2) { const [tx, ty] = toHighway(x + 2, y + 4); dirtTrack(x + 2, y + 5, tx, ty); }
+    }
+  };
+  return K;
+}
+
 // ---- городок вдоль трассы ----
 function genCounty() {
   genReset(); cityMask = new Uint8Array(NT);
@@ -236,122 +372,8 @@ function genCounty() {
   for (let k = 0; k < 5; k++) { const a = ri(A0, A1), c = rng() < .5 ? H0 - 1 : H1 + 1, [x, y] = XY(a, c); SPECIAL.push({x:x + .5, y:y + .5, pi:ri(0, 9), n:3}); }
 
   // ---- за городом ----
-  const freeArea = (x, y, w, h, m) => {
-    if (!inMap(x - m, y - m, FEN + 3) || !inMap(x + w + m - 1, y + h + m - 1, FEN + 3) || nearTown(x, y, w, h, 3)) return false;
-    for (let yy = y - m; yy < y + h + m; yy++) for (let xx = x - m; xx < x + w + m; xx++) { const i = yy * MW + xx; if (map[i] !== GRASS || hAt[i] || propAt[i] || soil[i] || cityMask[i]) return false; }
-    return true;
-  };
-  const claim = (x, y, w, h) => { for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) cityMask[yy * MW + xx] = 1; };
-  // участок: u — вдоль ближнего края (0..FU-1), v — вглубь (0 — ближний край); vd — куда растёт v: 0 +y, 1 −y, 2 +x, 3 −x
-  const frame = (rx, ry, FU, FV, vd, mf) => {
-    const ax = vd < 2;
-    const L = (u, v) => { u = mf ? FU - 1 - u : u; return ax ? [rx + u, vd === 0 ? ry + v : ry + FV - 1 - v] : [vd === 2 ? rx + v : rx + FV - 1 - v, ry + u]; };
-    const LR = (u, v, lu, lv) => { const [x0, y0] = L(u, v), [x1, y1] = L(u + lu - 1, v + lv - 1); return [Math.min(x0, x1), Math.min(y0, y1), Math.abs(x1 - x0) + 1, Math.abs(y1 - y0) + 1]; };
-    const LS = (du, dv) => { const [x0, y0] = L(0, 0), [x1, y1] = L(du, dv), dx = x1 - x0, dy = y1 - y0; return dy < 0 ? 0 : dy > 0 ? 1 : dx < 0 ? 2 : 3; };
-    return {rect:[rx, ry, ax ? FU : FV, ax ? FV : FU], L, LR, LS};
-  };
-  // участок у трассы (отступ off от обочины) или где-то в лесу, лицом к ближайшей трассе
-  const hwFrame = (hd, sg, u0, FU, FV, off, mf) => hd === 'x' ? frame(u0, sg < 0 ? H0 - off - FV : H1 + 1 + off, FU, FV, sg < 0 ? 1 : 0, mf)
-                                                             : frame(sg < 0 ? H0 - off - FV : H1 + 1 + off, u0, FU, FV, sg < 0 ? 3 : 2, mf);
-  const findFrame = (FU, FV, off, m, pAdj, tries) => {
-    for (let t = 0; t < tries; t++) {
-      let F;
-      if (rng() < pAdj) F = hwFrame(rng() < .5 ? 'x' : 'y', rng() < .5 ? -1 : 1, ri(FEN + 4, MW - FEN - 5 - FU), FU, FV, off, rng() < .5);
-      else {                                                                  // в глубине: ближний край смотрит на ближайшую трассу
-        const ax = rng() < .5, w = ax ? FU : FV, h = ax ? FV : FU, rx = ri(FEN + 4, MW - FEN - 5 - w), ry = ri(FEN + 4, MH - FEN - 5 - h);
-        const cx = rx + w / 2, cy = ry + h / 2;
-        F = frame(rx, ry, FU, FV, ax ? (cy < H0 ? 1 : 0) : (cx < H0 ? 3 : 2), rng() < .5);
-      }
-      if (freeArea(...F.rect, m)) { claim(...F.rect); return F; }
-    }
-    return null;
-  };
-  const driveway = F => {                                                     // грунтовка от ближнего края к трассе
-    const [x0, y0] = F.L(1, -1), [x1, y1] = F.L(2, -1), sx = Math.min(x0, x1), sy = Math.min(y0, y1), [tx, ty] = toHighway(sx, sy);
-    const hx = Math.abs(tx - sx) > Math.abs(ty - sy);
-    hx ? soilRect(Math.min(sx, tx), sy, Math.max(sx, tx), sy + 1, 1) : soilRect(sx, Math.min(sy, ty), sx + 1, Math.max(sy, ty), 1);
-    if ((hx ? ty !== sy && ty !== sy + 1 : tx !== sx && tx !== sx + 1)) dirtTrack(sx, sy, tx, ty);
-  };
-  const putPump = (x, y) => addProp({type:'pump', proc:true, cx:x + .5, cy:y + .5, solid:true, r:[x + .3, y + .32, x + .7, y + .68]}, [[x, y]]);
-  // заправка: площадка с колонками у трассы, за ней здание
-  { const F = findFrame(12, 11, 1, 1, 1, 300); if (F) {
-    const [fx, fy, fw, fh] = F.LR(0, 0, 12, 4); carve(fx, fy, fx + fw - 1, fy + fh - 1, WALK);
-    for (const u of [3, 8]) putPump(...F.L(u, 2));
-    const [x, y, w, h] = F.LR(2, 5, 8, 6); bld(x, y, w, h, 'gas', [F.LS(0, -1)]);
-    SPECIAL.push({x:x + w / 2, y:y + h / 2, pi:12, n:2});
-  } }
-  // склады: бетонный двор за забором, ворота и въезд к трассе
-  { const FU = ri(22, 28), FV = ri(17, 20), F = findFrame(FU, FV, 4, 1, 1, 300); if (F) {
-    const [x, y, w, h] = F.rect; carve(x, y, x + w - 1, y + h - 1, WALK);
-    const nW = FU >= 26 && rng() < .5 ? 2 : 1, bl = Math.floor((FU - 4) / nW) - (nW - 1) * 2;
-    for (let k = 0; k < nW; k++) {
-      const [bx, by, bw, bh] = F.LR(2 + k * (bl + 2), FV - 11, bl, 9);
-      carve(bx, by, bx + bw - 1, by + bh - 1, GRASS); bld(bx, by, bw, bh, 'warehouse', [F.LS(0, -1), F.LS(-1, 0), F.LS(1, 0)]);
-      SPECIAL.push({x:bx + bw / 2, y:by + bh / 2, pi:12, n:2});
-    }
-    for (let k = 0; k < 10; k++) { const [bx, by] = F.L(ri(1, FU - 2), ri(1, FV - 13)); yardBox(bx, by, 'crate'); }
-    { const [tx0, ty0] = F.L(ri(3, FU - 6), 3), [tx1, ty1] = F.L(0, 3), along = Math.abs(tx1 - tx0) > 0 ? 'x' : 'y', tx = along === 'x' ? Math.min(tx0, tx0 + (tx1 > tx0 ? 1 : -1)) : tx0, ty = along === 'y' ? Math.min(ty0, ty0 + (ty1 > ty0 ? 1 : -1)) : ty0;
-      const c2 = along === 'x' ? [tx + 1, ty] : [tx, ty + 1];
-      if (get(tx, ty) === WALK && get(...c2) === WALK && !propAt[ty * MW + tx] && !propAt[c2[1] * MW + c2[0]]) { set(tx, ty, ROAD); set(...c2, ROAD); if (!parkCarAt(tx, ty, along, {ci:5})) { set(tx, ty, WALK); set(...c2, WALK); } } }
-    const gf = F.LS(0, -1), mid = F.L(FU >> 1, 0), gx = mid[0], gy = mid[1];
-    fenceRun(x - 1, y - 1, x + w, y - 1, gf === 0 ? [[gx - 2, gx + 2]] : []); fenceRun(x - 1, y + h, x + w, y + h, gf === 1 ? [[gx - 2, gx + 2]] : []);
-    fenceRun(x - 1, y, x - 1, y + h - 1, gf === 2 ? [[gy - 2, gy + 2]] : []); fenceRun(x + w, y, x + w, y + h - 1, gf === 3 ? [[gy - 2, gy + 2]] : []);
-    { const [ax, ay, aw, ah] = F.LR((FU >> 1) - 2, -4, 5, 4); carve(ax, ay, ax + aw - 1, ay + ah - 1, WALK); }
-  } }
-  // фермы: дом и амбар рядом, двор, за ними пашня и пастбище, лесополоса; у трассы или в глубине, тогда к ним ведёт грунтовка
-  for (let f = 0, nf = G4 ? ri(4, 5) : ri(2, 4); f < nf; f++) {
-    let FU = ri(30, 34), FV = ri(20, 23), F = findFrame(FU, FV, 2, 2, .5, 400);
-    if (!F) { FU = 30; FV = 19; F = findFrame(FU, FV, 2, 1, .5, 600); }
-    if (!F) break;
-    const {L, LR, LS} = F;
-    { const [x, y, w, h] = LR(4, 1, 10, 9); bld(x, y, w, h, 'house', [LS(0, 1), LS(0, -1)]); }
-    { const [x, y, w, h] = LR(15, 1, 14, 9); bld(x, y, w, h, 'farm', [LS(0, 1), LS(1, 0)]); SPECIAL.push({x:x + w / 2, y:y + h / 2, pi:ri(0, 9), n:2}); }
-    { const [x0, y0] = L(1, 0), [x1, y1] = L(2, FV - 2); soilRect(x0, y0, x1, y1, 1); driveway(F); }   // въезд вдоль участка и грунтовка к трассе
-    { const [x0, y0] = L(3, 10), [x1, y1] = L(FU - 2, 11); soilRect(x0, y0, x1, y1, 1); }               // двор перед домом и амбаром
-    for (const u of [17, 20, 23]) yardBox(...L(u, 11), 'crate');
-    const mid = 4 + ((FU - 6) >> 1), pasture = rng() < .5;
-    [[4, mid - 4], [mid + 1, FU - 2 - mid]].forEach(([u, lu], k) => {
-      const lv = FV - 15; if (lu < 5 || lv < 4) return;
-      const [x, y, w, h] = LR(u, 13, lu, lv);
-      if (k === 1 && pasture) {                                               // пастбище за изгородью, калитка со двора
-        const gs = LS(0, -1), g = gs < 2 ? x + (w >> 1) : y + (h >> 1);
-        fenceRun(x - 1, y - 1, x + w, y - 1, gs === 0 ? [[g - 1, g + 1]] : []); fenceRun(x - 1, y + h, x + w, y + h, gs === 1 ? [[g - 1, g + 1]] : []);
-        fenceRun(x - 1, y, x - 1, y + h - 1, gs === 2 ? [[g - 1, g + 1]] : []); fenceRun(x + w, y, x + w, y + h - 1, gs === 3 ? [[g - 1, g + 1]] : []);
-        return;
-      }
-      const kk = rng() < .5 ? 2 : 3; soilRect(x, y, x + w - 1, y + h - 1, kk);
-      for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) {   // кусты урожая вдоль борозд, редко — их можно выкопать
-        const row = kk === 2 ? yy - y : xx - x, col = kk === 2 ? xx - x : yy - y;
-        if (row % 3 === 1 && col % 3 === 0 && rng() < .55) addProp({type:'veg', proc:true, cx:xx + .5, cy:yy + .5, solid:false, r:[xx + .08, yy + .08, xx + .92, yy + .92], dug:false, v:ri(0, 2)}, [[xx, yy]]);
-      }
-    });
-    for (let u = -1; u <= FU; u++) { const [x, y] = L(u, FV + 1); if (inMap(x, y, FEN + 2) && get(x, y) === GRASS && !propAt[y * MW + x] && !soil[y * MW + x] && rng() < .85) set(x, y, TREE); }   // лесополоса
-  }
-  // дома вдоль трасс за городом: город «растекается» по дороге
-  for (let n = 0, nn = G4 ? ri(18, 24) : ri(7, 11), t = 0; n < nn && t < (G4 ? 900 : 400); t++) {
-    const FU = ri(9, 11), FV = ri(8, 9), F = findFrame(FU, FV, 3, 2, 1, 1); if (!F) continue;
-    const [x, y, w, h] = F.rect, H = bld(x, y, w, h, 'house', [F.LS(0, -1), F.LS(0, 1)]); if (!H) continue;
-    pathFromDoor(H); n++;
-    const farF = H.x - FEN >= 12 && H.y - FEN >= 12 && MW - FEN - H.x - H.w >= 12 && MH - FEN - H.y - H.h >= 12;   // у самого забора гараж упрётся воротами в сетку
-    if (rng() < .5) yardFence(H); if (rng() < .5) yardGarden(H); if (rng() < .3 && (!G4 || farF)) yardGarage(H);
-  }
-  // озеро с рыбацким домиком и грунтовкой
-  for (let t = 0; t < 120; t++) {
-    const rx = 7 + rng() * 5, ry = 5 + rng() * 4, cx = ri(FEN + 16, MW - FEN - 17), cy = ri(FEN + 14, MH - FEN - 15);
-    const x0 = Math.floor(cx - rx) - 4, y0 = Math.floor(cy - ry) - 4, w = Math.ceil(rx * 2) + 8, h = Math.ceil(ry * 2) + 8;
-    if (!freeArea(x0, y0, w, h, 2)) continue;
-    pond(cx, cy, rx, ry); claim(x0, y0, w, h);
-    const sx = Math.round(cx + (rng() < .5 ? -1 : 1) * (rx + 2)) - 2, sy = Math.round(cy) - 2;
-    if (rectFree(sx, sy, 5, 4, 0)) { bld(sx, sy, 5, 4, 'shed'); const [tx, ty] = toHighway(sx + 2, sy + 4); dirtTrack(sx + 2, sy + 4, tx, ty); }
-    break;
-  }
-  // охотничьи домики в лесу, к двум из них — грунтовка
-  for (let n = 0, t = 0; n < (G4 ? 7 : 4) && t < 400; t++) {
-    const x = ri(FEN + 4, MW - FEN - 10), y = ri(FEN + 4, MH - FEN - 10);
-    if (!freeArea(x, y, 5, 4, 4)) continue;
-    bld(x, y, 5, 4, 'shed'); n++;
-    if (n <= 2) { const [tx, ty] = toHighway(x + 2, y + 4); dirtTrack(x + 2, y + 5, tx, ty); }
-  }
+  { const K = outskirtsKit(nearTown);
+    K.gas(); K.depot(); K.farms(G4 ? ri(4, 5) : ri(2, 4)); K.roadHouses(G4 ? ri(18, 24) : ri(7, 11), G4 ? 900 : 400, G4); K.lake(); K.cabins(G4 ? 7 : 4); }
   highwayCars(8);
 
   // карантин: блокпосты на трассах и забор
