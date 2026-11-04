@@ -149,13 +149,20 @@ function genTown5() {
     o = o || {};
     const s = Math.sign(dB - dF), depth = Math.abs(dB - dF) + 1, D = k => dF + s * k, front = faceD(sd, -s), lots = [];
     // ряд ровный: участки одной ширины, все дома на одной линии с одинаковым отступом и глубиной, дом посередине участка
-    const SET = o.set || 3, L = ia1 - ia0, n = Math.max(1, Math.round(L / (o.lw || ri(14, 17))));
+    const SET = o.set || 3, L = ia1 - ia0, canG = depth >= SET + 10;
     const dd = Math.min(ri(8, o.dmax || 10), depth - SET - 3);
     if (L < 11 || dd < 8) return lots;
-    for (let q = 0; q < n; q++) {
-      const a = ia0 + Math.round(q * L / n), b = ia0 + Math.round((q + 1) * L / n), lw = b - a - 1;
+    // сначала — у каких участков гараж (примерно у трети): им участок шире; остаток длины ряда делится поровну
+    const pG = o.gar != null ? o.gar : .35, types = [];
+    for (let sum = 0; ; ) { const g = canG && rng() < pG, w = g ? 19 : 13; if (sum + w > L) { if (g && sum + 13 <= L) { types.push(false); sum += 13; } break; } types.push(g); sum += w; }
+    if (!types.length) types.push(false);
+    const base = types.reduce((t, g) => t + (g ? 19 : 13), 0), extra = (L - base) / types.length;
+    let acc = ia0;
+    for (let q = 0; q < types.length; q++) {
+      const a = Math.round(acc), wq = (types[q] ? 19 : 13) + extra; acc += wq;
+      const b = q === types.length - 1 ? ia1 : Math.round(acc), lw = b - a - 1;
       if (lw < 10) continue;
-      const gar = rng() < (o.gar != null ? o.gar : .3) && depth >= SET + 10 && lw - 2 >= 8 + 6;
+      const gar = types[q] && lw - 2 >= 8 + 6;
       const hw = Math.min(ri(8, 11), lw - 2 - (gar ? 6 : 0)), gl = gar && rng() < .5, off = a + 1 + ((lw - hw - (gar ? 6 : 0)) >> 1), h0 = off + (gl ? 6 : 0);
       const [hx, hy, hwx, hhy] = rectAD(h0, h0 + hw - 1, sd, D(SET), D(SET + dd - 1));
       const H = bldF(hx, hy, hwx, hhy, 'house', front); let G = null;
