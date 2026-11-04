@@ -1,0 +1,29 @@
+# Архив для Яндекс Игр: собирается сам при каждом пуше в main (и вручную — кнопкой Run workflow во вкладке Actions).
+# Скачать: Actions → «Архив для Яндекс Игр» → нужный запуск → Artifacts → deadline-yandex.
+name: Архив для Яндекс Игр
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  yandex:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # Pillow — на случай, если лист спрайтов поменялся, а его WebP-копия ещё не закоммичена (tools/webp.py)
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install Pillow
+      - run: node build.mjs --yandex
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deadline-yandex
+          path: dist/deadline-yandex.zip
+          compression-level: 0
+          retention-days: 90
