@@ -25,7 +25,7 @@ function webpOf(name, h) {
 // pwa: сайт. Спрайты и шрифты тогда идут отдельными файлами в <папка сайта>/art/ с хэшем в имени:
 // браузер качает их параллельно и не разбирает мегабайты текста, а service worker хранит их, пока они не поменяются.
 // Без pwa всё зашито в один HTML, как раньше.
-export function build({dev = false, pwa = false, out = 'dist/karantin.html'} = {}) {
+export function build({dev = false, pwa = false, plat = '', out = 'dist/karantin.html'} = {}) {
   const dst = path.join(ROOT, out), assets = [], preload = [];
   const put = (file, buf, spare) => { fs.mkdirSync(path.join(path.dirname(dst), 'art'), {recursive: true}); fs.writeFileSync(path.join(path.dirname(dst), 'art', file), buf); if (!spare) assets.push('art/' + file); return 'art/' + file; };   // spare: запасной файл, в офлайн-кэш заранее не кладётся
   // 1. sprite atlas: frame rects + every sheet (a data URL, or a file on the site)
@@ -36,7 +36,7 @@ export function build({dev = false, pwa = false, out = 'dist/karantin.html'} = {
     const buf = fs.readFileSync(path.join(ROOT, 'assets/sprites', name + '.png'));
     if (!pwa) { png[name] = 'data:image/png;base64,' + buf.toString('base64'); continue; }
     const h = hash(buf), wf = webpOf(name, h);
-    alt[name] = put(`${name}.${h}.png`, buf, !!wf);
+    if (!(plat && wf)) alt[name] = put(`${name}.${h}.png`, buf, !!wf);       // на площадке WebP понимают все браузеры: запасной PNG не кладём
     png[name] = wf ? put(`${name}.${h}.webp`, fs.readFileSync(wf)) : alt[name];
     size[name] = wf ? fs.statSync(wf).size : buf.length;
   }
@@ -55,7 +55,8 @@ export function build({dev = false, pwa = false, out = 'dist/karantin.html'} = {
   // 3. page
   // the sheets start downloading straight from <head>, while the browser is still busy with the game code
   if (pwa) preload.push(`<script>window.__pre={};(function(u){try{if(window.fetch)for(var k in u)window.__pre[k]=fetch(u[k]);}catch(e){}})(${JSON.stringify(png)})</script>`);
-  const head = (pwa ? preload.join('') : '') + (pwa ? '<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#0c0f12"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Dead Line"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" href="icon-192.png">'
+  const platHead = plat === 'yandex' ? `<script>window.__PLAT='yandex'</script><script src="/sdk.js" async></script>` : '';
+  const head = platHead + (pwa ? preload.join('') : '') + (pwa && !plat ? '<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#0c0f12"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Dead Line"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" href="icon-192.png">'
  : '');
   // fonts live in the page itself: an outside font server that hangs must never block the game from starting
   const FONTS = [['Oswald', 500, 'oswald-500'], ['Oswald', 700, 'oswald-700'], ['PT Sans', 400, 'ptsans-400'], ['PT Sans', 700, 'ptsans-700'], ['PT Mono', 400, 'ptmono-400']];
@@ -86,7 +87,18 @@ export function buildSite() {
   return dir;
 }
 
+// Яндекс Игры: папка dist/yandex (страница + art/) и архив для загрузки в консоль разработчика
+export function buildYandex() {
+  const dir = path.join(ROOT, 'dist/yandex'), zip = path.join(ROOT, 'dist/deadline-yandex.zip');
+  fs.rmSync(dir, {recursive: true, force: true}); fs.rmSync(zip, {force: true});
+  build({pwa: true, plat: 'yandex', out: 'dist/yandex/index.html'});
+  const r = spawnSync('zip', ['-qr9', zip, '.'], {cwd: dir, stdio: 'inherit'});
+  if (r.status !== 0) console.warn('zip не найден: загрузи содержимое dist/yandex архивом вручную');
+  return fs.existsSync(zip) ? zip : dir;
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
+  if (process.argv.includes('--yandex')) { const f = buildYandex(); console.log('Яндекс Игры:', path.relative(ROOT, f), (fs.statSync(f).isFile() ? (fs.statSync(f).size / 1048576).toFixed(1) + ' МБ' : '')); process.exit(0); }
   if (process.argv.includes('--site')) { console.log('Сайт собран:', path.relative(ROOT, buildSite())); process.exit(0); }
   const dev = process.argv.includes('--dev');
   const dst = build({dev, out: dev ? 'dist/karantin-dev.html' : 'dist/karantin.html'});

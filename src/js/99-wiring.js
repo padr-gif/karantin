@@ -52,7 +52,7 @@ function die() {
   $('dCause').textContent = lastCause;
   $('dRec').textContent = fmtDur(best);
   $('ctrl').hidden = true;
-  setTimeout(() => { if (mode === 'dead') show('dead'); }, 1400);
+  setTimeout(() => { if (mode === 'dead') { show('dead'); PLAT.interstitial(); } }, 1400);
 }
 function flashSaved(ok) { $('saveInd').textContent = ok ? 'сохранено ' + fmtTime(gameMin) : ''; setTimeout(() => { $('saveInd').textContent = ''; }, 4000); }
 

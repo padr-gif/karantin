@@ -182,6 +182,7 @@ function travelTo(side) {
   if (traveling) return;
   const [ox, oy] = SIDE_D[side], nx = (world.dx || 0) + ox, ny = (world.dy || 0) + oy;
   traveling = true; paused = true;
+  if (typeof PLAT !== 'undefined') PLAT.interstitial();                       // Яндекс Игры: реклама в естественной паузе (95-platform)
   showRoad('Дорога в район «' + distName(nx, ny) + '»…', () => { try { doTravel(side, nx, ny); } finally { traveling = false; if ($('pause').hidden && !panel && !travelAsk) paused = false; } });
 }
 function doTravel(side, nx, ny) {

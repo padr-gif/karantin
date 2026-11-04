@@ -108,6 +108,7 @@ function openPause() {
   closePanel(); paused = true; atkHeld = false; joy.id = null; joy.x = joy.y = 0; $('stick').hidden = true;
   $('pInfo').innerHTML = (P.look && P.look.name ? '<b>' + P.look.name.replace(/</g, '') + '</b> · ' + (PROFS[P.prof] || PROFS.none).name.toLowerCase() + '<br>' : '') + `День ${Math.floor(gameMin / 1440) + 1}, ${fmtTime(gameMin)} · убито ${kills} · ${(DIFF[world.diff] || DIFF.normal).name.toLowerCase()}`;
   show('pause');
+  if (typeof platDropBtn === 'function') platDropBtn();                   // кнопка «Сброс припасов за рекламу» (95-platform)
 }
 function resume() { show(null); if (!panel) paused = false; }
 function goBack() { show(backTo); if (backTo === 'menu') refreshMenu(); }
