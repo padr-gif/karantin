@@ -3,7 +3,7 @@
 // Если основное не читается или не загружается, игра берёт запасное. Сохранение можно выгрузить файлом и загрузить
 // из файла (перенести игру на другой телефон). Ошибки кадра и скрипта пишутся в журнал; в паузе — «Отчёт об ошибках».
 
-const GAME_VER = '0.86';
+const GAME_VER = '0.87';
 const PKEY = s => LKEY(s) + '-prev';
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } };
@@ -221,7 +221,8 @@ function showBench() {
   const worst = Math.min(...BENCH.rows.map(r => r.fps));
   const verdict = worst >= 45 ? 'Отлично: играется плавно.' : worst >= 28 ? 'Нормально: играть можно.' : 'Медленно. Поставь графику «Экономия» в настройках.';
   eventBanner('Тест скорости', BENCH.rows.map(r => r.n + ': ' + r.fps + ' FPS').join(' · ') + '. ' + verdict, '', 'i-star');
-  if (worst < 28 && settings.gfx > 1.5) { settings.gfx = 1.5; saveSettings(); applySettings(); toast('Включил графику «Экономия»'); }
+  if (worst < 18 && settings.gfx > 1) { settings.gfx = 1; settings.gfxAuto = false; saveSettings(); toast('Включил графику «Минимум»'); }
+  else if (worst < 28 && settings.gfx > 1.5) { settings.gfx = 1.5; settings.gfxAuto = false; saveSettings(); toast('Включил графику «Экономия»'); }
 }
 { $('sBench').addEventListener('click', () => { if (backTo !== 'menu') { toast('Запусти тест из главного меню'); return; } SFX.ui(); show(null); runBench(); });
   const st = document.createElement('style');

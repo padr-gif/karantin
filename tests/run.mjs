@@ -419,6 +419,29 @@ const occ = await D(`(() => {
 })()`);
 check('мебель у передней стены: у закрытого дома не вылезает, у открытого — видна сквозь стену', occ.skip || (occ.closed && occ.open), occ);
 
+console.log('Осада и оборона');
+await fresh();
+check('первая осада — в ночь седьмого дня в 22:00', await D("SIEGE.at === (Math.floor(gameMin / 1440) + 6) * 1440 + 22 * 60 && !SIEGE.on"), await D("[SIEGE.at, gameMin]"));
+check('орда растёт со временем', await D("(() => { const a = hordeSize(); gameMin += 10 * 1440; const b = hordeSize(); gameMin -= 10 * 1440; return a === 24 && b > a && b <= 44; })()"), await D("hordeSize()"));
+await D("gameMin = SIEGE.at - 13 * 60; update(.016)");
+check('утром — предупреждение и значок «Ночью осада»', await D("SIEGE.warned && radioNews().some(r => /Этой ночью/.test(r[1]))"));
+const w1 = await D("zs.length = 0; gameMin = SIEGE.at; update(.016); ({on:SIEGE.on, n:zs.filter(z => z.siege).length, far:zs.filter(z => z.siege).every(z => Math.hypot(z.x - P.x, z.y - P.y) > 13)})");
+check('22:00 — осада, первая волна кольцом вокруг', w1.on && w1.n >= 4 && w1.far, w1);
+const w3 = await D("gameMin = SIEGE.at + 301; update(.016); ({w:SIEGE.w, n:zs.filter(z => z.siege).length})");
+check('к трём ночи — все три волны, не больше 36 разом', w3.w === 3 && w3.n > w1.n && w3.n <= 36, w3);
+check('мертвецы осады ищут героя', await D("for (const z of zs) if (z.siege) z.state = 'wander'; SIEGE._k = 0; update(.016); zs.filter(z => z.siege).every(z => z.state !== 'wander' && Math.hypot(z.tx - P.x, z.ty - P.y) < 1)"));
+const end = await D("const n0 = airdrops.length, k0 = SIEGE.n; gameMin = SIEGE.end; update(.016); ({on:SIEGE.on, n:SIEGE.n - k0, drop:airdrops.length > n0, left:zs.some(z => z.siege), next:SIEGE.at - SIEGE.end})");
+check('рассвет — осада кончилась, груз с вертолёта, следующая через неделю', !end.on && end.n === 1 && end.drop && !end.left && end.next === 7 * 1440 - 480, end);
+check('вторая осада больше первой', await D("(() => { const b = SIEGE.n; SIEGE.n = 0; const a = siegeWaveN(); SIEGE.n = b; return siegeWaveN() > a; })()"));
+const sgv = await D("SIEGE.on = true; SIEGE.w = 2; const d = JSON.parse(JSON.stringify(serialize())); SIEGE.on = false; SIEGE.w = 0; applySave(d); ({on:SIEGE.on, w:SIEGE.w})");
+check('осада переживает сохранение', sgv.on && sgv.w === 2, sgv);
+await D("SIEGE.on = false");
+check('нет орд в мире — нет и осад', await D("(() => { const k = world.hordeK; world.hordeK = 0; gameMin = SIEGE.at; update(.016); const r = !SIEGE.on; world.hordeK = k; return r; })()"));
+const trip = await D(`(() => { __open(); zs.length = 0; const x = Math.floor(P.x) + 2, y = Math.floor(P.y); const p = mkPiece('trip', x, y, {q:1}); buildFlow();
+  P.awake = 0; P.en = 100; P.sleep = true; const z = mkZombie(x + .5, y + .5, {pi:1, b:'m', blood:0}, 60, 1); update(.016); const woke = !P.sleep; P.sleep = false;
+  return {ok:!!p, woke, hp:p && p.hp, solid:p && p.solid}; })()`);
+check('растяжка: мертвец прошёл — звон будит героя', trip.ok && trip.woke && trip.hp < 40 && !trip.solid, trip);
+
 console.log('Живая игра 15 секунд');
 await fresh("['coward']");
 await D("P.weapon = mkItem('shotgun'); P.weapon.mag = 2; P.inv.push(mkItem('shells')); gameMin += 14 * 60; for (let i = 0; i < 25; i++) spawnZombie(4, false);");

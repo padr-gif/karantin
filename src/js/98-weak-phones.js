@@ -41,15 +41,5 @@ if (settings.gfxAuto == null) {
   requestAnimationFrame(tick);
 }
 
-// --- настройки: ручной выбор графики выключает автоподбор; строка «Частота кадров» ---
+// строка «Частота кадров» заполняется в openSettings (20-screens), «Минимум» после теста скорости — в showBench (73-stability)
 setRowAdd('Частота кадров', '30 к/с — ровнее и холоднее на слабом телефоне, меньше тратит батарею', 'sCap', 'img');
-{ const f = openSettings; openSettings = function () { const r = f.apply(this, arguments);
-    const g = $('sGfx'); if (g && !g._auto) { g._auto = true; g.addEventListener('click', () => { if (settings.gfxAuto) { settings.gfxAuto = false; saveSettings(); } }, true); }
-    if ($('sCap')) seg($('sCap'), [[false, '60 к/с'], [true, '30 к/с']], () => fpsCap(), v => { settings.cap30 = v; saveSettings(); });
-    return r; }; }
-
-// тест скорости: совсем медленно — сразу «Минимум»
-{ const f = showBench; showBench = function () {
-    f.apply(this, arguments);
-    if (BENCH && BENCH.rows.length && Math.min(...BENCH.rows.map(r => r.fps)) < 18 && settings.gfx > 1) { settings.gfx = 1; settings.gfxAuto = false; saveSettings(); toast('Включил графику «Минимум»'); }
-  }; }

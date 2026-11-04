@@ -2,7 +2,7 @@
 // Дерево рубят топором или топориком: остаётся пень, рядом падает бревно. Бревно пилят ножовкой на доски или колют топором на хворост.
 // Куст срубается любым лезвием — выходят ветки (хворост). Пни, брёвна и срубленные кусты переживают сохранение (x85).
 // Технику и сантехнику разбирают ключом, ломом или кувалдой (SALVAGE в 38): в руках инструмент — у холодильника появляется «Разобрать».
-// Стройка (кнопка «Стройка» внизу или в «Создать»): стены, дверь, пол, колья, колючка — тапом по клетке рядом с героем.
+// Стройка (кнопка «Стройка» внизу или в «Создать»): стены, дверь, пол, колья, колючка, растяжка — тапом по клетке рядом с героем.
 //   Прочность и скорость зависят от плотничества: на нулевом уровне стена кривая и хлипкая, на пятом — мастерская.
 //   Мертвецы ломятся в постройки (поле путей пускает их через стену с ценой — 05 buildFlow, bw), колья и колючка ранят и держат.
 Object.assign(ITEMS, {
@@ -164,6 +164,7 @@ const BUILD = [
   {k:'floor', name:'Пол', col:'#c49a66', hp:0, dur:3, cost:[['plank', 2], ['nails', 1]], tool:'hammer'},
   {k:'spikes', name:'Колья', col:'#6e5434', hp:60, dur:4, cost:[['sticks', 3]], tool:'blade'},
   {k:'barbed', name:'Колючка', col:'#9aa0a6', hp:90, dur:3, cost:[['wire', 2]], tool:null, lv:1},
+  {k:'trip', name:'Растяжка', col:'#c9b27a', hp:40, dur:2, cost:[['cansalarm', 1]], tool:null},   // банки на верёвке через проход: звенят, когда мертвец задевает
 ];
 const BK = Object.fromEntries(BUILD.map(b => [b.k, b]));
 const QN = ['кривая', 'шаткая', 'обычная', 'крепкая', 'добротная', 'мастерская'];
@@ -184,7 +185,7 @@ function bldWhy(b, x, y) {
 function mkPiece(k, x, y, o) {
   const b = BK[k]; if (!b) return null;
   const p = Object.assign({type:'bw', bw:k, proc:true, cx:x + .5, cy:y + .5, solid:!!b.solid, r:[x + .02, y + .02, x + .98, y + .98], q:1, open:false}, o || {});
-  if (k === 'floor') p.dz = -1.2; else if (k === 'spikes' || k === 'barbed') { p.r = [x + .1, y + .1, x + .9, y + .9]; p.dz = -.2; }
+  if (k === 'floor') p.dz = -1.2; else if (k === 'spikes' || k === 'barbed' || k === 'trip') { p.r = [x + .1, y + .1, x + .9, y + .9]; p.dz = -.2; }
   if (p.mhp == null) p.mhp = Math.round(b.hp * p.q); if (p.hp == null) p.hp = p.mhp;
   if (k === 'door' && p.open) p.solid = false;
   return addProp(p, [[x, y]]) ? p : null;
@@ -227,7 +228,7 @@ function bldErase(x, y) {
 }
 // постройка ломается: мертвецы проломили, колья сточились
 function breakPiece(p, why) {
-  if (p.dead) return; dropProp(p); if (p.bw !== 'barbed') addToPile(p.cx, p.cy, mkItem('plank'));
+  if (p.dead) return; dropProp(p); if (p.bw !== 'barbed' && p.bw !== 'trip') addToPile(p.cx, p.cy, mkItem('plank'));
   emit('wood', p.cx, p.cy, 14, 14, null, 0, 2.4); SFX.wood(p.cx, p.cy); buildFlow();
   if (Math.hypot(p.cx - P.x, p.cy - P.y) < 14) toast(why);
 }
@@ -239,6 +240,12 @@ defProc('bw', (p, f) => {
   if (p.bw === 'floor') { box(x, y, x + 1, y + 1, 0, 1.4, [176, 136, 90], f); for (let k = 1; k < 4; k++) box(x + k / 4 - .01, y + .02, x + k / 4 + .01, y + .98, 1.4, 1.5, [120, 88, 56], f); return; }
   if (p.bw === 'spikes') { for (let k = 0; k < 5; k++) { const sx = x + .2 + (k % 3) * .3, sy = y + .25 + Math.floor(k / 3) * .45; box(sx - .05, sy - .05, sx + .05, sy + .05, 0, 9 + 3 * hash(x + k, y), [110, 82, 50], f); } return; }
   if (p.bw === 'barbed') { for (let k = 0; k < 3; k++) box(x + .08, y + .2 + k * .3, x + .92, y + .24 + k * .3, 3 + k * 2, 4.2 + k * 2, [150, 154, 160], f); for (const sx of [x + .12, x + .88]) box(sx - .04, y + .45, sx + .04, y + .55, 0, 11, [90, 92, 96], f); return; }
+  if (p.bw === 'trip') {                                                        // два колышка, верёвка у земли, банки посередине
+    for (const sx of [x + .1, x + .9]) box(sx - .03, y + .47, sx + .03, y + .53, 0, 7, [104, 80, 52], f);
+    box(x + .1, y + .495, x + .9, y + .505, 4.5, 5, [206, 196, 170], f);
+    for (let k = 0; k < 3; k++) { const cx = x + .36 + k * .14; box(cx - .035, y + .47, cx + .035, y + .53, 1.2, 4.4, k === 1 ? [168, 52, 44] : [176, 180, 186], f); }
+    return;
+  }
   const H = 50, col = p.bw === 'mwall' ? [128 - dmg * 30, 132 - dmg * 30, 138 - dmg * 30] : [168 - dmg * 40, 124 - dmg * 30, 80 - dmg * 20];
   if (p.bw === 'door' && p.open) { box(x + .02, y + .02, x + .14, y + .98, 0, H, [110, 80, 52], f, a); return; }   // открытая — створка у косяка
   const tex = p.bw === 'mwall' ? null : {s:TX.planksV(col), e:TX.planksV(col), t:C(col, 1)};
@@ -276,6 +283,7 @@ onUpdate(dt => {
       if (z._spT <= 0) { z._spT = .8; hitZombie(z, here.bw === 'barbed' ? 9 : 12, Math.atan2(z.y - here.cy, z.x - here.cx), 0); }
       continue;
     }
+    if (here && !here.dead && here.bw === 'trip' && !(here._t > gameMin - 3)) tripRing(here);   // растяжка: мертвец прошёл — звон (не чаще раза в 3 игровые минуты)
     if (z.state !== 'chase' || z.down > 0 || z.wind > 0) continue;
     const dx = P.x - z.x, dy = P.y - z.y, dl = Math.hypot(dx, dy) || 1;
     let wall = null;
@@ -295,6 +303,16 @@ onUpdate(dt => {
     }
   }
 });
+
+function tripRing(p) {
+  p._t = gameMin; p.hp -= 8;
+  const d = Math.hypot(p.cx - P.x, p.cy - P.y);
+  if (d < 40) SFX.glass(P.x + (p.cx - P.x) * .3, P.y + (p.cy - P.y) * .3);
+  noise(p.cx, p.cy, 4);
+  if (P.sleep && d < 30) wake('Звякнула растяжка! Мертвецы рядом');
+  else if (d < 30) toast('Звякнула растяжка: кто-то идёт');
+  if (p.hp <= 0) breakPiece(p, 'Растяжку сорвали');
+}
 
 // ---- режим стройки: панель деталей и тап по клетке ----
 function bldUI() {
@@ -340,7 +358,7 @@ onDraw(() => {
 });
 // кнопка внизу рядом с «Мебелью» и рецепт в «Создать»
 { const ref = $('bEdit');
-  if (ref) { const b = mk('button', 'hslot editslot'); b.type = 'button'; b.id = 'bBuild'; b.title = 'Стройка: стены, двери, пол, колья'; b.setAttribute('aria-label', 'Стройка');
+  if (ref) { const b = mk('button', 'hslot editslot'); b.type = 'button'; b.id = 'bBuild'; b.title = 'Стройка: стены, двери, пол, колья, растяжка'; b.setAttribute('aria-label', 'Стройка');
     b.innerHTML = '<svg class="ic"><use href="#i-hammer"/></svg><span class="hl">Стройка</span>'; b.addEventListener('click', () => { SFX.ui(); bldToggle(); }); ref.after(b); } }
 RECIPES.unshift({name:'Стройка: стены, дверь, пол', icon:'hammer', xp:0, parts:() => [{id:'plank', ok:countItem('plank') >= 3, badge:'3+'}, {id:'nails', ok:countItem('nails') >= 1}, {id:'hammer', ok:hasTool('hammer')}],
   need:'свой дом из досок: чем выше плотничество, тем крепче стены · кнопка «Стройка» внизу', can:() => true, make:() => { bldToggle(true); return false; }});

@@ -84,7 +84,7 @@ function startHorde() {
   sides.sort((a, b) => Math.hypot(b[0] - P.x, b[1] - P.y) - Math.hypot(a[0] - P.x, a[1] - P.y));
   const [sx, sy] = sides[0], tx = P.x + (rng() - .5) * 10, ty = P.y + (rng() - .5) * 10;
   let n = 0;
-  for (let k = 0; k < 140 && n < 24; k++) {
+  for (let k = 0, N = hordeSize(); k < 260 && n < N; k++) {   // орда растёт со временем (89-siege)
     const x = sx + (rng() - .5) * 8, y = sy + (rng() - .5) * 8;
     if (navBlocked(Math.floor(x), Math.floor(y)) || vis[Math.floor(y) * MW + Math.floor(x)]) continue;
     const z = zType(mkZombie(x, y, zPal(), ri(48, 72), (.82 + rng() * .3) * DIFF[world.diff].spd));
