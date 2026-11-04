@@ -73,8 +73,14 @@ let menuDrift = 0, last = performance.now();
 let frameErr = 0;
 let logicOff = false, renderOff = false, resLock = false;          // для теста скорости: без логики, пустой кадр, качество не трогать
 const FT = {u:0, r:0};                                               // время последнего кадра: логика и отрисовка, мс
+let lastDraw = 0;
+// ограничение 30 к/с: на слабом телефоне ровные 30 лучше скачущих 25–45, и батарея с телефоном меньше греются.
+// Пропущенный кадр не делает ничего — логика потом получает время за оба (dt считается от прошлого рабочего кадра)
+const fpsCap = () => settings.cap30 === true || (settings.cap30 == null && gfxCap <= 1);
 function frame(t) {
   requestAnimationFrame(frame);
+  if (fpsCap() && t - lastDraw < 1000 / 30 - 4) return;
+  lastDraw = t;
   try { frameBody(t); } catch (err) { console.error(err); logErr(err, 'кадр'); if (!frameErr++) toast('Ошибка отрисовки, игра продолжает работать'); }
 }
 function frameBody(t) {
@@ -92,7 +98,7 @@ function frameBody(t) {
   if (mode === 'play' && !paused && !renderOff && FT.r + FT.u < 12) chunkAhead();   // кадр лёгкий — следующий кусок земли заранее (93-perf)
   // adaptive resolution: drop the backing-store density if the device can't keep up
   if (mode === 'play' && !paused && !resLock && raw > 0 && raw < .5) {
-    if (raw > 1 / 38) { slowT += raw; fastT = 0; } else { fastT += raw; if (fastT > 4) slowT = 0; }
+    if (raw > (fpsCap() ? 1 / 24 : 1 / 38)) { slowT += raw; fastT = 0; } else { fastT += raw; if (fastT > 4) slowT = 0; }
     if (slowT > 2.5 && Math.min(gfxCap, devicePixelRatio || 1) * resQ > devMin() + .05) { resQ *= .75; slowT = 0; resize(); }
   }
   drawMinimap(dt);

@@ -204,4 +204,4 @@ playerLookPal = function (lk) {
 
 // ---- пиксельный вайб по умолчанию: мир без сглаживания (детальный режим остаётся в настройках) ----
 SETTINGS_DEF.smooth = false;
-if (settings.gfxv !== 35) { settings.smooth = false; settings.gfxv = 35; try { localStorage.setItem('karantin-settings', JSON.stringify(settings)); } catch (e) {} }
+if (!(settings.gfxv >= 35)) { settings.smooth = false; settings.gfxv = 35; try { localStorage.setItem('karantin-settings', JSON.stringify(settings)); } catch (e) {} }

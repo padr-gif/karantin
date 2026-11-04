@@ -1,5 +1,6 @@
 // ================= frame render =================
 let drops = [], animT = 0, fogDirty = true;
+const LOWG = () => gfxCap <= 1;                                             // графика «Минимум»
 const RD = {ground:true, objects:true, light:true};                          // слои кадра (тест скорости выключает по одному)
 function render(dt) {
   mainCtx.setTransform(1, 0, 0, 1, 0, 0);
@@ -164,7 +165,7 @@ function render(dt) {
   if (P.sleep && !P.bed) { const sx = SX(P.x, P.y), sy = SY(P.x, P.y, 0); ctx.fillStyle = '#3c6e78'; ctx.strokeStyle = 'rgba(16,14,12,.85)'; ctx.lineWidth = .6; ctx.beginPath(); ctx.ellipse(sx, sy, 15, 7, 0, 0, 6.283); ctx.fill(); ctx.stroke(); }
   if (P.sleep) { const bed = P.bed, lk = P.look || look; drawChar(P, 'p' + lk.g + '_death_' + dirOf(bed ? Math.atan2(-bed.wd[1], -bed.wd[0]) : P.face) + '_' + (AN('p', 'death') - 1), 'P' + lk.g + lk.skin + lk.hair + lk.shirt + lk.pants, lookPal(lk), bed ? bed.cx : P.x, bed ? bed.cy : P.y, bed ? 15 : 3); }
   ctx.fillStyle = 'rgba(10,10,10,.9)';
-  for (const c of corpses) {
+  if (!LOWG()) for (const c of corpses) {
     if (c.fall < 1) continue; const i = Math.floor(c.y) * MW + Math.floor(c.x); if (!vis[i]) continue;
     for (let q = 0; q < 3; q++) { const a = animT * (3 + q) + q * 2 + c.seed * 9; const fx = c.x + Math.cos(a) * .3, fy = c.y + Math.sin(a * 1.3) * .25; ctx.fillRect(Math.round(SX(fx, fy)), Math.round(SY(fx, fy, U * (.35 + Math.sin(a * 2) * .15))), 1, 1); }
   }
@@ -181,7 +182,9 @@ function render(dt) {
 
   // darkness & lights
   const fl = mode === 'play' ? flashlight() : null;
-  if (RD.light && !(mode === 'play' && L >= .999 && !P.sleep)) {
+  // «Минимум»: днём лёгкая дымка-затемнение не рисуется — это целый слой во весь экран ради 10% тени
+  const dayLite = LOWG() && mode === 'play' && L > .9 && !P.sleep && !fires.length && !blazes.length && !flares.length;
+  if (RD.light && !dayLite && !(mode === 'play' && L >= .999 && !P.sleep)) {
     const alpha = mode === 'menu' ? .5 : ((P.sleep ? .25 : .1) + .74 * (1 - L) + .08 * wet) * (settings.nightK || 1);   // nightK: светлее ночь на ярком солнце телефона
     let rTiles = mode === 'menu' ? 9 : 3.4 + 9 * L + (hasTr('eagle') ? 1.2 : 0) - (hasTr('short') ? 1 : 0);
     if (inside && poweredAt(P.x, P.y) && roomLitAt(P.x, P.y) && L < .6 && mode === 'play') rTiles = Math.max(rTiles, 7);
@@ -234,7 +237,7 @@ function render(dt) {
 
   // rain at screen resolution
   if (wet > .02 && !reduceMotion && settings.rain && !(mode === 'play' && insideHouse(P.x, P.y))) {
-    const want = Math.floor(140 * wet), SW = cv.width, SH = cv.height;
+    const want = Math.floor((LOWG() ? 60 : 140) * wet), SW = cv.width, SH = cv.height;
     while (drops.length < want) drops.push({x:Math.random() * SW, y:Math.random() * SH, s:.7 + Math.random() * .6});
     if (drops.length > want) drops.length = want;
     if (snowing()) {

@@ -3,7 +3,7 @@
 // Если основное не читается или не загружается, игра берёт запасное. Сохранение можно выгрузить файлом и загрузить
 // из файла (перенести игру на другой телефон). Ошибки кадра и скрипта пишутся в журнал; в паузе — «Отчёт об ошибках».
 
-const GAME_VER = '0.83';
+const GAME_VER = '0.86';
 const PKEY = s => LKEY(s) + '-prev';
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } };
@@ -165,7 +165,7 @@ async function runBench() {
   const wait = ms => new Promise(r => setTimeout(r, ms));
   godMode = true; resLock = true;                                         // герой неуязвим, качество не меняется посреди замера
   let js = 0, upd = 0, frames = [], lastT = 0, on = false;
-  const tick = t => { if (!on) return; if (lastT) frames.push(t - lastT); lastT = t; js += FT.u + FT.r; upd += FT.u; requestAnimationFrame(tick); };
+  let ld = -1; const tick = t => { if (!on) return; requestAnimationFrame(tick); if (ld === lastDraw) return; ld = lastDraw; if (lastT) frames.push(t - lastT); lastT = t; js += FT.u + FT.r; upd += FT.u; };
   const measure = async ms => { js = 0; upd = 0; frames = []; lastT = 0; on = true; requestAnimationFrame(tick); await wait(ms); on = false; return frames.slice(); };
   const rows = [];
   try {

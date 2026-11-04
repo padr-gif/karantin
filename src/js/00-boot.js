@@ -30,11 +30,12 @@ function viewH() {
   vpStretch = true; return exp;
 }
 // большой экран (планшет) в «Экономии»: картинку можно считать в 0.75 от размера экрана — на треть меньше пикселей за кадр
-const devMin = () => gfxCap <= 1.5 && innerWidth * innerHeight > 800000 ? .75 : 1;
+// «Минимум» (gfxCap 1): холст в точках экрана, а если телефон не тянет — ещё мельче, до 0.7 (пиксельная картинка это переносит)
+const devMin = () => gfxCap <= 1 ? .7 : gfxCap <= 1.5 && innerWidth * innerHeight > 800000 ? .75 : 1;
 function resize() {
   const cw = innerWidth, chh = viewH();
   DEV = Math.max(devMin(), Math.min(gfxCap, window.devicePixelRatio || 1) * resQ);
-  if (gfxCap <= 1.5) DEV = Math.min(DEV, Math.max(.6, Math.sqrt(1.3e6 / (cw * chh))));   // «Экономия»: не больше ~1.3 Мп холста (планшеты)
+  if (gfxCap <= 1.5) DEV = Math.min(DEV, Math.max(.6, Math.sqrt((gfxCap <= 1 ? .8e6 : 1.3e6) / (cw * chh))));   // «Экономия»: не больше ~1.3 Мп холста, «Минимум» — 0.8 Мп
   cv.width = Math.round(cw * DEV); cv.height = Math.round(chh * DEV);
   cv.style.width = cw + 'px'; cv.style.height = chh + 'px'; cv.style.bottom = vpStretch ? 'auto' : '';
   // 100vh on phones can include the strip under the system buttons; panels size themselves to what is really visible

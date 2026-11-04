@@ -36,7 +36,7 @@ function objAtDraw(id, name, wx, wy, f, alpha, offX, tint) {
 
 // ---- настройка: «Пиксели» или «Детальная»; детальная теперь по умолчанию ----
 SETTINGS_DEF.smooth = true;
-if (settings.gfxv !== 30) { settings.smooth = true; settings.gfxv = 30; try { localStorage.setItem('karantin-settings', JSON.stringify(settings)); } catch (e) {} }
+if (!(settings.gfxv >= 30)) { settings.smooth = true; settings.gfxv = 30; try { localStorage.setItem('karantin-settings', JSON.stringify(settings)); } catch (e) {} }
 SETTINGS_DEF.fps = false;
 
 // ---- счётчик FPS и памяти: включается в настройках или адресом ?fps ----
@@ -65,6 +65,7 @@ function fpsMem() {
 function fpsTick() {
   requestAnimationFrame(fpsTick);
   if (!fpsOn()) { if (FPS.el) FPS.el.hidden = true; return; }
+  if (FPS.ld === lastDraw) return; FPS.ld = lastDraw;                 // кадр пропущен ограничением 30 к/с — не считаем
   const t = performance.now(), el = fpsEl(); el.hidden = false;
   if (FPS.last) FPS.worst = Math.max(FPS.worst, t - FPS.last);
   FPS.last = t; FPS.frames++;

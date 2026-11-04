@@ -147,7 +147,7 @@ function openSettings(from) {
   bind('sZoom', [[-1, 'Мельче'], [0, 'Обычно'], [1, 'Крупнее'], [2, 'Очень крупно']], 'zoom');
   bind('sVol', [[0, 'Выкл'], [.35, 'Тихо'], [.7, 'Обычно'], [1, 'Громко']], 'vol');
   bind('sDay', [[.5, 'Медленно'], [1, 'Обычно'], [2, 'Быстро']], 'dayLen');
-  bind('sGfx', [[1.5, 'Экономия'], [2, 'Обычная'], [3, 'Максимум']], 'gfx');
+  bind('sGfx', [[1, 'Минимум'], [1.5, 'Экономия'], [2, 'Обычная'], [3, 'Максимум']], 'gfx');
   bind('sRain', onoff, 'rain'); bind('sShake', onoff, 'shake'); bind('sGore', onoff, 'gore'); bind('sHints', onoff, 'hints'); bind('sAuto', onoff, 'autosave');
   bind('sUia', [[1, 'Нет'], [.8, '20%'], [.6, '40%'], [.4, '60%']], 'uia');
   seg($('sSmooth'), [[false, 'Пиксели'], [true, 'Детальная']], () => !!settings.smooth, v => { settings.smooth = v; saveSettings(); });

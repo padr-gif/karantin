@@ -25,6 +25,9 @@ function lookPal(lk, weapon) {
 }
 const SETTINGS_DEF = {gfx:2, mini:true, vol:.7, zoom:0, dayLen:1, rain:true, shake:true, gore:true, hints:true, autosave:true, uia:1, nightK:1, vib:true};   // nightK — темнота ночи, vib — вибрация при укусе
 const settings = Object.assign({}, SETTINGS_DEF);
+// сохранённое читаем сразу: переходы версий ниже (50-detail, 54-clothes) раньше видели пустые настройки
+// и записывали их поверх сохранённых — каждый запуск всё сбрасывалось (и «Экономия» тоже)
+try { const s = JSON.parse(localStorage.getItem('karantin-settings') || 'null'); if (s) Object.assign(settings, s); } catch (e) {}
 function loadSettings() { try { const s = JSON.parse(localStorage.getItem('karantin-settings') || 'null'); if (s) Object.assign(settings, s); } catch (e) {} applySettings(); }
 function saveSettings() { try { localStorage.setItem('karantin-settings', JSON.stringify(settings)); } catch (e) {} applySettings(); }
 function applySettings() { zoomOff = settings.zoom; gfxCap = settings.gfx || 2; resize(); document.body.classList.toggle('nohints', !settings.hints); document.body.style.setProperty('--uia', settings.uia || 1); hdApply(); ctlApply(); }
