@@ -11,12 +11,12 @@
 // Координаты внутри: a — вдоль главной трассы, sd — сторона (−1/+1), d — клеток от трассы вглубь стороны.
 // Старые сохранения (gen ≤ 4) строятся прежним генератором (74-county).
 
-const T5 = {S1:36, S2:74, MID0:18, MID1:56, RIV:90};                         // улицы, задние межи кварталов, середина реки (d)
+const T5 = {RIV:88};                                                          // середина реки (d клеток от трассы)
 
 function genTown5() {
   genReset(); cityMask = new Uint8Array(NT);
   const V = rng() < .5, H0 = EXIT_R, H1 = EXIT_R + RW - 1, sgR = rng() < .5 ? -1 : 1, sgL = -sgR;
-  const {S1, S2, MID0, MID1, RIV} = T5;
+  const {RIV} = T5;
   const cc = (sd, d) => sd < 0 ? H0 - d : H1 + d;
   const XY = (a, c) => V ? [c, a] : [a, c];
   const AD = (a, sd, d) => XY(a, cc(sd, d));
@@ -35,30 +35,69 @@ function genTown5() {
   };
   const DIRS = [[0, -1], [0, 1], [-1, 0], [1, 0]];
 
-  // ---- река: параллельно главной трассе, за набережной ----
+  // ---- река: петляет параллельно главной трассе; где подходит близко — у квартала нет задней улицы ----
   const ph = rng() * 6.28, ph2 = rng() * 6.28;
-  const rc = a => RIV + Math.round(3 * Math.sin(a / 23 + ph) + 2 * Math.sin(a / 9 + ph2)), rw = a => 4 + Math.round(1.2 * Math.sin(a / 17 + ph2));
+  const rc = a => RIV + Math.round(6 * Math.sin(a / 37 + ph) + 2.5 * Math.sin(a / 13 + ph2)), rw = a => 4 + Math.round(1.3 * Math.sin(a / 17 + ph2));
   for (let a = 0; a < MW; a++) for (let d = rc(a) - rw(a); d <= rc(a) + rw(a); d++) { const [x, y] = AD(a, sgR, d); set(x, y, WATER); }
+  const nearBank = (a0, a1) => { let m = 1e9; for (let a = a0; a <= a1; a++) m = Math.min(m, rc(a) - rw(a)); return m; };
+  const farBank = (a0, a1) => { let m = 0; for (let a = a0; a <= a1; a++) m = Math.max(m, rc(a) + rw(a)); return m; };
 
-  // ---- улицы: поперечные (шаг уже в центре), две параллельные с каждой стороны ----
+  // ---- улицы: поперечные с неровным шагом; у каждого квартала свои отступы параллельных улиц (s1, s2),
+  //      поэтому они идут со сдвигом и упираются в поперечные Т-образно; задней улицы бывает нет — край города рваный ----
   const cross = [EXIT_R];
-  for (let a = EXIT_R, k = 0; ; k++) { a -= k ? ri(46, 54) : ri(36, 40); if (a < FEN + 40) break; cross.unshift(a); }
-  for (let a = EXIT_R, k = 0; ; k++) { a += k ? ri(46, 54) : ri(36, 40); if (a + RW > MW - FEN - 44) break; cross.push(a); }
-  const A0 = cross[0], A1 = cross[cross.length - 1] + RW - 1;
+  for (let a = EXIT_R, k = 0; ; k++) { a -= k ? ri(30, 50) : ri(36, 42); if (a < FEN + 26) break; cross.unshift(a); }
+  for (let a = EXIT_R, k = 0; ; k++) { a += k ? ri(30, 50) : ri(36, 42); if (a + RW > MW - FEN - 30) break; cross.push(a); }
+  const A0 = cross[0], A1 = cross[cross.length - 1] + RW - 1, ci = cross.indexOf(EXIT_R);
+  const cols = [];
+  for (let k = 0; k + 1 < cross.length; k++) {
+    const col = {k, a0:cross[k], a1:cross[k + 1] + RW - 1, ia0:cross[k] + RW + 1, ia1:cross[k + 1] - 2, mid:(cross[k] + cross[k + 1] + RW) / 2,
+      core:k === ci || k === ci - 1, edge:k === 0 || k === cross.length - 2, B:{}};
+    for (const sd of [-1, 1]) {
+      const s1 = col.core ? ri(36, 40) : ri(30, 43);
+      let s2 = s1 + RW + ri(29, 38);
+      if (!col.core && rng() > (col.edge ? .45 : .8)) s2 = 0;
+      const nb = sd === sgR ? nearBank(col.a0 - 2, col.a1 + 2) : 1e9;
+      if (s2 && s2 + RW + 3 > nb) s2 = 0;
+      const b1lo = s1 + RW + 1;
+      let b1hi = s2 ? s2 - 2 : sd === sgR ? Math.min(nb - 3, b1lo + ri(16, 24)) : b1lo + ri(15, 24);
+      if (b1hi - b1lo < 13) b1hi = 0;
+      col.B[sd] = {s1, s2, b1lo, b1hi, nb};
+    }
+    cols.push(col);
+  }
+  // поперечная улица иногда обрывается: m1 — не идёт дальше первой улицы (сливаются дальние кварталы),
+  // m0 — начинается только от первой улицы (сливаются кварталы у трассы). Слитые кварталы — одной глубины
+  for (let k = 1; k < cols.length; k++) for (const sd of [-1, 1]) {
+    const P = cols[k - 1], C = cols[k]; if (P.core || C.core) continue;
+    const r = rng();
+    if (r < .35 && P.B[sd].b1hi) { C.B[sd] = Object.assign({}, P.B[sd], {nb:Math.min(P.B[sd].nb, C.B[sd].nb)}); C.B[sd].m1 = true; }
+    else if (r < .55) { C.B[sd] = Object.assign({}, P.B[sd], {nb:Math.min(P.B[sd].nb, C.B[sd].nb)}); C.B[sd].m0 = true; }
+    const B = C.B[sd];
+    if (sd === sgR && B.s2 && B.s2 + RW + 3 > B.nb) { B.s2 = 0; B.b1hi = Math.min(B.nb - 3, B.b1lo + 20); if (B.b1hi - B.b1lo < 13) B.b1hi = 0; P.B[sd].s2 = 0; P.B[sd].b1hi = B.b1hi; }
+  }
   const streets = [];                                                        // в координатах карты: p — первая клетка проезжей части, lo..hi — вдоль
   const street = (alongA, p, lo, hi, main) => streets.push({p, lo, hi, wd:RW, vert:alongA === V, main});
-  for (const sd of [-1, 1]) for (const d of [S1, S2]) {
-    fillAD(A0, A1, sd, d, d + RW - 1, ROAD);
-    street(true, Math.min(cc(sd, d), cc(sd, d + RW - 1)), A0, A1);
+  const pmin = (sd, d) => Math.min(cc(sd, d), cc(sd, d + RW - 1));
+  let dTop = {[-1]:0, [1]:0};
+  for (const col of cols) for (const sd of [-1, 1]) for (const d of [col.B[sd].s1, col.B[sd].s2]) if (d) {
+    fillAD(col.a0, col.a1, sd, d, d + RW - 1, ROAD); street(true, pmin(sd, d), col.a0, col.a1);
+    dTop[sd] = Math.max(dTop[sd], d + RW - 1);
   }
-  for (const a of cross) {
-    if (a !== EXIT_R) for (const sd of [-1, 1]) fillAD(a, a + RW - 1, sd, 0, S2 + RW - 1, ROAD);
-    street(false, a, Math.min(cc(-1, S2 + RW - 1), cc(1, S2 + RW - 1)), Math.max(cc(-1, S2 + RW - 1), cc(1, S2 + RW - 1)));
-  }
+  cross.forEach((a, k) => {
+    if (a === EXIT_R) { street(false, a, Math.min(cc(-1, dTop[-1]), cc(1, dTop[1])), Math.max(cc(-1, dTop[-1]), cc(1, dTop[1]))); return; }
+    for (const sd of [-1, 1]) {
+      const B = cols[k] && cols[k].B[sd];
+      let d0 = 0, dm = Math.max(...[cols[k - 1], cols[k]].filter(Boolean).map(c => (c.B[sd].s2 || c.B[sd].s1) + RW - 1));
+      if (B && B.m1) dm = B.s1 + RW - 1;
+      if (B && B.m0) d0 = B.s1;
+      if (dm < d0) continue;
+      fillAD(a, a + RW - 1, sd, d0, dm, ROAD); street(false, a, Math.min(cc(sd, d0), cc(sd, dm)), Math.max(cc(sd, d0), cc(sd, dm)));
+    }
+  });
   street(true, H0, A0 - 1, A1 + 1, true);
   highway(false);
   // тротуары вокруг всех улиц города
-  { const [bx, by, bw, bh] = rectAD(A0 - 1, A1 + 1, -1, S2 + RW, S2 + RW), [cx, cy, cw, ch] = rectAD(A0 - 1, A1 + 1, 1, S2 + RW, S2 + RW);
+  { const [bx, by, bw, bh] = rectAD(A0 - 1, A1 + 1, -1, dTop[-1] + 1, dTop[-1] + 1), [cx, cy, cw, ch] = rectAD(A0 - 1, A1 + 1, 1, dTop[1] + 1, dTop[1] + 1);
     const x0 = Math.min(bx, cx), y0 = Math.min(by, cy), x1 = Math.max(bx + bw - 1, cx + cw - 1), y1 = Math.max(by + bh - 1, cy + ch - 1);
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++)
       if (get(x, y) === GRASS && inMap(x, y, 1) && D4.some(([ox, oy]) => get(x + ox, y + oy) === ROAD)) set(x, y, WALK);
@@ -66,7 +105,7 @@ function genTown5() {
   const RX = [...new Set(streets.filter(s => s.vert).map(s => s.p).concat([EXIT_R]))], RY = [...new Set(streets.filter(s => !s.vert).map(s => s.p).concat([EXIT_R]))];
   ROADSX = RX; ROADSY = RY; ROADS.length = 0; ROADS.push(...new Set([...RX, ...RY]));
   // рамка города (для загородной части и леса): по суше — до конца частного сектора, у реки — до воды
-  const box = (() => { const [x0, y0, w0, h0] = rectAD(A0 - 3, A1 + 3, sgL, 0, 98), [x1, y1, w1, h1] = rectAD(A0 - 3, A1 + 3, sgR, 0, S2 + RW + 4);
+  const box = (() => { const [x0, y0, w0, h0] = rectAD(A0 - 3, A1 + 3, sgL, 0, dTop[sgL] + 24), [x1, y1, w1, h1] = rectAD(A0 - 3, A1 + 3, sgR, 0, Math.max(dTop[sgR] + 4, ...cols.map(c => c.B[sgR].b1hi + 2)));
     return [Math.min(x0, x1), Math.min(y0, y1), Math.max(x0 + w0, x1 + w1) - 1, Math.max(y0 + h0, y1 + h1) - 1]; })();
   const nearTown = (x, y, w, h, m) => x + w - 1 >= box[0] - m && x <= box[2] + m && y + h - 1 >= box[1] - m && y <= box[3] + m;
 
@@ -109,17 +148,20 @@ function genTown5() {
   const lotRow = (ia0, ia1, sd, dF, dB, o) => {
     o = o || {};
     const s = Math.sign(dB - dF), depth = Math.abs(dB - dF) + 1, D = k => dF + s * k, front = faceD(sd, -s), lots = [];
-    const SET = o.set || 3;
     let a = ia0;
     while (ia1 - a >= 11) {
+      const SET = o.set || (rng() < .7 ? ri(2, 4) : ri(4, 6));               // отступ от улицы у каждого дома свой
       let gar = rng() < (o.gar != null ? o.gar : .3) && depth >= SET + 10;
-      const wa = ri(o.w0 || 8, o.w1 || 11), mL = ri(1, 2);
+      const wa = ri(o.w0 || 8, o.w1 || 12), mL = ri(1, 3);
       let inner = mL + wa + (gar ? 6 : 0) + ri(1, 2), b = a + inner + 1;
       if (b > ia1) { if (gar) { gar = false; inner -= 6; b -= 6; } if (b > ia1) { if (ia1 - a - 1 >= mL + 8 + 1) b = ia1; else break; } }
       if (ia1 - b < 11) b = ia1;                                               // остаток — в последний участок
       const gl = gar && rng() < .5, h0 = a + 1 + mL + (gl ? 6 : 0), hw = Math.min(wa, b - h0 - 1 - (gar && !gl ? 6 : 0));
-      if (hw < 8) { a = b; continue; }
       const dd = Math.min(ri(8, o.dmax || 10), depth - SET - 3);
+      if (hw < 8 || dd < 8 || rng() < (o.empty != null ? o.empty : .08)) {   // пустой заросший участок
+        for (let t = ri(2, 6); t > 0; t--) plant(...AD(ri(a + 1, b - 1), sd, D(ri(1, depth - 2))));
+        a = b; continue;
+      }
       const [hx, hy, hwx, hhy] = rectAD(h0, h0 + hw - 1, sd, D(SET), D(SET + dd - 1));
       const H = bldF(hx, hy, hwx, hhy, 'house', front); let G = null;
       if (H) {
@@ -145,10 +187,8 @@ function genTown5() {
   };
 
   // ---- кварталы ----
-  const cols = [];
-  for (let k = 0; k + 1 < cross.length; k++) cols.push({k, ia0:cross[k] + RW + 1, ia1:cross[k + 1] - 2, mid:(cross[k] + cross[k + 1] + RW) / 2});
   const byCenter = cols.slice().sort((p, q) => Math.abs(p.mid - EXIT_R) - Math.abs(q.mid - EXIT_R));
-  const near0 = byCenter.slice(0, 2);                                       // две колонки у перекрёстка трасс — центр
+  const near0 = cols.filter(c => c.core);                                       // две колонки у перекрёстка трасс — центр
   const used = new Set(), key = (c, sd, band) => c.k + ':' + sd + ':' + band;
 
   // площадь: у перекрёстка, со стороны суши — фонтан, деревья, полиция и администрация фасадами на площадь
@@ -181,14 +221,16 @@ function genTown5() {
     // парковка: асфальт с въездами с обеих поперечных улиц, машины вдоль
     fillAD(ia0 - 1, ia1 + 1, sd, 14, 19, ROAD); maskAD(ia0, ia1, sd, 13, 20);
     for (const d of [14, 18]) for (let a = ia0 + 1; a < ia1 - 2; a += 5) if (rng() < .45) { const [x, y] = AD(a, sd, d), [x2, y2] = AD(a, sd, sd > 0 ? d : d + 1); V ? parkCarAt(Math.min(x, x2), y, 'y') : parkCarAt(x, Math.min(y, y2), 'x'); }
-    lotRow(ia0, ia1, sd, S1 - 2, 21, {dmax:9, gar:0, garden:.2, rows:1});
+    lotRow(ia0, ia1, sd, c.B[sd].s1 - 2, 21, {dmax:9, gar:0, garden:.2, rows:1});
   };
   for (const c of byCenter) for (const sd of [sgL, sgR]) if (commQ.length && !used.has(key(c, sd, 0))) commBlock(c, sd);
 
   // школа со стадионом: за центром, со стороны суши
   const rest = cols.filter(c => !near0.includes(c)).sort((p, q) => Math.abs(p.mid - EXIT_R) - Math.abs(q.mid - EXIT_R));
-  { const c = rest[1] || rest[0] || near0[1] || near0[0], sd = sgL; used.add(key(c, sd, 1));
-    const {ia0, ia1} = c, [cw, ch] = CSIZE.school, s0 = ia0 + 2;
+  const merged = (c, sd) => c.B[sd].m0 || c.B[sd].m1 || (cols[c.k + 1] && (cols[c.k + 1].B[sd].m0 || cols[c.k + 1].B[sd].m1));
+  const deep = (c, sd) => c.B[sd].s2 && c.B[sd].b1hi - c.B[sd].b1lo >= 28 && !used.has(key(c, sd, 1)) && !merged(c, sd);
+  { const c = rest.find(c => deep(c, sgL)) || near0.find(c => deep(c, sgL)); if (c) { const sd = sgL; used.add(key(c, sd, 1));
+    const {ia0, ia1} = c, {s1:S1, s2:S2} = c.B[sd], [cw, ch] = CSIZE.school, s0 = ia0 + 2;
     fillAD(ia0, ia1, sd, S1 + RW + 1, S1 + RW + 3, WALK);                   // школьный двор у улицы
     const [x, y, w, h] = rectAD(s0, s0 + cw - 1, sd, S1 + RW + 4, S1 + RW + 3 + ch); const Sc = bldF(x, y, w, h, 'school', faceD(sd, -1));
     if (Sc) SPECIAL.push({x:x + w / 2, y:y + h / 2, pi:ri(0, 9), n:6});
@@ -202,11 +244,11 @@ function genTown5() {
     }
     maskAD(ia0, ia1, sd, S1 + RW + 1, S2 - 2);
     for (let a = ia0 + 1; a <= s0 + cw + 1; a += 4) plant(...AD(a, sd, S2 - 3));
-  }
+  } }
 
   // микрорайон: две-три панельки, двор с деревьями, парковка у задней улицы
   const flatsBlock = (c, sd) => {
-    const {ia0, ia1} = c; used.add(key(c, sd, 1));
+    const {ia0, ia1} = c, {s1:S1, s2:S2} = c.B[sd]; used.add(key(c, sd, 1));
     maskAD(ia0, ia1, sd, S1 + RW + 1, S2 - 2);
     const L = ia1 - ia0 + 1, d0 = S1 + RW + 3, n = V ? 3 : Math.max(2, Math.min(3, Math.floor(((L - 6) / 2 - 1) / 6))), fw = 6 * n + 1, fh = 14;                 // в клетках карты: fw — вдоль x, fh — вдоль y
     const la = V ? fh : fw, ld = V ? fw : fh;                                 // размер здания вдоль a и вдоль d
@@ -228,7 +270,7 @@ function genTown5() {
   };
   // парк: деревья, пруд, грунтовые дорожки крест-накрест, фонари
   const parkBlock = (c, sd) => {
-    const {ia0, ia1} = c; used.add(key(c, sd, 1));
+    const {ia0, ia1} = c, S1 = c.B[sd].s1, S2 = c.B[sd].b1hi + 2; used.add(key(c, sd, 1));
     maskAD(ia0, ia1, sd, S1 + RW + 1, S2 - 2);
     const am = (ia0 + ia1) >> 1, dm = (S1 + RW + S2) >> 1;
     for (let a = ia0; a <= ia1; a++) for (const d of [dm, dm + 1]) { const [x, y] = AD(a, sd, d); soil[y * MW + x] = 1; }
@@ -237,18 +279,91 @@ function genTown5() {
     for (let t = 0; t < 320; t++) plant(...AD(ri(ia0 + 1, ia1 - 1), sd, ri(S1 + RW + 2, S2 - 3)));
     for (const a of [ia0 + 6, am - 8, am + 10, ia1 - 5]) { const [x, y] = AD(a, sd, dm - 1); if (get(x, y) === GRASS && !propAt[y * MW + x]) addProp({type:'lamp', flick:rng() < .2, cx:x + .5, cy:y + .5 + .3, hx:0, hy:1, solid:true, r:[x + .4, y + .7, x + .6, y + .9]}, [[x, y]]); }
   };
-  { const fc = [rest[0], ...near0].find(c => c && !used.has(key(c, sgL, 1))); if (fc) flatsBlock(fc, sgL);
-    const pk = rest[1] || rest[0]; if (pk && !used.has(key(pk, sgR, 1))) parkBlock(pk, sgR);
+  { const fc = rest.concat(near0).find(c => deep(c, sgL)) || rest.concat(near0).find(c => deep(c, sgR)); if (fc) flatsBlock(fc, deep(fc, sgL) ? sgL : sgR);
+    const pk = rest.concat(near0).find(c => !used.has(key(c, sgR, 1)) && !merged(c, sgR) && c.B[sgR].b1hi - c.B[sgR].b1lo >= 22); if (pk) parkBlock(pk, sgR);
   }
 
-  // жилые кварталы: два ряда участков спина к спине
+  // жилые кварталы: где глубоко — два ряда участков спина к спине, где мелко — один ряд
+  const band = (c, sd, lo, hi, faceHi, o) => {
+    const depth = hi - lo + 1;
+    if (depth >= 29) { const m = lo + (depth >> 1) + ri(-2, 2); lotRow(c.ia0, c.ia1, sd, lo, m, o); lotRow(c.ia0, c.ia1, sd, hi, m, o); }
+    else if (depth >= 13) faceHi ? lotRow(c.ia0, c.ia1, sd, hi, lo, o) : lotRow(c.ia0, c.ia1, sd, lo, hi, o);
+  };
+  const span = (c, sd, f) => {                                               // слитые кварталы — один длинный ряд участков
+    if (c.B[sd][f]) return null;
+    let j = c.k; while (cols[j + 1] && cols[j + 1].B[sd][f]) j++;
+    return Object.assign({}, c, {ia1:cols[j].ia1});
+  };
   for (const c of cols) for (const sd of [-1, 1]) {
-    if (!used.has(key(c, sd, 0))) { lotRow(c.ia0, c.ia1, sd, 2, MID0); lotRow(c.ia0, c.ia1, sd, S1 - 2, MID0); }
-    if (!used.has(key(c, sd, 1))) { lotRow(c.ia0, c.ia1, sd, S1 + RW + 1, MID1); lotRow(c.ia0, c.ia1, sd, S2 - 2, MID1); }
+    const B = c.B[sd], c0 = span(c, sd, 'm0'), c1 = span(c, sd, 'm1');
+    if (c0 && !used.has(key(c, sd, 0))) band(c0, sd, 2, B.s1 - 2, rng() < .5);
+    if (c1 && !used.has(key(c, sd, 1)) && B.b1hi) {
+      if (B.s2) band(c1, sd, B.b1lo, B.b1hi, false);
+      else lotRow(c1.ia0, c1.ia1, sd, B.b1lo, B.b1hi, {garden:.7, rows:3, fence:.7});   // за домами лес или река
+    }
+    if (B.s2) {                                                               // за задней улицей: частный сектор или дома огородами к реке
+      const lo = B.s2 + RW + 1;
+      if (sd === sgL && rng() < .65) lotRow(c.ia0, c.ia1, sd, lo, lo + ri(15, 20), {gar:.2, garden:.8, rows:4, fence:.85});
+      if (sd === sgR && B.nb - 3 - lo >= 13) lotRow(c.ia0, c.ia1, sd, lo, Math.min(B.nb - 3, lo + 20), {gar:.1, garden:.7, rows:3});
+    }
   }
-  // частный сектор за последней улицей со стороны суши: один ряд, большие огороды
-  for (const c of cols) if (rng() < .75) lotRow(c.ia0, c.ia1, sgL, S2 + RW + 1, S2 + RW + 20, {gar:.2, garden:.8, rows:4, fence:.85});
-  // набережная: ивы у воды, фонари вдоль реки
+  // тупики-грунтовки на краях города: дом на отшибе
+  for (const end of [0, cols.length - 1]) for (const sd of [-1, 1]) {
+    if (rng() < .45) continue;
+    const c = cols[end], B = c.B[sd], d = B.s2 && rng() < .5 ? B.s2 : B.s1, dir = end ? 1 : -1, aS = end ? c.a1 + 1 : c.a0 - 1, len = ri(14, 24);
+    const aE = aS + dir * len;
+    let ok = true; for (let a = Math.min(aS, aE); a <= Math.max(aS, aE) && ok; a++) for (let dd = d - 12; dd <= d + RW + 12 && ok; dd++) { const [x, y] = AD(a, sd, dd); if (!inMap(x, y, FEN + 3) || get(x, y) !== GRASS || hAt[y * MW + x] || propAt[y * MW + x] || soil[y * MW + x]) ok = false; }
+    if (!ok) continue;
+    for (let a = Math.min(aS, aE); a <= Math.max(aS, aE); a++) for (const dd of [d + 1, d + 2]) { const [x, y] = AD(a, sd, dd); soil[y * MW + x] = 1; }
+    for (const side of [-1, 1]) if (rng() < .7) {
+      const dF = side < 0 ? d - 1 : d + RW, hw = ri(8, 10), a0 = end ? aE - hw - ri(0, 3) : aE + ri(0, 3), lo = Math.min(a0, a0 + hw - 1);
+      const D = k => dF + side * k, [hx, hy, w, h] = rectAD(lo, lo + hw - 1, sd, D(2), D(9));
+      if (rectFree(hx, hy, w, h, 1)) { const H = bldF(hx, hy, w, h, 'house', faceD(sd, -side)); if (H) { pathOut(H.doors[0]); for (let k = 0; k < 6; k++) veg(...AD(lo + 1 + k, sd, D(11))); } }
+    }
+  }
+  // кривые улочки старой слободы: грунтовка петляет от края города, дома вразброс по обе стороны, лицом к ней
+  const lane = (x, y, dir, segs, br) => {
+    const free = (x0, y0, x1, y1) => { for (let yy = Math.min(y0, y1); yy <= Math.max(y0, y1); yy++) for (let xx = Math.min(x0, x1); xx <= Math.max(x0, x1); xx++) { const i = yy * MW + xx; if (!inMap(xx, yy, FEN + 4) || map[i] !== GRASS || hAt[i] || propAt[i] || (soil[i] && soil[i] !== 1) || cityMask[i]) return false; } return true; };
+    let n = 0;
+    for (let g = 0; g < segs; g++) {
+      const L = ri(8, 16), o = DIRS[dir], horiz = o[1] === 0;
+      const x1 = x + o[0] * L, y1 = y + o[1] * L;
+      if (!free(x + o[0], y + o[1], x1 + (horiz ? 0 : 1), y1 + (horiz ? 1 : 0))) { if (g) break; else return 0; }
+      for (let k = 1; k <= L; k++) { const xx = x + o[0] * k, yy = y + o[1] * k; soil[yy * MW + xx] = 1; soil[(yy + (horiz ? 1 : 0)) * MW + xx + (horiz ? 0 : 1)] = 1; }
+      // дома вдоль отрезка
+      for (const side of [-1, 1]) if (rng() < .75) {
+        const w = ri(8, 10), h = ri(8, 9), gap = ri(2, 4), t = ri(1, Math.max(1, L - (horiz ? w : h)));
+        let hx, hy, f;
+        if (horiz) { hx = Math.min(x, x1) + t; hy = side < 0 ? y - gap - h : y + 2 + gap; f = side < 0 ? 1 : 0; }
+        else { hy = Math.min(y, y1) + t; hx = side < 0 ? x - gap - w : x + 2 + gap; f = side < 0 ? 3 : 2; }
+        if (rectFree(hx, hy, w, h, 1)) {
+          const H = bldF(hx, hy, w, h, 'house', f);
+          if (H) { pathOut(H.doors[0]); n++; if (rng() < .5) yardFence(H); if (rng() < .6) yardGarden(H); if (rng() < .2) yardGarage(H); }
+        }
+      }
+      x = x1; y = y1;
+      if (!br && g && rng() < .3) n += lane(x, y, horiz ? (rng() < .5 ? 0 : 1) : (rng() < .5 ? 2 : 3), ri(2, 4), true);   // ответвление
+      const turn = rng(); if (turn < .6) dir = horiz ? (rng() < .5 ? 0 : 1) : (rng() < .5 ? 2 : 3);   // поворот направо или налево, иначе прямо
+      if (o[0] && DIRS[dir][0] === -o[0] || o[1] && DIRS[dir][1] === -o[1]) dir = DIRS.indexOf(o);
+    }
+    return n;
+  };
+  for (const end of [0, cols.length - 1]) {
+    const sd = rng() < .7 ? sgL : sgR, c = cols[end], B = c.B[sd], d = B.s2 || B.s1, aS = end ? c.a1 : c.a0, dirA = end ? 1 : -1;
+    const [x, y] = AD(aS + dirA, sd, d + 1), o = V ? [0, dirA] : [dirA, 0];
+    lane(x, y, DIRS.findIndex(q => q[0] === o[0] && q[1] === o[1]), ri(5, 8));
+  }
+  // и несколько — от задних улиц и от трасс за городом, вглубь, к лесу
+  const dirOf = (da, dc) => { const [dx, dy] = V ? [dc, da] : [da, dc]; return DIRS.findIndex(q => q[0] === dx && q[1] === dy); };
+  for (let t = 0, n = 0; t < 12 && n < 3; t++) {
+    const c = pick(cols), sd = rng() < .75 ? sgL : sgR, B = c.B[sd], d = (B.s2 || B.s1) + RW, a = ri(c.ia0 + 3, c.ia1 - 4), [x, y] = AD(a, sd, d);
+    if (get(x, y) === WALK && lane(x, y, dirOf(0, sd), ri(4, 7))) n++;
+  }
+  for (const dA of [-1, 1]) for (const sd of [-1, 1]) if (rng() < .5) {          // от главной трассы за городом
+    const a = dA < 0 ? ri(FEN + 30, A0 - 20) : ri(A1 + 20, MW - FEN - 30), [x, y] = AD(a, sd, 1);
+    if (a > FEN + 20 && a < MW - FEN - 20) lane(x, y, dirOf(0, sd), ri(4, 7));
+  }
+  // набережная: ивы у воды
   for (let a = A0; a <= A1; a++) {
     const dw = rc(a) - rw(a) - 1;
     if (rng() < .16) plant(...AD(a, sgR, dw));
@@ -271,8 +386,8 @@ function genTown5() {
   // ---- за городом ----
   const K = outskirtsKit(nearTown);
   // дачи за рекой: грунтовая улица от поперечной трассы, участки по обе стороны
-  { const dl = RIV + 28, plotW = 12, n = ri(5, 6), lenA = n * plotW + 1, dir = rng() < .5 ? 1 : -1;
-    const a0 = dir > 0 ? EXIT_R + RW + 6 : EXIT_R - 6 - lenA, a1 = a0 + lenA - 1;
+  { const plotW = 12, n = ri(5, 6), lenA = n * plotW + 1, dir = rng() < .5 ? 1 : -1;
+    const a0 = dir > 0 ? EXIT_R + RW + 6 : EXIT_R - 6 - lenA, a1 = a0 + lenA - 1, dl = Math.min(farBank(a0 - 2, a1 + 2) + 18, MW - EXIT_R - FEN - 24);
     const [rx, ry, rw_, rh] = rectAD(a0 - 2, a1 + 2, sgR, dl - 16, dl + 16);
     if (K.freeArea(rx, ry, rw_, rh, 0)) {
       for (let a = Math.min(a0, EXIT_R + RW), aE = Math.max(a1, EXIT_R - 1); a <= aE; a++) for (let d = dl - 1; d <= dl + 1; d++) { const [x, y] = AD(a, sgR, d); if (get(x, y) === GRASS) soil[y * MW + x] = 1; }
