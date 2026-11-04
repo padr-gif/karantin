@@ -148,28 +148,22 @@ function genTown5() {
   const lotRow = (ia0, ia1, sd, dF, dB, o) => {
     o = o || {};
     const s = Math.sign(dB - dF), depth = Math.abs(dB - dF) + 1, D = k => dF + s * k, front = faceD(sd, -s), lots = [];
-    let a = ia0;
-    while (ia1 - a >= 11) {
-      const SET = o.set || (rng() < .7 ? ri(2, 4) : ri(4, 6));               // отступ от улицы у каждого дома свой
-      let gar = rng() < (o.gar != null ? o.gar : .3) && depth >= SET + 10;
-      const wa = ri(o.w0 || 8, o.w1 || 12), mL = ri(1, 3);
-      let inner = mL + wa + (gar ? 6 : 0) + ri(1, 2), b = a + inner + 1;
-      if (b > ia1) { if (gar) { gar = false; inner -= 6; b -= 6; } if (b > ia1) { if (ia1 - a - 1 >= mL + 8 + 1) b = ia1; else break; } }
-      if (ia1 - b < 11) b = ia1;                                               // остаток — в последний участок
-      const gl = gar && rng() < .5, h0 = a + 1 + mL + (gl ? 6 : 0), hw = Math.min(wa, b - h0 - 1 - (gar && !gl ? 6 : 0));
-      const dd = Math.min(ri(8, o.dmax || 10), depth - SET - 3);
-      if (hw < 8 || dd < 8 || rng() < (o.empty != null ? o.empty : .08)) {   // пустой заросший участок
-        for (let t = ri(2, 6); t > 0; t--) plant(...AD(ri(a + 1, b - 1), sd, D(ri(1, depth - 2))));
-        a = b; continue;
-      }
+    // ряд ровный: участки одной ширины, все дома на одной линии с одинаковым отступом и глубиной, дом посередине участка
+    const SET = o.set || 3, L = ia1 - ia0, n = Math.max(1, Math.round(L / (o.lw || ri(14, 17))));
+    const dd = Math.min(ri(8, o.dmax || 10), depth - SET - 3);
+    if (L < 11 || dd < 8) return lots;
+    for (let q = 0; q < n; q++) {
+      const a = ia0 + Math.round(q * L / n), b = ia0 + Math.round((q + 1) * L / n), lw = b - a - 1;
+      if (lw < 10) continue;
+      const gar = rng() < (o.gar != null ? o.gar : .3) && depth >= SET + 10 && lw - 2 >= 8 + 6;
+      const hw = Math.min(ri(8, 11), lw - 2 - (gar ? 6 : 0)), gl = gar && rng() < .5, off = a + 1 + ((lw - hw - (gar ? 6 : 0)) >> 1), h0 = off + (gl ? 6 : 0);
       const [hx, hy, hwx, hhy] = rectAD(h0, h0 + hw - 1, sd, D(SET), D(SET + dd - 1));
       const H = bldF(hx, hy, hwx, hhy, 'house', front); let G = null;
       if (H) {
         pathOut(H.doors[0]);
-        if (gar) { const g0 = gl ? h0 - 6 : h0 + hw + 1, [gx, gy, gw, gh] = rectAD(g0, g0 + 4, sd, D(SET + 2), D(SET + 7)); G = bldF(gx, gy, gw, gh, 'garage', front); drive(G, rng() < .55); }
+        if (gar) { const g0 = gl ? h0 - 6 : h0 + hw + 1, [gx, gy, gw, gh] = rectAD(g0, g0 + 4, sd, D(SET + 2), D(SET + 7)); G = bldF(gx, gy, gw, gh, 'garage', front); drive(G, rng() < .3); }
       }
       lots.push({a, b, H, G});
-      a = b;
     }
     // заборы, огороды, деревья
     for (const L of lots) {
@@ -180,8 +174,8 @@ function genTown5() {
         for (let k = 1; k < depth - 1; k++) { putPF(...AD(A0b, sd, D(k)), CX, st); putPF(...AD(A1b, sd, D(k)), CX, st); }
       }
       if (rng() < (o.garden != null ? o.garden : .45)) { const n = o.rows || 2; for (let k = depth - 1 - n; k < depth - 1; k++) for (let aa = A0b + 2; aa <= A1b - 2; aa++) veg(...AD(aa, sd, D(k))); }
-      if (rng() < .55) plant(...AD(rng() < .5 ? A0b + 2 : A1b - 2, sd, D(depth - 2 - (o.rows || 2))));
-      if (rng() < .4) plant(...AD(rng() < .5 ? A0b + 1 : A1b - 1, sd, D(1)));
+      if (rng() < .5) plant(...AD(A1b - 2, sd, D(depth - 2 - (o.rows || 2))));      // яблоня в дальнем углу двора
+      if (rng() < .5) plant(...AD(A0b + 1, sd, D(1)));                           // дерево у калитки — всегда в одном углу
     }
     return lots;
   };
@@ -200,7 +194,7 @@ function genTown5() {
     const put = (kind, a0) => { const [cw, ch] = CSIZE[kind], [x, y, w, h] = rectAD(a0, a0 + cw - 1, sd, 22, 22 + ch - 1); const H = bldF(x, y, w, h, kind, faceD(sd, -1)); if (H) SPECIAL.push({x:x + w / 2, y:y + h / 2, pi:kind === 'police' ? 10 : ri(0, 9), n:kind === 'police' ? 4 : 2}); return H; };
     const pl = rng() < .5, wP = CSIZE.police[0], wO = CSIZE.office[0], gap = Math.max(2, (ia1 - ia0 + 1 - wP - wO) / 3 | 0);
     put(pl ? 'police' : 'office', ia0 + gap); put(pl ? 'office' : 'police', ia1 - gap - (pl ? wO : wP) + 1);
-    for (let q = 0; q < 2; q++) { const lane = sd < 0 ? H0 : H1, a = ia0 + 2 + q * 6; V ? parkCarAt(lane, a, 'y', {ci:2, police:true}) : parkCarAt(a, lane, 'x', {ci:2, police:true}); }
+    for (let q = 0; q < 1; q++) { const lane = sd < 0 ? H0 : H1, a = ia0 + 2 + q * 6; V ? parkCarAt(lane, a, 'y', {ci:2, police:true}) : parkCarAt(a, lane, 'x', {ci:2, police:true}); }
     SPECIAL.push({x:AD(am, sd, 8)[0] + .5, y:AD(am, sd, 8)[1] + .5, pi:ri(0, 9), n:4});
   }
 
@@ -220,7 +214,7 @@ function genTown5() {
     }
     // парковка: асфальт с въездами с обеих поперечных улиц, машины вдоль
     fillAD(ia0 - 1, ia1 + 1, sd, 14, 19, ROAD); maskAD(ia0, ia1, sd, 13, 20);
-    for (const d of [14, 18]) for (let a = ia0 + 1; a < ia1 - 2; a += 5) if (rng() < .45) { const [x, y] = AD(a, sd, d), [x2, y2] = AD(a, sd, sd > 0 ? d : d + 1); V ? parkCarAt(Math.min(x, x2), y, 'y') : parkCarAt(x, Math.min(y, y2), 'x'); }
+    for (const d of [14, 18]) for (let a = ia0 + 1; a < ia1 - 2; a += 5) if (rng() < .18) { const [x, y] = AD(a, sd, d), [x2, y2] = AD(a, sd, sd > 0 ? d : d + 1); V ? parkCarAt(Math.min(x, x2), y, 'y') : parkCarAt(x, Math.min(y, y2), 'x'); }
     lotRow(ia0, ia1, sd, c.B[sd].s1 - 2, 21, {dmax:9, gar:0, garden:.2, rows:1});
   };
   for (const c of byCenter) for (const sd of [sgL, sgR]) if (commQ.length && !used.has(key(c, sd, 0))) commBlock(c, sd);
@@ -263,7 +257,7 @@ function genTown5() {
     }
     // парковка вдоль задней улицы
     fillAD(ia0 - 1, ia1 + 1, sd, S2 - 7, S2 - 2, ROAD);
-    for (let a = ia0 + 1; a < ia1 - 2; a += 5) if (rng() < .5) { const d = S2 - 6, [x, y] = AD(a, sd, d), [x2, y2] = AD(a, sd, sd > 0 ? d : d + 1); V ? parkCarAt(Math.min(x, x2), y, 'y') : parkCarAt(x, Math.min(y, y2), 'x'); }
+    for (let a = ia0 + 1; a < ia1 - 2; a += 5) if (rng() < .2) { const d = S2 - 6, [x, y] = AD(a, sd, d), [x2, y2] = AD(a, sd, sd > 0 ? d : d + 1); V ? parkCarAt(Math.min(x, x2), y, 'y') : parkCarAt(x, Math.min(y, y2), 'x'); }
     // двор: деревья, кусты, песочница
     for (let t = 0; t < 60; t++) { const a = ri(ia0 + 1, ia1 - 1), d = ri(d0 + ld + 2, S2 - 9); plant(...AD(a, sd, d)); }
     { const a = (ia0 + ia1) >> 1; for (let q = 0; q < 3; q++) for (let r = 0; r < 3; r++) { const [x, y] = AD(a + q, sd, d0 + ld + 3 + r); if (get(x, y) === GRASS && !propAt[y * MW + x]) soil[y * MW + x] = 1; } }
@@ -321,48 +315,6 @@ function genTown5() {
       if (rectFree(hx, hy, w, h, 1)) { const H = bldF(hx, hy, w, h, 'house', faceD(sd, -side)); if (H) { pathOut(H.doors[0]); for (let k = 0; k < 6; k++) veg(...AD(lo + 1 + k, sd, D(11))); } }
     }
   }
-  // кривые улочки старой слободы: грунтовка петляет от края города, дома вразброс по обе стороны, лицом к ней
-  const lane = (x, y, dir, segs, br) => {
-    const free = (x0, y0, x1, y1) => { for (let yy = Math.min(y0, y1); yy <= Math.max(y0, y1); yy++) for (let xx = Math.min(x0, x1); xx <= Math.max(x0, x1); xx++) { const i = yy * MW + xx; if (!inMap(xx, yy, FEN + 4) || map[i] !== GRASS || hAt[i] || propAt[i] || (soil[i] && soil[i] !== 1) || cityMask[i]) return false; } return true; };
-    let n = 0;
-    for (let g = 0; g < segs; g++) {
-      const L = ri(8, 16), o = DIRS[dir], horiz = o[1] === 0;
-      const x1 = x + o[0] * L, y1 = y + o[1] * L;
-      if (!free(x + o[0], y + o[1], x1 + (horiz ? 0 : 1), y1 + (horiz ? 1 : 0))) { if (g) break; else return 0; }
-      for (let k = 1; k <= L; k++) { const xx = x + o[0] * k, yy = y + o[1] * k; soil[yy * MW + xx] = 1; soil[(yy + (horiz ? 1 : 0)) * MW + xx + (horiz ? 0 : 1)] = 1; }
-      // дома вдоль отрезка
-      for (const side of [-1, 1]) if (rng() < .75) {
-        const w = ri(8, 10), h = ri(8, 9), gap = ri(2, 4), t = ri(1, Math.max(1, L - (horiz ? w : h)));
-        let hx, hy, f;
-        if (horiz) { hx = Math.min(x, x1) + t; hy = side < 0 ? y - gap - h : y + 2 + gap; f = side < 0 ? 1 : 0; }
-        else { hy = Math.min(y, y1) + t; hx = side < 0 ? x - gap - w : x + 2 + gap; f = side < 0 ? 3 : 2; }
-        if (rectFree(hx, hy, w, h, 1)) {
-          const H = bldF(hx, hy, w, h, 'house', f);
-          if (H) { pathOut(H.doors[0]); n++; if (rng() < .5) yardFence(H); if (rng() < .6) yardGarden(H); if (rng() < .2) yardGarage(H); }
-        }
-      }
-      x = x1; y = y1;
-      if (!br && g && rng() < .3) n += lane(x, y, horiz ? (rng() < .5 ? 0 : 1) : (rng() < .5 ? 2 : 3), ri(2, 4), true);   // ответвление
-      const turn = rng(); if (turn < .6) dir = horiz ? (rng() < .5 ? 0 : 1) : (rng() < .5 ? 2 : 3);   // поворот направо или налево, иначе прямо
-      if (o[0] && DIRS[dir][0] === -o[0] || o[1] && DIRS[dir][1] === -o[1]) dir = DIRS.indexOf(o);
-    }
-    return n;
-  };
-  for (const end of [0, cols.length - 1]) {
-    const sd = rng() < .7 ? sgL : sgR, c = cols[end], B = c.B[sd], d = B.s2 || B.s1, aS = end ? c.a1 : c.a0, dirA = end ? 1 : -1;
-    const [x, y] = AD(aS + dirA, sd, d + 1), o = V ? [0, dirA] : [dirA, 0];
-    lane(x, y, DIRS.findIndex(q => q[0] === o[0] && q[1] === o[1]), ri(5, 8));
-  }
-  // и несколько — от задних улиц и от трасс за городом, вглубь, к лесу
-  const dirOf = (da, dc) => { const [dx, dy] = V ? [dc, da] : [da, dc]; return DIRS.findIndex(q => q[0] === dx && q[1] === dy); };
-  for (let t = 0, n = 0; t < 12 && n < 3; t++) {
-    const c = pick(cols), sd = rng() < .75 ? sgL : sgR, B = c.B[sd], d = (B.s2 || B.s1) + RW, a = ri(c.ia0 + 3, c.ia1 - 4), [x, y] = AD(a, sd, d);
-    if (get(x, y) === WALK && lane(x, y, dirOf(0, sd), ri(4, 7))) n++;
-  }
-  for (const dA of [-1, 1]) for (const sd of [-1, 1]) if (rng() < .5) {          // от главной трассы за городом
-    const a = dA < 0 ? ri(FEN + 30, A0 - 20) : ri(A1 + 20, MW - FEN - 30), [x, y] = AD(a, sd, 1);
-    if (a > FEN + 20 && a < MW - FEN - 20) lane(x, y, dirOf(0, sd), ri(4, 7));
-  }
   // набережная: ивы у воды
   for (let a = A0; a <= A1; a++) {
     const dw = rc(a) - rw(a) - 1;
@@ -376,7 +328,7 @@ function genTown5() {
     else { const y = s.p - 1; if (get(k, y) === WALK && !propAt[y * MW + k] && !open(get(k, y - 1))) addProp({type:'lamp', flick:rng() < .15, cx:k + .5, cy:y + .5 + .3, hx:0, hy:1, solid:true, r:[k + .4, y + .7, k + .6, y + .9]}, [[k, y]]); }
   }
   const crossing = (s, a) => (s.vert ? RY : RX).some(q => a >= q - 2 && a <= q + RW + 1);
-  for (let t = 0, n = 0; t < 1200 && n < 60; t++) {
+  for (let t = 0, n = 0; t < 1200 && n < 14; t++) {
     const s = pick(streets), a = ri(s.lo, s.hi - 1), lane = s.p + (rng() < .5 ? 0 : RW - 1);
     if (crossing(s, a) || crossing(s, a + 1)) continue;
     if (s.vert ? parkCarAt(lane, a, 'y') : parkCarAt(a, lane, 'x')) n++;
@@ -384,7 +336,7 @@ function genTown5() {
   for (let k = 0; k < 5; k++) { const a = ri(A0, A1), [x, y] = XY(a, rng() < .5 ? H0 - 1 : H1 + 1); SPECIAL.push({x:x + .5, y:y + .5, pi:ri(0, 9), n:3}); }
 
   // ---- за городом ----
-  const K = outskirtsKit(nearTown);
+  const K = outskirtsKit(nearTown); dirtL = true;                          // грунтовки — прямые, с одним поворотом
   // дачи за рекой: грунтовая улица от поперечной трассы, участки по обе стороны
   { const plotW = 12, n = ri(5, 6), lenA = n * plotW + 1, dir = rng() < .5 ? 1 : -1;
     const a0 = dir > 0 ? EXIT_R + RW + 6 : EXIT_R - 6 - lenA, a1 = a0 + lenA - 1, dl = Math.min(farBank(a0 - 2, a1 + 2) + 18, MW - EXIT_R - FEN - 24);
@@ -420,8 +372,8 @@ function genTown5() {
     }
     { const [x, y] = F.L(FU >> 1, 7), along = F.LS(1, 0) < 2 ? 'y' : 'x'; set(x, y, ROAD); const [x2, y2] = along === 'x' ? [x + 1, y] : [x, y + 1]; set(x2, y2, ROAD); if (!parkCarAt(Math.min(x, x2), Math.min(y, y2), along)) { set(x, y, GRASS); set(x2, y2, GRASS); } }
   } }
-  K.farms(ri(3, 4)); K.roadHouses(ri(8, 12), 600, true); K.lake([1, 0, 2, 3]); K.cabins(5);
-  highwayCars(8);
+  K.farms(ri(3, 4)); K.roadHouses(ri(5, 7), 600, true); K.lake([1, 0, 2, 3]); K.cabins(3);
+  highwayCars(3);
 
   // карантин: блокпосты на трассах и забор
   for (const side of ['w', 'e', 'n', 's']) checkpoint(side);
@@ -436,5 +388,5 @@ function genTown5() {
     const n = D4.map(([ox, oy]) => get(x + ox, y + oy));
     return n.includes(ROAD) && n.filter(t => t === WALK).length <= 2 && !n.includes(DOOR);
   }});
-  cityMask = null; world.nofence = false;
+  cityMask = null; world.nofence = false; dirtL = false;
 }

@@ -13,7 +13,9 @@ function soilPaint(x, y, k) {
 }
 function soilRect(x0, y0, x1, y1, k) { for (let y = Math.min(y0, y1); y <= Math.max(y0, y1); y++) for (let x = Math.min(x0, x1); x <= Math.max(x0, x1); x++) soilPaint(x, y, k); }
 // грунтовка из точки в точку: отрезки по 5–12 клеток то вдоль x, то вдоль y, шириной 2
+let dirtL = false;                                                            // 74-town: прямая грунтовка с одним поворотом, без «лесенки»
 function dirtTrack(x0, y0, x1, y1) {
+  if (dirtL) { soilRect(x0, y0, x1, y0 + 1, 1); soilRect(x1, y0, x1 + 1, y1, 1); return; }
   let x = x0, y = y0, horiz = rng() < .5;
   for (let g = 0; g < 80 && (x !== x1 || y !== y1); g++) {
     const dx = x1 - x, dy = y1 - y;
