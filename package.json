@@ -8,6 +8,7 @@
     "build": "node build.mjs",
     "site": "node build.mjs --site",
     "yandex": "node build.mjs --yandex",
+    "android": "node build.mjs --android",
     "deploy": "node build.mjs --site && sh tools/deploy.sh",
     "appicon": "node tools/icons/appicon.mjs pwa",
     "dev": "node serve.mjs",
@@ -16,7 +17,12 @@
     "golden": "node build.mjs --dev && node tests/golden.mjs",
     "golden:save": "node build.mjs --dev && node tests/golden.mjs save"
   },
+  "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/core": "^7.0.0"
+  },
   "devDependencies": {
+    "@capacitor/cli": "^7.0.0",
     "playwright": "1.56.0"
   }
 }

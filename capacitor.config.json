@@ -1,0 +1,8 @@
+{
+  "appId": "ru.padrgif.deadline",
+  "appName": "Dead Line",
+  "webDir": "dist/android",
+  "android": {
+    "backgroundColor": "#0c0f12"
+  }
+}

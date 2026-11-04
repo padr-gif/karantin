@@ -55,7 +55,8 @@ export function build({dev = false, pwa = false, plat = '', out = 'dist/karantin
   // 3. page
   // the sheets start downloading straight from <head>, while the browser is still busy with the game code
   if (pwa) preload.push(`<script>window.__pre={};(function(u){try{if(window.fetch)for(var k in u)window.__pre[k]=fetch(u[k]);}catch(e){}})(${JSON.stringify(png)})</script>`);
-  const platHead = plat === 'yandex' ? `<script>window.__PLAT='yandex'</script><script src="/sdk.js" async></script>` : '';
+  const platHead = plat === 'yandex' ? `<script>window.__PLAT='yandex'</script><script src="/sdk.js" async></script>`
+    : plat === 'android' ? `<script>window.__PLAT='android'</script>` : '';
   const head = platHead + (pwa ? preload.join('') : '') + (pwa && !plat ? '<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#0c0f12"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Dead Line"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" href="icon-192.png">'
  : '');
   // fonts live in the page itself: an outside font server that hangs must never block the game from starting
@@ -97,7 +98,16 @@ export function buildYandex() {
   return fs.existsSync(zip) ? zip : dir;
 }
 
+// приложение для Android (RuStore): папка dist/android, её Capacitor заворачивает в APK (.github/workflows/android.yml)
+export function buildAndroid() {
+  const dir = path.join(ROOT, 'dist/android');
+  fs.rmSync(dir, {recursive: true, force: true});
+  build({pwa: true, plat: 'android', out: 'dist/android/index.html'});
+  return dir;
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
+  if (process.argv.includes('--android')) { console.log('Android:', path.relative(ROOT, buildAndroid())); process.exit(0); }
   if (process.argv.includes('--yandex')) { const f = buildYandex(); console.log('Яндекс Игры:', path.relative(ROOT, f), (fs.statSync(f).isFile() ? (fs.statSync(f).size / 1048576).toFixed(1) + ' МБ' : '')); process.exit(0); }
   if (process.argv.includes('--site')) { console.log('Сайт собран:', path.relative(ROOT, buildSite())); process.exit(0); }
   const dev = process.argv.includes('--dev');

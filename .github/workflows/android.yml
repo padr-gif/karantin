@@ -1,0 +1,66 @@
+# APK для Android (RuStore): собирается сам при каждом пуше в main и вручную — кнопкой Run workflow во вкладке Actions.
+# Скачать: Actions → «APK для Android» → нужный запуск → Artifacts → deadline-android.
+#
+# Подпись. RuStore принимает только подписанный APK, и все обновления должны быть подписаны ТЕМ ЖЕ ключом.
+# Ключ хранится в секретах репозитория (Settings → Secrets and variables → Actions):
+#   DL_KEYSTORE_B64 — файл ключа .jks в base64;   DL_STORE_PASS — пароль от него (псевдоним ключа — deadline).
+# Без секретов собирается только отладочный APK: поставить на свой телефон и проверить можно, в RuStore — нельзя.
+name: APK для Android
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    env:
+      HAS_KEY: ${{ secrets.DL_KEYSTORE_B64 != '' && secrets.DL_STORE_PASS != '' }}
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: pip install Pillow
+      - run: npm install --no-audit --no-fund
+      - run: node build.mjs --android
+      - run: npx cap add android
+      - run: python3 tools/android/icons.py
+
+      - name: Ключ подписи
+        if: env.HAS_KEY == 'true'
+        run: |
+          echo "${{ secrets.DL_KEYSTORE_B64 }}" | base64 -d > "$RUNNER_TEMP/deadline.jks"
+          echo "DL_KEYSTORE=$RUNNER_TEMP/deadline.jks" >> "$GITHUB_ENV"
+          echo "DL_STORE_PASS=${{ secrets.DL_STORE_PASS }}" >> "$GITHUB_ENV"
+      - run: node tools/android/setup.mjs
+      - run: npx cap sync android
+
+      - name: Сборка (подписанный релиз)
+        if: env.HAS_KEY == 'true'
+        working-directory: android
+        run: |
+          ./gradlew assembleRelease --no-daemon
+          mkdir -p ../out && cp app/build/outputs/apk/release/app-release.apk "../out/DeadLine-$(node -p "require('../package.json').version").apk"
+      - name: Сборка (отладочный, без ключа)
+        if: env.HAS_KEY != 'true'
+        working-directory: android
+        run: |
+          ./gradlew assembleDebug --no-daemon
+          mkdir -p ../out && cp app/build/outputs/apk/debug/app-debug.apk "../out/DeadLine-$(node -p "require('../package.json').version")-debug.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deadline-android
+          path: out/*.apk
+          compression-level: 0
+          retention-days: 90

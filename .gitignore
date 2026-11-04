@@ -8,3 +8,6 @@ site/
 !assets/**/*.png
 !pwa/*.png
 tools/mh3d/raster.so
+/android/
+*.jks
+*.keystore

@@ -253,3 +253,18 @@ python3 tools/mh3d/bake.py zm       # только зомби-мужчин
 ```
 
 Кадр хранит номер цвета (кожа, волосы, одежда…) в красном канале и яркость в синем, игра перекрашивает его под внешность.
+
+## Android-приложение (RuStore)
+
+APK собирается в GitHub Actions: вкладка **Actions → «APK для Android»** → последний запуск → **Artifacts → deadline-android**.
+Запускается сам при каждом пуше в `main`, вручную — кнопкой **Run workflow**.
+
+Как устроено: `node build.mjs --android` собирает игру в `dist/android/`, Capacitor заворачивает её в Android-проект
+(`npx cap add android`, папка `android/` в git не хранится), `tools/android/icons.py` ставит иконки и заставку,
+`tools/android/setup.mjs` — альбомную ориентацию, полный экран, кнопку «Назад», версию из `package.json` и подпись.
+
+- ID приложения — `ru.padrgif.deadline` (`capacitor.config.json`). **После первой публикации в RuStore его менять нельзя.**
+- Версия: `0.86.0` → versionCode `8600`. Для каждой новой загрузки в RuStore версия в `package.json` должна расти.
+- Подпись: секреты репозитория `DL_KEYSTORE_B64` (файл ключа в base64) и `DL_STORE_PASS` (пароль, псевдоним ключа `deadline`).
+  Без них собирается только отладочный APK. Ключ храни у себя: без него новые версии в RuStore не загрузить.
+- Кнопка «Назад» вызывает `window.__androidBack()` (`95-platform.js`): закрывает панели и экраны как Esc, из главного меню сворачивает игру.

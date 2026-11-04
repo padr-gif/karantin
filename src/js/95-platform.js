@@ -115,3 +115,13 @@ setInterval(() => {
   const live = mode === 'play' && !paused && !PLAT.ad && !document.hidden;
   if (live !== PLAT.live) { PLAT.live = live; try { F.GameplayAPI && (live ? F.GameplayAPI.start() : F.GameplayAPI.stop()); } catch (e) {} }
 }, 500);
+
+// Android-приложение (build.mjs --android, Capacitor): системная кнопка «Назад» спрашивает игру через window.__androidBack.
+// true — игра обработала сама (закрыла панель, открыла/закрыла паузу, вернулась на экран назад);
+// false — мы в главном меню и закрывать нечего: приложение сворачивается.
+window.__androidBack = () => {
+  const v = visibleScreen();
+  if (!panel && (v === 'menu' || (!v && mode !== 'play'))) return false;
+  dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape'}));
+  return true;
+};
