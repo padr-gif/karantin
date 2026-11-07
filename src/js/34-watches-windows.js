@@ -1,12 +1,12 @@
 // ================= watches & clock, windows (open / vault / curtains), paper-doll backpack, alarm =================
 Object.assign(ITEMS, {
   watchQ:{name:'Кварцевые часы', sh:'Часы', kind:'cloth', slot:'wrist', ins:0, verb:'Надеть', info:'показывают время · на запястье'},
-  watchD:{name:'Электронные часы', sh:'Эл. часы', kind:'cloth', slot:'wrist', ins:0, verb:'Надеть', info:'время, дата, будильник · на запястье'},
+  watchD:{name:'Электронные часы', sh:'Эл. часы', kind:'cloth', slot:'wrist', ins:0, verb:'Надеть', info:'время, дата, температура, будильник · на запястье'},
   curtain:{name:'Шторы', kind:'misc', info:'повесь на окно без занавесок'},
 });
 Object.assign(DESC, {
   watchQ:'Простые кварцевые часы на кожаном ремешке. Надень, и в углу экрана появится точное время.',
-  watchD:'Электронные часы с подсветкой: время, дата и будильник, который поднимет тебя со сна.',
+  watchD:'Электронные часы с подсветкой: время, дата, температура на улице и будильник, который поднимет тебя со сна.',
   curtain:'Плотные шторы. Повесь на окно без занавесок: задёрнутые шторы скрывают тебя от мертвецов снаружи.',
 });
 { const add = (k, ...ids) => CONT[k] && CONT[k].loot.push(...ids);
@@ -14,7 +14,7 @@ Object.assign(DESC, {
 RECIPES.push({name:'Шторы из тряпок', icon:'curtain', parts:() => [{id:'rag', ok:countItem('rag') >= 3, badge:'3'}], need:'3 тряпки', can:() => countItem('rag') >= 3, make:() => { for (let k = 0; k < 3; k++) removeItem('rag'); P.inv.push(mkItem('curtain')); toast('Шторы готовы. Повесь на окно'); }});
 const wristId = () => P && P.cloth && P.cloth.wrist ? P.cloth.wrist.id : null;
 // время и дату герой знает только по часам на руке: кварцевые — время, электронные — время и дата.
-// Без часов везде вместо цифр — часть суток («утро», «ночь»)
+// Без часов везде вместо цифр — часть суток («утро», «ночь»). Температуру показывают только электронные часы — в HUD (и радио с ТВ)
 const hasClock = () => { const w = wristId(); return w === 'watchQ' || w === 'watchD'; };
 const hasDate = () => wristId() === 'watchD';
 function clockStamp(m) { return hasClock() ? fmtTime(m) : partOfDayAt(m).replace('Глубокая ', '').toLowerCase(); }
@@ -22,8 +22,9 @@ function partOfDay() { return partOfDayAt(gameMin); }
 function partOfDayAt(m) { const h = (m % 1440) / 60; return h < 5 ? 'Глубокая ночь' : h < 8 ? 'Рассвет' : h < 12 ? 'Утро' : h < 17 ? 'День' : h < 20 ? 'Вечер' : h < 22 ? 'Сумерки' : 'Ночь'; }
 function clockHud() {
   const w = wristId(), dig = w === 'watchD';
-  $('time').hidden = !w; $('day').hidden = !dig; $('temp').hidden = true; $('pod').hidden = !!w;
+  $('time').hidden = !w; $('day').hidden = !dig; $('temp').hidden = !dig; $('pod').hidden = !!w;
   if (!w) $('pod').textContent = partOfDay();
+  if (dig) $('temp').textContent = Math.round(outsideTemp()) + '°';
   $('day').textContent = 'День ' + (Math.floor(gameMin / 1440) + 1) + ' · ' + dateStr(gameMin, true);
 }
 // ---- windows ----
