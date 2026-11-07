@@ -528,6 +528,35 @@ check('без электричества телевизор гаснет', pw.wa
 const far = await D(`(() => { P.sleep = false; P.awake = 0; P.en = 100; const f = furns.find(f => f.type === 'tv'); tvOn(f); TVS.ch = 2; P.skills = {}; P.x = f.cx + 15; P.y = f.cy; const d0 = Math.floor(gameMin / 1440) * 1440; gameMin = d0 + 10 * 60; TVS.key = ''; for (let m = 0; m < 30; m++) { gameMin++; update(.016); } tvOff(); return P.skills.cook || 0; })()`);
 check('далеко от телевизора опыта нет', far === 0, far);
 
+console.log('v0.92: отключка, ускорение времени, скольжение вдоль стен, дневник');
+await fresh();
+const ko = await D(`(() => { zs.length = 0; P.sleep = false; P.awake = 5000; P.en = 40; P.car = null; update(.016); update(.016);
+  const out = P.sleep, aw = P.awake; wake(); update(.016); for (let i = 0; i < 20; i++) update(.1);
+  const stays = !P.sleep && $('sleep').hidden;
+  P.awake = AWAKE_ZERO; P.en = 0; P.wakeG = 0; update(.016); const again = P.sleep;
+  for (let i = 0; i < 4000 && P.sleep; i++) update(.25);
+  return {out, aw, stays, again, woke:!P.sleep, cap:Math.round(enCap()), en:Math.round(P.en)}; })()`);
+check('вырубился без сна — счётчик не уходит за предел', ko.out && ko.aw <= 2880, ko);
+check('разбудили после отключки — не засыпает снова тут же', ko.stays, ko);
+check('проспался после отключки — встаёт бодрым и не вырубается', ko.again && ko.woke && ko.cap > 50 && ko.en > 95, ko);
+const ff = await D(`(() => { zs.length = 0; P.sleep = false; P.awake = 0; P.en = 100; P.hp = 100; P.sat = P.hyd = 90; P.bleed = 0; P.hurt = 0; keys.clear(); joy.id = null; joy.x = joy.y = 0;
+  ffSet(2, true); update(.016); let g0 = gameMin; for (let i = 0; i < 10; i++) update(.1); const still = gameMin - g0;
+  keys.add('KeyW'); update(.016); g0 = gameMin; for (let i = 0; i < 10; i++) update(.1); const walk = gameMin - g0;
+  keys.clear(); update(.016); g0 = gameMin; for (let i = 0; i < 10; i++) update(.1); const back = gameMin - g0;
+  spawnZombie(3, false); for (const z of zs) { z.state = 'chase'; z.x = P.x + 3; z.y = P.y; } update(.016); const offZ = FF.i;
+  zs.length = 0; ffSet(0, true);
+  return {still:+still.toFixed(2), walk:+walk.toFixed(2), back:+back.toFixed(2), offZ}; })()`);
+check('ускорение ×10 идёт, только пока герой стоит', ff.still > 9 && ff.walk < 1.2 && ff.back > 9, ff);
+check('мертвецы рядом — ускорение выключается само', ff.offZ === 0, ff);
+const sl = await D(`(() => { for (let y = 20; y < MH - 20; y++) for (let x = 20; x < MW - 20; x++) {
+    if (get(x, y) === WALL && get(x + 1, y) === WALL && get(x - 1, y) === WALL && !blocked(x + .5, y + 1.5, P.r) && !blocked(x + 1.5, y + 1.5, P.r) && !blocked(x - .5, y + 1.5, P.r)) {
+      P.x = x + .5; P.y = y + 1.5; for (let k = 0; k < 40; k++) move(P, 0, -.05); const x0 = P.x, y0 = P.y; move(P, .07, -.07); return {dx:+(P.x - x0).toFixed(3), dy:+(P.y - y0).toFixed(3)}; } } return null; })()`);
+check('вдоль стены герой идёт почти с полной скоростью', sl && sl.dx > .09, sl);
+const jl = await D(`(() => { P.log = [[gameMin - 1500, 'Укус: левая рука'], [gameMin - 10, 'Ночь осады №1'], [gameMin, 'Нашёл аптечку']]; openPanel('inv'); panel.tab = 'self'; panel.sub = 'info'; renderPanel();
+  const r = {days:document.querySelectorAll('#pnBody .jday').length, ent:document.querySelectorAll('#pnBody .jent').length, bad:!!document.querySelector('#pnBody .jent.bad'), siege:!!document.querySelector('#pnBody .jent.siege'), old:!!document.querySelector('#pnBody .infolay .diary')};
+  closePanel(); return r; })()`);
+check('дневник: лента по дням с цветными отметками, без «бумажного» стиля', jl.days === 2 && jl.ent === 3 && jl.bad && jl.siege && !jl.old, jl);
+
 console.log('Живая игра 15 секунд');
 await fresh("['coward']");
 await D("P.weapon = mkItem('shotgun'); P.weapon.mag = 2; P.inv.push(mkItem('shells')); gameMin += 14 * 60; for (let i = 0; i < 25; i++) spawnZombie(4, false);");

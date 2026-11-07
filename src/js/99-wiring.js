@@ -85,11 +85,11 @@ function frame(t) {
 }
 function frameBody(t) {
   const raw = (t - last) / 1000;
-  const dt = Math.min(.05, Math.max(0, raw)); last = t;
+  const dt = Math.min(.1, Math.max(0, raw)); last = t;                          // до 10 к/с игра идёт с настоящей скоростью (раньше ниже 20 к/с — замедлялась)
   frameNo++; animT += dt;
   if (!$('create').hidden && ART.ready) drawPreview();
   if (panel && panel.kind === 'inv' && panel.tab === 'items' && ART.ready && frameNo % 2 === 0) drawDoll();
-  if (mode === 'play' && !paused) { const t0 = performance.now(); if (!logicOff) update(dt); FT.u = performance.now() - t0; updateParts(dt); } else FT.u = 0;
+  if (mode === 'play' && !paused) { const t0 = performance.now(); if (!logicOff) { if (dt > .05) { update(dt / 2); if (mode === 'play') update(dt / 2); } else update(dt); } FT.u = performance.now() - t0; updateParts(dt); } else FT.u = 0;
   if (mode === 'dead') { P.fall = (P.fall || 0) + dt * 2.2; updateParts(dt); camX += (P.x - camX) * .05; camY += (P.y - camY) * .05; }
   else if (mode === 'menu') menuTick(dt);                                        // живая сцена меню (82-menu)
   else if (mode === 'dead') { camX += (P.x - camX) * .05; camY += (P.y - camY) * .05; }

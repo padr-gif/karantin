@@ -97,7 +97,7 @@ MOOD_MAX = 8;
 // Жара (P.heat 0..100): летом днём на солнце, в тёплом или у огня; жажда и усталость, на пределе — тепловой удар.
 //   Проходит в тени и в доме, если раздеться, промокнуть или попить.
 // Ломота (P.sore 0..100): частые удары забивают мышцы — удары медленнее; проходит от отдыха, сна и горячего душа.
-const gmOf = dt => dt * settings.dayLen * (P.sleep ? 40 : 1);                // игровые минуты за кадр, как в updateCore
+const gmOf = dt => dt * settings.dayLen * timeK();                // игровые минуты за кадр, как в updateCore
 const feelsTemp = () => airTemp(P.x, P.y) + insulation() * 1.6 - (P.wet || 0) * .12;
 function dirtK() { return (P.dirt || 0) / 100; }
 

@@ -161,10 +161,7 @@ function buildInfoTab(host) {
   if (P.traits && P.traits.length) { a.appendChild(mk('div', 'sect', 'Черты')); const tl = mk('div', 'tlist'); for (const k of P.traits) { const t = TRAITS[k]; if (!t) continue; const e = mk('span', 'tr ' + (t.pts > 0 ? 'pos' : 'neg'), t.name); e.title = t.info; tl.appendChild(e); } a.appendChild(tl); }
   b.appendChild(mk('div', 'sect', 'Самочувствие')); { const ml = moodleList(), mb = mk('div', 'moodlist'); for (const t of ml) mb.appendChild(mk('span', 'ml', t)); if (!ml.length) mb.appendChild(mk('p', 'empty', 'Всё в порядке')); b.appendChild(mb); }
   b.appendChild(mk('div', 'sect', 'Дневник'));
-  const log = (P.log || []).slice().reverse(), dv = mk('div', 'diary');
-  if (!log.length) dv.appendChild(mk('p', 'empty', 'Пока пусто'));
-  for (const [m, t] of log.slice(0, 40)) { const r = mk('p', 'dent'); r.appendChild(mk('span', 'dw', 'День ' + (Math.floor(m / 1440) + 1) + ', ' + fmtTime(m))); r.appendChild(document.createTextNode(t)); dv.appendChild(r); }
-  b.appendChild(dv);
+  b.appendChild(jlogView((P.log || []).slice().reverse().slice(0, 40)));
   lay.appendChild(a); lay.appendChild(b); host.appendChild(lay);
 }
 function buildSelf(body) {
@@ -196,6 +193,34 @@ onPanel((a, {key, keep}) => {
   if (panel && key === scrollKey) { keep.push(['', 0, body.scrollTop]); for (const sel of SCROLL_SEL) body.querySelectorAll(sel).forEach((e, i) => { if (e.scrollTop) keep.push([sel, i, e.scrollTop]); }); }
   return {key, keep};
 });
+// ---- дневник событий: лента по дням, время слева, точка по смыслу записи ----
+const JLOG_KIND = [
+  [/укус|кров|рана|перелом|ожог|порез|царап|ушиб|отравл|лихорад|умер|смерт/i, 'bad'],
+  [/осад|орд|волн/i, 'siege'],
+  [/убил|упокоен|убито|мертвец/i, 'kill'],
+  [/сон|спал|уснул|выспал|проснул/i, 'sleep'],
+  [/нашёл|нашел|груз|вертол|военн|радио|сигнал|спас|достиж|научил|навык|урожай|построил|починил/i, 'good'],
+];
+function jlogKind(t) { for (const [re, k] of JLOG_KIND) if (re.test(t)) return k; return ''; }
+function jlogView(log) {
+  const dv = mk('div', 'jlog');
+  if (!log.length) { dv.appendChild(mk('p', 'jempty', 'Пока ни одной записи. Всё важное — раны, находки, ночи осады — появится здесь само.')); return dv; }
+  const today = Math.floor(gameMin / 1440);
+  let day = null, list = null;
+  for (const [m, t] of log) {
+    const d = Math.floor(m / 1440);
+    if (d !== day) {
+      day = d; const h = mk('div', 'jday');
+      h.appendChild(mk('b', '', 'День ' + (d + 1)));
+      if (d === today) h.appendChild(mk('span', '', 'сегодня')); else if (d === today - 1) h.appendChild(mk('span', '', 'вчера'));
+      dv.appendChild(h); list = mk('div', 'jlist'); dv.appendChild(list);
+    }
+    const r = mk('div', 'jent ' + jlogKind(t));
+    r.appendChild(mk('time', '', fmtTime(m))); r.appendChild(mk('i', '')); r.appendChild(mk('p', '', t));
+    list.appendChild(r);
+  }
+  return dv;
+}
 // ---- save the diary and fitness timer too ----
 onSave(d => { Object.assign(d.p, {log:P.log || [], fitT:r2(P.fitT || 0), _logDay:P._logDay, _logK:P._logK || 0, _logPw:P._logPw || 0, _logWt:P._logWt || 0});
 });

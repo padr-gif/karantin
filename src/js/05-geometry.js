@@ -9,7 +9,19 @@ function blocked(x, y, r) {
 }
 function move(e, dx, dy) {
   winSolid = e === P;
-  try { move0(e, dx, dy); } finally { winSolid = false; }
+  try {
+    const x0 = e.x, y0 = e.y;
+    move0(e, dx, dy);
+    // герой скользит вдоль стены почти без потери скорости: в изометрии «вдоль стены» на экране — это наискосок по клеткам,
+    // и раньше упёршаяся ось просто пропадала (×0,7 скорости у каждой стены). Добираем свободную ось до полного шага
+    if (e === P && dx && dy) {
+      const L = Math.hypot(dx, dy), bx = e.x === x0, by = e.y === y0;
+      if (bx !== by) {
+        if (bx) { const want = Math.sign(dy) * Math.min(L, Math.abs(dy) * 1.41), add = want - (e.y - y0); if (add * dy > 0 && !blocked(e.x, e.y + add, e.r)) e.y += add; }
+        else { const want = Math.sign(dx) * Math.min(L, Math.abs(dx) * 1.41), add = want - (e.x - x0); if (add * dx > 0 && !blocked(e.x + add, e.y, e.r)) e.x += add; }
+      }
+    }
+  } finally { winSolid = false; }
 }
 function move0(e, dx, dy) {
   if (dx) {

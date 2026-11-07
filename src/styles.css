@@ -754,9 +754,6 @@ body.editing #toasts{top:calc(var(--st) + 2px)}
 .infolay>div{min-height:0;overflow:auto;padding:8px;border-radius:12px;background:rgba(0,0,0,.2);border:1px solid var(--edge)}
 .infolay .kv{font-size:12px;gap:2px 10px}
 .infolay p.empty{font-size:12px;margin:0 0 4px}
-.diary{display:grid;gap:3px}
-.dent{margin:0;font-size:12px;line-height:1.35;padding:3px 0;border-bottom:1px solid rgba(221,214,198,.07)}
-.dent .dw{display:block;font:600 10.5px var(--f-mono);color:var(--amber)}
 @media (max-width:640px){.bodylay,.infolay{grid-template-columns:1fr}}
 /* v23: traits on the new-survivor screen, wounds list, trait chips */
 .olbl .tpts{display:block;font:700 11px var(--f-mono);color:var(--ok,#9fc48a);margin-top:2px;letter-spacing:0;text-transform:none}
@@ -1530,3 +1527,29 @@ body.invglass>*:not(#game):not(#vig):not(#panel):not(#toasts):not(svg){visibilit
 .tvg-t{font:700 11.5px var(--f-mono);color:#9fb3c0}.tvg-s{font:11px var(--f-body);color:var(--muted)}
 @media (max-width:620px){.tvg-cols{grid-template-columns:1fr}}
 @media (max-height:430px){.tv-knobs,.tv-led{display:none}.tv-ctl{gap:6px;padding-top:0}#panel .tv-chb{height:26px}.tv-brand{display:none}}
+/* v92: ускорение времени — метка на часах */
+.clock{cursor:pointer}
+.clock.ff{border-color:rgba(255,209,102,.55)}
+.fftag{flex:none;align-self:center;font:700 11px/1 var(--f-mono);padding:4px 6px;border-radius:9px;background:#ffd166;color:#1a1408;box-shadow:0 2px 6px rgba(0,0,0,.45);pointer-events:none}
+.fftag::before{content:'▶▶ ';font-size:8px;letter-spacing:-2px}
+.fftag.hold{background:#55606b;color:#d6dde3}
+.fftag.hold::before{content:'❚❚ ';letter-spacing:0}
+/* v92: дневник событий во вкладке «Состояние → Общее» — лента по дням */
+.jlog{display:grid;gap:2px;padding:2px 0 6px}
+.jempty{margin:4px 0;font-size:12px;line-height:1.45;color:var(--muted)}
+.jday{position:sticky;top:-8px;z-index:1;display:flex;align-items:baseline;gap:8px;margin:6px -8px 2px;padding:6px 10px 5px;background:linear-gradient(rgba(20,24,28,.97),rgba(20,24,28,.9));border-bottom:1px solid var(--edge)}
+.jday:first-child{margin-top:2px}
+.jday b{font:700 11px/1 var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--amber)}
+.jday span{font:600 10px/1 var(--f-mono);color:var(--muted);text-transform:lowercase}
+.jlist{position:relative;display:grid;padding:2px 0}
+.jlist::before{content:'';position:absolute;left:47px;top:6px;bottom:6px;width:1px;background:rgba(221,214,198,.14)}
+.jent{display:grid;grid-template-columns:38px 18px minmax(0,1fr);align-items:start;padding:4px 0}
+.jent time{font:600 10.5px/17px var(--f-mono);font-variant-numeric:tabular-nums;color:var(--muted);text-align:right}
+.jent i{width:7px;height:7px;margin:5px 0 0 6px;border-radius:50%;background:#7d8a94;box-shadow:0 0 0 3px rgba(20,24,28,.95);position:relative}
+.jent p{margin:0;font-size:12.5px;line-height:17px;color:var(--paper)}
+.jent.bad i{background:#ff6b5b}.jent.bad p{color:#ffc2b8}
+.jent.siege i{background:#c63d2f;width:9px;height:9px;margin:4px 0 0 5px}
+.jent.siege p{color:#ff9a8a;font-weight:600}
+.jent.kill i{background:var(--amber)}
+.jent.sleep i{background:#8fb3e0}
+.jent.good i{background:#9fc48a}

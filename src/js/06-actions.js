@@ -434,6 +434,8 @@ function startSleep(bed) {
 function wake(msg) {
   if (!P.sleep) return;
   P.sleep = false; $('sleep').hidden = true; $('ctrl').hidden = false;
+  // разбудили (сам, мертвецы, голод) раньше времени: не вырубается снова в тот же миг — два игровых часа на ногах, чуть сил на бегство
+  if (typeof AWAKE_ZERO !== 'undefined') { P.awake = Math.min(P.awake || 0, AWAKE_ZERO * .85); if (P.en < 12) P.en = 12; P.wakeG = 120; }
   if (msg) toast(msg);
 }
 

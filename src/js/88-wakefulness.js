@@ -13,7 +13,8 @@ const enCap = () => P ? Math.max(0, 100 * (1 - (P.awake || 0) / AWAKE_ZERO)) : 1
 function wakeTick(gm) {
     if (!P || mode !== 'play') return;
     if (P.sleep) { P.awake = Math.max(0, (P.awake || 0) - gm * 4); P._capMsg = 0; return; }
-    P.awake = (P.awake || 0) + gm;
+    P.awake = Math.min(AWAKE_ZERO, (P.awake || 0) + gm);                      // дальше нуля потолок не падает: иначе сон не успевал бы «вернуть» потолок
+    if (P.wakeG > 0) P.wakeG = Math.max(0, P.wakeG - gm);                      // только что проснулся: пару часов на ногах держится в любом случае
     const cap = enCap();
     // отдых: бодрость растёт до потолка; дошла — встаёт сам
     const A = P.act;
@@ -22,9 +23,12 @@ function wakeTick(gm) {
       A.t = A.dur * Math.min(.999, A.e0 >= cap ? 1 : (P.en - A.e0) / (cap - A.e0));
       if (P.en >= cap - .05) { P.act = null; toast(cap >= 99 ? 'Отдохнул. Бодрость полная' : 'Отдохнул сколько мог. Дальше поможет только сон — ' + Math.round(cap) + '% предел'); }
     }
+    // за час-полтора до отключки — предупреждение: найди кровать, пока не уснул посреди улицы
+    if (!(P.wakeG > 0) && (cap < 6 || P.en < 8) && !P._koMsg && !P.car) { P._koMsg = 1; toast('Глаза слипаются: скоро уснёшь прямо на месте. Найди кровать или запрись'); if (typeof vib === 'function') vib(60); }
+    if (cap > 15 && P.en > 15) P._koMsg = 0;
     if (cap < 50 && !P._capMsg) { P._capMsg = 1; toast('Ты давно не спал: без сна бодрость больше не поднимется выше ' + Math.round(cap) + '%'); }
     // отключка: потолок 0 или бодрость кончилась — засыпает прямо здесь
-    if ((cap <= 0 || P.en <= 0) && !P.car && !(typeof TUT !== 'undefined' && TUT.on)) {
+    if ((cap <= 0 || P.en <= 0) && !(P.wakeG > 0) && !P.car && !(typeof TUT !== 'undefined' && TUT.on)) {
       P.en = Math.max(0, P.en); P.act = null; P.sleep = true; P.bed = null; joy.id = null; joy.x = joy.y = 0; $('stick').hidden = true;
       $('sleep').hidden = false; $('ctrl').hidden = true; if (typeof sleepAlarmUI === 'function') sleepAlarmUI();
       toast('Глаза закрылись сами. Ты вырубился прямо здесь'); if (typeof logEv === 'function') logEv('Не выдержал без сна и уснул прямо на месте');
@@ -39,6 +43,8 @@ function wakeTick(gm) {
   });
 }
 
+addMoodles(m => { if (P && !P.sleep && !P.car && (enCap() < 6 || P.en < 8)) m.push(['Валишься с ног', 'crit']); },
+  m => { if (P && !P.sleep && !P.car && (enCap() < 6 || P.en < 8)) m.push('Валишься с ног: ещё немного — и уснёшь там, где стоишь. Ляг в кровать, пока ты в безопасности'); });
 // ---- «Отдохнуть» у стула, кресла, дивана, кровати ----
 function restFurnNear() {
   let best = null, bd = 1.5;
