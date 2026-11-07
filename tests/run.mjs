@@ -495,6 +495,33 @@ const ic = await D(`(() => { const p = props.find(p => p.type === 'icont' && p.l
   return {a1:a1 && a1.kind, a2:a2 && a2.kind, open:!p.locked, act:P.act && P.act.kind}; })()`);
 check('запертый контейнер: без лома нельзя, ломом — вскрыть и обыскать', ic.skip || (ic.a1 === 'icpry' && ic.a2 === 'icpry' && ic.open && ic.act === 'search'), ic);
 
+console.log('Добыча');
+const badLoot = await D(`Object.entries(CONT).flatMap(([k, c]) => (c.loot || []).filter(i => !ITEMS[i]).map(i => k + ':' + i))`);
+check('в добыче мебели и контейнеров только существующие вещи', !badLoot.length, badLoot);
+
+console.log('Телепередачи и кассеты VHS');
+await fresh();
+const tvx = await D(`(() => { P.sleep = false; P.awake = 0; P.en = 100; zs.length = 0; powerOffAt = 1e12; const f = furns.filter(f => f.type === 'tv').sort((a, b) => Math.hypot(a.cx - P.x, a.cy - P.y) - Math.hypot(b.cx - P.x, b.cy - P.y))[0];
+  P.x = f.cx + .9; P.y = f.cy + .9; P.skills = {}; P.bored = 0; const d0 = Math.floor(gameMin / 1440) * 1440;
+  tvOn(f); TVS.ch = 2; const sk = []; for (let m = 10 * 60; m < 11 * 60; m += 1) { gameMin = d0 + m; update(.016); }
+  const xp = P.skills.cook || 0, sub = TVS.sub && TVS.sub.who;
+  gameMin = d0 + 12 * 60; TVS.key = ''; update(.016); const gap = tvNow(2, gameMin).gap;
+  P.skills.cook = 30; const x2 = P.skills.cook; for (let m = 10 * 60; m < 10 * 60 + 30; m += 1) { gameMin = d0 + 1440 + m; update(.016); }
+  const capped = P.skills.cook === x2;
+  gameMin = d0 + 8 * 1440 + 10 * 60; const ended = tvNow(2, gameMin).ended;
+  return {xp, sub, gap, capped, ended, f:!!TVS.f}; })()`);
+check('эфир: «Вкусно и просто» в 10:00 учит кулинарии', tvx.xp > 2 && tvx.xp < 4 && tvx.sub === 'Шеф Аркадий', tvx);
+check('эфир: перерыв между передачами, выше 3-го уровня не учит, через неделю — конец', tvx.gap && tvx.capped && tvx.ended, tvx);
+const vh = await D(`(() => { P.sleep = false; P.awake = 0; P.en = 100; gameMin = Math.floor(gameMin / 1440) * 1440 - 8 * 1440 + 10 * 60; if (!TVS.f) tvOn(furns.filter(f => f.type === 'tv').sort((a, b) => Math.hypot(a.cx - P.x, a.cy - P.y) - Math.hypot(b.cx - P.x, b.cy - P.y))[0]); const f = TVS.f; P.skills = {}; const t = mkItem('vhs_mech'); P.inv.push(t); tvInsert(t);
+  for (let k = 0; k < 400 && TVS.vhs; k++) update(.25);
+  const xp1 = P.skills.mech || 0, done = t.done; tvInsert(t); for (let k = 0; k < 400 && TVS.vhs; k++) update(.25);
+  return {xp1, done, again:(P.skills.mech || 0) - xp1}; })()`);
+check('кассета: опыт механики один раз, повтор — без опыта', vh.xp1 > 5 && vh.done && vh.again === 0, vh);
+const pw = await D(`(() => { P.sleep = false; P.awake = 0; P.en = 100; const po = powerOffAt; powerOffAt = 0; const g = gens; gens = []; const was = !!TVS.f, pwr = powerOn(); update(.016); const off = !TVS.f; gens = g; powerOffAt = po; return {was, pwr, off}; })()`);
+check('без электричества телевизор гаснет', pw.was && !pw.pwr && pw.off, pw);
+const far = await D(`(() => { P.sleep = false; P.awake = 0; P.en = 100; const f = furns.find(f => f.type === 'tv'); tvOn(f); TVS.ch = 2; P.skills = {}; P.x = f.cx + 15; P.y = f.cy; const d0 = Math.floor(gameMin / 1440) * 1440; gameMin = d0 + 10 * 60; TVS.key = ''; for (let m = 0; m < 30; m++) { gameMin++; update(.016); } tvOff(); return P.skills.cook || 0; })()`);
+check('далеко от телевизора опыта нет', far === 0, far);
+
 console.log('Живая игра 15 секунд');
 await fresh("['coward']");
 await D("P.weapon = mkItem('shotgun'); P.weapon.mag = 2; P.inv.push(mkItem('shells')); gameMin += 14 * 60; for (let i = 0; i < 25; i++) spawnZombie(4, false);");

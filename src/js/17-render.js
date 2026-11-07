@@ -272,6 +272,7 @@ function render(dt) {
       mainCtx.fillStyle = '#ddd6c6'; mainCtx.fillText(label, lx0, ly0); }
     }
   }
+  drawTvSubs();                                                               // реплики над включённым телевизором (98-tv-shows)
   if (frameNo % 60 === 0) evict();
 }
 let frameNo = 0;

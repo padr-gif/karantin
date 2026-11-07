@@ -180,7 +180,7 @@ function getAction(excl) {
     else if (f.type === 'toilet') { if (waterOn()) f.w = 4; a = {kind:'toilet', label:f.w >= 1 ? 'попить из бачка (' + Math.floor(f.w) + ')' : 'бачок пуст', f}; }
     else if (f.type === 'bath') a = {kind:'sink', label:'Попить из крана', f};
     else if (f.type === 'sofa') a = {kind:'sleep', label:'Прилечь на диван', f};
-    else if (f.type === 'tv') a = {kind:'tv', label:poweredAt(f.cx, f.cy) ? 'смотреть новости' : 'нет электричества', f};
+    else if (f.type === 'tv') a = {kind:'tv', label:!poweredAt(f.cx, f.cy) ? 'нет электричества' : TVS.f === f ? 'идёт ' + tvNowLabel() : 'включить', f};   // 98-tv-shows
     else if (CONT[f.type].loot) a = f.searched ? {kind:'open', label:'Открыть', f} : {kind:'search', label:'Обыскать', f};
     if (a) { best = a; bd = d; }
   }
@@ -305,7 +305,7 @@ function doActionBase(a0) {
   else if (a.kind === 'fish') P.act = {kind:'fish', t:0, dur:10 + rng() * 6};
   else if (a.kind === 'pond') { let used = 0; while (P.hyd < 90) { P.hyd = Math.min(100, P.hyd + 30); used++; } if (used && rng() < .35) { P.pois = Math.max(P.pois, 100); toast('Сырая вода из водоёма. Живот крутит'); } let n = 0; for (const it of P.inv) if (it.id === 'bottle') { it.id = 'waterD'; n++; } SFX.drink(); toast((used ? 'Попил сырой воды' : 'Пить не хочется') + (n ? `, набрал ${n} бут.` : '')); }
   else if (a.kind === 'toilet') { const t = a.f; if (t.w < 1) { toast('Бачок пуст'); return; } let used = 0; while (P.hyd < 90 && t.w >= 1) { P.hyd = Math.min(100, P.hyd + 25); t.w -= 1; used++; } for (const it of P.inv) { if (t.w < 1) break; if (it.id === 'bottle') { it.id = 'water'; t.w -= 1; } else if (ITEMS[it.id].kind === 'canteen') while ((it.w || 0) < wcap(it) && t.w >= 1) { it.w = (it.w || 0) + 1; t.w -= 1; } } SFX.drink(); toast(used ? 'Попил из бачка. Вода чистая' : 'Набрал воды из бачка'); renderInv(); }
-  else if (a.kind === 'tv') { if (!poweredAt(a.f.cx, a.f.cy)) { toast('Без электричества телевизор не включить'); return; } SFX.radio(); P.bored = Math.max(0, (P.bored || 0) - 25); openPanel('radio', {it:{ch:100}, tv:true, news:radioNews()}); }
+  else if (a.kind === 'tv') { if (!poweredAt(a.f.cx, a.f.cy)) { toast('Без электричества телевизор не включить'); return; } tvOn(a.f); openPanel('radio', {tv:true, f:a.f, news:radioNews()}); }   // работает фоном: передачи, кассеты (98-tv-shows)
   else if (a.kind === 'trapget') { if (invFull()) { toast('Слишком тяжело — не унести'); return; } const t = a.f, i = props.indexOf(t) + 1; for (let q = 0; q < NT; q++) if (propAt[q] === i) propAt[q] = 0; t.dead = true; traps = traps.filter(x => x !== t); P.inv.push(mkItem('trap')); toast('Капкан в рюкзаке'); }
   else if (a.kind === 'drive') enterCar(a.f);
   else if (a.kind === 'carfuel') { const c = a.f; for (const j of fuelCans()) { const m = Math.min(j.fuel, 100 - c.fuel); j.fuel -= m; c.fuel += m; if (c.fuel >= 100) break; } SFX.drink(); toast('Бак машины: ' + Math.round(c.fuel) + '%'); }

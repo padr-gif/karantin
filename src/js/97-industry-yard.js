@@ -6,7 +6,7 @@
 // новые вещи добавляются в конец props — номера машин и баков в сохранении не сдвигаются.
 // Контейнер с дверью можно обыскать (лут — CONT.icont); часть заперта — вскрыть ломом, это громко.
 let INDY_BLOCKS = [];                                                         // дворы района: {x0,y0,x1,y1,role} (заполняет genIndustrial)
-Object.assign(CONT, {icont:{name:'Морской контейнер', loot:['plank', 'plank', 'nails', 'scrap', 'scrap', 'pipe', 'rope', 'tape', 'wire', 'jerrycan', 'beans', 'noodles', 'water', 'water', 'battery', 'cigs', 'rag', 'sledge', 'crowbar', 'milbag', 'matches'], n:[2, 5], cap:12}});
+Object.assign(CONT, {icont:{name:'Морской контейнер', loot:['plank', 'plank', 'nails', 'scrap', 'scrap', 'pipe', 'tape', 'wire', 'cansalarm', 'jerrycan', 'beans', 'noodles', 'water', 'water', 'battery', 'cigs', 'rag', 'sledge', 'crowbar', 'milbag', 'matches'], n:[2, 5], cap:12}});
 const ICONT_COL = [[164, 62, 44], [46, 92, 140], [58, 112, 74], [196, 140, 48], [120, 124, 128], [142, 52, 60]];
 const YARD_SOLID = (x, y, k) => [x + k, y + k, x + 1 - k, y + 1 - k];
 

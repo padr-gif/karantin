@@ -170,22 +170,26 @@ function mediaRadio(body) {
 // Четыре канала: новости с бегущей строкой, погода, настроечная таблица «вещание прервано» и пустой канал с «снегом».
 // Новости листаются сами, тап по экрану — следующий сюжет.
 function mediaTV(body) {
-  $('pnTitle').textContent = 'Телевизор'; $('pnSub').textContent = 'ГТВ · городское телевидение';
-  if (!panel.ch) panel.ch = 1;
+  $('pnTitle').textContent = 'Телевизор'; $('pnSub').textContent = 'смотри рядом — растёт навык';
+  panel.ch = panel.f && TVS.f === panel.f ? TVS.ch : panel.ch || 1;          // включённый телевизор помнит канал (98-tv-shows)
   if (panel.si == null) panel.si = 0;
   const dev = mk('div', 'tv'), scr = mk('div', 'tv-scr ch' + panel.ch), inn = mk('div', 'tv-in'), tok = MEDIA.tok;
   scr.appendChild(inn); scr.appendChild(mk('div', 'tv-fx'));
   const ctl = mk('div', 'tv-ctl');
   ctl.appendChild(mk('div', 'tv-brand', 'ЭФИР-4'));
   const chs = mk('div', 'tv-chs');
-  for (const [n, name] of [[1, 'Новости'], [2, 'Погода'], [3, 'ГТВ-2'], [4, 'ТВ-4']]) {
-    const b = btn(String(n), () => { if (panel.ch === n) return; panel.ch = n; SFX.tvSwitch(); renderPanel(); }, 'tv-chb' + (panel.ch === n ? ' on' : ''));
+  for (const [n, name] of TV_CH) {
+    const b = btn(String(n), () => { if (panel.ch === n) return; panel.ch = n; if (TVS.f === panel.f) { TVS.ch = n; TVS.key = ''; } SFX.tvSwitch(); renderPanel(); }, 'tv-chb' + (panel.ch === n ? ' on' : ''));
     b.title = name; b.setAttribute('aria-label', 'Канал ' + n + ': ' + name); chs.appendChild(b);
   }
   ctl.appendChild(chs);
+  if (panel.f) { const pw = btn('Выкл', () => { tvOff(); closePanel(); }, 'tv-pw'); pw.title = 'Выключить телевизор'; ctl.appendChild(pw); }
   const kn = mk('div', 'tv-knobs'); kn.appendChild(mk('i', 'tv-knob')); kn.appendChild(mk('i', 'tv-knob')); ctl.appendChild(kn);
   ctl.appendChild(mk('i', 'tv-led'));
   dev.appendChild(scr); dev.appendChild(ctl); body.appendChild(dev);
+  if (panel.ch === 2 || panel.ch === 3) tvShowScreen(inn, panel.ch, tok);
+  else if (panel.ch === 4) tvVideoScreen(inn);
+  if (panel.ch !== 4) body.appendChild(tvGuide(panel.ch));
   scr.classList.add('tvflash'); setTimeout(() => scr.classList.remove('tvflash'), 180);   // переключение — вспышка помех
 
   if (panel.ch === 1) {
@@ -211,27 +215,15 @@ function mediaTV(body) {
     scr.addEventListener('click', () => { panel.si++; SFX.ui(); story(); });
     const t = setInterval(() => { if (!mediaAlive(tok, 'radio')) { clearInterval(t); return; } panel.si++; story(); }, 9000);
     MEDIA.timers.push(t);
-  } else if (panel.ch === 2) {
-    const tC = Math.round(outsideTemp()), wet = rainTarget || rain > .5, snow = (world.snow || 0) > .25 || (wet && tC <= 0);
-    const hrs = Math.max(1, Math.round(weatherTimer / 60));
-    inn.appendChild(mk('div', 'tvw-head', 'ПОГОДА · ' + dateStr(gameMin).toUpperCase()));
-    const big = mk('div', 'tvw-big'); big.appendChild(svgIc(snow ? 'i-snow' : wet ? 'i-rain' : ((gameMin % 1440) / 60 > 6 && (gameMin % 1440) / 60 < 20 ? 'i-sun' : 'i-moon')));
-    big.appendChild(mk('span', 'tvw-t', (tC > 0 ? '+' : '') + tC + '°'));
-    big.appendChild(mk('span', 'tvw-w', snow ? 'снег' : wet ? 'дождь' : 'без осадков'));
-    inn.appendChild(big);
-    const rows = mk('div', 'tvw-rows');
-    const night = tC - 5;
-    for (const [a, b] of [['Ночью', (night > 0 ? '+' : '') + night + '°' + (night < 1 ? ', заморозки' : '')], ['Осадки', wet ? `ещё около ${hrs} ч` : `не раньше чем через ${hrs} ч`], ['Сезон', seasonName()]]) {
-      const r = mk('div', 'tvw-row'); r.appendChild(mk('span', '', a)); r.appendChild(mk('b', '', b)); rows.appendChild(r);
-    }
-    inn.appendChild(rows);
-    inn.appendChild(mk('div', 'tvw-foot', wet ? 'Выставьте бочки и вёдра под водостоки' : 'Наполните ёмкости заранее'));
-  } else if (panel.ch === 3) {
-    const bars = mk('div', 'tvb-bars'); for (let k = 0; k < 7; k++) bars.appendChild(mk('i')); inn.appendChild(bars);
-    const box = mk('div', 'tvb-box'); box.appendChild(mk('b', '', 'ГТВ-2')); box.appendChild(mk('span', '', 'Вещание прервано по техническим причинам')); box.appendChild(mk('small', '', 'Оставайтесь дома · ' + hhmm(gameMin)));
-    inn.appendChild(box);
-    SFX.tvTone();
-  } else {
+  }
+}
+// настроечная таблица и «снег» — пустой эфир (98-tv-shows: вещание кончилось)
+function tvBars(inn, name, text) {
+  const bars = mk('div', 'tvb-bars'); for (let k = 0; k < 7; k++) bars.appendChild(mk('i')); inn.appendChild(bars);
+  const box = mk('div', 'tvb-box'); box.appendChild(mk('b', '', name)); box.appendChild(mk('span', '', text)); box.appendChild(mk('small', '', 'Оставайтесь дома · ' + hhmm(gameMin)));
+  inn.appendChild(box); SFX.tvTone();
+}
+function tvSnow(inn, tok) {
     const c = mk('canvas', 'tvs-snow'); c.width = 160; c.height = 90; inn.appendChild(c); inn.appendChild(mk('div', 'tvs-lbl', 'НЕТ СИГНАЛА'));
     const g = c.getContext('2d'), img = g.createImageData(160, 90);
     let last = 0;
@@ -244,7 +236,6 @@ function mediaTV(body) {
     };
     if (reduceMotion) draw(0); else MEDIA.raf = requestAnimationFrame(draw);
     SFX.tvSnow();
-  }
 }
 
 // =============== газета ===============

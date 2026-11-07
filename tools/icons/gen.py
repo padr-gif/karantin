@@ -750,6 +750,20 @@ def _(i): i.ball(6, 8, 25, 26, '#b03a30'); i.rect(5, 19, 26, 27, (0, 0, 0, 0)); 
 @icon('balacl')
 def _(i): i.ball(6, 3, 25, 29, '#26262a'); i.box(10, 12, 21, 17, (200, 160, 130, 255)); i.rect(12, 14, 13, 15, '#26262a'); i.rect(18, 14, 19, 15, '#26262a')
 
+# ---- кассеты VHS (98-tv-shows): чёрный корпус, окошко с катушками, наклейка цвета навыка ----
+def vhs(i, label, mark=None):
+    i.box(3, 8, 28, 24, '#26272b')
+    i.rect(5, 10, 26, 15, label); i.rect(5, 10, 26, 10, sh(col(label), 1.25)); i.rect(7, 12, 21, 12, (240, 236, 224, 255)); i.rect(7, 14, 17, 14, (240, 236, 224, 255))
+    i.rect(9, 17, 22, 21, (54, 58, 64, 255)); i.ball(10, 17, 14, 21, (210, 200, 180, 255), hl=False); i.ball(17, 17, 21, 21, (210, 200, 180, 255), hl=False)
+    i.rect(11, 18, 12, 19, (40, 40, 44, 255)); i.rect(18, 18, 19, 19, (40, 40, 44, 255))
+    if mark: mark(i)
+for _k, _c in (('cook', '#c0392b'), ('carp', '#d9822b'), ('farm', '#4f8a3a'), ('tail', '#8e4f8f'), ('mech', '#1f6f8b'), ('fight', '#2c3e7a'), ('fit', '#2a9d8f')):
+    icon('vhs_' + _k)(lambda i, c=_c: vhs(i, c))
+@icon('vhs_med')
+def _(i): vhs(i, '#e8e2d6', mark=lambda i: (i.rect(23, 11, 25, 14, '#c0302a'), i.rect(22, 12, 26, 13, '#c0302a')))
+@icon('vhs_film')
+def _(i): vhs(i, '#e8b030', mark=lambda i: (i.rect(23, 10, 24, 15, (30, 30, 30, 255)), i.rect(22, 11, 25, 11, (30, 30, 30, 255)), i.rect(22, 14, 25, 14, (30, 30, 30, 255))))
+
 def build(out_png, out_json, preview=None):
     names = list(ICONS)
     cols, S = 8, 96
