@@ -461,11 +461,39 @@ check('газета: свой выпуск, остаётся в рюкзаке, 
 const mg = await D(`(() => { P.inv.length = 0; P.readMag = {}; const m = mkItem('book_carp'); P.inv.push(m); readMag(0);
   const r = {open:panel && panel.kind === 'mag', cover:!!$('pnBody').querySelector('.mg-cov'), boost:!!(P.boost && P.boost.carp)}; closePanel(); return r; })()`);
 check('журнал навыка: обложка и что вынес', mg.open && mg.cover && mg.boost, mg);
-const nt = await D(`(() => { const out = {}; for (const id of ['a3', 'p2', 'l1', 'r1']) { const it = mkItem('note'); it.story = id; it.text = storyNote(id).text; openPanel('note', {it}); out[id] = $('pnBody').querySelector('.nt').className; closePanel(); }
-  openPanel('note', {it:{text:NOTES[0]}}); out.plain = $('pnBody').querySelector('.nt').className; closePanel(); return out; })()`);
+const nt = await D(`(() => { const out = {}; for (const id of ['a3', 'p2', 'l1', 'r1']) { const it = mkItem('note'); it.story = id; it.text = storyNote(id).text; openPanel('note', {it}); out[id] = $('pnBody').querySelector('.notep').className; closePanel(); }
+  openPanel('note', {it:{text:NOTES[0]}}); out.plain = $('pnBody').querySelector('.notep').className; closePanel(); return out; })()`);
 check('записки: у сюжетных своя бумага', nt.a3.includes('nt-fax') && nt.p2.includes('nt-phone') && nt.l1.includes('nt-card') && nt.r1.includes('nt-flyer') && nt.plain.includes('nt-hand'), nt);
 const nv = await D(`(() => { P.inv.length = 0; const n = mkItem('novel'); P.inv.push(n); useItem(null, 0); const r = {open:panel && panel.kind === 'novel', gone:!P.inv.includes(n)}; closePanel(); return r; })()`);
 check('роман: разворот книги', nv.open && nv.gone, nv);
+
+console.log('Уведомления, печать текста, двор промзоны');
+await fresh();
+const tst = await D(`(() => { toast('Мимо! Руки трясутся от страха'); const t = [...document.querySelectorAll('#toasts .ntf')].pop(); return Math.round(t.getBoundingClientRect().height); })()`);
+check('уведомление в одну строку — компактное', tst < 44, tst);
+const tw = await D(`(async () => { openPanel('radio', {it:{ch:100}, tv:true, news:radioNews()}); const msg = $('pnBody').querySelector('.tvn-txt'), scr = $('pnBody').querySelector('.tv-scr');
+  for (let k = 0; k < 5; k++) { scr.click(); await new Promise(r => setTimeout(r, 60)); }
+  await new Promise(r => setTimeout(r, 2500)); const want = panel.news[panel.si % panel.news.length][1], got = msg.textContent; closePanel(); return {ok:got === want, got:got.slice(0, 40), want:want.slice(0, 40)}; })()`);
+check('телевизор: быстрое листание не смешивает тексты', tw.ok, tw);
+const yd = await D(`(() => {
+  for (let r = 1; r < 500; r++) { world.root = r; for (const s of ['n','e','s','w']) { const [ox, oy] = SIDE_D[s]; if (distType(ox, oy) === 'industrial') { doTravel(s, ox, oy); r = 1e9; break; } } }
+  const Y = /^(icseg|icont|ypal|ypipe|ydrum|yspool|ytire|yfork)$/, n = props.filter(p => Y.test(p.type)).length;
+  // в каждом дворе цеха и складов: все свободные клетки бетона достижимы от ворот
+  let pockets = 0;
+  for (const b of INDY_BLOCKS) { if (b.role !== 'factory' && b.role !== 'depot') continue;
+    const gx = (b.x0 + b.x1) >> 1, inB = (x, y) => x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1;
+    const open = (x, y) => inB(x, y) && map[y * MW + x] === WALK && !furn[y * MW + x] && !(propAt[y * MW + x] && props[propAt[y * MW + x] - 1].solid);
+    const seen = new Set(), q = [[gx, b.y0]]; seen.add(b.y0 * MW + gx);
+    while (q.length) { const [x, y] = q.pop(); for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) { const nx = x + dx, ny = y + dy, i = ny * MW + nx; if (!seen.has(i) && open(nx, ny)) { seen.add(i); q.push([nx, ny]); } } }
+    for (let y = b.y0; y <= b.y1; y++) for (let x = b.x0; x <= b.x1; x++) if (open(x, y) && !seen.has(y * MW + x)) pockets++; }
+  const c = props.find(p => p.type === 'icont');
+  return {type:curDType(), n, pockets, door:!!c}; })()`);
+check('промзона: двор обставлен, тупиков нет', yd.type === 'industrial' && yd.n > 40 && yd.pockets === 0 && yd.door, yd);
+const ic = await D(`(() => { const p = props.find(p => p.type === 'icont' && p.locked); if (!p) return {skip:true};
+  P.inv = P.inv.filter(i => i.id !== 'crowbar'); P.x = p.cx + (p.ax === 'x' ? 1.1 : 0); P.y = p.cy + (p.ax === 'y' ? 1.1 : 0);
+  const a1 = getAction(); P.inv.push(mkItem('crowbar')); const a2 = getAction(); doAction(a2);
+  return {a1:a1 && a1.kind, a2:a2 && a2.kind, open:!p.locked, act:P.act && P.act.kind}; })()`);
+check('запертый контейнер: без лома нельзя, ломом — вскрыть и обыскать', ic.skip || (ic.a1 === 'icpry' && ic.a2 === 'icpry' && ic.open && ic.act === 'search'), ic);
 
 console.log('Живая игра 15 секунд');
 await fresh("['coward']");

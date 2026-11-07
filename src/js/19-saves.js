@@ -74,7 +74,7 @@ function serializeCore() {
     piles:piles.filter(p => p.items.length).map(p => [r2(p.x), r2(p.y), p.items]),
     traps:traps.map(t => [t.cx, t.cy, t.armed ? 1 : 0]),
     gens:gens.map(g => [g.cx, g.cy, r2(g.fuel), g.on ? 1 : 0]), beds:beds.map(b => [b.cx, b.cy, b.crop, r2(b.g), r2(b.w), r2(b.dry)]),
-    drops:airdrops.map(a => [a.tx, a.ty, a.landed && a.f ? a.f.items : null, a.landed && a.f && a.f.searched ? 1 : 0]), heliAt:world.heliAt, hordeAt:world.hordeAt, marks:world.marks || [], storm:!!world.storm, mut:!!world.mut, pbin:props.map((p, k) => (p.type === 'bin' || p.type === 'mail') && p.searched ? [k, p.items || []] : null).filter(Boolean), doff:world.dayOff || 0, bcd:world.bcd || {}, tcd:world.tcd || {}, snow:r2(world.snow || 0), snowMsg:!!world.snowMsg,
+    drops:airdrops.map(a => [a.tx, a.ty, a.landed && a.f ? a.f.items : null, a.landed && a.f && a.f.searched ? 1 : 0]), heliAt:world.heliAt, hordeAt:world.hordeAt, marks:world.marks || [], storm:!!world.storm, mut:!!world.mut, pbin:props.map((p, k) => (p.type === 'bin' || p.type === 'mail' || p.type === 'icont') && p.searched ? [k, p.items || []] : null).filter(Boolean), doff:world.dayOff || 0, bcd:world.bcd || {}, tcd:world.tcd || {}, snow:r2(world.snow || 0), snowMsg:!!world.snowMsg,
     moved:furns.map((f, k) => f.moved ? [k, f.x, f.y, r2(f.cx), r2(f.cy), f.r.map(r2)] : null).filter(Boolean),
     seen:packBits(seen)};
 }

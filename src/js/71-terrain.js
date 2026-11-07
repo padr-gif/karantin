@@ -302,6 +302,7 @@ function genIndustrial() {
   const blocks = [];
   for (let bj = 0; bj < 2; bj++) for (let bi = 0; bi < 2; bi++) blocks.push({x0:R[bi] + RW + 2, x1:R[bi + 1] - 3, y0:R[bj] + RW + 2, y1:R[bj + 1] - 3});
   const roles = shuffle(['depot', 'factory', 'garages', 'homes']);
+  INDY_BLOCKS = blocks.map((b, n) => Object.assign({role:roles[n]}, b));          // двор обставит dressYards (97-industry-yard)
   blocks.forEach((b, n) => {
     const role = roles[n];
     if (role !== 'homes') carve(b.x0, b.y0, b.x1, b.y1, WALK);                        // бетонный двор
@@ -356,6 +357,7 @@ function genIndustrial() {
 // построить карту района по его типу (curDType): город нового вида (world.gen ≥ 2), старый город, деревня, лес, промзона
 function generate() {
   ROADSX = ROADSY = null; curAct = null;                                    // прежнее действие ссылается на старую карту
+  INDY_BLOCKS = [];
   if (genTutMap) { setWorldSize(TUT_MW); world.dtype = 'tut'; GCFG = {}; genTutorial(); growFurniture(); return; }   // обучение: один двор за забором (86-tut-map)
   const t = curDType();
   setWorldSize(world.gen >= 3 && t === 'town' ? (world.townN || 256) : 184);   // новый городок — большая карта (v72: 320, старые сохранения — 256), остальные районы как были
@@ -377,6 +379,7 @@ function generate() {
     for (let t2 = 0; t2 < 400; t2++) { const x = ri(30, 144), y = ri(30, 144); if (!rectFree(x, y, 9, 8, 1)) continue; const H = bld(x, y, 9, 8, 'house'); pathFromDoor(H); for (let i = 0; i < NT; i++) if (map[i] === WALL) { const xx = i % MW, yy = (i / MW) | 0; wpC[i] = pieces(xx, yy, HWC); wpV[i] = pieces(xx, yy, HWV); } break; }
   }
   if (world.gen >= 2) growFurniture();                                          // деревня, лес, промзона: крупная мебель и вещи в комнатах, как в городе
+  dressYards();                                                                 // промзона: контейнеры, поддоны, трубы во дворах (последними — номера прежних вещей не сдвигаются)
 }
 // после постройки нового района: дождевые бочки в деревне, мусор и т. п. (только при первом заходе)
 function postGen(t) {

@@ -1337,6 +1337,7 @@ body.invglass>*:not(#game):not(#vig):not(#panel):not(#toasts):not(svg){visibilit
 .rdo-bars i{width:3px;background:rgba(255,201,112,.2);border-radius:1px}
 .rdo-bars i:nth-child(1){height:4px}.rdo-bars i:nth-child(2){height:6px}.rdo-bars i:nth-child(3){height:8px}.rdo-bars i:nth-child(4){height:10px}.rdo-bars i:nth-child(5){height:12px}
 .rdo-bars[data-n="1"] i:nth-child(-n+1),.rdo-bars[data-n="2"] i:nth-child(-n+2),.rdo-bars[data-n="3"] i:nth-child(-n+3),.rdo-bars[data-n="4"] i:nth-child(-n+4),.rdo-bars[data-n="5"] i{background:#ffc970}
+.tw-rest{visibility:hidden}
 .rdo-txt{font:400 13.5px/1.45 var(--f-mono);white-space:pre-wrap;text-shadow:0 0 5px rgba(255,170,60,.35);cursor:pointer}
 .rdo-disp.noise .rdo-txt{color:rgba(255,201,112,.45);letter-spacing:.12em;animation:rdoJit .18s steps(2) infinite}
 .rdo-disp.quiet .rdo-txt{color:rgba(255,201,112,.55);font-style:italic}
@@ -1360,7 +1361,7 @@ body.invglass>*:not(#game):not(#vig):not(#panel):not(#toasts):not(svg){visibilit
 /* --- телевизор: кинескоп, развёртка, бегущая строка --- */
 .tv{display:grid;grid-template-columns:1fr 70px;gap:12px;padding:12px;border-radius:16px;background:linear-gradient(180deg,#3b3f42,#24272a);box-shadow:inset 0 2px 0 rgba(255,255,255,.1),0 10px 26px rgba(0,0,0,.45)}
 .tv-scr{position:relative;aspect-ratio:4/3;max-height:min(58vh,330px);width:100%;justify-self:center;border-radius:22px/18px;overflow:hidden;background:#0a1210;box-shadow:inset 0 0 0 6px #121416,inset 0 0 40px rgba(0,0,0,.8);cursor:pointer;color:#e8f3ec}
-.tv-in{position:absolute;inset:6px;display:flex;flex-direction:column;padding:10px 12px 0;font-family:var(--f-body)}
+.tv-in{position:absolute;inset:6px;display:flex;flex-direction:column;padding:10px 12px 0;font-family:var(--f-body);overflow:hidden}
 .tv-fx{position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0 1px,transparent 1px 3px),radial-gradient(ellipse at 50% 50%,transparent 55%,rgba(0,0,0,.55) 100%);animation:tvFl 4s infinite}
 @keyframes tvFl{0%,100%{opacity:1}48%{opacity:.92}50%{opacity:.8}52%{opacity:.95}}
 .tv-scr.tvflash .tv-in{filter:brightness(2.2) contrast(.5);transform:scaleY(.94)}
@@ -1378,7 +1379,8 @@ body.invglass>*:not(#game):not(#vig):not(#panel):not(#toasts):not(svg){visibilit
 .tvn-live i{width:6px;height:6px;border-radius:50%;background:#fff;animation:ledBl 1.2s steps(2) infinite}
 .tvn-clock{margin-left:auto;font:700 13px var(--f-mono);color:#cfe7da}
 .tvn-rub{margin-top:auto;font:700 12px var(--f-display);letter-spacing:.1em;text-transform:uppercase;color:#ffd166}
-.tvn-txt{font:700 clamp(14px,2.3vw,19px)/1.3 var(--f-body);text-shadow:0 1px 2px #000;min-height:3.9em;margin:3px 0 6px}
+.tvn-txt{font:700 clamp(14px,2.3vw,19px)/1.3 var(--f-body);text-shadow:0 1px 2px #000;margin:3px 0 6px;flex:0 1 auto;min-height:0;overflow:auto;scrollbar-width:none}
+.tvn-top,.tvn-rub,.tvn-dots,.tvn-tick{flex:none}
 .tvn-dots{display:flex;gap:4px;margin-bottom:8px}.tvn-dots i{width:16px;height:3px;border-radius:2px;background:rgba(255,255,255,.25)}.tvn-dots i.on{background:#ffd166}
 .tvn-tick{display:flex;align-items:stretch;margin:0 -12px;height:26px;background:#0d2d57;border-top:2px solid #c6271d;overflow:hidden}
 .tvn-tick b{flex:none;display:grid;place-items:center;padding:0 9px;background:#c6271d;font:700 12px var(--f-display);letter-spacing:.08em}
@@ -1441,8 +1443,8 @@ body.invglass>*:not(#game):not(#vig):not(#panel):not(#toasts):not(svg){visibilit
 .bk-n{margin-top:auto;text-align:center;font:12px var(--f-serif);color:#8a7a5c}
 @media (max-width:520px){.bk{grid-template-columns:1fr}.bk-pg{min-height:0}}
 /* --- записки --- */
-.nt{position:relative;margin:4px auto;max-width:560px;padding:20px 22px 22px;color:#23324f;box-shadow:0 8px 22px rgba(0,0,0,.4)}
-.nt p{margin:0 0 10px}
+.notep{position:relative;margin:4px auto;max-width:560px;padding:20px 22px 22px;color:#23324f;box-shadow:0 8px 22px rgba(0,0,0,.4)}
+.notep p{margin:0 0 10px}
 .nt-hand,.nt-grid,.nt-fridge,.nt-kid,.nt-list{font:500 23px/1.25 var(--f-hand)}
 .nt-hand{background:#f1ead8;background-image:linear-gradient(90deg,transparent 30px,rgba(200,60,60,.45) 30px 31.5px,transparent 31.5px),repeating-linear-gradient(180deg,transparent 0 28px,rgba(70,110,170,.32) 28px 29px);background-position:0 0,0 12px;padding-left:42px;transform:rotate(-.8deg);
   clip-path:polygon(0 0,100% 0,100% 96%,96% 100%,90% 97%,83% 100%,74% 97%,66% 100%,57% 97%,49% 100%,40% 97%,31% 100%,22% 97%,13% 100%,5% 97%,0 100%)}

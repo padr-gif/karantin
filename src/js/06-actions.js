@@ -186,7 +186,7 @@ function getAction(excl) {
   }
   for (const p of props) {
     if (Math.abs(p.cx - P.x) > 4 || Math.abs(p.cy - P.y) > 4) continue;
-    if (p.type !== 'car' && p.type !== 'barrel' && p.type !== 'gen' && p.type !== 'pump' && p.type !== 'gbed' && p.type !== 'trap' && p.type !== 'bin' && p.type !== 'mail') continue;
+    if (p.type !== 'car' && p.type !== 'barrel' && p.type !== 'gen' && p.type !== 'pump' && p.type !== 'gbed' && p.type !== 'trap' && p.type !== 'bin' && p.type !== 'mail' && p.type !== 'icont') continue;
     const qx = clamp(P.x, p.r[0], p.r[2]), qy = clamp(P.y, p.r[1], p.r[3]), d = Math.hypot(P.x - qx, P.y - qy) + (p.type === 'car' || p.type === 'barrel' ? .45 : .15);
     if (d >= bd || (excl && excl.has(p)) || p.dead) continue;
     if (!reachOK(qx, qy)) continue;
@@ -200,6 +200,7 @@ function getAction(excl) {
       else a = {kind:'hotwire', label:hasTool('knife') || hasTool('crowbar') ? 'завести без ключа' : 'нет ключей', f:p};
     }
     else if (p.type === 'bin' || p.type === 'mail') a = !p.searched ? {kind:'search', label:'Обыскать', f:p} : {kind:'open', label:'Открыть', f:p};
+    else if (p.type === 'icont') a = !p.searched && p.locked ? {kind:'icpry', label:hasTool('crowbar') ? 'Вскрыть ломом (громко)' : 'Заперт: нужен лом', f:p} : !p.searched ? {kind:'search', label:'Обыскать контейнер', f:p} : {kind:'open', label:'Открыть контейнер', f:p};   // 97-industry-yard
     else if (p.type === 'barrel') a = p.w >= 1 ? {kind:'barrel', label:'Попить (' + Math.floor(p.w) + ' л)', f:p} : {kind:'none', label:'Пусто, ждём дождя', f:p};
     else if (p.type === 'gen') a = p.fuel < 92 && fuelCans().length ? {kind:'refuel', label:'залить бензин (' + Math.round(p.fuel) + '%)', f:p} : {kind:'gen', label:(p.on ? 'выключить' : 'включить') + ' (' + Math.round(p.fuel) + '%)', f:p};
     else if (p.type === 'pump') a = P.inv.some(i => i.id === 'jerrycan') ? {kind:'pumpfill', label:'налить в канистру', f:p} : {kind:'info', label:'нужна канистра', f:p};

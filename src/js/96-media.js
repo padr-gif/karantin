@@ -12,18 +12,26 @@ function mediaStop() {
 const mediaAlive = (tok, kind) => tok === MEDIA.tok && panel && panel.kind === kind;
 const mpick = a => a[Math.floor(Math.random() * a.length)];                 // не rng(): чтение не должно сдвигать случайность мира
 // текст печатается по буквам; тап — сразу целиком
+// У каждого поля свой таймер: новый текст (следующий сюжет, другая станция) сначала гасит старую печать — иначе
+// два таймера пишут в одно поле по очереди и буквы перемешиваются. Недопечатанная часть стоит невидимой,
+// поэтому строки не прыгают и не наезжают друг на друга, пока текст печатается.
+function stopType(el) { if (el._tt) { clearInterval(el._tt); el._tt = 0; } el.onclick = null; }
 function typeInto(el, text, cps) {
+  stopType(el);
   el.textContent = '';
   if (reduceMotion || !text) { el.textContent = text || ''; return; }
   const tok = MEDIA.tok, step = Math.max(1, Math.round((cps || 70) / 40));
+  const vis = mk('span'), rest = mk('span', 'tw-rest', text);
+  el.appendChild(vis); el.appendChild(rest);
   let n = 0;
+  const done = () => { stopType(el); el.textContent = text; };
   const t = setInterval(() => {
-    if (tok !== MEDIA.tok || !el.isConnected) { clearInterval(t); return; }
-    n = Math.min(text.length, n + step); el.textContent = text.slice(0, n);
-    if (n >= text.length) clearInterval(t);
+    if (tok !== MEDIA.tok || !el.isConnected) { stopType(el); return; }
+    n = Math.min(text.length, n + step); vis.textContent = text.slice(0, n); rest.textContent = text.slice(n);
+    if (n >= text.length) done();
   }, 25);
-  MEDIA.timers.push(t);
-  el.onclick = e => { if (n < text.length) { n = text.length; el.textContent = text; e.stopPropagation(); } };   // тап по недопечатанному — дописать, дальше не листать
+  el._tt = t; MEDIA.timers.push(t);
+  el.onclick = e => { if (el._tt) { done(); e.stopPropagation(); } };   // тап по недопечатанному — дописать, дальше не листать
 }
 const hhmm = m => { m = ((Math.floor(m) % 1440) + 1440) % 1440; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
 
@@ -115,7 +123,7 @@ function mediaRadio(body) {
       stName.textContent = s.name; disp.classList.remove('noise');
       if (locked !== s) {
         locked = s;
-        if (!s.msgs) { txt.textContent = s.dj ? 'Несущая есть, голоса нет. «Волна» выходит в эфир по вечерам, с восьми.' : '…тишина в эфире…'; disp.classList.add('quiet'); }
+        if (!s.msgs) { stopType(txt); txt.textContent = s.dj ? 'Несущая есть, голоса нет. «Волна» выходит в эфир по вечерам, с восьми.' : '…тишина в эфире…'; disp.classList.add('quiet'); }
         else { disp.classList.remove('quiet'); typeInto(txt, s.msgs.join('\n\n'), 90); }
         if (final) SFX.ui();
       }
@@ -123,7 +131,7 @@ function mediaRadio(body) {
       locked = null; disp.classList.remove('quiet');
       stName.textContent = k > 0 ? 'Слабый сигнал…' : 'Помехи';
       disp.classList.toggle('noise', k === 0);
-      txt.onclick = null;
+      stopType(txt);
       txt.textContent = k > 0 && s.msgs ? garble(s.msgs[0], k * k) : garble('ш-ш-ш-ш   ш-ш-ш   тр-р-р   ш-ш-ш-ш-ш   ш-ш   кх-х-х', .55);
       const t = performance.now(); if (t - lastTune > 90) { lastTune = t; SFX.tune(); }
     }
@@ -361,7 +369,7 @@ const NOTE_STAMP = {a1:'СЕКРЕТНО', a3:'ДСП'};
 const HAND_RE = /^(Снизу от руки|Поверх ручкой|Через два дня|Потом)/;
 function mediaNote(body, text, sid) {
   const skin = NOTE_SKIN[sid] || 'hand', paras = String(text || '').split('\n\n');
-  const pg = mk('div', 'nt nt-' + skin);
+  const pg = mk('div', 'notep nt-' + skin);
   if (skin === 'phone') {                                                     // переписка: кавычки — сообщения, остальное — пометки
     const scr = mk('div', 'nt-scr'); scr.appendChild(mk('div', 'nt-who', 'Солнышко'));
     for (const p of paras) {
