@@ -1528,7 +1528,7 @@ body.invglass>*:not(#game):not(#vig):not(#panel):not(#toasts):not(svg){visibilit
 @media (max-width:620px){.tvg-cols{grid-template-columns:1fr}}
 @media (max-height:430px){.tv-knobs,.tv-led{display:none}.tv-ctl{gap:6px;padding-top:0}#panel .tv-chb{height:26px}.tv-brand{display:none}}
 /* v92: ускорение времени — метка на часах */
-.clock{cursor:pointer}
+.clock{cursor:pointer;pointer-events:auto}
 .clock.ff{border-color:rgba(255,209,102,.55)}
 .fftag{flex:none;align-self:center;font:700 11px/1 var(--f-mono);padding:4px 6px;border-radius:9px;background:#ffd166;color:#1a1408;box-shadow:0 2px 6px rgba(0,0,0,.45);pointer-events:none}
 .fftag::before{content:'▶▶ ';font-size:8px;letter-spacing:-2px}
@@ -1553,3 +1553,10 @@ body.invglass>*:not(#game):not(#vig):not(#panel):not(#toasts):not(svg){visibilit
 .jent.kill i{background:var(--amber)}
 .jent.sleep i{background:#8fb3e0}
 .jent.good i{background:#9fc48a}
+/* v92.1: кнопка ускорения времени рядом с масштабом */
+.ffbtn{position:relative;color:#ffd166}
+.ffbtn .ic{width:20px;height:20px}
+.ffbtn b{position:absolute;right:-5px;bottom:-6px;font:700 10px/1 var(--f-mono);padding:2px 4px;border-radius:7px;background:#ffd166;color:#1a1408}
+.ffbtn b:empty{display:none}
+.ffbtn.on{background:rgba(255,209,102,.22);border-color:rgba(255,209,102,.7)}
+.ffbtn.hold b{background:#55606b;color:#d6dde3}

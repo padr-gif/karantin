@@ -1,5 +1,5 @@
 // ================= ускорение времени: только пока герой стоит =================
-// Тап по часам (или F) переключает скорость: обычная → ×3 → ×10 → обычная. Ускоряется только игровое время
+// Кнопка ▶▶ под часами, тап по часам или F переключает скорость: обычная → ×3 → ×10 → обычная. Ускоряется только игровое время
 // (часы, голод, жажда, раны, огород, передачи), мертвецы и движения — как обычно.
 // Герой пошёл, побежал, сел в машину, ударил — сразу обычная скорость; встал — снова быстрая (режим остаётся включённым).
 // Опасность (погоня рядом, удар, кровотечение, голод/жажда на нуле, начало осады) — режим сам выключается.
@@ -24,11 +24,13 @@ function ffSet(i, quiet) {
   if (!quiet) toast(FF.i ? 'Время ×' + FF_LV[FF.i] + ': идёт быстрее, пока стоишь на месте' : 'Обычная скорость времени');
   ffUI();
 }
+function ffTap() { if (mode !== 'play' || paused || !P || P.sleep || document.body.classList.contains('ctledit')) return; SFX.ui && SFX.ui(); ffSet(FF.i + 1); }
 function ffUI() {
   const t = $('ffTag'); if (!t) return;
   t.hidden = !FF.i; t.textContent = '×' + FF_LV[FF.i];
   t.classList.toggle('hold', !!FF.i && !FF.run);
   const c = $('clockBox'); if (c) c.classList.toggle('ff', !!FF.i);
+  const b = $('bFF'); if (b) { b.classList.toggle('on', !!FF.i); b.classList.toggle('hold', !!FF.i && !FF.run); $('ffLv').textContent = FF.i ? '×' + FF_LV[FF.i] : ''; }
 }
 onUpdate(() => {
   if (!P || mode !== 'play') return;
@@ -44,9 +46,10 @@ onLoad(() => { FF.i = 0; FF.run = false; ffUI(); });
   const c = $('clockBox');
   if (c) {
     c.setAttribute('role', 'button'); c.title = 'Ускорить время (F)';
-    c.addEventListener('click', () => { if (mode !== 'play' || paused || P.sleep || document.body.classList.contains('ctledit')) return; ffSet(FF.i + 1); });
+    c.addEventListener('click', ffTap);
     const t = document.createElement('span'); t.id = 'ffTag'; t.className = 'fftag'; t.hidden = true; c.appendChild(t);
   }
+  const b = $('bFF'); if (b) b.addEventListener('click', e => { e.stopPropagation(); ffTap(); });
   addEventListener('keydown', e => {
     if (mode !== 'play' || paused || !P || P.sleep || panel) return;
     const k = e.key.toLowerCase();

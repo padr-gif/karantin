@@ -548,6 +548,11 @@ const ff = await D(`(() => { zs.length = 0; P.sleep = false; P.awake = 0; P.en =
   return {still:+still.toFixed(2), walk:+walk.toFixed(2), back:+back.toFixed(2), offZ}; })()`);
 check('ускорение ×10 идёт, только пока герой стоит', ff.still > 9 && ff.walk < 1.2 && ff.back > 9, ff);
 check('мертвецы рядом — ускорение выключается само', ff.offZ === 0, ff);
+await fresh(); await D("ffSet(0, true); document.querySelectorAll('.travelask').forEach(e => e.remove());");
+await page.click('#bFF', {timeout:5000}); const t1 = await D("FF.i");
+await page.click('#clockBox'); const t2 = await D("FF.i");
+await page.click('#bFF'); const t3 = await D("FF.i");
+check('ускорение включается настоящим нажатием: кнопка ▶▶ и часы', t1 === 1 && t2 === 2 && t3 === 0, {t1, t2, t3});
 const sl = await D(`(() => { for (let y = 20; y < MH - 20; y++) for (let x = 20; x < MW - 20; x++) {
     if (get(x, y) === WALL && get(x + 1, y) === WALL && get(x - 1, y) === WALL && !blocked(x + .5, y + 1.5, P.r) && !blocked(x + 1.5, y + 1.5, P.r) && !blocked(x - .5, y + 1.5, P.r)) {
       P.x = x + .5; P.y = y + 1.5; for (let k = 0; k < 40; k++) move(P, 0, -.05); const x0 = P.x, y0 = P.y; move(P, .07, -.07); return {dx:+(P.x - x0).toFixed(3), dy:+(P.y - y0).toFixed(3)}; } } return null; })()`);
