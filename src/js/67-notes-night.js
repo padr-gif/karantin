@@ -68,7 +68,7 @@ function readStory(it) {
     readStory(panel.it);
     $('pnTitle').textContent = n.title; $('pnSub').textContent = STORY_LINES[n.line];
     const body = $('pnBody'); body.textContent = '';
-    const pg = mk('div', 'diary snote'); for (const para of n.text.split('\n\n')) pg.appendChild(mk('p', 'dline', para)); body.appendChild(pg);
+    mediaNote(body, n.text, n.id);                                            // своя бумага у каждой записки (96-media)
   });
 }
 // в дневнике — страница «Записки»: по линиям, ненайденные — пропуски

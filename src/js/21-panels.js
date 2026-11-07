@@ -42,6 +42,7 @@ function openPanel(kind, opt) {
 function closePanel() {
   if (markPick) { markPick.remove(); markPick = null; }                     // выбор метки на карте
   const src = panel && panel.kind === 'loot' && panel.src;
+  mediaStop();
   if (panel) { panel = null; $('panel').hidden = true; document.body.classList.remove('invglass'); if ($('pause').hidden) paused = false; }
   if (src && src.type && src.type !== 'pile') SFX.contClose(src.type);
 }
@@ -185,6 +186,8 @@ function renderPanel() { runHooked('panel', renderPanelCore); }
 function renderPanelCore() {
   if (!panel) return;
   const body = $('pnBody'), tabs = $('pnTabs'); body.textContent = ''; tabs.textContent = '';
+  mediaStop();                                                                   // таймеры радио, телевизора (96-media)
+  $('panel').dataset.skin = panel.kind === 'radio' ? (panel.tv ? 'tv' : 'radio') : ['note', 'paper', 'mag', 'novel'].includes(panel.kind) ? panel.kind : '';
   $('panel').classList.toggle('pmap', panel.kind === 'map');                    // карта — на весь экран
   const sec = t => body.appendChild(mk('div', 'sect', t));
   const empty = t => body.appendChild(mk('p', 'empty', t));
@@ -253,13 +256,12 @@ function renderPanelCore() {
     body.classList.add('fit');
   } else if (panel.kind === 'note') {
     $('pnTitle').textContent = 'Записка'; $('pnSub').textContent = 'написано от руки, торопливо';
-    const c = mk('div', 'news'); c.appendChild(mk('p', '', panel.it.text || NOTES[0])); body.appendChild(c);
-  } else if (panel.kind === 'radio') {
-    const it = panel.it;
-    $('pnTitle').textContent = panel.tv ? 'Телевизор' : 'Радиоприёмник'; $('pnSub').textContent = panel.tv ? 'экстренный выпуск' : `день ${Math.floor(gameMin / 1440) + 1} · заряд ${Math.round(it.ch)}%`;
-    for (const [who, text] of panel.news) { const c = mk('div', 'news'); c.appendChild(mk('span', 'freq', who)); c.appendChild(mk('p', '', text)); body.appendChild(c); }
-    if (!panel.tv) { const r = mk('div', 'secrow'); r.appendChild(mk('span', 'empty', 'Каждое прослушивание тратит 10% заряда'));
-    const b = btn('Поймать ещё', () => listenRadio(it)); b.disabled = !(it.ch > 0); r.appendChild(b); body.appendChild(r); }
+    mediaNote(body, panel.it.text || NOTES[0]);                                 // сюжетные записки перерисовывает 67-notes-night
+  } else if (panel.kind === 'paper') { mediaPaper(body);
+  } else if (panel.kind === 'novel') { mediaNovel(body);
+  } else if (panel.kind === 'mag') { mediaMag(body);
+  } else if (panel.kind === 'radio' && panel.tv) { mediaTV(body);
+  } else if (panel.kind === 'radio') { mediaRadio(body);
   } else if (panel.kind === 'map') {
     $('pnTitle').textContent = 'Карта'; $('pnSub').textContent = P.mapRead ? 'район по бумажной карте' : 'только то, что видел сам';
     // карта на весь экран: тащи пальцем или мышью, щипок и колесо — масштаб; «Где я», обозначения сворачиваются; при открытии — по центру на тебе

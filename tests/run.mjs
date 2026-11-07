@@ -442,6 +442,31 @@ const trip = await D(`(() => { __open(); zs.length = 0; const x = Math.floor(P.x
   return {ok:!!p, woke, hp:p && p.hp, solid:p && p.solid}; })()`);
 check('растяжка: мертвец прошёл — звон будит героя', trip.ok && trip.woke && trip.hp < 40 && !trip.solid, trip);
 
+console.log('Радио, телевизор, газета, записки');
+await fresh();
+const rd = await D(`(() => { const r = mkItem('radio'); r.ch = 50; P.inv.push(r); listenRadio(r);
+  const ok = panel && panel.kind === 'radio' && $('panel').dataset.skin === 'radio' && !!$('pnBody').querySelector('.rdo-scale');
+  const st = panel.st.map(s => s.f), sorted = st.every((f, k) => !k || f >= st[k - 1]);
+  const f0 = panel.fq; $('pnBody').querySelectorAll('.rdo-b')[1].click(); const f1 = panel.fq; closePanel();
+  return {ok, sorted, n:st.length, moved:f1 > f0 || f1 === st[0], keep:r.fq === f1, ch:r.ch}; })()`);
+check('радио: шкала, станции по частоте, переключение и память волны', rd.ok && rd.sorted && rd.n >= 4 && rd.moved && rd.keep && rd.ch === 40, rd);
+const tv = await D(`(() => { openPanel('radio', {it:{ch:100}, tv:true, news:radioNews()}); const r = [];
+  for (const c of [1, 2, 3, 4]) { panel.ch = c; renderPanel(); r.push(!!$('pnBody').querySelector('.tv-scr.ch' + c)); }
+  const skin = $('panel').dataset.skin; closePanel(); return {r, skin, raf:MEDIA.raf}; })()`);
+check('телевизор: четыре канала, «снег» останавливается при закрытии', tv.r.every(Boolean) && tv.skin === 'tv' && !tv.raf, tv);
+const np = await D(`(() => { P.inv.length = 0; P.bored = 80; const n = mkItem('newspaper'); P.inv.push(n); useItem(null, 0);
+  const a = {open:panel && panel.kind === 'paper', bored:P.bored, kept:P.inv.includes(n), ed:n.ed, head:$('pnBody').querySelector('.np-head').textContent};
+  closePanel(); P.bored = 80; useItem(null, 0); a.again = P.bored; a.skin = $('panel').dataset.skin; closePanel(); return a; })()`);
+check('газета: свой выпуск, остаётся в рюкзаке, скука уходит только в первый раз', np.open && np.bored < 80 && np.kept && np.ed >= 0 && np.head.length > 3 && np.again === 80 && np.skin === 'paper', np);
+const mg = await D(`(() => { P.inv.length = 0; P.readMag = {}; const m = mkItem('book_carp'); P.inv.push(m); readMag(0);
+  const r = {open:panel && panel.kind === 'mag', cover:!!$('pnBody').querySelector('.mg-cov'), boost:!!(P.boost && P.boost.carp)}; closePanel(); return r; })()`);
+check('журнал навыка: обложка и что вынес', mg.open && mg.cover && mg.boost, mg);
+const nt = await D(`(() => { const out = {}; for (const id of ['a3', 'p2', 'l1', 'r1']) { const it = mkItem('note'); it.story = id; it.text = storyNote(id).text; openPanel('note', {it}); out[id] = $('pnBody').querySelector('.nt').className; closePanel(); }
+  openPanel('note', {it:{text:NOTES[0]}}); out.plain = $('pnBody').querySelector('.nt').className; closePanel(); return out; })()`);
+check('записки: у сюжетных своя бумага', nt.a3.includes('nt-fax') && nt.p2.includes('nt-phone') && nt.l1.includes('nt-card') && nt.r1.includes('nt-flyer') && nt.plain.includes('nt-hand'), nt);
+const nv = await D(`(() => { P.inv.length = 0; const n = mkItem('novel'); P.inv.push(n); useItem(null, 0); const r = {open:panel && panel.kind === 'novel', gone:!P.inv.includes(n)}; closePanel(); return r; })()`);
+check('роман: разворот книги', nv.open && nv.gone, nv);
+
 console.log('Живая игра 15 секунд');
 await fresh("['coward']");
 await D("P.weapon = mkItem('shotgun'); P.weapon.mag = 2; P.inv.push(mkItem('shells')); gameMin += 14 * 60; for (let i = 0; i < 25; i++) spawnZombie(4, false);");

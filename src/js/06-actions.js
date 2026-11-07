@@ -479,6 +479,9 @@ function useItemBase(it, k, d) {
     if (!fl) { toast('Некуда вставить: нужен фонарик или радио'); return; }
     fl.ch = 100; P.inv.splice(k, 1); toast('Батарейка вставлена: ' + ITEMS[fl.id].name.toLowerCase());
   } else if (d.kind === 'cloth') { wearCloth(k); return;
+  } else if (it.id === 'newspaper') { if (readPaper(it.read && P.inv.find(i => i.id === 'newspaper' && !i.read) || it)) {   // в стопке — сначала непрочитанная
+    P.bored = Math.max(0, (P.bored || 0) - d.fun); P.stress = Math.max(0, (P.stress || 0) - 10); } return;   // газета остаётся: растопка, доспех (96-media)
+  } else if (it.id === 'novel') { P.bored = Math.max(0, (P.bored || 0) - d.fun); P.stress = Math.max(0, (P.stress || 0) - 10); P.inv.splice(k, 1); readNovel(it); return;
   } else if (d.kind === 'fun') { P.bored = Math.max(0, (P.bored || 0) - d.fun); P.stress = Math.max(0, (P.stress || 0) - 10); if (!d.keep) P.inv.splice(k, 1); toast(it.id === 'cards' ? 'Пасьянс сошёлся. Полегчало' : 'Дочитал. Скука отступила'); renderInv(); return;
   } else if (d.kind === 'smoke') { const ft = fireTool(); if (!ft) { toast('Нечем прикурить: нужны спички или зажигалка'); return; } useFireTool(); it.uses--; if (it.uses <= 0) P.inv.splice(k, 1); P.stress = Math.max(0, (P.stress || 0) - 35); P.hp = Math.max(1, P.hp - 1); emit('smoke', P.x, P.y, 1.4, 2, null, 0, .3); toast('Затянулся. Нервы успокаиваются'); renderInv(); return;
   } else if (d.kind === 'generator') { placeGen(k); return;

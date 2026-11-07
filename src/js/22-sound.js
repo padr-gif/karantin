@@ -72,6 +72,10 @@ const SFX = (() => {
     alarm(x, y) { const v = at(x, y); for (let k = 0; k < 6; k++) { tone(.16 * v, .05, 'square', 2600, null, k * .07); tone(.12 * v, .05, 'square', 3100, null, k * .07 + .035); } },
     radio() { noise(.18, .35, 'bandpass', 1800, .6, 0, .02); for (let k = 0; k < 5; k++) tone(.05, .08, 'sawtooth', 300 + Math.random() * 500, null, .3 + k * .09); },
     pickup() { this.rustle(); },
+    tune() { noise(.07, .07, 'bandpass', 1800 + Math.random() * 2400, .5); },                       // треск между станциями (96-media)
+    tvSwitch() { noise(.12, .14, 'highpass', 2500, .6); tone(.04, .1, 'square', 220, 110); },
+    tvTone() { tone(.05, .9, 'sine', 1000); },                                                     // писк настроечной таблицы
+    tvSnow() { noise(.1, .9, 'highpass', 1500, .4, 0, .05); },
     thunder(v) { noise(.7 * v, 2.2, 'lowpass', 140, .8, 0, .05, 60); noise(.4 * v, .4, 'lowpass', 600, 1, 0, .01); tone(.3 * v, 1.6, 'sine', 45, 30, .05, .05); },
     horn() { carHorn(); },                                                    // готовый буфер (92-car-sound)
     caw(x, y) { const v = Math.max(.25, at(x, y)); for (let k = 0; k < 3; k++) voice(.16 * v, .2, 950 + Math.random() * 200, 640, k * .22 + Math.random() * .05, 1700); for (let k = 0; k < 8; k++) noise(.05 * v, .06, 'bandpass', 700, 1.5, k * .05); },

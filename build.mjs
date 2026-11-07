@@ -60,7 +60,7 @@ export function build({dev = false, pwa = false, plat = '', out = 'dist/karantin
   const head = platHead + (pwa ? preload.join('') : '') + (pwa && !plat ? '<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#0c0f12"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Dead Line"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" href="icon-192.png">'
  : '');
   // fonts live in the page itself: an outside font server that hangs must never block the game from starting
-  const FONTS = [['Oswald', 500, 'oswald-500'], ['Oswald', 700, 'oswald-700'], ['PT Sans', 400, 'ptsans-400'], ['PT Sans', 700, 'ptsans-700'], ['PT Mono', 400, 'ptmono-400']];
+  const FONTS = [['Oswald', 500, 'oswald-500'], ['Oswald', 700, 'oswald-700'], ['PT Sans', 400, 'ptsans-400'], ['PT Sans', 700, 'ptsans-700'], ['PT Mono', 400, 'ptmono-400'], ['PT Serif', 400, 'ptserif-400'], ['PT Serif', 700, 'ptserif-700'], ['Caveat', 500, 'caveat-500']];   // PT Serif — газета, журналы; Caveat — записки от руки (90-media)
   // (on the site they are files of our own, same origin, so that rule still holds)
   const fonts = FONTS.map(([fam, w, f]) => {
     const buf = fs.readFileSync(path.join(ROOT, 'assets/fonts', f + '.woff'));

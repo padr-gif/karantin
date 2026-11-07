@@ -32,6 +32,8 @@ function readMag(k) {
   P.readMag[it.id] = true; stat('books');
   P.boost[d.skill] = {mult:3, max:hi};
   addXp(d.skill, 2);
-  toast('Прочитано: ' + d.name + '. До уровня ' + (hi + 1) + ' навык «' + SKILLS[d.skill].name + '» растёт втрое быстрее');
-  SFX.rustle(); P.bored = Math.max(0, (P.bored || 0) - 20); renderInv();
+  const msg = 'До уровня ' + (hi + 1) + ' навык «' + SKILLS[d.skill].name + '» растёт втрое быстрее';
+  SFX.rustle(); P.bored = Math.max(0, (P.bored || 0) - 20);
+  openPanel('mag', {it, msg, hi});                                             // обложка выпуска и что вынес (96-media)
+  if (!panel || panel.kind !== 'mag') { toast('Прочитано: ' + d.name + '. ' + msg); renderInv(); }
 }
