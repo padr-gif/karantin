@@ -205,13 +205,13 @@ function jlogKind(t) { for (const [re, k] of JLOG_KIND) if (re.test(t)) return k
 function jlogView(log) {
   const dv = mk('div', 'jlog');
   if (!log.length) { dv.appendChild(mk('p', 'jempty', 'Пока ни одной записи. Всё важное — раны, находки, ночи осады — появится здесь само.')); return dv; }
-  const today = Math.floor(gameMin / 1440);
+  const today = Math.floor(gameMin / 1440), d0 = Math.floor(startMin / 1440);   // дни — от начала этой жизни, как в карточке героя и бумажном дневнике
   let day = null, list = null;
   for (const [m, t] of log) {
     const d = Math.floor(m / 1440);
     if (d !== day) {
       day = d; const h = mk('div', 'jday');
-      h.appendChild(mk('b', '', 'День ' + (d + 1)));
+      h.appendChild(mk('b', '', 'День ' + Math.max(1, d - d0 + 1)));
       if (d === today) h.appendChild(mk('span', '', 'сегодня')); else if (d === today - 1) h.appendChild(mk('span', '', 'вчера'));
       dv.appendChild(h); list = mk('div', 'jlist'); dv.appendChild(list);
     }

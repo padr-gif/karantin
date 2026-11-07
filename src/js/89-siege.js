@@ -33,29 +33,32 @@ function siegeSpawn(n) {
   }
   SIEGE.sp += made; return made;
 }
+const siegeNight = gm => { const h = (gm % 1440) / 60; return h >= 21 || h < 6; };
+const siegeLeft = () => Math.max(0, Math.ceil((SIEGE.end - gameMin) / 60));      // часов до конца осады
+function siegeNext22(gm) { return (Math.floor(gm / 1440) + 7) * 1440 + 22 * 60; }   // через неделю, ровно в 22:00
 function siegeStart() {
   SIEGE.on = true; SIEGE.w = 0; SIEGE.end = SIEGE.at + SIEGE_LEN; SIEGE.sp = 0; SIEGE.life = world.lives || 0;
   if (P.sleep) wake('Вокруг стонут и скребутся. Началась осада!');
-  eventBanner('Осада', 'Они идут со всех сторон. Держись до рассвета: три волны, последняя около трёх ночи.', 'danger', 'i-skull');
+  eventBanner('Осада', siegeNight(SIEGE.at) ? 'Они идут со всех сторон. Держись до рассвета: три волны, последняя около трёх ночи.' : 'Они идут со всех сторон. Держись восемь часов: три волны.', 'danger', 'i-skull');
   logEv('Ночь осады №' + (SIEGE.n + 1));
 }
 function siegeWave() {
   const n = Math.min(siegeWaveN(), SIEGE_MAX - siegeAlive());
   if (n > 0) siegeSpawn(n);
-  if (SIEGE.w > 0) { toast(SIEGE.w === 1 ? 'Вторая волна: мертвецов стало больше' : 'Последняя волна. До рассвета три часа'); if (P.sleep) wake('Снова стоны за стенами — новая волна'); }
+  if (SIEGE.w > 0) { toast(SIEGE.w === 1 ? 'Вторая волна: мертвецов стало больше' : 'Последняя волна. ' + (siegeNight(gameMin) ? 'До рассвета три часа' : 'Ещё три часа')); if (P.sleep) wake('Снова стоны за стенами — новая волна'); }
   SIEGE.w++;
 }
 function siegeEnd() {
   let left = 0;
   for (const z of zs) if (z.siege) { z.siege = false; left++; if (z.state !== 'chase') { z.state = 'wander'; z.wt = 0; } }
   const k = SIEGE.n + 1, alive = mode === 'play' && (world.lives || 0) === SIEGE.life;
-  SIEGE.on = false; SIEGE.n++; SIEGE.at += 7 * 1440; SIEGE.warned = SIEGE.warn2 = false;
+  SIEGE.on = false; SIEGE.n++; SIEGE.at = siegeNext22(SIEGE.at);              // следующая — через неделю в 22:00, даже если эту запустили не вовремя (админ-меню) SIEGE.warned = SIEGE.warn2 = false;
   if (!alive) return;
   const killed = Math.max(0, SIEGE.sp - left);
   P.stress = Math.max(0, (P.stress || 0) - 25); P.unh = Math.max(0, (P.unh || 0) - 10);
   ach('siege'); if (SIEGE.n >= 3) ach('siege3');
   dropSupply();                                                                // до баннера: тост о грузе иначе вытеснил бы «Осада отбита»
-  eventBanner('Осада отбита', 'Рассвет. Мертвецы расходятся.' + (killed ? ' Упокоено за ночь: ' + killed + '.' : '') + ' Военные видели выживших — с вертолёта сбросят груз.', 'good', 'i-sun');
+  eventBanner('Осада отбита', (siegeNight(gameMin) || hourOf() < 8 ? 'Рассвет. ' : '') + 'Мертвецы расходятся.' + (killed ? ' Упокоено за ночь: ' + killed + '.' : '') + ' Военные видели выживших — с вертолёта сбросят груз.', 'good', 'i-sun');
   logEv('Пережил ночь осады №' + k + (killed ? ', упокоено ' + killed : ''));
 }
 
@@ -88,7 +91,7 @@ addMoodles(m => {
   else if (SIEGE.warned) m.push(['Ночью осада', 'warn']);
 }, m => {
   if (siegeOff()) return;
-  if (SIEGE.on) m.push('Осада: до рассвета мертвецы ищут тебя. Сиди за прочными дверьми, чини проломы доской, не выходи');
+  if (SIEGE.on) { const h = siegeLeft(); m.push('Осада: ещё ' + (h <= 1 ? 'меньше часа' : '~' + h + ' ч') + (siegeNight(gameMin) && SIEGE.end % 1440 <= 7 * 60 ? ', до рассвета,' : '') + ' мертвецы ищут тебя. Сиди за прочными дверьми, чини проломы доской, не выходи'); }
   else if (SIEGE.warned) m.push('Ночью осада (с 22:00): заколоти окна, поставь стены и колья, повесь банки на двери');
 });
 
@@ -99,6 +102,7 @@ onLoad(d => {
   const x = d && d.x89;
   if (!x) { siegeReset(gameMin); return; }                                     // старое сохранение: первая осада через неделю от сейчас
   Object.assign(SIEGE, x);
+  if (!SIEGE.on && SIEGE.at % 1440 !== 22 * 60) SIEGE.at = Math.floor(SIEGE.at / 1440) * 1440 + 22 * 60;   // сбитое расписание (старая «осада сейчас») — снова в 22:00
   if (SIEGE.on) for (const z of zs) if (Math.hypot(z.x - P.x, z.y - P.y) < 30) z.siege = true;   // посреди осады: ближние снова охотятся
 });
 onNewWorld(o => { if (!o || !o.save) siegeReset(gameMin); });

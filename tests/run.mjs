@@ -581,6 +581,21 @@ const jl = await D(`(() => { P.log = [[gameMin - 1500, 'Укус: левая р�
   closePanel(); return r; })()`);
 check('дневник: лента по дням с цветными отметками, без «бумажного» стиля', jl.days === 2 && jl.ent === 3 && jl.bad && jl.siege && !jl.old, jl);
 
+console.log('v0.95: осада по расписанию, блокнот');
+await fresh();
+const sg = await D(`(() => { zs.length = 0; paused = false; P.sleep = false; P.awake = 0; P.en = 100; godMode = true;
+  gameMin = Math.floor(gameMin / 1440) * 1440 + 3 * 1440 + 10 * 60; siegeReset(gameMin - 3 * 1440); SIEGE.at = gameMin; SIEGE.warned = SIEGE.warn2 = true; update(.016);
+  const on = SIEGE.on, tip = []; for (const M of MOODS) M.tips && M.tips(tip); const t = tip.find(x => x.startsWith('Осада')) || '';
+  gameMin += 8 * 60 + 1; update(.016); const off = !SIEGE.on, nextH = (SIEGE.at % 1440) / 60, nextD = Math.floor(SIEGE.at / 1440) - dayNo();
+  zs.length = 0; godMode = false; return {on, t, off, nextH, nextD}; })()`);
+check('осада днём (админ-меню): без «до рассвета», 8 часов, следующая — через неделю в 22:00', sg.on && /ещё ~8 ч/.test(sg.t) && !/рассвет/.test(sg.t) && sg.off && sg.nextH === 22 && sg.nextD === 7, sg);
+const nb = await D(`(() => { openPanel('inv'); panel.tab = 'tasks'; panel.dpage = 'day'; renderPanel();
+  const r = {pages:document.querySelectorAll('#pnBody .nbook .nb-pg').length, tasks:document.querySelectorAll('#pnBody .nb-task').length, sum:document.querySelectorAll('#pnBody .nb-sum').length,
+    day:(document.querySelector('#pnBody .nb-date b') || {}).textContent};
+  const pg = document.querySelector('#pnBody .nb-l'), ln = [...pg.querySelectorAll('.nb-ln')].map(e => e.offsetHeight % 30); r.aligned = ln.every(x => x === 0);
+  closePanel(); return r; })()`);
+check('дневник — разворот блокнота: дела слева, что было и итог справа, строки по линейкам', nb.pages === 2 && nb.tasks >= 1 && nb.sum === 3 && /^День \d+$/.test(nb.day) && nb.aligned, nb);
+
 console.log('Живая игра 15 секунд');
 await fresh("['coward']");
 await D("P.weapon = mkItem('shotgun'); P.weapon.mag = 2; P.inv.push(mkItem('shells')); gameMin += 14 * 60; for (let i = 0; i < 25; i++) spawnZombie(4, false);");

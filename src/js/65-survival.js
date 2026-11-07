@@ -80,31 +80,57 @@ function buildDiary(body) {
   for (const [k, t] of [['day', 'Дела на сегодня'], ['notes', 'Записки ' + ((world.story || []).length) + '/' + STORY_NOTES.length]]) sw.appendChild(btn(t, () => { panel.dpage = k; renderPanel(); }, page === k ? 'on' : 'ghost'));
   body.insertBefore(sw, body.firstChild);
 }
+// «Дела на сегодня» — разворот блокнота (v95): слева — дата, мысль дня и список дел, справа — что было и итог дня.
+// Рукописный шрифт, линейки совпадают со строками (у каждой строки ровно одна высота) и прокручиваются вместе с текстом.
+const ruN = (n, one, few, many) => { const a = n % 100, b = n % 10; return a > 10 && a < 20 ? many : b === 1 ? one : b > 1 && b < 5 ? few : many; };
+const DIARY_WD = ['понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота', 'воскресенье'];
+function diaryMood() {
+  const st = P.stress || 0, un = P.unh || 0, bo = P.bored || 0;
+  if (st > 80) return 'на пределе. Руки трясутся';
+  if (un > 60) return 'тоскливо. Хочется кого-нибудь услышать';
+  if (bo > 60) return 'скучно до одури';
+  if (st > 45) return 'нервы шалят';
+  if (P.en < 20) return 'валюсь с ног';
+  return 'держусь';
+}
 function diaryDay(body) {
   const T = tasksToday(); body.textContent = '';
-  const pg = mk('div', 'diary');
-  const d0 = dayNo() - Math.floor(startMin / 1440) + 1;
-  pg.appendChild(mk('div', 'dhead', 'День ' + d0 + ', ' + fmtTime(gameMin)));
-  pg.appendChild(mk('p', 'dline', T.head || DAY_HEAD[0]));
-  { const m = weekMod(); if (m) pg.appendChild(mk('p', 'dline dsub', 'Неделя ' + (world.week.n + 1) + ': ' + WEEK_MODS[m].name.toLowerCase() + '.')); }   // особенность недели
-  pg.appendChild(mk('p', 'dline dsub', 'Сегодня надо:'));
+  const d0 = dayNo() - Math.floor(startMin / 1440) + 1, done = T.list.filter(t => t.done).length;
+  const book = mk('div', 'nbook'), L = mk('div', 'nb-pg nb-l'), R = mk('div', 'nb-pg nb-r');
+  // левая страница
+  const dt = mk('div', 'nb-date'); dt.appendChild(mk('b', '', 'День ' + d0)); dt.appendChild(mk('span', '', DIARY_WD[(dayNo() + 6) % 7] + ', ' + fmtTime(gameMin))); L.appendChild(dt);
+  L.appendChild(mk('p', 'nb-ln nb-quote', T.head || DAY_HEAD[0]));
+  { const m = weekMod(); if (m) L.appendChild(mk('p', 'nb-ln nb-week', 'Неделя ' + (world.week.n + 1) + ' — ' + WEEK_MODS[m].name.toLowerCase())); }
+  L.appendChild(mk('p', 'nb-ln nb-h', 'Сегодня надо' + (T.list.length ? ' · ' + done + ' из ' + T.list.length : '')));
   for (const t of T.list) {
-    const d = taskDef(t), p = taskProg(t), r = mk('div', 'ditem' + (t.done ? ' done' : ''));
-    r.appendChild(mk('span', 'dbox', t.done ? '✗' : ''));
-    const tx = mk('div', 'dtx'); tx.appendChild(mk('span', 'dt', d.t(t.n)));
-    if (t.done) tx.appendChild(mk('span', 'dnote', t.note));
-    else if (t.n > 1) tx.appendChild(mk('span', 'dprog', p + ' из ' + t.n));
-    r.appendChild(tx); pg.appendChild(r);
+    const d = taskDef(t), p = taskProg(t), r = mk('div', 'nb-ln nb-task' + (t.done ? ' done' : ''));
+    r.appendChild(mk('i', 'nb-box'));
+    const tx = mk('span', 'nb-tx', d.t(t.n)); r.appendChild(tx);
+    if (t.done && t.note) tx.appendChild(mk('em', 'nb-note', ' — ' + t.note));
+    else if (!t.done && t.n > 1) r.appendChild(mk('em', 'nb-prog', p + '/' + t.n));
+    L.appendChild(r);
   }
-  if (T.streak) pg.appendChild(mk('p', 'dline dsub', 'Уже ' + (T.streak + 1) + '-й день подряд держусь плана.'));
-  // что случилось сегодня — из записей
-  const from = dayNo() * 1440, ev = (P.log || []).filter(e => e[0] >= from).slice(-6);
-  if (ev.length) {
-    pg.appendChild(mk('p', 'dline dsub', 'Что было:'));
-    for (const e of ev) pg.appendChild(mk('p', 'dline dev', fmtTime(e[0]) + ' — ' + e[1]));
-  }
-  body.appendChild(pg);
+  if (done === T.list.length && T.list.length) L.appendChild(mk('p', 'nb-ln nb-ok', 'Всё сделал. Можно выдохнуть.'));
+  if (T.streak) L.appendChild(mk('p', 'nb-ln nb-streak', (T.streak + 1) + '-й день подряд по плану'));
+  // правая страница: что было сегодня
+  R.appendChild(mk('p', 'nb-ln nb-h', 'Что было'));
+  const from = dayNo() * 1440, ev = (P.log || []).filter(e => e[0] >= from).slice(-7);
+  if (!ev.length) R.appendChild(mk('p', 'nb-ln nb-empty', 'Пока тихо. И слава богу.'));
+  for (const e of ev) { const r = mk('p', 'nb-ln nb-ev ' + jlogKind(e[1])); r.appendChild(mk('time', '', fmtTime(e[0]))); r.appendChild(document.createTextNode(e[1])); R.appendChild(r); }
+  // итог дня — как пишут в настоящем дневнике
+  R.appendChild(mk('p', 'nb-ln nb-h', 'Итог'));
+  const kd = P._dk && P._dk.day === dayNo() ? Math.max(0, kills - P._dk.k0) : 0;
+  const tC = Math.round(airTemp(P.x, P.y)), wx = rain > .5 ? ((world.snow || 0) > .4 ? 'снег' : 'дождь') : lightLevel() < .3 ? 'темно' : 'ясно';
+  for (const line of [
+    'Погода: ' + wx + ', ' + (tC > 0 ? '+' : '') + tC + '°',
+    'Упокоил: ' + (kd ? kd + ' ' + ruN(kd, 'мертвеца', 'мертвецов', 'мертвецов') : 'никого'),
+    'Самочувствие: ' + diaryMood(),
+  ]) R.appendChild(mk('p', 'nb-ln nb-sum', line));
+  book.appendChild(L); book.appendChild(mk('i', 'nb-spine')); book.appendChild(R);
+  body.appendChild(book);
 }
+// убитые за сегодня — для итога дня
+onUpdate(() => { if (!P || mode !== 'play') return; const d = dayNo(); if (!P._dk || P._dk.day !== d) P._dk = {day:d, k0:kills}; });
 { onPanel(() => {
     if (!panel || panel.kind !== 'inv') return;
     const tabs = $('pnTabs');

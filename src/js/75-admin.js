@@ -74,7 +74,7 @@ onPanel(() => {
     row([['Убрать рядом', () => { const n = zs.length; zs = zs.filter(z => Math.hypot(z.x - P.x, z.y - P.y) > 25); toast('Убрано: ' + (n - zs.length)); }],
          ['Убрать всех', () => { const n = zs.length; zs = []; toast('Убрано: ' + n); }],
          ['+1 рядом', () => adminZombies(1, 2)], ['+10 рядом', () => adminZombies(10, 8)], ['Орда (+40)', () => adminZombies(40, 14)],
-         ['Осада сейчас', () => { if (SIEGE.on) { toast('Осада уже идёт'); return; } SIEGE.at = gameMin; SIEGE.warned = SIEGE.warn2 = true; toast('Осада начинается'); }]]);
+         ['Осада сейчас', () => { if (SIEGE.on) { toast('Осада уже идёт'); return; } SIEGE.at = gameMin; SIEGE.warned = SIEGE.warn2 = true; toast('Осада начинается: на 8 часов, потом снова по расписанию — в 22:00'); }]]);
     sec('Время');
     row([['+1 час', () => { gameMin += 60; }], ['Утро 8:00', () => adminHour(8)], ['День 13:00', () => adminHour(13)], ['Вечер 19:00', () => adminHour(19)], ['Ночь 23:00', () => adminHour(23)], ['+1 день', () => { gameMin += 1440; }]]);
     sec('Погода');
