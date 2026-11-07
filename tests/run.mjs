@@ -512,6 +512,12 @@ const tvx = await D(`(() => { P.sleep = false; P.awake = 0; P.en = 100; zs.lengt
   return {xp, sub, gap, capped, ended, f:!!TVS.f}; })()`);
 check('эфир: «Вкусно и просто» в 10:00 учит кулинарии', tvx.xp > 2 && tvx.xp < 4 && tvx.sub === 'Шеф Аркадий', tvx);
 check('эфир: перерыв между передачами, выше 3-го уровня не учит, через неделю — конец', tvx.gap && tvx.capped && tvx.ended, tvx);
+const eps = await D(`(() => { const seen = new Set(), films = new Set(); let dup = 0;
+  for (let d = 0; d < TV_DAYS; d++) for (const ch of [2, 3]) for (const [h, k] of TV_SCHED[ch].slots) for (let i = 1; i <= 10; i++) {
+    const l = tvLine(k, d, i, ch); if (k === 'film') { films.add(filmOf(d, ch).t); continue; } if (!tvRepeat(ch, h, k)) { if (seen.has(l)) dup++; seen.add(l); } }
+  const host5 = tvNow(3, 5 * 1440 + 8 * 60 + 7).host, topic = tvNow(2, 2 * 1440 + 10 * 60 + 1).topic;
+  return {lines:seen.size, dup, films:films.size, host5, topic}; })()`);
+check('у каждой передачи 7 разных выпусков, 14 фильмов без повторов', eps.lines === 560 && eps.dup === 0 && eps.films === 14 && eps.host5 === 'Сменщик Саша' && eps.topic === 'Консервы', eps);
 const vh = await D(`(() => { P.sleep = false; P.awake = 0; P.en = 100; gameMin = Math.floor(gameMin / 1440) * 1440 - 8 * 1440 + 10 * 60; if (!TVS.f) tvOn(furns.filter(f => f.type === 'tv').sort((a, b) => Math.hypot(a.cx - P.x, a.cy - P.y) - Math.hypot(b.cx - P.x, b.cy - P.y))[0]); const f = TVS.f; P.skills = {}; const t = mkItem('vhs_mech'); P.inv.push(t); tvInsert(t);
   for (let k = 0; k < 400 && TVS.vhs; k++) update(.25);
   const xp1 = P.skills.mech || 0, done = t.done; tvInsert(t); for (let k = 0; k < 400 && TVS.vhs; k++) update(.25);

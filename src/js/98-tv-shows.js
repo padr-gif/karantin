@@ -102,12 +102,8 @@ const SHOWS = {
     'Устали — уходите. Уставший боец промахивается.',
     'Лучшая драка — та, которой удалось избежать.']},
 };
-const FILMS = [
-  {t:'Тайна старой дачи', lines:['— Ты слышал? На чердаке кто-то ходит.', '— Это ветер, Маша. Просто ветер.', '— Ветер не скрипит половицами.', '— Ладно. Возьми фонарь, я — топор.', '— Здесь пахнет… яблоками?', '— Смотри, следы. Детские.', '— В этом доме двадцать лет никто не жил.', '— Тогда кто зажёг свечу?', '— Бежим! Бежим к машине!', '— Ключи… где ключи?!']},
-  {t:'Неуловимый Лис', lines:['— Сейф открыт, генерал. Пустой.', '— Опять Лис. Третий раз за месяц.', '— Он оставил записку: «Спасибо за гостеприимство».', '— Перекрыть все дороги из города!', '— А если он не уехал? Если он среди нас?', '— Официант, ещё кофе. С сахаром.', '— Конечно, месье. Вам с корицей?', '— Вы весьма наблюдательны, мой друг.', '— Взять его! Это он!', '— Слишком поздно, генерал. Слишком поздно.']},
-  {t:'Звёзды над степью', lines:['— Посмотри, сколько звёзд. В городе такого не увидишь.', '— Останемся здесь до утра?', '— Трактор чинить надо, а ты про звёзды.', '— Трактор подождёт. Звёзды — нет.', '— Знаешь, я ведь тогда не уехал из-за тебя.', '— Знаю. Я ждала.', '— Слышишь? Сверчки.', '— Это не сверчки. Это сердце стучит.', '— Завтра будет дождь.', '— Пусть. Нам будет тепло.']},
-  {t:'Последний рейс', lines:['— Командир, топлива на сорок минут.', '— До аэродрома пятьдесят.', '— Значит, будем садиться в поле.', '— Пассажиров предупредить?', '— Скажи, что небольшая болтанка. И улыбайся.', '— Шасси не выходит!', '— Выпустим вручную. Держи штурвал.', '— Поле! Вижу поле!', '— Держитесь крепче, ребята.', '— Мы… сели? Мы сели!']},
-];
+const FILMS = TV_FILMS;                                                       // 14 фильмов (98-tv-episodes)
+const filmOf = (day, ch) => FILMS[(day * 2 + ch - 2) % FILMS.length];        // за неделю ни один сеанс не повторяется
 // расписание: [час начала, передача]; передача длится час
 const TV_SCHED = {
   2:{name:'Домашний', slots:[[7, 'farm'], [10, 'cook'], [13, 'carp'], [16, 'tail'], [19, 'med'], [21, 'film']]},
@@ -151,23 +147,30 @@ function tvNow(ch, gm) {
     const st = h * 60;
     if (m >= st && m < st + 60) {
       const idx = Math.floor((m - st) / TV_LINE), film = k === 'film';
-      const sh = film ? null : SHOWS[k], F = film ? FILMS[(day + ch) % FILMS.length] : null;
-      return {k, film, ch, day, st, idx, left:st + 60 - m, title:film ? 'Вечерний фильм: «' + F.t + '»' : sh.t, host:film ? F.t : sh.host, skill:film ? null : k, line:tvLine(k, day, idx, ch)};
+      const sh = film ? null : SHOWS[k], F = film ? filmOf(day, ch) : null, ep = film ? null : TV_EPS[k][day];
+      return {k, film, ch, day, st, idx, left:st + 60 - m, rep:tvRepeat(ch, h, k), topic:ep && ep[0], title:film ? 'Вечерний фильм: «' + F.t + '»' : sh.t, host:film ? F.t : ep[2] || sh.host, skill:film ? null : k, line:tvLine(k, day, idx, ch)};
     }
   }
   const nx = S.slots.find(([h]) => h * 60 > m) || null;
   return {gap:true, next:nx ? [nx[0], nx[1]] : (day + 1 < TV_DAYS ? [S.slots[0][0], S.slots[0][1], true] : null)};
 }
+// реплика выпуска: 0 — объявление темы, 1–10 — выпуск дня (TV_EPS), 11 — прощание
 function tvLine(k, day, idx, ch) {
   const last = idx >= 11;
   if (k === 'film') {
-    const F = FILMS[(day + ch) % FILMS.length];
-    return idx === 0 ? 'Смотрите фильм «' + F.t + '».' : last ? 'Конец фильма. Спокойной ночи.' : F.lines[(idx - 1) % F.lines.length];
+    const F = filmOf(day, ch);
+    return idx === 0 ? 'Смотрите фильм «' + F.t + '».' : last ? 'Конец фильма. Спокойной ночи.' : F.lines[idx - 1];
   }
-  const sh = SHOWS[k];
-  if (idx === 0) return day >= 4 ? 'Мы в эфире, несмотря ни на что. «' + sh.t + '», выпуск ' + (day + 1) + '.' : 'Здравствуйте! В эфире «' + sh.t + '», выпуск ' + (day + 1) + '.';
-  if (last) return day >= TV_DAYS - 1 ? 'На сегодня всё. Берегите себя… и друг друга.' : 'На сегодня всё. Завтра в это же время — до встречи!';
-  return sh.tips[(idx - 1 + day * 3) % sh.tips.length];
+  const sh = SHOWS[k], ep = TV_EPS[k][day];
+  if (idx === 0) return '«' + sh.t + '», выпуск ' + (day + 1) + '. Тема: ' + ep[0].toLowerCase() + '.';
+  if (last) return day >= TV_DAYS - 1 ? 'Прощайте. Берегите себя… и друг друга.' : day >= 4 ? 'Завтра в это же время. Если будем в эфире.' : 'На сегодня всё. Завтра в это же время — до встречи!';
+  return ep[1][idx - 1];
+}
+// повтор: эта передача уже шла сегодня раньше — на любом канале
+function tvRepeat(ch, h, k) {
+  if (k === 'film') return false;
+  for (const [c, S] of Object.entries(TV_SCHED)) for (const [h2, k2] of S.slots) if (k2 === k && (h2 < h || (h2 === h && +c < ch))) return true;
+  return false;
 }
 const tvTitleOf = k => k === 'film' ? 'Вечерний фильм' : SHOWS[k].t;
 function tvNowLabel() {
@@ -288,6 +291,7 @@ function tvShowScreen(inn, ch, tok) {
   const tag = mk('div', 'tvs-tag', n.film ? 'Кино · снимает скуку' : 'Навык: ' + SK_SHORT(n.skill) + (skillLv(n.skill) >= TV_CAP ? ' · ты уже знаешь больше' : ' · до ' + TV_CAP + '-го уровня'));
   inn.appendChild(tag);
   inn.appendChild(mk('div', 'tvs-title', n.title));
+  if (!n.film) inn.appendChild(mk('div', 'tvs-topic', 'Выпуск ' + (n.day + 1) + ': ' + n.topic + (n.rep ? ' · повтор' : '')));
   const msg = mk('div', 'tvn-txt'); inn.appendChild(msg);
   typeInto(msg, (n.film ? '' : n.host + ': ') + n.line, 60);
   const bar = mk('div', 'tvs-bar'); const fill = mk('i'); fill.style.width = Math.round((60 - n.left) / 60 * 100) + '%'; bar.appendChild(fill); inn.appendChild(bar);
@@ -328,8 +332,9 @@ function tvGuide(cur) {
     const c = mk('div', 'tvg-col' + (cur === ch ? ' cur' : '')); c.appendChild(mk('div', 'tvg-ch', ch + ' · ' + TV_SCHED[ch].name));
     for (const [h, k] of TV_SCHED[ch].slots) {
       const st = h * 60, r = mk('div', 'tvg-row' + (m >= st + 60 ? ' past' : m >= st ? ' now' : ''));
-      r.appendChild(mk('span', 'tvg-t', String(h).padStart(2, '0') + ':00')); r.appendChild(mk('span', 'tvg-n', tvTitleOf(k)));
+      r.appendChild(mk('span', 'tvg-t', String(h).padStart(2, '0') + ':00')); r.appendChild(mk('span', 'tvg-n', k === 'film' ? '«' + filmOf(day, ch).t + '»' : tvTitleOf(k) + (tvRepeat(ch, h, k) ? ' (повтор)' : '')));
       r.appendChild(mk('span', 'tvg-s', k === 'film' ? 'кино' : SK_SHORT(k)));
+      if (k !== 'film') r.appendChild(mk('span', 'tvg-e', TV_EPS[k][day][0]));         // тема сегодняшнего выпуска
       c.appendChild(r);
     }
     cols.appendChild(c);
