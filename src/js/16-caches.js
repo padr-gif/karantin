@@ -299,20 +299,20 @@ function playerAnimBase(pAtk) {
   const act = P.act && P.act.kind;
   if (P.thrT > 0) { const n = AN('p', 'punch'); return ['punch', Math.min(n - 1, Math.floor((1 - P.thrT / .32) * n))]; }
   if (act === 'use' && P.act.an === 'read') return ['eat', 1];
-  if (act === 'use') { const an = P.act.an, n = AN('p', an); if (an === 'work') return ['work', Math.floor(animT * 6) % n]; return [an, Math.min(n - 1, Math.floor(P.act.t / P.act.dur * n))]; }
+  if (act === 'use') { const an = P.act.an, n = AN('p', an); if (an === 'work') return ['work', Math.floor(heroAnimT * 6) % n]; return [an, Math.min(n - 1, Math.floor(P.act.t / P.act.dur * n))]; }
   if (act === 'pickup') { const n = AN('p', 'pickup'); return ['pickup', Math.min(n - 1, Math.floor(P.act.t / P.act.dur * n))]; }
-  if (act === 'search' || act === 'cook' || act === 'cookx' || act === 'forage') return ['search', Math.floor(animT * 7) % AN('p', 'search')];
-  if (act === 'fish') return ['idle', Math.floor(animT * 2) % AN('p', 'idle')];
-  if (act === 'pry') return ['work', Math.floor(animT * 6) % AN('p', 'work')];
-  if (act === 'hotwire') return ['search', Math.floor(animT * 7) % AN('p', 'search')];
-  if (act === 'bar' || act === 'unbar' || act === 'furn' || act === 'dismantle' || act === 'job' || act === 'reload') return ['work', Math.floor(animT * 6) % AN('p', 'work')];
+  if (act === 'search' || act === 'cook' || act === 'cookx' || act === 'forage') return ['search', Math.floor(heroAnimT * 7) % AN('p', 'search')];
+  if (act === 'fish') return ['idle', Math.floor(heroAnimT * 2) % AN('p', 'idle')];
+  if (act === 'pry') return ['work', Math.floor(heroAnimT * 6) % AN('p', 'work')];
+  if (act === 'hotwire') return ['search', Math.floor(heroAnimT * 7) % AN('p', 'search')];
+  if (act === 'bar' || act === 'unbar' || act === 'furn' || act === 'dismantle' || act === 'job' || act === 'reload') return ['work', Math.floor(heroAnimT * 6) % AN('p', 'work')];
   if (act === 'vault') return vaultAnim();
   const an = P.running ? 'run' : P.sneak ? 'sneak' : 'walk', n = AN('p', an);
   const k = P.running ? .62 : 1;
   const wf = ((Math.floor(P.walk * k / (Math.PI * 2) * n) % n) + n) % n;
   if (P.moving) return [an, wf];
   if (P.sneak) return ['sneak', 0];
-  return ['idle', Math.floor(animT * 2.6) % AN('p', 'idle')];
+  return ['idle', Math.floor(heroAnimT * 2.6) % AN('p', 'idle')];
 }
 function zombieAnim(z) {
   {                                                                          // тянется за героем через проём, лежит сбитый и встаёт

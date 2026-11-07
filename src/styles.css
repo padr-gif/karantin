@@ -1563,3 +1563,8 @@ body.invglass>*:not(#game):not(#vig):not(#panel):not(#toasts):not(svg){visibilit
 .fftag{white-space:nowrap}
 .ffbtn.hint{animation:ffhint .6s ease-in-out 6 alternate}
 @keyframes ffhint{to{box-shadow:0 0 0 4px rgba(255,209,102,.6);transform:scale(1.08)}}
+/* v94: карта — окно-просмотр, холст во всю обёртку, без прокрутки */
+.mapwrap{position:relative;overflow:hidden!important}
+.mapwrap .mapc{position:absolute;left:0;top:0;margin:0;border-radius:0}
+#panel.pmap .sheet{display:flex;flex-direction:column}
+#panel.pmap #pnBody{flex:1 1 auto;overflow:hidden;display:flex!important;flex-direction:column;gap:8px}

@@ -84,7 +84,7 @@ function updateCore(dt) {
   if (P.running) { P.dustT = (P.dustT || 0) - dt; if (P.dustT <= 0) { P.dustT = .22; emit('dust', P.x, P.y, .02, 1, null, 0, .6); } }
   noiseTimer -= dt;
   if (noiseTimer <= 0 && P.moving && !P.sneak) { noise(P.x, P.y, (P.running ? 7 : 1.6) * (rain > .5 ? .8 : 1) * stepNoiseK()); noiseTimer = .5; }
-  if (P.act) { P.act.t += dt; if (P.act.t >= P.act.dur) { const a = P.act; P.act = null; finishAct(a); } }
+  if (P.act) { P.act.t += dt * actK(); if (P.act.t >= P.act.dur) { const a = P.act; P.act = null; finishAct(a); } }
   updateThrown(dt);
   updateGens(dt, gm); updateBeds(gm); updateHeli(dt); updateDrops(dt); updateBlazes(dt); updateTraps(); updateFlares(dt); updateBino(dt); updateClimate(gm); updateStorm(dt); updateHorde(); updateSnow(gm); updateMood(gm, dt); P.achT = (P.achT || 0) - dt; if (P.achT <= 0) { P.achT = 1; checkAch(); }
   { const dark = lightLevel() < .3, day = Math.floor(gameMin / 1440); if (dark && P.nightDay !== day) { P.nightDay = day; toast('Стемнело. Ночью мертвецы бегают быстрее'); } }

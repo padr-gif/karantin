@@ -28,6 +28,9 @@ const FF_ALARM = [
 ];
 // множитель игровых минут за кадр (сон — ×40, как раньше)
 function timeK() { return P && P.sleep ? 40 : FF.run ? FF_LV[FF.i] : 1; }
+// занятия (чтение, спорт, готовка, ремонт, обыск…) тоже идут быстрее — и их анимация (heroAnimT, 99-wiring)
+function actK() { return FF.run && P && P.act && P.act.kind !== 'reload' && P.act.kind !== 'vault' ? FF_LV[FF.i] : 1; }
+let heroAnimT = 0;
 function ffSet(i, quiet) {
   FF.i = i % FF_LV.length; FF.g0 = gameMin; FF.run = false;
   if (FF.i) {

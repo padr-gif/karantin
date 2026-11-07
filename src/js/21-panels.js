@@ -264,12 +264,11 @@ function renderPanelCore() {
   } else if (panel.kind === 'radio') { mediaRadio(body);
   } else if (panel.kind === 'map') {
     $('pnTitle').textContent = 'Карта'; $('pnSub').textContent = P.mapRead ? 'район по бумажной карте' : 'только то, что видел сам';
-    // карта на весь экран: тащи пальцем или мышью, щипок и колесо — масштаб; «Где я», обозначения сворачиваются; при открытии — по центру на тебе
+    // карта на весь экран: тащи пальцем или мышью, щипок, колесо и двойной тап — масштаб; «Где я», обозначения сворачиваются; при открытии — по центру на тебе
     const zr = mk('div', 'secrow maptools'), zs2 = mk('div', 'seg mapz');
-    const mid = () => [c.parentNode.clientWidth / 2, c.parentNode.clientHeight / 2];
-    zs2.appendChild(btn('Весь город', () => { SFX.ui(); mapZoomTo(c, 1, ...mid()); }, (world.mapZ || 2) <= 1.01 ? 'on' : ''));
-    zs2.appendChild(btn('−', () => { SFX.ui(); mapZoomTo(c, (world.mapZ || 2) / 1.4, ...mid()); }, 'mzb'));
-    zs2.appendChild(btn('+', () => { SFX.ui(); mapZoomTo(c, (world.mapZ || 2) * 1.4, ...mid()); }, 'mzb'));
+    zs2.appendChild(btn('Весь город', () => { SFX.ui(); world.mapZ = 1; drawMapCanvas(c); }, (world.mapZ || 4) <= 1.01 ? 'on' : ''));
+    zs2.appendChild(btn('−', () => { SFX.ui(); mapZoomTo(c, (world.mapZ || 4) / 1.7); }, 'mzb'));
+    zs2.appendChild(btn('+', () => { SFX.ui(); mapZoomTo(c, Math.max(1.7, (world.mapZ || 4) * 1.7)); }, 'mzb'));
     zr.appendChild(zs2);
     const me = btn('Где я', () => { SFX.ui(); mapCenter(c); }, 'mapme'); zr.appendChild(me);
     const lgB = btn(world.mapLg ? 'Скрыть обозначения' : 'Обозначения', () => { world.mapLg = !world.mapLg; renderPanel(); }, 'maplg'); zr.appendChild(lgB);
@@ -282,7 +281,7 @@ function renderPanelCore() {
       body.appendChild(lg);
     }
     if (!P.mapRead) body.appendChild(mk('p', 'empty mapnote', 'Видно только то, что ты видел сам. Бумажная карта района из машин и шкафов откроет весь город.'));
-    requestAnimationFrame(() => { drawMapCanvas(c); mapCenter(c); });
+    requestAnimationFrame(() => mapCenter(c));
     mapDrag(mw, c);
     mw.addEventListener('click', e => { if (c._dragged) { c._dragged = false; return; } mapPin(e, c); });   // на обёртке: при захвате указателя клик приходит ей
   } else if (panel.kind === 'cook') {
@@ -309,37 +308,42 @@ function renderPanelCore() {
   }
 }
 
-// карта: новый масштаб z (1 — весь город, до 6), точка (fx, fy) окна карты остаётся на месте
+// карта: новый масштаб z (1 — весь город, до MAP_ZMAX), точка (fx, fy) окна карты остаётся на месте
 function mapZoomTo(c, z, fx, fy) {
-  const w = c && c.parentNode, m = c && c._mp; if (!w || !m) return;
-  z = Math.max(1, Math.min(6, z)); if (Math.abs(z - (world.mapZ || 2)) < .01) return;
-  const u = (w.scrollLeft + fx - m.cw / 2) / m.s, v = (w.scrollTop + fy + m.m0 * m.s) * 2 / m.s;   // u = x − y, v = x + y под пальцем
-  world.mapZ = z; drawMapCanvas(c); const n = c._mp;
-  w.scrollLeft = n.s * u + n.cw / 2 - fx; w.scrollTop = n.s / 2 * v - n.m0 * n.s - fy;
-  const zb = w.parentNode && w.parentNode.querySelector('.mapz button'); if (zb) zb.classList.toggle('on', z <= 1.01);
+  if (!c || !c._M) return;
+  z = clamp(z, 1, MAP_ZMAX); const M = c._M;
+  if (fx == null) { fx = M.aw / 2; fy = M.ah / 2; }
+  const uf = (fx - M.ox) / M.s, vf = (fy - M.oy) * 2 / M.s, s2 = M.fit * z;      // под пальцем — та же точка города
+  world.mapZ = z;
+  c._v = {u:uf - (fx - M.aw / 2) / s2, v:vf - (fy - M.ah / 2) * 2 / s2};
+  mapRedraw(c);
 }
+function mapRedraw(c) { if (c._raf) return; c._raf = requestAnimationFrame(() => { c._raf = 0; drawMapCanvas(c); }); }
 // карта двигается пальцем и мышью; два пальца — масштаб; колесо — масштаб под курсором. Сдвиг больше 6 пикселей — не тап (не ставит значок)
 function mapDrag(w, c) {
-  const pts = new Map(); let pinch = null, raf = 0, want = null;
+  const pts = new Map(); let pinch = null;
   const loc = e => { const r = w.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
-  const zoomSoon = (z, fx, fy) => { want = [z, fx, fy]; if (!raf) raf = requestAnimationFrame(() => { raf = 0; if (want) mapZoomTo(c, ...want); want = null; }); };
   w.addEventListener('pointerdown', e => { pts.set(e.pointerId, {x:e.clientX, y:e.clientY, mv:0}); try { w.setPointerCapture(e.pointerId); } catch (er) {}
-    if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = {d:Math.hypot(a.x - b.x, a.y - b.y), z:world.mapZ || 2}; } });
+    if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = {d:Math.hypot(a.x - b.x, a.y - b.y), z:world.mapZ || 4}; } });
   w.addEventListener('pointermove', e => {
-    const p = pts.get(e.pointerId); if (!p) return;
+    const p = pts.get(e.pointerId); if (!p || !c._M) return;
     const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY; p.mv += Math.abs(dx) + Math.abs(dy);
     if (p.mv > 6) c._dragged = true;
     if (pts.size >= 2 && pinch) { const [a, b] = [...pts.values()], d = Math.hypot(a.x - b.x, a.y - b.y), r = w.getBoundingClientRect();
-      zoomSoon(pinch.z * d / Math.max(20, pinch.d), (a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top); return; }
-    w.scrollLeft -= dx; w.scrollTop -= dy;
+      mapZoomTo(c, pinch.z * d / Math.max(20, pinch.d), (a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top); return; }
+    if (pts.size >= 2) return;
+    if ((world.mapZ || 4) <= 1.01) { world.mapZ = 1.02; c._v = c._v || {u:0, v:MW}; }   // потащил «весь город» — дальше двигается свободно
+    const s = c._M.s; c._v.u -= dx / s; c._v.v -= dy * 2 / s; mapRedraw(c);
   });
   const up = e => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; if (!pts.size) setTimeout(() => { c._dragged = false; }, 0); };
   w.addEventListener('pointerup', up); w.addEventListener('pointercancel', up);
-  w.addEventListener('wheel', e => { e.preventDefault(); zoomSoon((world.mapZ || 2) * (e.deltaY < 0 ? 1.18 : 1 / 1.18), ...loc(e)); }, {passive:false});
+  w.addEventListener('wheel', e => { e.preventDefault(); mapZoomTo(c, (world.mapZ || 4) * Math.pow(1.0018, -e.deltaY), ...loc(e)); }, {passive:false});
+  w.addEventListener('dblclick', e => { e.preventDefault(); mapZoomTo(c, (world.mapZ || 4) * 2, ...loc(e)); });   // двойной тап — приблизить сюда
 }
-// карта: прокрутить так, чтобы герой был посередине
+// карта: герой посередине
 function mapCenter(c) {
-  const m = c && c._mp, w = c && c.parentNode; if (!m || !w) return;
-  const px = m.s * (P.x - P.y) + m.cw / 2, py = m.s / 2 * (P.x + P.y) - m.m0 * m.s;
-  w.scrollLeft = px - w.clientWidth / 2; w.scrollTop = py - w.clientHeight / 2;
+  if (!c) return;
+  if ((world.mapZ || 4) <= 1.01) world.mapZ = 4;
+  c._v = {u:P.x - P.y, v:P.x + P.y}; drawMapCanvas(c);
 }
+addEventListener('resize', () => { const c = panel && panel.kind === 'map' && document.querySelector('#pnBody .mapc'); if (c) mapRedraw(c); });

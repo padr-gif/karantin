@@ -558,6 +558,20 @@ await page.click('#bFF', {timeout:5000}); const t1 = await D("FF.i");
 await page.click('#clockBox'); const t2 = await D("FF.i");
 await page.click('#bFF'); const t3 = await D("FF.i");
 check('ускорение включается настоящим нажатием: кнопка ▶▶ и часы', t1 === 1 && t2 === 2 && t3 === 0, {t1, t2, t3});
+const fa = await D(`(() => { zs.length = 0; P.sleep = false; P.awake = 0; P.en = 100; P.hp = 100; P.sat = P.hyd = 90; P.bleed = 0; P.hurt = 0; keys.clear();
+  P.act = {kind:'job', t:0, dur:100, fn:() => {}}; update(.1); const t1 = P.act.t;
+  ffSet(2, true); update(.016); P.act.t = 0; update(.1); const t4 = P.act.t; const h0 = heroAnimT;
+  P.act = null; ffSet(0, true); return {t1:+t1.toFixed(3), t4:+t4.toFixed(3)}; })()`);
+check('при ускорении занятия (чтение, спорт, крафт) идут быстрее', fa.t1 === .1 && Math.abs(fa.t4 - .4) < .01, fa);
+const mz = await D(`(() => { P.mapRead = true; openMap(); return 1; })()`); await sleep(300);
+const mz2 = await D(`(() => { const c = document.querySelector('.mapc'); world.mapZ = 1; drawMapCanvas(c); const s1 = c._M.s;
+  const t0 = performance.now(); mapZoomTo(c, 1.7); drawMapCanvas(c); const s2 = c._M.s, dt = performance.now() - t0;
+  const [wx, wy] = c._toWorld(c._M.aw / 2 + 40, c._M.ah / 2 + 20); mapZoomTo(c, 6, c._M.aw / 2 + 40, c._M.ah / 2 + 20); drawMapCanvas(c);
+  const [wx2, wy2] = c._toWorld(c._M.aw / 2 + 40, c._M.ah / 2 + 20); mapCenter(c); const [cx, cy] = c._toWorld(c._M.aw / 2, c._M.ah / 2);
+  const fill = c.parentNode.clientHeight; closePanel();
+  return {grow:+(s2 / s1).toFixed(2), dt:Math.round(dt), keep:+Math.hypot(wx - wx2, wy - wy2).toFixed(2), me:+Math.hypot(cx - P.x, cy - P.y).toFixed(2), fill}; })()`);
+check('карта: «+» сразу приближает, точка под пальцем остаётся на месте, «Где я» — по центру', mz2.grow > 1.6 && mz2.keep < .2 && mz2.me < .2, mz2);
+check('карта: масштаб перерисовывается быстро', mz2.dt < 150, mz2);
 const sl = await D(`(() => { for (let y = 20; y < MH - 20; y++) for (let x = 20; x < MW - 20; x++) {
     if (get(x, y) === WALL && get(x + 1, y) === WALL && get(x - 1, y) === WALL && !blocked(x + .5, y + 1.5, P.r) && !blocked(x + 1.5, y + 1.5, P.r) && !blocked(x - .5, y + 1.5, P.r)) {
       P.x = x + .5; P.y = y + 1.5; for (let k = 0; k < 40; k++) move(P, 0, -.05); const x0 = P.x, y0 = P.y; move(P, .07, -.07); return {dx:+(P.x - x0).toFixed(3), dy:+(P.y - y0).toFixed(3)}; } } return null; })()`);

@@ -4,7 +4,7 @@
 function heroPre(lk) { return 'p' + ((lk || (P && P.look) || look).g === 'f' ? 'f' : 'm'); }
 function heroRig(lk) { return !!(ART.meta && ART.meta.anims && ART.meta.anims[heroPre(lk)]); }   // запечён на модели UBC: все клипы, одежда по областям
 function heroDur(an, def) { const d = ART.meta.anims[heroPre() + 'dur']; return (d && d[an]) || def; }
-const pmLoop = (an, speed) => { const n = AN('p', an), d = heroDur(an, 2); return [an, Math.floor(animT * (speed || 1) / d * n) % n]; };
+const pmLoop = (an, speed) => { const n = AN('p', an), d = heroDur(an, 2); return [an, Math.floor(heroAnimT * (speed || 1) / d * n) % n]; };
 
 // ---- зарядка: прыжки «ноги врозь — руки в стороны», дольше и полезнее ----
 // шаги в такт прыжкам

@@ -156,8 +156,8 @@ function drawMinimap(dt) {
 // ---- map pins ----
 function mapPin(e, c) {
   const r = c.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
-  const m0 = c._m0, s = c._s, cw = c._cw; if (!s) return;
-  const u = (mx - cw / 2) / s, v = my / (s / 2) + 2 * m0, x = (u + v) / 2, y = (v - u) / 2;
+  if (!c._toWorld) return;
+  const [x, y] = c._toWorld(mx, my);
   if (adminTp) { adminTp = false; closePanel(); adminTeleport(x, y); return; }   // админ-меню: телепорт тапом
   world.marks = world.marks || [];
   const near = world.marks.findIndex(m => Math.hypot(m.x - x, m.y - y) < 3);
