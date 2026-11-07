@@ -1,47 +1,74 @@
 // ================= ускорение времени: только пока герой стоит =================
-// Кнопка ▶▶ под часами, тап по часам или F переключает скорость: обычная → ×3 → ×10 → обычная. Ускоряется только игровое время
-// (часы, голод, жажда, раны, огород, передачи), мертвецы и движения — как обычно.
-// Герой пошёл, побежал, сел в машину, ударил — сразу обычная скорость; встал — снова быстрая (режим остаётся включённым).
-// Опасность (погоня рядом, удар, кровотечение, голод/жажда на нуле, начало осады) — режим сам выключается.
-const FF_LV = [1, 3, 10];
-const FF = {i:0, run:false};
-function ffWhy() {                                                               // почему нельзя ускорять: строка — выключить совсем, 1 — просто подождать
-  if (!P || mode !== 'play' || P.sleep) return 1;
-  if (zs.some(z => z.state === 'chase' && Math.hypot(z.x - P.x, z.y - P.y) < 14)) return 'Мертвецы рядом — время снова обычное';
+// Кнопка ▶▶ слева от масштаба, тап по часам или F: обычная → ×2 → ×4 → обычная. Ускоряется только игровое время
+// (часы, голод, жажда, раны, огород, передачи), мертвецы — как обычно.
+// Шагнул, побежал, сел в машину, ударил — ускорение сбрасывается совсем: включать заново.
+// Опасность (мертвец рядом, удар, кровотечение, голод/жажда, мало здоровья, осада) — тоже сброс, с подсказкой.
+// Пока ускорено, на часах видно, сколько времени уже «прокручено» (без часов на руке точного времени нет — это и есть отклик).
+const FF_LV = [1, 2, 4];
+const FF = {i:0, run:false, g0:0, warn:{}};
+function ffWhy() {                                                               // строка — сбросить с подсказкой, 1 — сбросить молча, 0 — можно
+  if (!P || mode !== 'play') return 1;
+  if (P.sleep) return 1;
+  if (zs.some(z => !z.dead && (z.state === 'chase' ? Math.hypot(z.x - P.x, z.y - P.y) < 16 : Math.hypot(z.x - P.x, z.y - P.y) < 9 && vis[Math.floor(z.y) * MW + Math.floor(z.x)]))) return 'Мертвец рядом — время снова обычное';
   if (P.hurt > 0) return 'Тебя ранили — время снова обычное';
   if (P.bleed) return 'Кровотечение — сначала перевяжись';
-  if (P.sat < 6 || P.hyd < 6) return 'Голод и жажда — время снова обычное';
   if (P.hp < 25) return 'Ты слишком слаб — время снова обычное';
-  if (typeof SIEGE !== 'undefined' && SIEGE.on && zs.some(z => z.siege && Math.hypot(z.x - P.x, z.y - P.y) < 10)) return 'Осада у дверей — время снова обычное';
+  if (typeof SIEGE !== 'undefined' && SIEGE.on && zs.some(z => z.siege && Math.hypot(z.x - P.x, z.y - P.y) < 12)) return 'Осада у дверей — время снова обычное';
   if (P.moving || P.running || P.car || atkHeld || P.swing > 0 || (P.act && P.act.kind === 'vault')) return 1;
   return 0;
 }
-// множитель игрового времени за кадр (сон — ×40, как раньше)
+// «будильники» ускорения: нужда подступила — останавливаемся один раз, чтобы не проморгать
+const FF_ALARM = [
+  ['sat', () => P.sat < 20, 'Проголодался — время снова обычное'],
+  ['hyd', () => P.hyd < 20, 'Хочется пить — время снова обычное'],
+  ['en', () => P.en < 15, 'Клонит в сон — время снова обычное'],
+  ['night', () => lightLevel() < .3, 'Стемнело — время снова обычное'],
+  ['power', () => !powerOn(), 'Отключили электричество — время снова обычное'],
+  ['siege', () => typeof SIEGE !== 'undefined' && SIEGE.warned && !SIEGE.on, 'Сегодня ночью осада — время снова обычное'],
+];
+// множитель игровых минут за кадр (сон — ×40, как раньше)
 function timeK() { return P && P.sleep ? 40 : FF.run ? FF_LV[FF.i] : 1; }
 function ffSet(i, quiet) {
-  FF.i = i % FF_LV.length;
-  if (FF.i) { const w = ffWhy(); if (typeof w === 'string') { FF.i = 0; if (!quiet) toast(w); ffUI(); return; } }
-  if (!quiet) toast(FF.i ? 'Время ×' + FF_LV[FF.i] + ': идёт быстрее, пока стоишь на месте' : 'Обычная скорость времени');
+  FF.i = i % FF_LV.length; FF.g0 = gameMin; FF.run = false;
+  if (FF.i) {
+    const w = ffWhy();
+    if (typeof w === 'string') { FF.i = 0; if (!quiet) toast(w); ffUI(); return; }
+    for (const [k, test] of FF_ALARM) FF.warn[k] = !!(P && test());             // то, что уже есть, — не повод сразу останавливаться
+    FF.run = !w;
+  }
+  if (!quiet) toast(FF.i ? 'Время ×' + FF_LV[FF.i] + '. Пошёл — и скорость снова обычная' : 'Обычная скорость времени');
   ffUI();
 }
-function ffTap() { if (mode !== 'play' || paused || !P || P.sleep || document.body.classList.contains('ctledit')) return; SFX.ui && SFX.ui(); ffSet(FF.i + 1); }
+function ffStop(msg) { if (!FF.i) return; FF.i = 0; FF.run = false; if (msg) toast(msg); ffUI(); }
+function ffTap() { if (mode !== 'play' || paused || !P || P.sleep || document.body.classList.contains('ctledit')) return; if (SFX.ui) SFX.ui(); ffSet(FF.i + 1); }
+function ffSpan(m) { m = Math.floor(m); return m < 60 ? '+' + m + ' мин' : '+' + Math.floor(m / 60) + ' ч' + (m % 60 >= 5 ? ' ' + (m % 60) + ' мин' : ''); }
+let ffShown = '';
 function ffUI() {
-  const t = $('ffTag'); if (!t) return;
-  t.hidden = !FF.i; t.textContent = '×' + FF_LV[FF.i];
-  t.classList.toggle('hold', !!FF.i && !FF.run);
-  const c = $('clockBox'); if (c) c.classList.toggle('ff', !!FF.i);
-  const b = $('bFF'); if (b) { b.classList.toggle('on', !!FF.i); b.classList.toggle('hold', !!FF.i && !FF.run); $('ffLv').textContent = FF.i ? '×' + FF_LV[FF.i] : ''; }
+  const t = $('ffTag'), c = $('clockBox'), b = $('bFF');
+  const txt = FF.i ? '×' + FF_LV[FF.i] + (gameMin - FF.g0 >= 1 ? ' · ' + ffSpan(gameMin - FF.g0) : '') : '';
+  if (t) { t.hidden = !FF.i; t.textContent = txt; }
+  if (c) c.classList.toggle('ff', !!FF.i);
+  if (b) { b.classList.toggle('on', !!FF.i); $('ffLv').textContent = FF.i ? '×' + FF_LV[FF.i] : ''; }
+  ffShown = txt;
 }
 onUpdate(() => {
   if (!P || mode !== 'play') return;
   if (!FF.i) { FF.run = false; return; }
   const w = ffWhy();
-  if (typeof w === 'string') { FF.i = 0; FF.run = false; toast(w); ffUI(); return; }
-  const run = !w;
-  if (run !== FF.run) { FF.run = run; ffUI(); }
+  if (w) { ffStop(typeof w === 'string' ? w : P.sleep ? '' : 'Обычная скорость времени'); return; }
+  for (const [k, test, msg] of FF_ALARM) { const on = test(); if (on && !FF.warn[k]) { FF.warn[k] = true; ffStop(msg); return; } if (!on) FF.warn[k] = false; }
+  FF.run = true;
+  if (frameNo % 10 === 0) { const g = Math.floor(gameMin - FF.g0); if (ffShown.indexOf(ffSpan(g)) < 0) ffUI(); }
 });
-onNewWorld(() => { FF.i = 0; FF.run = false; ffUI(); });
-onLoad(() => { FF.i = 0; FF.run = false; ffUI(); });
+// подсказка один раз за игру: постоял спокойно полминуты в доме — показать, где кнопка
+onUpdate(dt => {
+  if (!P || mode !== 'play' || paused || FF.i || P._ffHint || panel) return;
+  if (ffWhy() || !insideHouse(P.x, P.y) || P.act) { FF.idle = 0; return; }
+  FF.idle = (FF.idle || 0) + dt;
+  if (FF.idle > 30) { P._ffHint = 1; toast('Ждёшь? Кнопка ▶▶ под часами ускоряет время, пока стоишь на месте'); const b = $('bFF'); if (b) { b.classList.add('hint'); setTimeout(() => b.classList.remove('hint'), 4000); } }
+});
+onNewWorld(() => ffStop());
+onLoad(() => ffStop());
 {
   const c = $('clockBox');
   if (c) {
@@ -53,6 +80,6 @@ onLoad(() => { FF.i = 0; FF.run = false; ffUI(); });
   addEventListener('keydown', e => {
     if (mode !== 'play' || paused || !P || P.sleep || panel) return;
     const k = e.key.toLowerCase();
-    if (k === 'f' || k === 'а') ffSet(FF.i + 1);
+    if (k === 'f' || k === 'а') ffTap();
   });
 }

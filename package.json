@@ -1,6 +1,6 @@
 {
   "name": "karantin",
-  "version": "0.92.1",
+  "version": "0.93.0",
   "private": true,
   "description": "Dead Line — мобильная зомби-выживалка в браузере",
   "type": "module",
