@@ -208,9 +208,8 @@ function renderPanelCore() {
       const dl = mk('dl', 'kv');
       const add = (k, v) => { dl.appendChild(mk('dt', '', k)); dl.appendChild(mk('dd', '', v)); };
       add('Здоровье', Math.round(P.hp) + '%'); add('Сытость', Math.round(P.sat) + '%'); add('Вода', Math.round(P.hyd) + '%'); add('Бодрость', Math.round(P.en) + '%');
-      add('Прожито', fmtDur(gameMin - startMin)); add('Убито', String(kills)); add('Сложность', DIFF[world.diff].name);
-      add('Дата', dateStr(gameMin) + ' · ' + seasonName());
-      add('Температура', Math.round(airTemp(P.x, P.y)) + '°C' + (P.cold > 30 ? ' · тебе холодно' : '')); add('Одежда', wornNames()); add('Намокание', Math.round(P.wet || 0) + '%'); add('Стресс', Math.round(P.stress || 0) + '%'); add('Скука', Math.round(P.bored || 0) + '%');
+      add('Убито', String(kills)); add('Сложность', DIFF[world.diff].name);
+      add('Ощущение', feelWord()); add('Одежда', wornNames()); add('Намокание', Math.round(P.wet || 0) + '%'); add('Стресс', Math.round(P.stress || 0) + '%'); add('Скука', Math.round(P.bored || 0) + '%');
       add('Электричество', powerOn() ? 'есть' : gens.some(g => g.on) ? 'от генератора' : 'отключено'); add('Водопровод', waterOn() ? 'работает' : 'отключён');
       body.appendChild(dl); sec('Навыки');
       const sk = mk('div', 'skills');

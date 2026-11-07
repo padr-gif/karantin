@@ -3,7 +3,7 @@
 // Если основное не читается или не загружается, игра берёт запасное. Сохранение можно выгрузить файлом и загрузить
 // из файла (перенести игру на другой телефон). Ошибки кадра и скрипта пишутся в журнал; в паузе — «Отчёт об ошибках».
 
-const GAME_VER = '0.95';
+const GAME_VER = '0.96';
 const PKEY = s => LKEY(s) + '-prev';
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } };
@@ -14,7 +14,7 @@ function unpackRec(rec) {
   try { return JSON.parse(rec.z ? lzUnpack(rec.body) : rec.body); } catch (e) { return null; }
 }
 function readLocal(k) { const raw = lsGet(k); if (!raw) return null; try { return JSON.parse(raw); } catch (e) { return null; } }
-function saveMeta() { return {day:Math.floor(gameMin / 1440) + 1, time:fmtTime(gameMin), kills, t:Date.now(), diff:world.diff, ver:GAME_VER}; }
+function saveMeta() { return {day:Math.floor(gameMin / 1440) + 1, time:fmtTime(gameMin), clk:hasDate() ? 2 : hasClock() ? 1 : 0, kills, t:Date.now(), diff:world.diff, ver:GAME_VER}; }
 function packSave() { const json = JSON.stringify(serialize()); return {meta:saveMeta(), body:lzPack(json), z:1, raw:json.length}; }
 
 writeSave = async function (s) {
@@ -65,7 +65,7 @@ loadSlot = async function (s) {
     try { if (!applyOrNull(d)) continue; }
     catch (e) { toast('Это сохранение от старой версии города. Начни новую игру'); return; }
     beginPlay();
-    toast(C[k].src === 'prev' || k > 0 ? 'Основное сохранение повреждено — загружена предыдущая копия' : 'Загружено: день ' + (Math.floor(gameMin / 1440) + 1) + ', ' + fmtTime(gameMin));
+    toast(C[k].src === 'prev' || k > 0 ? 'Основное сохранение повреждено — загружена предыдущая копия' : loadedMsg());
     return;
   }
   toast('Сохранение повреждено, запасной копии нет');

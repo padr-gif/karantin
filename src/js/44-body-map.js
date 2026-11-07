@@ -7,7 +7,7 @@ onStartNew(() => { if (P && !P.log) { P.log = []; logEv('Город закрыл
 });
 function tickDiary() {
   const day = Math.floor(gameMin / 1440);
-  if (P._logDay !== day) { if (P._logDay != null) logEv('Начался день ' + (day + 1) + ': ' + dateStr(gameMin) + ', ' + Math.round(outsideTemp()) + '°C'); P._logDay = day; }
+  if (P._logDay !== day) P._logDay = day;
   const nk = KILL_MS.find(m => m > (P._logK || 0)); if (nk && kills >= nk) { P._logK = nk; logEv(nk === 1 ? 'Убил первого мертвеца' : 'Убито мертвецов: ' + nk); }
   if (!P._logPw && !powerOn()) { P._logPw = 1; logEv('Отключили электричество'); }
   if (!P._logWt && !waterOn()) { P._logWt = 1; logEv('Из кранов больше не течёт вода'); }
@@ -139,7 +139,8 @@ function buildInfoTab(host) {
   ht.appendChild(mk('small', '', [(PROFS[P.prof] || PROFS.none).name, lkName(AGES[lk.age], lk), lkName(BUILDS[lk.build], lk)].filter(Boolean).join(' · ')));
   hc.appendChild(ht);
   const big = (v, t) => { const e = mk('div', 'hc-n'); e.appendChild(mk('b', '', v)); e.appendChild(mk('span', '', t)); return e; };
-  hc.appendChild(big(String(Math.floor((gameMin - startMin) / 1440) + 1), 'день')); hc.appendChild(big(String(kills), 'убито')); hc.appendChild(mk('small', 'hc-d', dateStr(gameMin) + ' · ' + seasonName() + ' · ' + DIFF[world.diff].name.toLowerCase()));
+  hc.appendChild(big(String(kills), 'убито')); hc.appendChild(big(String(((P && P.scars) || []).length), 'шрамов'));
+  hc.appendChild(mk('small', 'hc-d', [hasDate() ? dateStr(gameMin) : '', DIFF[world.diff].name.toLowerCase()].filter(Boolean).join(' · ')));
   a.appendChild(hc);
   // тело — полосами: зелёная, жёлтая, красная по уровню
   const bars = (list, inv) => { const g = mk('div', 'vbars'); for (const [t, v] of list) { const r = mk('div', 'vbar'), x = Math.max(0, Math.min(100, Math.round(v))), bad = inv ? x : 100 - x;
@@ -151,8 +152,7 @@ function buildInfoTab(host) {
   // вокруг: погода, тепло, свет и вода
   a.appendChild(mk('div', 'sect', 'Вокруг'));
   const env = mk('div', 'envchips'), chip = (t, v, cls) => { const e = mk('span', 'ec' + (cls ? ' ' + cls : '')); e.appendChild(mk('small', '', t)); e.appendChild(mk('b', '', v)); env.appendChild(e); };
-  const tC = Math.round(airTemp(P.x, P.y));
-  chip('Температура', tC + '°C', P.cold > 30 ? 'bad' : tC > 28 ? 'warn' : '');
+  { const f = feelsTemp(); chip('Ощущение', feelWord(), P.cold > 30 ? 'bad' : f > 30 ? 'warn' : ''); }
   chip('Тепло одежды', String(insulation()));
   chip('Свет', powerOn() ? 'есть' : gens.some(g => g.on) ? 'генератор' : 'нет', powerOn() ? '' : 'bad');
   chip('Водопровод', waterOn() ? 'работает' : 'отключён', waterOn() ? '' : 'bad');
@@ -177,7 +177,7 @@ function buildSelf(body) {
   if (sub === 'skills') buildSkillsTab(host); else if (sub === 'info') buildInfoTab(host); else buildBodyTab(host);
   const sc = (P && P.scars) || []; if (!sc.length) return;                      // шрамы
   const box = mk('div', 'scarlist'); box.appendChild(mk('div', 'sect', 'Шрамы · ' + sc.length));
-  for (const c of sc.slice(-8).reverse()) box.appendChild(mk('p', '', (WOUND[c.k] ? WOUND[c.k].name : 'Рана') + ', ' + c.where + ' — день ' + c.day + (c.ctx ? ', ' + c.ctx : '')));
+  for (const c of sc.slice(-8).reverse()) box.appendChild(mk('p', '', (WOUND[c.k] ? WOUND[c.k].name : 'Рана') + ', ' + c.where + (hasDate() && c.day ? ' — день ' + c.day : '') + (c.ctx ? ', ' + c.ctx : '')));
   body.appendChild(box);
 }
 // the character tab always opens on the body map
@@ -201,22 +201,31 @@ const JLOG_KIND = [
   [/сон|спал|уснул|выспал|проснул/i, 'sleep'],
   [/нашёл|нашел|груз|вертол|военн|радио|сигнал|спас|достиж|научил|навык|урожай|построил|починил/i, 'good'],
 ];
+const OLD_DAY_EV = /^Начался день \d/;
+// как герою сейчас — словами, без градусника
+function feelWord() {
+  const f = feelsTemp(), c = P.cold || 0;
+  return c > 85 ? 'замерзаю' : c > 55 ? 'холодно' : c > 30 ? 'прохладно' : f > 32 ? 'жарко' : f > 25 ? 'тепло' : 'нормально';
+}
 function jlogKind(t) { for (const [re, k] of JLOG_KIND) if (re.test(t)) return k; return ''; }
 function jlogView(log) {
   const dv = mk('div', 'jlog');
   if (!log.length) { dv.appendChild(mk('p', 'jempty', 'Пока ни одной записи. Всё важное — раны, находки, ночи осады — появится здесь само.')); return dv; }
-  const today = Math.floor(gameMin / 1440), d0 = Math.floor(startMin / 1440);   // дни — от начала этой жизни, как в карточке героя и бумажном дневнике
-  let day = null, list = null;
+  const today = Math.floor(gameMin / 1440), d0 = Math.floor(startMin / 1440);   // дни — от начала этой жизни, как в бумажном дневнике
+  const dated = hasDate();                                                     // без электронных часов: «сегодня / вчера / позавчера / раньше»
+  let key = null, list = null;
   for (const [m, t] of log) {
-    const d = Math.floor(m / 1440);
-    if (d !== day) {
-      day = d; const h = mk('div', 'jday');
-      h.appendChild(mk('b', '', 'День ' + Math.max(1, d - d0 + 1)));
-      if (d === today) h.appendChild(mk('span', '', 'сегодня')); else if (d === today - 1) h.appendChild(mk('span', '', 'вчера'));
+    if (OLD_DAY_EV.test(t)) continue;                                        // старые записи «Начался день N: дата, градусы»
+    const d = Math.floor(m / 1440), k = dated || d >= today - 2 ? d : 'old';
+    if (k !== key) {
+      key = k; const h = mk('div', 'jday');
+      const rel = d === today ? 'Сегодня' : d === today - 1 ? 'Вчера' : d === today - 2 ? 'Позавчера' : 'Раньше';
+      h.appendChild(mk('b', '', dated ? 'День ' + Math.max(1, d - d0 + 1) : rel));
+      if (dated) h.appendChild(mk('span', '', d >= today - 1 ? rel.toLowerCase() : dateStr(d * 1440)));
       dv.appendChild(h); list = mk('div', 'jlist'); dv.appendChild(list);
     }
     const r = mk('div', 'jent ' + jlogKind(t));
-    r.appendChild(mk('time', '', fmtTime(m))); r.appendChild(mk('i', '')); r.appendChild(mk('p', '', t));
+    r.appendChild(mk('time', '', clockStamp(m))); r.appendChild(mk('i', '')); r.appendChild(mk('p', '', t));
     list.appendChild(r);
   }
   return dv;

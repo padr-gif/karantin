@@ -101,12 +101,15 @@ async function loadSlot(s) {
   const d = await readSave(s);
   if (!d) { toast('Сохранение не найдено'); return; }
   try { applySave(d); } catch (e) { toast(e.message === 'old' ? 'Это сохранение от старой версии города. Начни новую игру' : 'Сохранение повреждено'); return; }
-  beginPlay(); toast('Загружено: день ' + (Math.floor(gameMin / 1440) + 1) + ', ' + fmtTime(gameMin));
+  beginPlay(); toast(loadedMsg());
 }
+// «День 3, 16 сент., 14:20» — сколько видно по часам на руке; без часов — пусто
+function clockLine() { return hasClock() ? (hasDate() ? 'День ' + (Math.floor(gameMin / 1440) + 1) + ', ' + dateStr(gameMin, true) + ', ' : '') + fmtTime(gameMin) : ''; }
+function loadedMsg() { const c = clockLine(); return c ? 'Загружено: ' + c : 'Игра загружена'; }
 function openPause() {
   if (mode !== 'play' || P.sleep) return;
   closePanel(); paused = true; atkHeld = false; joy.id = null; joy.x = joy.y = 0; $('stick').hidden = true;
-  $('pInfo').innerHTML = (P.look && P.look.name ? '<b>' + P.look.name.replace(/</g, '') + '</b> · ' + (PROFS[P.prof] || PROFS.none).name.toLowerCase() + '<br>' : '') + `День ${Math.floor(gameMin / 1440) + 1}, ${fmtTime(gameMin)} · убито ${kills} · ${(DIFF[world.diff] || DIFF.normal).name.toLowerCase()}`;
+  $('pInfo').innerHTML = (P.look && P.look.name ? '<b>' + P.look.name.replace(/</g, '') + '</b> · ' + (PROFS[P.prof] || PROFS.none).name.toLowerCase() + '<br>' : '') + [clockLine(), 'убито ' + kills, (DIFF[world.diff] || DIFF.normal).name.toLowerCase()].filter(Boolean).join(' · ');
   show('pause');
   if (typeof platDropBtn === 'function') platDropBtn();                   // кнопка «Сброс припасов за рекламу» (95-platform)
 }
@@ -126,7 +129,7 @@ async function renderSaves() {
     if (svMode === 'save' && s === 'auto') continue;
     const m = metas[s], row = mk('div', 'slot'), info = mk('div');
     info.appendChild(mk('b', '', (s === 'auto' ? 'Автосохранение' : 'Слот ' + s) + (m && m.name ? ' · ' + m.name : '')));
-    info.appendChild(mk('small', '', m ? `День ${m.day}, ${m.time} · убито ${m.kills} · ${(m.dn || (DIFF[m.diff] || DIFF.normal).name).toLowerCase()} · ${new Date(m.t).toLocaleString('ru-RU', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'})}` : 'Пусто'));
+    info.appendChild(mk('small', '', m ? `${m.clk ? (m.clk > 1 ? 'День ' + m.day + ', ' : '') + m.time + ' · ' : ''}убито ${m.kills} · ${(m.dn || (DIFF[m.diff] || DIFF.normal).name).toLowerCase()} · ${new Date(m.t).toLocaleString('ru-RU', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'})}` : 'Пусто'));
     const acts = mk('div', 'acts');
     if (svMode === 'load') {
       const b = btn('Загрузить', () => loadSlot(s)); b.disabled = !m; acts.appendChild(b);

@@ -54,7 +54,7 @@ function die() {
   $('ctrl').hidden = true;
   setTimeout(() => { if (mode === 'dead') { show('dead'); PLAT.interstitial(); } }, 1400);
 }
-function flashSaved(ok) { $('saveInd').textContent = ok ? 'сохранено ' + fmtTime(gameMin) : ''; setTimeout(() => { $('saveInd').textContent = ''; }, 4000); }
+function flashSaved(ok) { $('saveInd').textContent = ok ? 'сохранено' + (hasClock() ? ' ' + fmtTime(gameMin) : '') : ''; setTimeout(() => { $('saveInd').textContent = ''; }, 4000); }
 
 loadSettings();
 newGame(); for (let i = 0; i < NT; i++) seen[i] = 1; fogFull = true; menuScene();

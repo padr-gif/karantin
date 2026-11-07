@@ -188,7 +188,7 @@ function tickEvac(dt) {
     if (!P.car && mode === 'play' && Math.hypot(P.x - e.x, P.y - e.y) < 2.2) winGame();
   } else if (EV.h && gameMin > e.at + 180) {
     EV.h = null; e.at += 5 * 1440; e.told = true; e.rem = false;
-    toast('Вертолёт улетел без тебя. Следующая эвакуация — день ' + evDay() + ', 12:00');
+    toast('Вертолёт улетел без тебя. Новую эвакуацию объявят по радио');
   }
   if (BZ.evacPuffs) { for (const p of BZ.evacPuffs) { p.t += dt; p.z += dt * 30; p.r += dt * .5; p.x += dt * .4; } BZ.evacPuffs = BZ.evacPuffs.filter(p => p.t < 5); }
 }
