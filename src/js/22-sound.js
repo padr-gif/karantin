@@ -88,7 +88,16 @@ const SFX = (() => {
     carAlarm(x, y) { const v = Math.max(.12, at(x, y)); tone(.13 * v, .26, 'square', 720, 1450, 0, .01); tone(.1 * v, .24, 'square', 1450, 760, .27, .01); },
     fizz(x, y) { const v = at(x, y); noise(.12 * v, 1.2, 'highpass', 3000, .5, 0, .05); },
     heli(v) { if (v < .02) return; noise(.5 * v, .07, 'lowpass', 160, 1.2, 0, .004); tone(.25 * v, .06, 'sine', 70, 45); noise(.06 * v, .05, 'highpass', 2500, .5); },
-    gen(x, y) { const v = at(x, y); if (v < .03) return; tone(.06 * v, .15, 'sawtooth', 58 + Math.random() * 4, null, 0, .02); noise(.04 * v, .14, 'lowpass', 300, 1); },
+    // генератор: двухтактное «тук-тук» мотора (глухой удар выхлопа + низкий гул), лёгкий дребезг рамы и свист генератора
+    gen(x, y) { const v = at(x, y); if (v < .03) return;
+      const j = () => (Math.random() - .5) * .012;
+      for (const [d, k] of [[0, 1], [.078 + j(), .8]]) {
+        noise(.075 * v * k, .07, 'lowpass', 210 + Math.random() * 40, 2.2, d, .003, 90);
+        tone(.05 * v * k, .065, 'triangle', 47 + Math.random() * 3, 38, d, .003);
+      }
+      if (Math.random() < .5) noise(.012 * v, .05, 'bandpass', 1900 + Math.random() * 600, 6, .03 + Math.random() * .08, .002);
+      tone(.008 * v, .17, 'sine', 395 + Math.random() * 6, null, 0, .03);
+    },
     heart(k) { tone(.25 * k, .1, 'sine', 55, 40); tone(.18 * k, .1, 'sine', 50, 38, .16); },
     gun(big) { noise(big ? .95 : .8, big ? .5 : .32, 'lowpass', big ? 900 : 1600, .7, 0, .001, 120); noise(big ? .5 : .4, .06, 'highpass', 2500, .5); tone(big ? .5 : .35, .25, 'sine', big ? 70 : 110, 35); noise(.18, 1.4, 'lowpass', 300, .5, .05, .05); },
     click() { tone(.15, .03, 'square', 2200, null); noise(.08, .03, 'highpass', 4000, .6, .01); },

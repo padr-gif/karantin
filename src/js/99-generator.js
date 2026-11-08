@@ -198,3 +198,76 @@ onLoad(d => {
   P.co = (x && x.co) || 0;
 });
 onStartNew(() => { if (P) P.co = 0; genPlaceEnd(); });
+
+// ---------- журнал «Генераторы: подключение и уход» ----------
+// Без него к дому не подключить: где щиток, как не спалить проводку и не убить себя током. Электрик знает и так.
+ITEMS.mag_gen = {name:'Журнал «Генераторы: подключение и уход»', sh:'Журнал: генераторы', kind:'book', mag:'gen', verb:'Читать'};
+DESC.mag_gen = 'Тонкий журнал из хозяйственного: как подключить генератор к щитку дома, заземлить и не отравиться выхлопом. Прочитаешь — сможешь подключать.';
+KG.mag_gen = .2;
+{ const add = (k, ...ids) => CONT[k] && CONT[k].loot && CONT[k].loot.push(...ids);
+  add('toolrack', 'mag_gen', 'mag_gen'); add('crate', 'mag_gen'); add('bookshelf', 'mag_gen'); add('desk', 'mag_gen'); add('boxes', 'mag_gen'); add('locker', 'mag_gen'); }
+onStartNew(() => {
+  // в хозяйственном, где лежит генератор, рядом и журнал
+  const hw = furns.filter(f => f.type === 'crate' && f.items && f.items.some(i => i.id === 'generator'));
+  for (const f of hw) f.items.push(mkItem('mag_gen'));
+});
+const genKnown = () => !!(P && ((P.readMag && P.readMag.mag_gen) || P.prof === 'electric'));
+defUse(it => it.id === 'mag_gen', (it, k) => {
+  P.readMag = P.readMag || {};
+  if (P.readMag.mag_gen) { toast('Этот журнал ты уже прочитал'); return; }
+  P.readMag.mag_gen = true; stat && stat('books'); SFX.rustle(); P.bored = Math.max(0, (P.bored || 0) - 15); addXp('mech', 2);
+  openPanel('mag', {it, msg:'Теперь ты знаешь, как подключить генератор к щитку дома проводом — и почему его нельзя гонять в закрытой комнате.'});
+  if (!panel || panel.kind !== 'mag') { toast('Прочитано. Теперь генератор можно подключать к дому'); renderInv(); }
+});
+MAG_COVER.gen = {c:'#1f5f7a', main:['Свет в каждый дом'], sub:['Щиток: куда и как подключать', 'Угарный газ не пахнет', 'Бензин: сколько хватит на ночь', 'Заземление за пять минут']};
+{ const mm0 = mediaMag;
+  mediaMag = function (body) {
+    const it = panel.it, d = ITEMS[it.id]; if (!d || !d.mag) return mm0.apply(this, arguments);
+    const C = MAG_COVER[d.mag];
+    $('pnTitle').textContent = d.name; $('pnSub').textContent = 'прочитано от корки до корки';
+    const wrap = mk('div', 'mg'), cov = mk('div', 'mg-cov'); cov.style.setProperty('--mg', C.c);
+    const top = mk('div', 'mg-top'); top.appendChild(mk('span', 'mg-name', 'Генераторы')); top.appendChild(mk('span', 'mg-no', 'спецвыпуск')); cov.appendChild(top);
+    cov.appendChild(mk('div', 'mg-for', 'подключение и уход'));
+    const art = mk('div', 'mg-art'); art.appendChild(iconEl('mag_gen', 56)); cov.appendChild(art);
+    cov.appendChild(mk('div', 'mg-main', C.main[0]));
+    const ul = mk('ul', 'mg-sub'); for (const s of C.sub.slice(0, 3)) ul.appendChild(mk('li', '', s)); cov.appendChild(ul);
+    wrap.appendChild(cov);
+    const res = mk('div', 'mg-res'); res.appendChild(mk('div', 'mg-rh', 'Что ты вынес')); res.appendChild(mk('p', '', panel.msg));
+    wrap.appendChild(res); body.appendChild(wrap);
+  };
+}
+// подключение — только если знаешь как
+{ const run0 = ACT.gencon.run;
+  ACT.gencon.run = function (a) {
+    if (!genKnown()) { toast('Как подключать к щитку, ты не знаешь. Найди журнал «Генераторы: подключение и уход» — в хозяйственных, гаражах, на стеллажах с инструментом'); return; }
+    return run0.apply(this, arguments);
+  };
+  // подпись действия: подсказать, чего не хватает
+  addActions(out => { for (const a of out) if (a.kind === 'gencon' && !genKnown() && /^подключить к дому/.test(a.label)) a.label = 'подключить к дому: нужен журнал «Генераторы»'; });
+}
+
+// ---------- новый вид генератора ----------
+// открытая рама из чёрных труб, красный бак сверху с крышкой, серый мотор с рёбрами, тёмный альтернатор,
+// пульт с розетками и лампочкой (зелёная — работает), блестящий глушитель и два колеса
+drawGen = function (p, f) {
+  const [x0, y0, x1, y1] = p.r, on = p.on && p.fuel > 0, j = on ? Math.sin(animT * 70) * .008 : 0, jz = on ? Math.sin(animT * 55) * .35 : 0;
+  const X0 = x0 + j, X1 = x1 + j, mx = (X0 + X1) / 2, my = (y0 + y1) / 2, w = X1 - X0, h = y1 - y0;
+  const BLK = [34, 34, 38], STEEL = [150, 154, 160];
+  box(X0 + .02, y0 + .02, X1 - .02, y1 - .02, 0, 1.4, [46, 46, 50], f);                                    // поддон
+  for (const [cx, cy] of [[X0 + .03, y0 + .03], [X1 - .07, y0 + .03], [X0 + .03, y1 - .07], [X1 - .07, y1 - .07]]) box(cx, cy, cx + .04, cy + .04, 1.4, 19, BLK, f);   // стойки рамы
+  box(X0 + .05, my - .14, X0 + w * .58, my + .14, 2 + jz, 12 + jz, [120, 124, 130], f);                   // мотор
+  for (let k = 0; k < 4; k++) box(X0 + .07 + k * .065, my - .16, X0 + .1 + k * .065, my + .16, 8 + jz, 12.6 + jz, [86, 90, 96], f);   // рёбра цилиндра
+  box(X0 + w * .58, my - .12, X1 - .06, my + .12, 3 + jz, 11 + jz, [58, 60, 66], f);                      // альтернатор
+  box(X1 - .07, my - .1, X1 - .03, my + .1, 4 + jz, 11 + jz, [30, 30, 34], f);                            // пульт
+  box(X1 - .075, my - .07, X1 - .068, my - .02, 6 + jz, 8 + jz, [230, 196, 70], f);                       // розетка
+  box(X1 - .075, my + .02, X1 - .068, my + .07, 6 + jz, 8 + jz, [230, 196, 70], f);
+  box(X0 + .08, y0 + .07, X1 - .1, y1 - .07, 13 + jz, 18 + jz, [196, 52, 42], f);                         // бак
+  box(X0 + .1, y0 + .09, X1 - .12, y1 - .09, 18 + jz, 18.6 + jz, [214, 74, 60], f);
+  box(mx - .06, my - .06, mx + .02, my + .02, 18.6 + jz, 20.4 + jz, BLK, f);                              // крышка бака
+  box(X0 + .02, y0 + .04, X0 + w, y0 + .07, 18.5, 19.5, BLK, f); box(X0 + .02, y1 - .07, X1 - .02, y1 - .04, 18.5, 19.5, BLK, f);   // верхние трубы рамы
+  box(X0 + .07, y1 - .14, X0 + .27, y1 - .04, 3 + jz, 7 + jz, STEEL, f);                                  // глушитель
+  for (const wx of [X0 + .03, X1 - .13]) box(wx, y1 - .03, wx + .1, y1 + .02, 0, 3.6, [24, 24, 26], f);   // колёса
+  const lx = SX(X1 - .06, my + .1), ly = SY(X1 - .06, my + .1, 10 + jz);
+  ctx.fillStyle = on ? '#7bff6a' : '#5a1a14'; ctx.fillRect(lx - .9, ly - .9, 1.8, 1.8);
+  if (on) { ctx.fillStyle = 'rgba(123,255,106,.25)'; ctx.fillRect(lx - 2.2, ly - 2.2, 4.4, 4.4); }
+};
