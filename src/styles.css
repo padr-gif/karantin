@@ -1749,3 +1749,14 @@ body.invglass>*:not(#game):not(#vig):not(#panel):not(#toasts):not(svg){visibilit
 #dead .facts dd{color:#efe6d2}
 .screen .row-btns .go,.screen .row-btns .mbtn{padding-left:18px;padding-right:20px}
 @media (prefers-reduced-motion:reduce){.screen .card{animation:none}}
+
+/* ===== кнопки поверх игры — в стиле меню: тёмная плитка, золотая рамка и иконки ===== */
+#bPause.ibtn,#zoomBox .ibtn{border-radius:12px!important;background:rgba(12,14,15,.8)!important;border:1px solid var(--card-edge)!important;color:var(--gold)!important;
+  box-shadow:0 4px 12px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.04)}
+#bPause.ibtn:active,#zoomBox .ibtn:active{background:rgba(240,196,119,.16)!important}
+#zoomBox .ffbtn.on{background:linear-gradient(180deg,var(--gold-hi),var(--gold-lo))!important;color:#1a1408!important;border-color:var(--gold)!important}
+#zoomBox .ffbtn b{background:#1a1408;color:var(--gold)}
+#zoomBox .ffbtn.on b{background:#1a1408;color:var(--gold-hi)}
+#clockBox.clock{border-color:var(--card-edge);background:rgba(12,14,15,.8)}
+.btn.sm:not(.on){color:var(--gold);border-color:var(--card-edge);background:rgba(12,14,15,.8)}
+.btn.sm.on{background:linear-gradient(180deg,var(--gold-hi),var(--gold-lo));border-color:var(--gold);color:#1a1408}
