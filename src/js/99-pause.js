@@ -1,5 +1,5 @@
 // ================= пауза: карточка героя слева, кнопки справа =================
-// Слева — фигурка героя (та же, что во вкладке «Тело»), имя, профессия, четыре шкалы и мысль дня из дневника.
+// Слева — фигурка героя (та же, что во вкладке «Тело»), имя, профессия и четыре шкалы.
 // Справа — большая «Продолжить» и плитки с иконками. Время — только если есть часы (34-watches-windows),
 // иначе часть суток. Кнопки — те же элементы (#pResume, #pSave…), поэтому их обработчики не меняются.
 {
@@ -21,7 +21,7 @@
     $('pMenu').classList.add('pz-exit');
 
     const hero = mk('aside', 'pz-hero');
-    hero.innerHTML = '<div class="pz-fig"></div><div class="pz-who"><b class="pz-name"></b><span class="pz-prof"></span></div><div class="pz-bars"></div><p class="pz-quote"></p>';
+    hero.innerHTML = '<div class="pz-fig"></div><div class="pz-who"><b class="pz-name"></b><span class="pz-prof"></span></div><div class="pz-bars"></div>';
     const main = mk('div', 'pz-main');
     const head = mk('div', 'pz-head'); head.appendChild(card.querySelector('.stamp')); head.appendChild(mk('span', 'pz-when'));
     main.appendChild(head);
@@ -43,8 +43,6 @@
       q('.pz-name').textContent = (P.look && P.look.name) || 'Выживший';
       q('.pz-prof').textContent = (PROFS[P.prof] || PROFS.none).name;
       q('.pz-bars').innerHTML = bar('hp', 'i-heart', P.hp, 'Здоровье') + bar('sat', 'i-food', P.sat, 'Сытость') + bar('hyd', 'i-drop', P.hyd, 'Вода') + bar('en', 'i-bolt', P.en, 'Бодрость');
-      let th = ''; try { th = tasksToday().head || ''; } catch (e) {}
-      q('.pz-quote').textContent = th ? '«' + th.replace(/\.$/, '') + '»' : '';
       q('.pz-when').textContent = hasClock() ? clockLine() : partOfDay();
       const W = typeof wounds === 'function' ? wounds().length : 0;
       q('.pz-meta').innerHTML = `<span><b>${kills}</b> убито</span><span><b>${W || '—'}</b> ${W ? (W === 1 ? 'рана' : W < 5 ? 'раны' : 'ран') : 'без ран'}</span><span>${(DIFF[world.diff] || DIFF.normal).name}</span>`;
