@@ -12,7 +12,7 @@ function faceTex(Hs, px, py) {
 function wallPiece(x0, y0, x1, y1, z0, z1, Hs) {
   if (WT_OPEN) return;                                                       // слой «только проём» (91-house-view): без стены
   const [sT] = faceTex(Hs, (x0 + x1) / 2, y1 + .05), [eT] = faceTex(Hs, x1 + .05, (y0 + y1) / 2);
-  const fS = fogAt(Math.floor((x0 + x1) / 2), Math.floor(y1 + .05)), fE = fogAt(Math.floor(x1 + .05), Math.floor((y0 + y1) / 2));
+  const fS = fogWall(Math.floor((x0 + x1) / 2), Math.floor(y1 + .05), 1), fE = fogWall(Math.floor(x1 + .05), Math.floor((y0 + y1) / 2), 0);
   vface(x0, y1, x1, y1, z0, z1, sT, 1 - fS * .92);
   vface(x1, y0, x1, y1, z0, z1, eT, 1 - fE * .74);
   resetT();

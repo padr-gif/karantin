@@ -182,12 +182,18 @@ function buildSelf(body) {
 }
 // the character tab always opens on the body map
 // ---- keep scroll positions when a panel re-renders (recipe lists, columns) ----
-const SCROLL_SEL = ['.rlist', '.rdet', '.pcol', '.pdet', '.bodyinfo', '.skillwrap', '.infolay > div', '.self3 > div'];
+const SCROLL_SEL = ['.rlist', '.rdet', '.pcol', '.pdet', '.bodyinfo', '.skillwrap', '.infolay > div', '.self3 > div', '.dollside', '.lay3 > *', '.coll', '.slots'];
 let scrollKey = '';
 onPanel((a, {key, keep}) => {
   const body = $('pnBody');
   scrollKey = key;
-  for (const [sel, i, v] of keep) { const e = sel ? body.querySelectorAll(sel)[i] : body; if (e) e.scrollTop = v; }
+  const apply = () => { for (const [sel, i, v] of keep) { const e = sel ? body.querySelectorAll(sel)[i] : body; if (e && Math.abs(e.scrollTop - v) > 1) e.scrollTop = v; } };
+  apply();
+  // на телефоне список иногда ещё не успевает разложиться (значки, инерционная прокрутка) — возвращаем позицию ещё раз
+  if (keep.length) { requestAnimationFrame(apply); setTimeout(apply, 80); }
+  // выбранная вещь должна остаться на экране
+  const sel = body.querySelector('.pcol .cell.sel, .pcol .sel');
+  if (sel && keep.length) requestAnimationFrame(() => { const c = sel.closest('.pcol'); if (!c) return; const r = sel.getBoundingClientRect(), cr = c.getBoundingClientRect(); if (r.top < cr.top) c.scrollTop -= cr.top - r.top + 6; else if (r.bottom > cr.bottom) c.scrollTop += r.bottom - cr.bottom + 6; });
 }, () => {
   const body = $('pnBody'), key = panel ? panel.kind + '|' + (panel.tab || '') + '|' + (panel.sub || '') : '', keep = [];
   if (panel && key === scrollKey) { keep.push(['', 0, body.scrollTop]); for (const sel of SCROLL_SEL) body.querySelectorAll(sel).forEach((e, i) => { if (e.scrollTop) keep.push([sel, i, e.scrollTop]); }); }

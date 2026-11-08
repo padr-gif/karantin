@@ -85,6 +85,10 @@ function poly4(ax, ay, az, bx, by, bz, cx, cy, cz, dx, dy, dz, fill) {
 function line3(ax, ay, az, bx, by, bz) { ctx.moveTo(SX(ax, ay), SY(ax, ay, az)); ctx.lineTo(SX(bx, by), SY(bx, by, bz)); }
 const fogF = i => vis[i] ? 1 : seen[i] ? .55 : .24;
 const fogAt = (x, y) => (x < 0 || y < 0 || x >= MW || y >= MH) ? .24 : fogF(y * MW + x);
+// для фасадов: туман, сглаженный вдоль стены (5 клеток с весами) — иначе на границе видимости соседние куски одной стены
+// получались разного цвета, будто у дома разные текстуры. ax: 1 — стена тянется вдоль x (южная грань), 0 — вдоль y
+const FOG_W = [.12, .22, .32, .22, .12];
+function fogWall(x, y, ax) { let s = 0; for (let k = -2; k <= 2; k++) s += FOG_W[k + 2] * (ax ? fogAt(x + k, y) : fogAt(x, y + k)); return Math.round(s * 20) / 20; }
 
 // smooth fog of war layer: one pixel per tile, drawn stretched with smoothing
 const fogC = mkCanvas(MW, MH), fogG = fogC.getContext('2d');

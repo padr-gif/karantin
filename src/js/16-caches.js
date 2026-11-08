@@ -182,7 +182,7 @@ function drawGroundRange(gx0, gy0, gx1, gy1) {
 function wallKey(x, y, i, cut) {
   buildSwitches();
   const t = map[i];
-  let k = (cut ? 'c' : 'f') + fogF(i) + '|' + fogAt(x, y + 1) + '|' + fogAt(x + 1, y);
+  let k = (cut ? 'c' : 'f') + fogF(i) + '|' + fogWall(x, y + 1, 1) + '|' + fogWall(x + 1, y, 0);
   if (t !== WALL) {
     const o = obs[i];
     k += '|' + (o.open ? 1 : 0) + (o.dead ? 1 : 0) + (o.broken ? (o.cleared ? 2 : 1) : 0) + (o.bhp > 0 ? Math.ceil(o.bhp / 45) : 0) + '|' + Math.round((o.ang == null ? (o.open ? 1 : 0) : o.ang) * 12) + (o.mhp > 0 ? 'm' + Math.ceil(o.mhp / 55) : '');

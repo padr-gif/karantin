@@ -7,7 +7,18 @@
 // Генератор можно отключить и забрать с собой (бензин в баке остаётся).
 
 // ---------- что питает генератор ----------
-const genHouse = g => g && g.hid != null ? houses[g.hid] : null;
+// связь «генератор → дом» хранится по месту генератора и району (в world), а дом ищется по точке внутри него:
+// так провод не «улетает» к чужому дому после загрузки или перехода между районами
+const genKey = g => Math.floor(g.cx) + ',' + Math.floor(g.cy) + '@' + (world.dx || 0) + ',' + (world.dy || 0);
+const genLink = g => g && world.glink && world.glink[genKey(g)];
+function genHouse(g) {
+  const l = genLink(g); if (!l) return null;
+  const H = houses.find(H => l[0] > H.ix0 && l[0] < H.ix1 && l[1] > H.iy0 && l[1] < H.iy1);
+  if (!H) return null;
+  const qx = clamp(g.cx, H.ix0, H.ix1), qy = clamp(g.cy, H.iy0, H.iy1);
+  return Math.hypot(g.cx - qx, g.cy - qy) < 9 ? H : null;               // дальше провод не дотягивается — значит, связь устарела
+}
+function genLinkTo(g, H) { world.glink = world.glink || {}; if (H) world.glink[genKey(g)] = [(H.ix0 + H.ix1) / 2, (H.iy0 + H.iy1) / 2]; else delete world.glink[genKey(g)]; }
 const inHouseRect = (H, x, y, m) => x > H.ix0 - m && x < H.ix1 + m && y > H.iy0 - m && y < H.iy1 + m;
 poweredAt = function (x, y) {
   if (powerOn()) return true;
@@ -112,7 +123,7 @@ addActions(out => {
   if (!P || P.car || P.sleep || GPL.on) return;
   for (const g of gens) {
     if (g.dead || Math.hypot(g.cx - P.x, g.cy - P.y) > 1.5) continue;
-    if (g.hid == null) {
+    if (!genHouse(g)) {
       const hk = genNearHouse(g);
       if (hk < 0) out.push({kind:'gencon', label:'подключить: рядом нет дома', f:g});
       else out.push({kind:'gencon', label:countItem('wire') ? 'подключить к дому' : 'подключить к дому: нужен медный провод', f:g});
@@ -127,20 +138,20 @@ defAction('gencon', {name:() => 'Генератор', icon:() => 'i-bolt', run:a
   if (!countItem('wire')) { toast('Нужен медный провод: он есть в разобранной технике — холодильниках, плитах, лампах — и на стеллажах с инструментом'); return; }
   job(4 * (1 - .06 * skillLv('mech')), () => {
     if (!countItem('wire')) return;
-    removeItem('wire'); g.hid = hk; SFX.knock(g.cx, g.cy); addXp('mech', 2); clearCaches();
+    removeItem('wire'); genLinkTo(g, houses[hk]); SFX.knock(g.cx, g.cy); addXp('mech', 2); clearCaches();
     toast(g.on ? 'Подключено: в доме появился ток' : 'Подключено к дому. Включи генератор — и будет свет');
   }, {loopAn:'work'});
 }});
 defAction('genoff', {name:() => 'Генератор', icon:() => 'i-bolt', run:a => {
   if (mode !== 'play' || paused || panel) return; $('actMenu').hidden = true;
-  const g = a.f; g.hid = null; if (!invFull()) P.inv.push(mkItem('wire')); else addToPile(P.x, P.y, mkItem('wire'));
+  const g = a.f; genLinkTo(g, null); if (!invFull()) P.inv.push(mkItem('wire')); else addToPile(P.x, P.y, mkItem('wire'));
   SFX.knock(g.cx, g.cy); clearCaches(); renderInv(); toast('Провод смотан. Дом остался без тока');
 }});
 defAction('gentake', {name:() => 'Генератор', icon:() => 'i-bolt', run:a => {
   if (mode !== 'play' || paused || panel) return; $('actMenu').hidden = true;
   const g = a.f; if (g.on) { toast('Сначала выключи'); return; }
   const it = mkItem('generator'); it.fuel = g.fuel;
-  if (g.hid != null) { if (!invFull()) P.inv.push(mkItem('wire')); else addToPile(P.x, P.y, mkItem('wire')); }
+  if (genHouse(g)) { genLinkTo(g, null); if (!invFull()) P.inv.push(mkItem('wire')); else addToPile(P.x, P.y, mkItem('wire')); }
   if (typeof dropProp === 'function') dropProp(g); else g.dead = true;
   gens.splice(gens.indexOf(g), 1);
   if (!invFull()) P.inv.push(it); else addToPile(P.x, P.y, it);
@@ -188,16 +199,14 @@ addMoodles(m => {
 });
 
 // ---------- сохранение ----------
-onSave(d => { d.xGen = {hid:gens.map(g => g.hid == null ? -1 : g.hid), co:Math.round(P.co || 0)}; });
+onSave(d => { d.xGen = {link:world.glink || {}, co:Math.round(P.co || 0)}; });
 onLoad(d => {
   const x = d && d.xGen;
-  gens.forEach((g, k) => {
-    if (x && x.hid && x.hid[k] != null) g.hid = x.hid[k] >= 0 ? x.hid[k] : null;
-    else { const hk = genNearHouse(g); g.hid = hk >= 0 ? hk : null; }          // старые сохранения: уже стоящий генератор считаем подключённым
-  });
+  if (x && x.link) world.glink = x.link;
+  else { world.glink = {}; for (const g of gens) { const hk = genNearHouse(g); if (hk >= 0) genLinkTo(g, houses[hk]); } }   // старые сохранения: стоящий генератор считаем подключённым
   P.co = (x && x.co) || 0;
 });
-onStartNew(() => { if (P) P.co = 0; genPlaceEnd(); });
+onStartNew(() => { if (P) P.co = 0; world.glink = {}; genPlaceEnd(); });
 
 // ---------- журнал «Генераторы: подключение и уход» ----------
 // Без него к дому не подключить: где щиток, как не спалить проводку и не убить себя током. Электрик знает и так.
@@ -271,3 +280,5 @@ drawGen = function (p, f) {
   ctx.fillStyle = on ? '#7bff6a' : '#5a1a14'; ctx.fillRect(lx - .9, ly - .9, 1.8, 1.8);
   if (on) { ctx.fillStyle = 'rgba(123,255,106,.25)'; ctx.fillRect(lx - 2.2, ly - 2.2, 4.4, 4.4); }
 };
+// подпись журнала в рюкзаке (у обычных журналов там навык — у этого навыка нет)
+{ const t0 = itemText; itemText = function (it) { if (it && it.id === 'mag_gen') return 'как подключить генератор к дому · ' + (P && P.readMag && P.readMag.mag_gen ? 'уже прочитан' : 'читать ~6 секунд'); return t0.apply(this, arguments); }; }
