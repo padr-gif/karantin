@@ -23,7 +23,7 @@ function dropNtf(el, now) { if (!el) return; if (el._gone && !now) return; el._g
   clearTimeout(el._tm); if (now) { el.remove(); return; } el.classList.add('out'); setTimeout(() => el.remove(), 320); }
 // ---- special events get their own banner ----
 const EVENTS = [
-  [/орда/i, 'Орда', 'danger', 'i-skull'], [/эвакуац/i, 'Эвакуация', 'good', 'i-run'], [/сбросили груз|груз на парашюте/i, 'Груз с неба', 'good', 'i-bag'],
+  [/орда/i, 'Орда', 'danger', 'i-skull'], [/сбросили груз|груз на парашюте/i, 'Груз с неба', 'good', 'i-bag'],
   [/вертол/i, 'Вертолёт', 'warn', 'i-heli'], [/свет погас|электричества больше нет/i, 'Света больше нет', 'danger', 'i-bolt'], [/вода в кранах кончилась/i, 'Водопровод отключён', 'danger', 'i-drop'],
   [/^пришла зима/i, 'Зима', 'cold', 'i-snow'], [/^весна!/i, 'Весна', 'good', 'i-sun'], [/^лето\./i, 'Лето', 'warn', 'i-sun'], [/^осень\./i, 'Осень', 'warn', 'i-rain'],
   [/^пошёл снег/i, 'Первый снег', 'cold', 'i-snow'], [/^надвигается гроза/i, 'Гроза', 'warn', 'i-rain'], [/^крикун!/i, 'Крикун', 'danger', 'i-skull'], [/^бегун!/i, 'Бегун', 'danger', 'i-skull'],

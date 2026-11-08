@@ -60,9 +60,7 @@ function newGameCore(o) {
   world.dayOff = (SEASONS[NEWCFG.season] || SEASONS.autumn).off; world.season = null; powerOffAt = startMin + (NEWCFG.power || 99999) * 1440; waterOffAt = startMin + (NEWCFG.water || 99999) * 1440; world.mut = !!NEWCFG.mut;
   powerMsg = waterMsg = false; world.marks = []; scheduleHeli(startMin - 300); scheduleHorde(startMin); world.storm = false; world.snow = 0; world.snowMsg = false;
   { const hw = furns.filter(f => f.type === 'crate' && houses[hAt[f.y * MW + f.x] - 1] && houses[hAt[f.y * MW + f.x] - 1].kind === 'hardware'); if (hw.length) hw[0].items.push(mkItem('generator'), mkItem('jerrycan')); }
-  EV.h = null;
   if (!o.save) {
-    world.evac = null;
     { const hi = hAt[Math.floor(P.y) * MW + Math.floor(P.x)]; const fs = furns.filter(f => hi && hAt[f.y * MW + f.x] === hi && CONT[f.type] && CONT[f.type].loot && ['nightstand', 'dresser', 'wardrobe', 'hanger'].includes(f.type)); if (fs.length) fs[Math.floor(rng() * fs.length)].items.push(mkItem('watchQ')); }
     for (let i = 0, n = Math.round(125 * DIFF[world.diff].z * NT / 33856); i < n; i++) spawnZombie(11, true);   // на большой карте — больше, плотность та же
     for (const g of SPECIAL) if (g.corpse) { corpses.push({x:g.x, y:g.y, face:rng() * 6.28, pal:{pi:g.pi, b:rng() < .4 ? 'f' : 'm', blood:3}, fall:1, dir:-1, seed:rng()}); for (let q = 0; q < 3; q++) addBlood(g.x + (rng() - .5), g.y + (rng() - .5), .8); }

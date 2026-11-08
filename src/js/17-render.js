@@ -1,3 +1,4 @@
+let FL_CONE = null;                                                           // луч фонарика этого кадра (рисуется в render)
 // ================= frame render =================
 let drops = [], animT = 0, fogDirty = true;
 const LOWG = () => gfxCap <= 1;                                             // графика «Минимум»
@@ -170,7 +171,7 @@ function render(dt) {
     for (let q = 0; q < 3; q++) { const a = animT * (3 + q) + q * 2 + c.seed * 9; const fx = c.x + Math.cos(a) * .3, fy = c.y + Math.sin(a * 1.3) * .25; ctx.fillRect(Math.round(SX(fx, fy)), Math.round(SY(fx, fy, U * (.35 + Math.sin(a * 2) * .15))), 1, 1); }
   }
   drawParts();
-  drawBreath(); drawBustle(); drawEvac(); drawScreamFx(); drawLootMarks(); drawV23(); drawEditMarks(); for (const fn of OVERLAYS) fn(); drawFog(); if (tapMark) tapMark.t -= dt;
+  drawBreath(); drawBustle(); drawScreamFx(); drawLootMarks(); drawV23(); drawEditMarks(); for (const fn of OVERLAYS) fn(); drawFog(); if (tapMark) tapMark.t -= dt;
 
   // time-of-day tint
   const hr = hourOf(), L = lightLevel();
@@ -213,10 +214,25 @@ function render(dt) {
     }
     if (fl && fl.id === 'candle' && L < .9) hole(SX(P.x, P.y) / 2, SY(P.x, P.y, U * .9) / 2, U * 3.4, .8);
     else if (fl && L < .9) {
-      for (let q = 1; q <= 3; q++) { const bx = P.x + Math.cos(P.face) * q * 1.3, by = P.y + Math.sin(P.face) * q * 1.3; hole(SX(bx, by) / 2, SY(bx, by, 0) / 2, U * (.9 + q * .55), .9); }
+      // конус фонарика: рисуем прямо в координатах земли (матрица изометрии), поэтому он лежит на полу, а не на экране
+      const a = P.fd != null ? P.fd : P.face, len = fl.id === 'phone' ? 4 : 6.5, sp = fl.id === 'phone' ? .55 : .42;
+      lx.save(); lx.transform(U / 2, hh / 2, -U / 2, hh / 2, SX(0, 0) / 2, SY(0, 0, 0) / 2);
+      const g = lx.createRadialGradient(P.x, P.y, .2, P.x, P.y, len);
+      g.addColorStop(0, 'rgba(0,0,0,.96)'); g.addColorStop(.55, 'rgba(0,0,0,.85)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      lx.fillStyle = g; lx.beginPath(); lx.moveTo(P.x + Math.cos(a) * .2, P.y + Math.sin(a) * .2); lx.arc(P.x, P.y, len, a - sp, a + sp); lx.closePath(); lx.fill();
+      const g2 = lx.createRadialGradient(P.x, P.y, 0, P.x, P.y, 1.3); g2.addColorStop(0, 'rgba(0,0,0,.6)'); g2.addColorStop(1, 'rgba(0,0,0,0)');
+      lx.fillStyle = g2; lx.beginPath(); lx.arc(P.x, P.y, 1.3, 0, 6.283); lx.fill();   // рассеянный свет вокруг себя
+      lx.restore();
+      FL_CONE = {a, len, sp};
     }
     lx.globalCompositeOperation = 'source-over';
     ctx.imageSmoothingEnabled = true; ctx.drawImage(lc, 0, 0, W, H); ctx.imageSmoothingEnabled = false;
+    if (FL_CONE && fl && L < .9) {                                              // тёплый оттенок луча
+      const {a, len, sp} = FL_CONE; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.transform(U, hh, -U, hh, SX(0, 0), SY(0, 0, 0));
+      const g = ctx.createRadialGradient(P.x, P.y, .3, P.x, P.y, len); g.addColorStop(0, `rgba(255,214,150,${.16 * (1 - L)})`); g.addColorStop(1, 'rgba(255,214,150,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(P.x, P.y); ctx.arc(P.x, P.y, len, a - sp, a + sp); ctx.closePath(); ctx.fill(); ctx.restore();
+    }
+    FL_CONE = null;
     if (fireGlow.length && L < .95) {
       ctx.globalCompositeOperation = 'lighter';
       for (const [sx, sy, k] of fireGlow) { const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, U * 2.4 * k); g.addColorStop(0, `rgba(255,140,60,${.3 * (1 - L * .7)})`); g.addColorStop(1, 'rgba(255,120,40,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sx, sy, U * 2.4 * k, 0, 6.283); ctx.fill(); }

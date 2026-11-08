@@ -53,7 +53,7 @@ function updateCore(dt) {
   let mag = Math.min(1, Math.hypot(ix, iy));
   if (mag < .15) mag = 0;
   if (panel) { mag = 0; goTo = null; }
-  tickXfer(dt); tickAlarm(); tickBustle(dt); tickScreamers(dt); tickEvac(dt); tickWinterFx(dt); tickFlu(gm); tickV23(dt, gm);
+  tickXfer(dt); tickAlarm(); tickBustle(dt); tickScreamers(dt); tickWinterFx(dt); tickFlu(gm); tickV23(dt, gm);
   if (P.act && P.act.kind === 'vault') { mag = 0; const A = P.act, k = Math.min(1, A.t / A.dur), e = k * k * (3 - 2 * k); P.x = A.fx + (A.tx - A.fx) * e; P.y = A.fy + (A.ty - A.fy) * e; }
   let wx = 0, wy = 0;
   if (mag) { const a = ix, b = 2 * iy; wx = (a + b) / 2; wy = (b - a) / 2; const l = Math.hypot(wx, wy) || 1; wx /= l; wy /= l; }
@@ -118,7 +118,7 @@ function updateCore(dt) {
   // двери: список дверей кэшируется (раньше каждый кадр перебирались все 34 тыс. клеток карты)
   if (doorList.src !== obs || (doorList.t -= dt) < 0) { doorList.src = obs; doorList.t = 3; doorList.L = obs.filter(o => o && o.t === 'door'); }
   for (const o of doorList.L) { const tg = o.open && !o.dead ? 1 : 0; if (o.ang == null) o.ang = tg; if (o.ang !== tg) o.ang += clamp(tg - o.ang, -dt * 5, dt * 5); }
-  for (const c of corpses) if (c.fall < 1) { c.fall = Math.min(1, c.fall + dt / .5); if (c.fall >= 1) stampQ.push({c}); }
+  for (const c of corpses) if (c.fall < 1 && !c.drag) { c.fall = Math.min(1, c.fall + dt / .5); if (c.fall >= 1) stampQ.push({c}); }
 
   const sight = (4 + 6 * L + (fl ? 2.5 : 0)) * (P.sneak ? .6 : 1) * (rain > .5 ? .85 : 1);
   for (const z of zs) {

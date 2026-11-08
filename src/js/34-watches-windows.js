@@ -15,13 +15,15 @@ RECIPES.push({name:'Шторы из тряпок', icon:'curtain', parts:() => [
 const wristId = () => P && P.cloth && P.cloth.wrist ? P.cloth.wrist.id : null;
 // время и дату герой знает только по часам на руке: кварцевые — время, электронные — время и дата.
 // Без часов везде вместо цифр — часть суток («утро», «ночь»). Температуру показывают только электронные часы — в HUD (и радио с ТВ)
-const hasClock = () => { const w = wristId(); return w === 'watchQ' || w === 'watchD'; };
-const hasDate = () => wristId() === 'watchD';
+// часы на руке идут, пока не села батарейка (it.ch); настенные часы в доме — время, пока стоишь рядом (99-home-life)
+const watchOn = () => { const it = P && P.cloth && P.cloth.wrist; return !!it && (it.id === 'watchQ' || it.id === 'watchD') && !(it.ch <= 0); };
+const hasClock = () => watchOn() || (typeof wallClockNear === 'function' && wallClockNear());
+const hasDate = () => watchOn() && wristId() === 'watchD';
 function clockStamp(m) { return hasClock() ? fmtTime(m) : partOfDayAt(m).replace('Глубокая ', '').toLowerCase(); }
 function partOfDay() { return partOfDayAt(gameMin); }
 function partOfDayAt(m) { const h = (m % 1440) / 60; return h < 5 ? 'Глубокая ночь' : h < 8 ? 'Рассвет' : h < 12 ? 'Утро' : h < 17 ? 'День' : h < 20 ? 'Вечер' : h < 22 ? 'Сумерки' : 'Ночь'; }
 function clockHud() {
-  const w = wristId(), dig = w === 'watchD';
+  const w = hasClock(), dig = hasDate();
   $('time').hidden = !w; $('day').hidden = !dig; $('temp').hidden = !dig; $('pod').hidden = !!w;
   if (!w) $('pod').textContent = partOfDay();
   if (dig) $('temp').textContent = Math.round(outsideTemp()) + '°';
@@ -118,14 +120,14 @@ function finishVault(a) {
 }
 // ---- alarm (digital watch) ----
 function sleepAlarmUI() {
-  const box = $('alarmSeg'), dig = wristId() === 'watchD';
+  const box = $('alarmSeg'), dig = hasDate();
   box.hidden = !dig; $('alarmInfo').hidden = !dig;
   if (!dig) return;
   seg(box, [[null, 'Выкл'], [360, '06:00'], [480, '08:00'], [600, '10:00']], () => P.alarm == null ? null : P.alarm, v => { P.alarm = v; sleepAlarmUI(); });
   $('alarmInfo').textContent = P.alarm == null ? 'Будильник на электронных часах' : 'Будильник прозвенит в ' + fmtTime(P.alarm);
 }
 function tickAlarm() {
-  if (!P.sleep || P.alarm == null || wristId() !== 'watchD') { P._am = null; return; }
+  if (!P.sleep || P.alarm == null || !hasDate()) { P._am = null; return; }
   const m = gameMin % 1440, pm = P._am == null ? m : P._am, A = P.alarm; P._am = m;
   if ((pm < A && m >= A) || (pm > m && (A > pm || A <= m))) { SFX.alarm(P.x, P.y); wake('Пищит будильник: ' + fmtTime(A)); }
 }

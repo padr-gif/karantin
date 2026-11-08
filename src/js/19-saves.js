@@ -64,7 +64,7 @@ function serializeCore() {
   return {v:3, seed:world.seed, diff:world.diff, look:P.look,
     gm:r2(gameMin), sm:startMin, poff:powerOffAt, woff:waterOffAt, pm:powerMsg, wm:waterMsg, rain:r2(rain), rt:rainTarget, wt:r2(weatherTimer), st:r2(spawnTimer), kills,
     p:{x:r2(P.x), y:r2(P.y), face:r2(P.face), hp:r2(P.hp), sat:r2(P.sat), hyd:r2(P.hyd), en:r2(P.en), bleed:P.bleed, cloth:P.cloth || {}, cold:r2(P.cold || 0), wet:r2(P.wet || 0), stress:r2(P.stress || 0), boost:P.boost || {}, readMag:P.readMag || {}, flu:r2(P.flu || 0), fluR:r2(P.fluR || 0), bored:r2(P.bored || 0), stats:P.stats || {}, mapRead:!!P.mapRead, skills:P.skills || {}, prof:P.prof || 'none', inf:P.inf, infT:r2(P.infT), pois:r2(P.pois), weapon:P.weapon, armor:P.armor || null, inv:P.inv, cap:P.cap, sneak:P.sneak},
-    obs:obsL, furn:furns.map(f => [f.searched ? 1 : 0, f.items]), fmov:furns.map((f, k) => f.moved ? [k, f.x, f.y, r2(f.cx), r2(f.cy), f.wd, r2(f.sx), r2(f.sy), f.blockDoor ? 1 : 0, f.gone ? 1 : 0] : null).filter(Boolean), evac:world.evac || null,
+    obs:obsL, furn:furns.map(f => [f.searched ? 1 : 0, f.items]), fmov:furns.map((f, k) => f.moved ? [k, f.x, f.y, r2(f.cx), r2(f.cy), f.wd, r2(f.sx), r2(f.sy), f.blockDoor ? 1 : 0, f.gone ? 1 : 0] : null).filter(Boolean),
     cars:props.map((p, k) => p.type === 'car' ? [k, p.searched ? 1 : 0, p.items, p.dyn ? [r2(p.cx), r2(p.cy), r2(p.ang)] : 0, r2(p.fuel), p.key ? 1 : 0, r2(p.hp)] : null).filter(Boolean), incar:P.car ? props.indexOf(P.car) : -1,
     barrels:barrels.map(b => [b.cx, b.cy, r2(b.w), b.outside ? 1 : 0]),
     fires:fires.filter(f => !f.out).map(f => [r2(f.x), r2(f.y), r2(f.t)]),
@@ -105,7 +105,7 @@ function applySaveCore(d) {
   for (const a of d.drops || []) { const o = {x:a[0] + .5, y:a[1] + .5, tx:a[0], ty:a[1], z:a[2] ? 0 : 300, landed:false, items:a[2], searched:a[3]}; airdrops.push(o); if (a[2]) landDrop(o); }
   if (d.heliAt) world.heliAt = d.heliAt;
   for (const b of d.pbin || []) { const p = props[b[0]]; if (p) { p.searched = true; p.items = b[1]; } }
-  world.evac = null; world.mut = !!d.mut; world.dayOff = d.doff || 0; world.bcd = d.bcd || {}; world.tcd = d.tcd || {};
+  world.mut = !!d.mut; world.dayOff = d.doff || 0; world.bcd = d.bcd || {}; world.tcd = d.tcd || {};
   world.marks = d.marks || [];
   if (d.hordeAt) world.hordeAt = d.hordeAt; world.storm = !!d.storm; world.snow = d.snow || 0; world.snowMsg = !!d.snowMsg;
   for (const m of d.moved || []) { const f = furns[m[0]]; if (!f) continue; furn[f.y * MW + f.x] = 0; f.x = m[1]; f.y = m[2]; f.cx = m[3]; f.cy = m[4]; f.r = m[5]; f.moved = true; furn[f.y * MW + f.x] = m[0] + 1; }

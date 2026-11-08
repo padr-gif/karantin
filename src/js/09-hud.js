@@ -44,5 +44,5 @@ function updateHud() {
   renderHotbar();
   if (!!curBar !== lastBar) { lastBar = !!curBar; $('bBar').hidden = !curBar; stackKey = ''; }
   $('vig').style.opacity = Math.max(P.hurt * 1.6, P.hp < 30 ? (30 - P.hp) / 45 : 0).toFixed(2);
-  if (P.sleep) { $('sTime').textContent = wristId() ? (wristId() === 'watchD' ? 'День ' + (Math.floor(gameMin / 1440) + 1) + ', ' : '') + fmtTime(gameMin) : partOfDay(); $('sEn').textContent = 'Бодрость ' + Math.round(P.en) + '%'; }
+  if (P.sleep) { $('sTime').textContent = hasClock() ? (hasDate() ? 'День ' + (Math.floor(gameMin / 1440) + 1) + ', ' : '') + fmtTime(gameMin) : partOfDay(); $('sEn').textContent = 'Бодрость ' + Math.round(P.en) + '%'; }
 }
