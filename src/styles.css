@@ -1616,7 +1616,9 @@ body.invglass>*:not(#game):not(#vig):not(#panel):not(#toasts):not(svg){visibilit
 @media (max-width:600px){.nbook{grid-template-columns:1fr;grid-template-rows:auto}.nb-spine{display:none}#pnBody.nbody{overflow:auto}#pnBody.nbody .nb-pg{height:auto;max-height:none;overflow:visible}}
 
 /* «Тело»: новая фигурка, дыхание, пульс */
-.bodyfig{grid-template-rows:minmax(0,1fr) auto auto;gap:4px}
+.bodyfig{display:flex;flex-direction:column;align-items:center;gap:4px;overflow:hidden}
+.bodyfig .bfig{flex:1 1 0;min-height:0;height:auto;max-height:none;width:100%}
+.bodyfig .bf-ecg{flex:none}
 .bodyfig .figcap{position:static}
 .bfig{overflow:visible}
 .bfig .reg{fill:rgba(255,255,255,0);stroke:transparent;stroke-width:1.4;stroke-linejoin:round}
