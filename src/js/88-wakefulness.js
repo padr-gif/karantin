@@ -43,7 +43,7 @@ function wakeTick(gm) {
   });
 }
 
-addMoodles(m => { if (P && !P.sleep && !P.car && (enCap() < 6 || P.en < 8)) m.push(['Валишься с ног', 'crit']); },
+addMoodles(m => { if (P && !P.sleep && !P.car && (enCap() < 6 || P.en < 8) && !m.some(e => e[0] === 'Валится с ног')) m.push(['Валится с ног', 'crit']); },   // один значок, без повтора
   m => { if (P && !P.sleep && !P.car && (enCap() < 6 || P.en < 8)) m.push('Валишься с ног: ещё немного — и уснёшь там, где стоишь. Ляг в кровать, пока ты в безопасности'); });
 // ---- «Отдохнуть» у стула, кресла, дивана, кровати ----
 function restFurnNear() {

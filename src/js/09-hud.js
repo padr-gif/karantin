@@ -34,6 +34,7 @@ function updateHud() {
   if ((P.stress || 0) > 80) m.push(['Нервы на пределе', 'crit']); else if ((P.stress || 0) > 50) m.push(['Стресс', 'warn']);
   if ((P.bored || 0) > 60) m.push(['Скука', 'warn']);
   m.sort((a, b) => (b[1] === 'crit') - (a[1] === 'crit') || (b[1] === 'warn') - (a[1] === 'warn'));
+  { const seen = new Set(); m.splice(0, m.length, ...m.filter(e => !seen.has(e[0]) && seen.add(e[0]))); }   // одно состояние — один значок (после сортировки остаётся самый тревожный)
   if (m.length > MOOD_MAX) { const n = m.length - MOOD_MAX + 1; m.length = MOOD_MAX - 1; m.push(['+' + n, '']); }
   const html = m.map(([t, c]) => moodChip(t, c)).join('');
   const mo = $('moodles'); if (mo._h !== html) { mo._h = html; mo.innerHTML = html; }

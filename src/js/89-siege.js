@@ -85,14 +85,22 @@ onUpdate(dt => {
   if (gameMin >= SIEGE.end) siegeEnd();
 });
 
+// значки: «Ночью осада» — ночное небо и доски крест-накрест, «Осада» — то же на красном, с руками мертвецов
+Object.assign(MOOD_ART, {
+  'Ночью осада':`<circle cx="16" cy="16.5" r="12.5" fill="#2b3a5c" stroke="${MO_LINE}" stroke-width="1.6"/><path d="M21.5 6.5a5 5 0 1 0 4 7.2 4 4 0 1 1-4-7.2z" fill="#f2e3a6"/><circle cx="9" cy="9" r=".9" fill="#e8f0ff"/><circle cx="13" cy="6.5" r=".7" fill="#e8f0ff"/>` +
+    `<g transform="rotate(-24 16 21)"><rect x="5.5" y="18.5" width="21" height="4.4" rx="1" fill="#b88a58" stroke="${MO_LINE}" stroke-width="1.1"/></g><g transform="rotate(24 16 21)"><rect x="5.5" y="18.5" width="21" height="4.4" rx="1" fill="#c99a62" stroke="${MO_LINE}" stroke-width="1.1"/></g><circle cx="10" cy="21" r=".8" fill="#5a4a3a"/><circle cx="22" cy="21" r=".8" fill="#5a4a3a"/>`,
+  'Осада':`<circle cx="16" cy="16.5" r="12.5" fill="#b8392e" stroke="${MO_LINE}" stroke-width="1.6"/>` +
+    `<g transform="rotate(-24 16 15)"><rect x="5.5" y="12.5" width="21" height="4.4" rx="1" fill="#b88a58" stroke="${MO_LINE}" stroke-width="1.1"/></g><g transform="rotate(24 16 15)"><rect x="5.5" y="12.5" width="21" height="4.4" rx="1" fill="#c99a62" stroke="${MO_LINE}" stroke-width="1.1"/></g>` +
+    `<path d="M8 29v-5.5q0-1.6 1.4-1.6t1.4 1.6V21q0-1.4 1.3-1.4t1.3 1.4v8M18.6 29v-8q0-1.4 1.3-1.4t1.3 1.4v2.5q0-1.6 1.4-1.6t1.4 1.6V29" fill="#8fae7a" stroke="${MO_LINE}" stroke-width="1.1" stroke-linejoin="round"/>`,
+});
 addMoodles(m => {
   if (!P || siegeOff()) return;
   if (SIEGE.on) m.push(['Осада', 'crit']);
   else if (SIEGE.warned) m.push(['Ночью осада', 'warn']);
 }, m => {
   if (siegeOff()) return;
-  if (SIEGE.on) { const h = siegeLeft(); m.push('Осада: ещё ' + (h <= 1 ? 'меньше часа' : '~' + h + ' ч') + (siegeNight(gameMin) && SIEGE.end % 1440 <= 7 * 60 ? ', до рассвета,' : '') + ' мертвецы ищут тебя. Сиди за прочными дверьми, чини проломы доской, не выходи'); }
-  else if (SIEGE.warned) m.push('Ночью осада (с 22:00): заколоти окна, поставь стены и колья, повесь банки на двери');
+  if (SIEGE.on) { const h = siegeLeft(); m.push('Осада: ' + (hasClock() ? 'ещё ' + (h <= 1 ? 'меньше часа' : '~' + h + ' ч') : 'до рассвета') + (hasClock() && siegeNight(gameMin) && SIEGE.end % 1440 <= 7 * 60 ? ', до рассвета,' : '') + ' мертвецы ищут тебя. Сиди за прочными дверьми, чини проломы доской, не выходи'); }
+  else if (SIEGE.warned) m.push('Ночью осада: заколоти окна, поставь стены и колья, повесь банки на двери');
 });
 
 ACH.push(['siege', 'Ночь длиною в жизнь', 'Пережить ночь осады'], ['siege3', 'Неприступный', 'Пережить три осады']);

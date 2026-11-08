@@ -1768,3 +1768,18 @@ body.invglass>*:not(#game):not(#vig):not(#panel):not(#toasts):not(svg){visibilit
 .diary:not(.snote) .dsub{font-size:17px;color:#8b7558}
 .diary:not(.snote) .dmiss{font-size:18px;color:#a89a84}
 .diary:not(.snote) .sn b{font-style:normal;font-weight:700;color:#6a4f36}
+
+/* выбор места для генератора (99-generator) */
+.gpl{position:fixed;left:50%;bottom:calc(var(--sb,0px) + 84px);transform:translateX(-50%);z-index:14;display:flex;align-items:center;gap:14px;max-width:min(640px,calc(100vw - 24px));box-sizing:border-box;
+  padding:10px 12px 10px 16px;border-radius:16px;background:linear-gradient(160deg,var(--card-a),var(--card-b));border:1px solid var(--card-edge);box-shadow:0 14px 34px rgba(0,0,0,.55);animation:pzIn .18s ease-out}
+.gpl[hidden]{display:none}
+.gpl-t{display:flex;flex-direction:column;gap:2px;min-width:0}
+.gpl-t b{font:600 15px/1.2 var(--f-display);letter-spacing:.04em;text-transform:uppercase;color:#f3ead6}
+.gpl-t span{font-size:12.5px;line-height:1.3;color:var(--muted)}
+.gpl-t span.warn{color:#f0b35a}.gpl-t span.bad{color:#ef8a7e}
+.gpl-b{display:flex;gap:8px;flex:none}
+.gpl .go,.gpl .mbtn{padding:9px 16px;font-size:14px;border-radius:11px}
+.gpl .go{border:0;color:#1a1408;background:linear-gradient(180deg,var(--gold-hi),var(--gold-lo));font-family:var(--f-display);font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.gpl .go:disabled{opacity:.45;filter:grayscale(.5)}
+.gpl .mbtn{color:#e9e1cf;background:rgba(255,255,255,.04);border:1px solid var(--edge)}
+@media (max-width:620px){.gpl{flex-direction:column;align-items:stretch;gap:8px}.gpl-b{justify-content:flex-end}}

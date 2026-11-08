@@ -1,4 +1,14 @@
-let FL_CONE = null;                                                           // луч фонарика этого кадра (рисуется в render)
+let FL_CONE = null;
+// конус фонарика в координатах земли: 6 слоёв от широкого к узкому, у каждого свет гаснет вдаль — края мягкие, без «треугольника»
+function flCone(g, x, y, a, len, sp, al, rgba) {
+  const x0 = x + Math.cos(a) * .25, y0 = y + Math.sin(a) * .25;
+  for (let k = 0; k < 6; k++) {
+    const s = sp * (1.35 - k * .17), L = len * (1.05 - k * .07);
+    const gr = g.createRadialGradient(x0, y0, .1, x0, y0, L);
+    gr.addColorStop(0, rgba + al + ')'); gr.addColorStop(.45, rgba + (al * .8) + ')'); gr.addColorStop(1, rgba + '0)');
+    g.fillStyle = gr; g.beginPath(); g.moveTo(x0, y0); g.arc(x0, y0, L, a - s, a + s); g.closePath(); g.fill();
+  }
+}                                                           // луч фонарика этого кадра (рисуется в render)
 // ================= frame render =================
 let drops = [], animT = 0, fogDirty = true;
 const LOWG = () => gfxCap <= 1;                                             // графика «Минимум»
@@ -217,20 +227,17 @@ function render(dt) {
       // конус фонарика: рисуем прямо в координатах земли (матрица изометрии), поэтому он лежит на полу, а не на экране
       const a = P.fd != null ? P.fd : P.face, len = fl.id === 'phone' ? 4 : 6.5, sp = fl.id === 'phone' ? .55 : .42;
       lx.save(); lx.transform(U / 2, hh / 2, -U / 2, hh / 2, SX(0, 0) / 2, SY(0, 0, 0) / 2);
-      const g = lx.createRadialGradient(P.x, P.y, .2, P.x, P.y, len);
-      g.addColorStop(0, 'rgba(0,0,0,.96)'); g.addColorStop(.55, 'rgba(0,0,0,.85)'); g.addColorStop(1, 'rgba(0,0,0,0)');
-      lx.fillStyle = g; lx.beginPath(); lx.moveTo(P.x + Math.cos(a) * .2, P.y + Math.sin(a) * .2); lx.arc(P.x, P.y, len, a - sp, a + sp); lx.closePath(); lx.fill();
-      const g2 = lx.createRadialGradient(P.x, P.y, 0, P.x, P.y, 1.3); g2.addColorStop(0, 'rgba(0,0,0,.6)'); g2.addColorStop(1, 'rgba(0,0,0,0)');
-      lx.fillStyle = g2; lx.beginPath(); lx.arc(P.x, P.y, 1.3, 0, 6.283); lx.fill();   // рассеянный свет вокруг себя
+      flCone(lx, P.x, P.y, a, len, sp, .26, 'rgba(0,0,0,');                     // мягкие края: несколько слоёв всё уже и уже
+      const g2 = lx.createRadialGradient(P.x, P.y, 0, P.x, P.y, 1.6); g2.addColorStop(0, 'rgba(0,0,0,.55)'); g2.addColorStop(1, 'rgba(0,0,0,0)');
+      lx.fillStyle = g2; lx.beginPath(); lx.arc(P.x, P.y, 1.6, 0, 6.283); lx.fill();   // рассеянный свет вокруг себя
       lx.restore();
       FL_CONE = {a, len, sp};
     }
     lx.globalCompositeOperation = 'source-over';
     ctx.imageSmoothingEnabled = true; ctx.drawImage(lc, 0, 0, W, H); ctx.imageSmoothingEnabled = false;
     if (FL_CONE && fl && L < .9) {                                              // тёплый оттенок луча
-      const {a, len, sp} = FL_CONE; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.transform(U, hh, -U, hh, SX(0, 0), SY(0, 0, 0));
-      const g = ctx.createRadialGradient(P.x, P.y, .3, P.x, P.y, len); g.addColorStop(0, `rgba(255,214,150,${.16 * (1 - L)})`); g.addColorStop(1, 'rgba(255,214,150,0)');
-      ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(P.x, P.y); ctx.arc(P.x, P.y, len, a - sp, a + sp); ctx.closePath(); ctx.fill(); ctx.restore();
+      const {a, len, sp} = FL_CONE; ctx.save(); ctx.globalCompositeOperation = 'soft-light'; ctx.transform(U, hh, -U, hh, SX(0, 0), SY(0, 0, 0));
+      flCone(ctx, P.x, P.y, a, len, sp, .1 * (1 - L), 'rgba(255,226,170,'); ctx.restore();
     }
     FL_CONE = null;
     if (fireGlow.length && L < .95) {
