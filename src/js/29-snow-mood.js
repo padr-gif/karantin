@@ -28,7 +28,18 @@ function drawSnowCover(x0, y0, x1, y1) {
   for (const kind of ['ground', 'road']) {
     ctx.beginPath(); let any = false;
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
-      const i = y * MW + x, t = map[i]; if (t === FLOOR || isWallish(t) || hAt[i] || t === WATER) continue;
+      const i = y * MW + x, t = map[i];
+      // стена тонкая и стоит посреди своей клетки: наружная половина клетки — это земля у дома, её тоже заносит
+      // (раньше вдоль стен оставалась зелёная полоса в полклетки, ступеньками)
+      if (isWallish(t) && kind === 'ground') {
+        for (const [a, b] of D4) {
+          const j = (y + b) * MW + x + a, q = map[j];
+          if (q === FLOOR || isWallish(q) || hAt[j] || q === WATER) continue;
+          ctx.rect(a > 0 ? x + .5 : x - .01, b > 0 ? y + .5 : y - .01, a ? .51 : 1.02, b ? .51 : 1.02); any = true;
+        }
+        continue;
+      }
+      if (t === FLOOR || isWallish(t) || hAt[i] || t === WATER) continue;
       const road = t === ROAD || t === WALK; if (road !== (kind === 'road')) continue;
       ctx.rect(x - .01, y - .01, 1.02, 1.02); any = true;
     }
