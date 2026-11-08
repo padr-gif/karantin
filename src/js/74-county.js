@@ -37,9 +37,13 @@ function drawSoil(x, y, k) {
   const ok = (ox, oy) => { const xx = x + ox, yy = y + oy; return xx >= 0 && yy >= 0 && xx < MW && yy < MH && soil[yy * MW + xx] === k; };
   groundT(0);
   if (k === 1) {                                                              // грунтовка: рваный край, камешки
-    const e = (ox, oy, s) => ok(ox, oy) ? 0 : .06 + hash(x * 3 + ox * 7 + s, y * 5 + oy * 11) * .2;
+    // один цвет на всю дорожку и нахлёст на соседнюю клетку грунта — без сетки между клетками (рисуется один раз в кэш земли)
+    const e = (ox, oy, s) => ok(ox, oy) ? -.03 : .06 + hash(x * 3 + ox * 7 + s, y * 5 + oy * 11) * .2;
     const x0 = x + e(-1, 0, 1), x1 = x + 1 - e(1, 0, 2), y0 = y + e(0, -1, 3), y1 = y + 1 - e(0, 1, 4);
-    ctx.fillStyle = hash(x * 13 + 5, y * 7 + 11) < .5 ? '#6e5a3c' : '#745f3f'; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+    ctx.fillStyle = '#715d3e'; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+    // пятна чуть темнее и светлее — мягко, через прозрачность, чтобы не читались квадратами
+    { const h = hash(x * 13 + 5, y * 7 + 11), px = x + .15 + hash(x * 7 + 2, y * 3 + 9) * .5, py = y + .15 + hash(x * 2 + 8, y * 11 + 4) * .5;
+      ctx.fillStyle = h < .5 ? 'rgba(52,40,26,.12)' : 'rgba(150,126,92,.1)'; ctx.fillRect(px, py, .35, .3); }
     ctx.fillStyle = 'rgba(52,40,26,.45)';
     for (let q = 0; q < 3; q++) { const px = x0 + hash(x + q * 17, y * 3) * (x1 - x0 - .12), py = y0 + hash(x * 5, y + q * 23) * (y1 - y0 - .1); ctx.fillRect(px, py, .1, .08); }
     ctx.fillStyle = 'rgba(160,140,108,.5)';

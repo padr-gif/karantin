@@ -81,7 +81,7 @@ function nearSalvage() {                                                      //
 }
 addActions(out => {
   if (!P || P.car || P.sleep || BLD.on) return;
-  const tr = axeTool() && nearTree(); if (tr) out.push({kind:'chop', label:'срубить дерево', x:tr[0], y:tr[1], f:{type:'tree', cx:tr[0] + .5, cy:tr[1] + .5}});
+  const tr = axeTool() && nearTree(); if (tr) out.unshift({kind:'chop', label:'срубить дерево', x:tr[0], y:tr[1], f:{type:'tree', cx:tr[0] + .5, cy:tr[1] + .5}});   // с топором рубка — главное действие у дерева
   const bu = bladeTool() && nearProp('bush', 1.35); if (bu) out.push({kind:'cutbush', label:'срубить куст', f:bu});
   const lg = nearProp('blog', 1.4);
   if (lg) { if (hasTool('saw')) out.push({kind:'sawlog', label:'распилить на доски', f:lg}); if (axeTool()) out.push({kind:'splitlog', label:'наколоть хворост', f:lg});

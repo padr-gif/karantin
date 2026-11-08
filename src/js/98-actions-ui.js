@@ -47,6 +47,7 @@ body.popon #bAct{visibility:hidden}
     else if (a.f && a.f.type === 'car') z = U * 1.6;
     else if (a.f && TALL.has(SPRA && SPRA[a.f.type] || a.f.type)) z = U * 2.2;
     else if (a.f && (a.f.type === 'bed' || a.f.type === 'sofa' || a.f.type === 'bath')) z = U * 1.1;
+    else if (a.f && a.f.type === 'tree') z = U * 3;                                // тап по кроне тоже попадает в дерево
     else if (!a.f) return [x, y, U * 2.4];                                         // действие без предмета — над героем
     return [x, y, z];
   }
@@ -142,7 +143,9 @@ body.popon #bAct{visibility:hidden}
     return (AU.pop = p);
   }
   // одна цель — один проём (у окна свои ключи на каждое действие: шторы, закрыть…) или один предмет
-  const tgtKey = a => a.o ? 'o' + a.o.i : a.f && a.f.type !== 'pond' && a.f.type !== 'snow' ? a.f : 'k' + a.kind;
+  // дерево и куст — это клетка карты, а не вещь: у грибов, хвороста и рубки одна цель (иначе «Срубить» не попадало ни в меню, ни на кнопку)
+  const tgtKey = a => a.o ? 'o' + a.o.i : a.f && (a.f.type === 'tree' || a.f.type === 'bush') ? a.f.type + Math.floor(a.f.cx) + ',' + Math.floor(a.f.cy)
+    : a.f && a.f.type !== 'pond' && a.f.type !== 'snow' ? a.f : 'k' + a.kind;
   function actionsFor(a) {
     const t = tgtKey(a), all = getActions();
     const same = all.filter(b => tgtKey(b) === t);

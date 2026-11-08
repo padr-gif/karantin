@@ -1046,7 +1046,7 @@ body.ctledit #stick{z-index:61}
 #panel ::-webkit-scrollbar-track,.screen ::-webkit-scrollbar-track,#actMenu::-webkit-scrollbar-track{background:transparent}
 .rrow .rout{overflow:visible}
 /* дневник: «Дела на сегодня» и «Записки» — вкладками, как «Дневник» в шапке окна */
-.dswitch{display:inline-flex;justify-self:center;align-self:start;gap:3px;padding:3px;margin:0 auto 10px;max-width:none;background:rgba(0,0,0,.28);border-radius:11px}
+.dswitch{display:flex;width:max-content;box-sizing:border-box;justify-self:center;align-self:center;flex:none;gap:3px;padding:3px;margin:0 auto 10px;max-width:100%;background:rgba(0,0,0,.28);border-radius:11px}
 .dswitch button,.dswitch button.on{display:inline-flex;align-items:center;gap:6px;height:auto;min-height:0;padding:6px 12px;border:0;border-radius:8px;box-shadow:none;font-family:var(--f-display);font-weight:500;text-transform:uppercase;letter-spacing:.06em;font-size:12.5px;line-height:1.2}
 .dswitch button{background:transparent;color:var(--muted)}
 .dswitch button.on{background:#2e2a22;color:#f0c477}
@@ -1642,3 +1642,60 @@ body.invglass>*:not(#game):not(#vig):not(#panel):not(#toasts):not(svg){visibilit
 .bf-line{fill:none;stroke:var(--ec);stroke-width:1.5;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke;animation:bfScroll var(--beat,.9s) linear infinite;filter:drop-shadow(0 0 2px var(--ec))}
 @keyframes bfScroll{from{transform:translateX(0)}to{transform:translateX(-40px)}}
 @media (prefers-reduced-motion:reduce){.bf-breath,.bf-pulse,.bf-heart,.bf-line{animation:none}}
+
+/* ===== пауза (99-pause) ===== */
+#pause{background:radial-gradient(ellipse at 50% 40%,rgba(8,10,12,.55),rgba(4,5,6,.86));-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+#pause .card.pz{box-sizing:border-box;width:min(760px,100%);display:grid;grid-template-columns:minmax(190px,250px) minmax(0,1fr);gap:0;padding:0;overflow:hidden;
+  background:linear-gradient(160deg,rgba(24,27,26,.97),rgba(12,14,15,.97));border:1px solid rgba(240,196,119,.22);border-radius:18px;box-shadow:0 24px 60px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.04);
+  animation:pzIn .22s ease-out}
+@keyframes pzIn{from{opacity:0;transform:translateY(8px) scale(.985)}to{opacity:1;transform:none}}
+.pz-hero{position:relative;display:grid;grid-template-rows:minmax(0,1fr) auto auto auto;gap:8px;padding:14px 16px 16px;min-height:0;
+  background:radial-gradient(ellipse at 50% 38%,rgba(211,155,58,.16),rgba(0,0,0,0) 62%),linear-gradient(180deg,rgba(0,0,0,.1),rgba(0,0,0,.32));border-right:1px solid var(--edge)}
+.pz-fig{min-height:0;display:flex;justify-content:center;pointer-events:none}
+.pz-fig svg{height:100%;max-height:min(210px,calc(var(--vh,100vh) - 250px));width:auto;min-height:90px}
+.pz-fig svg text{display:none}
+.pz-who{display:flex;flex-direction:column;align-items:center;text-align:center;line-height:1.15}
+.pz-name{font-family:var(--f-display);font-size:19px;letter-spacing:.03em;color:#f3ead6}
+.pz-prof{font-size:12px;color:var(--muted)}
+.pz-bars{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px}
+.pz-bar{display:flex;align-items:center;gap:6px}
+.pz-bar .ic{width:14px;height:14px;flex:none}
+.pz-bar i{position:relative;flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden}
+.pz-bar s{position:absolute;inset:0 auto 0 0;border-radius:3px;background:currentColor}
+.pz-bar.hp{color:var(--hp)}.pz-bar.sat{color:var(--sat)}.pz-bar.hyd{color:var(--hyd)}.pz-bar.en{color:var(--en)}
+.pz-quote{margin:0;text-align:center;font-family:var(--f-hand);font-size:17px;line-height:1.2;color:#d9c9a4;opacity:.9}
+.pz-quote:empty{display:none}
+.pz-main{display:flex;flex-direction:column;gap:10px;padding:16px 18px;min-width:0}
+.pz-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.pz-head .stamp{margin:0}
+.pz-when{font-family:var(--f-display);font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:#f0c477}
+#pause .pz-b{display:flex;align-items:center;gap:10px;width:100%;justify-self:stretch;margin:0;text-align:left;cursor:pointer;
+  font-family:var(--f-display);font-weight:500;font-size:15px;letter-spacing:.06em;text-transform:uppercase;transition:transform .12s,background .12s,border-color .12s}
+.pz-i{width:20px;height:20px;flex:none}
+#pause .pz-go{justify-content:center;padding:13px 18px;border:0;border-radius:12px;color:#1a1408;font-size:19px;font-weight:700;letter-spacing:.1em;
+  background:linear-gradient(180deg,#f6d38e,#d9a54c);box-shadow:0 6px 18px rgba(217,165,76,.28),inset 0 1px 0 rgba(255,255,255,.45)}
+#pause .pz-go .pz-i{width:22px;height:22px}
+#pause .pz-go:active{transform:scale(.98)}
+.pz-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#pause .pz-grid .pz-b{padding:11px 12px;border-radius:11px;color:#e9e1cf;background:rgba(255,255,255,.04);border:1px solid var(--edge)}
+#pause .pz-grid .pz-b .pz-i{color:#f0c477}
+#pause .pz-grid .pz-b:hover{background:rgba(240,196,119,.08);border-color:rgba(240,196,119,.35)}
+#pause .pz-grid .pz-b:active{transform:scale(.97)}
+#pause .pz-grid #pDrop{grid-column:1/-1}
+.pz-meta{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--muted);margin-top:auto}
+.pz-meta b{font-family:var(--f-mono);color:#e9e1cf;font-weight:600;margin-right:3px}
+#pause .pz-exit{justify-content:center;padding:8px 12px;border:0;border-top:1px solid var(--edge);border-radius:0;background:transparent;color:#d98a7a;font-size:13px}
+#pause .pz-exit .pz-i{width:17px;height:17px}
+#pause .pz-exit:hover{color:#ff9f8c}
+@media (max-height:430px){
+  .pz-main{gap:7px;padding:12px 14px}.pz-hero{padding:10px 12px 12px;gap:6px}
+  #pause .pz-go{padding:10px 16px;font-size:17px}#pause .pz-grid .pz-b{padding:8px 10px;font-size:13.5px}.pz-grid{gap:6px}
+  .pz-name{font-size:17px}.pz-quote{font-size:15px}
+}
+@media (max-width:560px){
+  #pause .card.pz{grid-template-columns:1fr}
+  .pz-hero{grid-template-columns:72px minmax(0,1fr);grid-template-rows:auto auto auto;border-right:0;border-bottom:1px solid var(--edge)}
+  .pz-fig{grid-row:1/4;height:110px}.pz-fig svg{max-height:110px;min-height:0}
+  .pz-who{align-items:flex-start;text-align:left}.pz-quote{text-align:left;grid-column:2}
+}
+@media (prefers-reduced-motion:reduce){#pause .card.pz{animation:none}}
