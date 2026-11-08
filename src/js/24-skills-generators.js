@@ -87,10 +87,11 @@ function updateBeds(gm) {
   }
 }
 // ---- helicopter ----
+const HELI_FAR = 85;                                                         // появляется и исчезает за краем экрана — прилетает издалека
 function scheduleHeli(from) { world.heliAt = from + 1440 * ri(1, 2) + ri(-240, 360); }
 function startHeli() {
   const a = rng() * 6.283;
-  heli = {x:P.x + Math.cos(a) * 42, y:P.y + Math.sin(a) * 42, ph:'in', hover:75, ang:0, lx:P.x, ly:P.y, vx:0, vy:0, nT:0, sT:0, drop:rng() < .65};
+  heli = {x:P.x + Math.cos(a) * HELI_FAR, y:P.y + Math.sin(a) * HELI_FAR, ph:'in', hover:75, ang:0, lx:P.x, ly:P.y, vx:0, vy:0, nT:0, sT:0, drop:rng() < .65};
   if (P.sleep) wake('Тебя разбудил гул вертолёта');
   toast('Слышен гул вертолёта. Он привлечёт мертвецов со всей округи');
   scheduleHeli(gameMin);
@@ -100,15 +101,15 @@ function updateHeli(dt) {
   const h = heli, inside = insideHouse(P.x, P.y);
   if (!inside) { h.lx = P.x; h.ly = P.y; }
   let tx, ty, sp = 7;
-  if (h.ph === 'in') { tx = h.lx; ty = h.ly; if (Math.hypot(h.x - tx, h.y - ty) < 3) h.ph = 'hover'; }
+  if (h.ph === 'in') { tx = h.lx; ty = h.ly; const dd = Math.hypot(h.x - tx, h.y - ty); sp = dd > 25 ? 12 : 7; if (dd < 3) h.ph = 'hover'; }
   else if (h.ph === 'hover') {
     h.ang += dt * .45; tx = h.lx + Math.cos(h.ang) * 3.2; ty = h.ly + Math.sin(h.ang) * 3.2; sp = 4.5;
     h.hover -= dt * (inside ? 2.2 : 1);
     if (h.hover <= 0) {
-      h.ph = 'out'; const a = Math.atan2(h.y - P.y, h.x - P.x); h.ox = P.x + Math.cos(a) * 60; h.oy = P.y + Math.sin(a) * 60;
+      h.ph = 'out'; const a = Math.atan2(h.y - P.y, h.x - P.x); h.ox = P.x + Math.cos(a) * (HELI_FAR + 15); h.oy = P.y + Math.sin(a) * (HELI_FAR + 15);
       if (h.drop) dropSupply();
     }
-  } else { tx = h.ox; ty = h.oy; sp = 8; if (Math.hypot(h.x - P.x, h.y - P.y) > 50) { heli = null; if (mode === 'play') ach('heli'); return; } }
+  } else { tx = h.ox; ty = h.oy; sp = Math.hypot(h.x - P.x, h.y - P.y) > 25 ? 12 : 8; if (Math.hypot(h.x - P.x, h.y - P.y) > HELI_FAR) { heli = null; if (mode === 'play') ach('heli'); return; } }
   const dx = tx - h.x, dy = ty - h.y, d = Math.hypot(dx, dy) || 1, v = Math.min(sp, d * 1.5);
   h.vx += ((dx / d) * v - h.vx) * Math.min(1, dt * 1.5); h.vy += ((dy / d) * v - h.vy) * Math.min(1, dt * 1.5);
   h.x += h.vx * dt; h.y += h.vy * dt;
@@ -177,14 +178,28 @@ function drawHeli() {
   ctx.stroke();
   if (Math.floor(animT * 2.5) % 2) { ctx.fillStyle = '#ff3b30'; ctx.beginPath(); ctx.arc(bx, by + 8 * K, 2.2, 0, 6.283); ctx.fill(); }
 }
+// дом между пятном и зрителем (в изометрии «перед» клеткой — клетки с большим x + y) или пятно на самом доме
+function heliLitOk(x, y) {
+  const cx = Math.floor(x), cy = Math.floor(y);
+  for (let a = -1; a <= 3; a++) for (let b = -1; b <= 3; b++) {
+    if (a + b < 0) continue;
+    const i = (cy + b) * MW + cx + a; if (i < 0 || i >= map.length) continue;
+    if (hAt[i] || isWallish(map[i])) return false;
+  }
+  return true;
+}
 function drawHeliLight() {
   if (!heli || lightLevel() > .55) return;
-  const h = heli, gx = SX(h.lx, h.ly), gy = SY(h.lx, h.ly, 0), bx = SX(h.x, h.y), by = SY(h.x, h.y, 175);
-  ctx.globalCompositeOperation = 'lighter';
+  const h = heli;
+  // свет плавно гаснет, когда пятно уходит за дом или на крышу, и плавно включается снова
+  h.la = (h.la == null ? 0 : h.la) + ((heliLitOk(h.lx, h.ly) && Math.hypot(h.x - h.lx, h.y - h.ly) < 12 ? 1 : 0) - (h.la || 0)) * .08;
+  if (h.la < .02) return;
+  const gx = SX(h.lx, h.ly), gy = SY(h.lx, h.ly, 0), bx = SX(h.x, h.y), by = SY(h.x, h.y, 175), A = h.la;
+  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = A;
   ctx.fillStyle = 'rgba(255,250,220,.07)'; ctx.beginPath(); ctx.moveTo(bx - 3, by); ctx.lineTo(gx - 26, gy); ctx.lineTo(gx + 26, gy); ctx.lineTo(bx + 3, by); ctx.closePath(); ctx.fill();
   const g = ctx.createRadialGradient(gx, gy, 0, gx, gy, 40); g.addColorStop(0, 'rgba(255,250,220,.45)'); g.addColorStop(1, 'rgba(255,250,220,0)');
   ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(gx, gy, 40, 22, 0, 0, 6.283); ctx.fill();
-  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
 }
 // ---- procedural props for these systems ----
 function drawGen(p, f) {

@@ -1528,7 +1528,7 @@ body.invglass>*:not(#game):not(#vig):not(#panel):not(#toasts):not(svg){visibilit
 @media (max-width:620px){.tvg-cols{grid-template-columns:1fr}}
 @media (max-height:430px){.tv-knobs,.tv-led{display:none}.tv-ctl{gap:6px;padding-top:0}#panel .tv-chb{height:26px}.tv-brand{display:none}}
 /* v92: ускорение времени — метка на часах */
-.clock{cursor:pointer;pointer-events:auto}
+.clock{cursor:default;pointer-events:auto}
 .clock.ff{border-color:rgba(255,209,102,.55)}
 .fftag{flex:none;align-self:center;font:700 11px/1 var(--f-mono);padding:4px 6px;border-radius:9px;background:#ffd166;color:#1a1408;box-shadow:0 2px 6px rgba(0,0,0,.45);pointer-events:none}
 .fftag::before{content:'▶▶ ';font-size:8px;letter-spacing:-2px}
@@ -1760,3 +1760,11 @@ body.invglass>*:not(#game):not(#vig):not(#panel):not(#toasts):not(svg){visibilit
 #clockBox.clock{border-color:var(--card-edge);background:rgba(12,14,15,.8)}
 .btn.sm:not(.on){color:var(--gold);border-color:var(--card-edge);background:rgba(12,14,15,.8)}
 .btn.sm.on{background:linear-gradient(180deg,var(--gold-hi),var(--gold-lo));border-color:var(--gold);color:#1a1408}
+
+/* «Записки» тем же рукописным шрифтом, что и блокнот «Дела на сегодня» */
+.diary:not(.snote){font:500 21px/30px var(--f-hand);background:repeating-linear-gradient(#efe6d2 0 29px,#c9d3dd 29px 30px),#efe6d2;color:#2b2a33}
+.diary:not(.snote) .dhead{font:700 26px/30px var(--f-hand);letter-spacing:0;text-transform:none;color:#8a2f25}
+.diary:not(.snote) .dline{color:#2b2a33}
+.diary:not(.snote) .dsub{font-size:17px;color:#8b7558}
+.diary:not(.snote) .dmiss{font-size:18px;color:#a89a84}
+.diary:not(.snote) .sn b{font-style:normal;font-weight:700;color:#6a4f36}

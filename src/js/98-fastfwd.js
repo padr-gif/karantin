@@ -75,8 +75,7 @@ onLoad(() => ffStop());
 {
   const c = $('clockBox');
   if (c) {
-    c.setAttribute('role', 'button'); c.title = 'Ускорить время (F)';
-    c.addEventListener('click', ffTap);
+    // по часам больше не нажимаем — ускорение только кнопкой ▶▶ и клавишей F (часы задевали случайно)
     const t = document.createElement('span'); t.id = 'ffTag'; t.className = 'fftag'; t.hidden = true; c.appendChild(t);
   }
   const b = $('bFF'); if (b) b.addEventListener('click', e => { e.stopPropagation(); ffTap(); });
