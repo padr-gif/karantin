@@ -22,6 +22,7 @@ self.addEventListener('fetch', e => {
     e.respondWith(caches.open(CACHE).then(c => c.match(r).then(hit => hit || fetch(r).then(res => { if (res.ok) c.put(r, res.clone()); return res; }).catch(() => hit))));
     return;
   }
+  if (url.pathname.includes('/vk/')) return;   // версия для ВКонтакте живёт сама по себе, офлайн-кэш сайта её не трогает
   if (r.mode === 'navigate') {
     const net = fetch(r).then(res => { if (res.ok) { const cp = res.clone(); caches.open(CACHE).then(c => c.put('./index.html', cp)); } return res; });
     e.waitUntil(net.catch(() => {}));

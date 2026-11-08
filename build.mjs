@@ -56,6 +56,7 @@ export function build({dev = false, pwa = false, plat = '', out = 'dist/karantin
   // the sheets start downloading straight from <head>, while the browser is still busy with the game code
   if (pwa) preload.push(`<script>window.__pre={};(function(u){try{if(window.fetch)for(var k in u)window.__pre[k]=fetch(u[k]);}catch(e){}})(${JSON.stringify(png)})</script>`);
   const platHead = plat === 'yandex' ? `<script>window.__PLAT='yandex'</script><script src="/sdk.js" async></script>`
+    : plat === 'vk' ? `<script>window.__PLAT='vk';(function(){var u=['https://unpkg.com/@vkontakte/vk-bridge@2/dist/browser.min.js','https://cdn.jsdelivr.net/npm/@vkontakte/vk-bridge@2/dist/browser.min.js'],i=0;function n(){if(i>=u.length)return;var s=document.createElement('script');s.src=u[i++];s.async=true;s.onerror=n;document.head.appendChild(s);}n();})()</script>`
     : plat === 'android' ? `<script>window.__PLAT='android'</script>` : '';
   const head = platHead + (pwa ? preload.join('') : '') + (pwa && !plat ? '<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#0c0f12"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Dead Line"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" href="icon-192.png">'
  : '');
@@ -85,6 +86,7 @@ export function buildSite() {
     if (f === 'sw.js') fs.writeFileSync(dst, fs.readFileSync(src, 'utf8').replace('@@VERSION@@', version).replace('/*@@ASSETS@@*/', build.assets.map(a => JSON.stringify('./' + a)).join(', '))); else fs.copyFileSync(src, dst);
   }
   fs.writeFileSync(path.join(dir, '.nojekyll'), '');
+  build({pwa: true, plat: 'vk', out: 'site/vk/index.html'});                 // ВКонтакте: мини-приложение открывает https://padr-gif.github.io/karantin/vk/
   return dir;
 }
 
