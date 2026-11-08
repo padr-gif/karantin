@@ -1,11 +1,14 @@
 let FL_CONE = null;
 // конус фонарика в координатах земли: 6 слоёв от широкого к узкому, у каждого свет гаснет вдаль — края мягкие, без «треугольника»
+// Фонарь в правой руке на высоте пояса: луч бьёт в землю впереди, поэтому у ног почти темно,
+// пятно разгорается примерно через клетку и гаснет вдаль (раньше конус начинался прямо от ботинок).
+const flHand = (x, y, a) => [x + Math.cos(a) * .22 - Math.sin(a) * .2, y + Math.sin(a) * .22 + Math.cos(a) * .2];
 function flCone(g, x, y, a, len, sp, al, rgba) {
-  const x0 = x + Math.cos(a) * .25, y0 = y + Math.sin(a) * .25;
+  const [x0, y0] = flHand(x, y, a);
   for (let k = 0; k < 6; k++) {
     const s = sp * (1.35 - k * .17), L = len * (1.05 - k * .07);
     const gr = g.createRadialGradient(x0, y0, .1, x0, y0, L);
-    gr.addColorStop(0, rgba + al + ')'); gr.addColorStop(.45, rgba + (al * .8) + ')'); gr.addColorStop(1, rgba + '0)');
+    gr.addColorStop(0, rgba + '0)'); gr.addColorStop(.1, rgba + (al * .25) + ')'); gr.addColorStop(.24, rgba + al + ')'); gr.addColorStop(.5, rgba + (al * .8) + ')'); gr.addColorStop(1, rgba + '0)');
     g.fillStyle = gr; g.beginPath(); g.moveTo(x0, y0); g.arc(x0, y0, L, a - s, a + s); g.closePath(); g.fill();
   }
 }                                                           // луч фонарика этого кадра (рисуется в render)
@@ -238,6 +241,15 @@ function render(dt) {
     if (FL_CONE && fl && L < .9) {                                              // тёплый оттенок луча
       const {a, len, sp} = FL_CONE; ctx.save(); ctx.globalCompositeOperation = 'soft-light'; ctx.transform(U, hh, -U, hh, SX(0, 0), SY(0, 0, 0));
       flCone(ctx, P.x, P.y, a, len, sp, .1 * (1 - L), 'rgba(255,226,170,'); ctx.restore();
+      // сам луч в воздухе: от фонаря в руке к пятну на земле, еле заметный
+      const [hx, hy] = flHand(P.x, P.y, a), k = 1 - L, hz = U * .95 - (P.sneak ? U * .25 : 0), back = Math.cos(a) + Math.sin(a) < -.3 ? .35 : 1;   // спиной к нам — рука за телом, блик слабее
+      const sx = SX(hx, hy), sy = SY(hx, hy, hz), gx = hx + Math.cos(a) * 1.5, gy = hy + Math.sin(a) * 1.5;
+      const ex = SX(gx, gy), ey = SY(gx, gy, 0), px = -Math.sin(a) * .55, py = Math.cos(a) * .55;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const bg = ctx.createLinearGradient(sx, sy, ex, ey); bg.addColorStop(0, `rgba(255,232,190,${.16 * k})`); bg.addColorStop(1, 'rgba(255,232,190,0)');
+      ctx.fillStyle = bg; ctx.beginPath(); ctx.moveTo(sx, sy - 1.5); ctx.lineTo(SX(gx + px, gy + py), SY(gx + px, gy + py, 0)); ctx.lineTo(SX(gx - px, gy - py), SY(gx - px, gy - py, 0)); ctx.lineTo(sx, sy + 1.5); ctx.closePath(); ctx.fill();
+      const hg = ctx.createRadialGradient(sx, sy, 0, sx, sy, U * .32); hg.addColorStop(0, `rgba(255,240,205,${.75 * k * back})`); hg.addColorStop(1, 'rgba(255,240,205,0)');
+      ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(sx, sy, U * .32, 0, 6.283); ctx.fill(); ctx.restore();
     }
     FL_CONE = null;
     if (fireGlow.length && L < .95) {
