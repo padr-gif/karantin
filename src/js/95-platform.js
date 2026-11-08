@@ -40,9 +40,19 @@ function platAdPause(on) {
   if (on) { PLAT.wasPaused = paused; paused = true; atkHeld = false; joy.id = null; joy.x = joy.y = 0; try { SFX.mute(true); } catch (e) {} }
   else {
     if (!PLAT.wasPaused && !panel && $('pause').hidden && !traveling) paused = false;
-    if (!document.hidden) try { SFX.mute(false); } catch (e) {}
+    platSound();
   }
 }
+// звук молчит, пока вкладка скрыта, окно без фокуса или идёт реклама (требование площадки 1.3; полезно и на сайте)
+let platFocus = true;
+function platSound() { try { SFX.mute(document.hidden || !platFocus || PLAT.ad); } catch (e) {} }
+document.addEventListener('visibilitychange', platSound);
+addEventListener('blur', () => { platFocus = false; platSound(); });
+addEventListener('focus', () => { platFocus = true; platSound(); });
+addEventListener('pointerdown', () => { if (!platFocus) { platFocus = true; platSound(); } }, true);   // фрейм площадки не всегда шлёт focus
+// долгое нажатие и правая кнопка нигде не открывают меню браузера (кроме полей ввода)
+document.addEventListener('contextmenu', e => { if (!(e.target && e.target.closest && e.target.closest('input,textarea'))) e.preventDefault(); });
+
 // реклама за награду; onReward вызывается, только если ролик досмотрен
 PLAT.rewarded = function (onReward) {
   if (!PLAT.sdk || PLAT.ad) return false;
