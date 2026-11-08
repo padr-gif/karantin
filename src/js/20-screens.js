@@ -28,8 +28,11 @@ async function refreshMenu() {
   latestSlot = null; let best = 0;
   for (const s of SAVE_SLOTS) if (metas[s] && metas[s].t > best) { best = metas[s].t; latestSlot = s; }
   $('mContinue').hidden = !latestSlot;
-  if (latestSlot) $('mContinue').textContent = 'Продолжить · день ' + metas[latestSlot].day;
-  { const m = latestSlot && metas[latestSlot], ci = $('mContInfo'); if (ci) { ci.hidden = !m; if (m) ci.textContent = [m.name, m.time, (m.dn || (DIFF[m.diff] || DIFF.normal).name).toLowerCase(), 'убито ' + m.kills].filter(Boolean).join(' · '); } }
+  if (latestSlot) {                                                        // номер дня — только если в сохранении на руке электронные часы
+    const m = metas[latestSlot], t = 'Продолжить' + (m.clk > 1 ? ' · день ' + m.day : ''), sp = $('mContinue').querySelector('.pz-t');
+    if (sp) sp.textContent = t; else $('mContinue').textContent = t;
+  }
+  { const m = latestSlot && metas[latestSlot], ci = $('mContInfo'); if (ci) { ci.hidden = !m; if (m) ci.textContent = [m.name, m.clk ? m.time : '', (m.dn || (DIFF[m.diff] || DIFF.normal).name).toLowerCase(), 'убито ' + m.kills].filter(Boolean).join(' · '); } }
 }
 function toMenu() {
   closePanel(); wake();

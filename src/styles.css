@@ -1740,8 +1740,7 @@ body.invglass>*:not(#game):not(#vig):not(#panel):not(#toasts):not(svg){visibilit
 /* главное меню: золотая «Новая игра», ниже плитки по две в ряд */
 #menu .mlist{grid-template-columns:1fr 1fr;gap:7px;max-width:330px}
 #menu .mlist .go,#menu .mlist .mm-cont,#menu .mlist #mTut{grid-column:1/-1}
-#menu .mlist .go,#menu .mlist .mbtn{justify-content:flex-start}
-#menu .mlist .go{justify-content:center}
+#menu .mlist .go,#menu .mlist .mbtn{justify-content:center;text-align:center}
 #menu .mlist .mbtn{background:rgba(12,14,15,.72);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
 #menu .mlist .mbtn .pz-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* сон и смерть */
