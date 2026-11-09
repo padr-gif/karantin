@@ -98,6 +98,7 @@ if (PLAT.name === 'vk') {
     if (!window.vkBridge) return;
     B = window.vkBridge;
     try { await send('VKWebAppInit'); } catch (e) {}
+    document.documentElement.classList.add('plat-vk');
     try {
       B.subscribe(e => {
         const t = e && e.detail && e.detail.type;
