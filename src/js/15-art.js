@@ -14,6 +14,37 @@ function needSheet(n) {
   if (ART.imgs[n]) return true;
   const src = ART.src[n]; if (!src || ART.pend.has(n)) return false;
   ART.pend.add(n);
+  if (ART_IOS && /^pchar_/.test(n) && pxWorkerLoad(n, src)) return false;        // лист раскрывается в фоновом потоке — без заминки
+  needSheetImg(n, src); return false;
+}
+// Раскрытие листа героя в массив пикселей — в фоновом потоке: на главном это рывок в полсекунды на лист (при первом
+// ударе и после выгрузки неиспользуемого). Поток сам скачивает/берёт файл, раскрывает и отдаёт готовые пиксели.
+// Не вышло (старый Safari без OffscreenCanvas, не открылся WebP) — обычный путь через картинку.
+let PXW = null, pxwBad = false;
+function pxWorkerLoad(n, src) {
+  if (pxwBad || typeof Worker === 'undefined' || typeof OffscreenCanvas === 'undefined' || typeof createImageBitmap !== 'function') return false;
+  try {
+    if (!PXW) {
+      const code = `onmessage = async e => { const {n, src} = e.data; try {
+        const blob = typeof src === 'string' ? await (await fetch(src)).blob() : src;
+        const bmp = await createImageBitmap(blob), w = bmp.width, h = bmp.height;
+        const g = new OffscreenCanvas(w, h).getContext('2d', {willReadFrequently:true}); g.drawImage(bmp, 0, 0); bmp.close && bmp.close();
+        const d = g.getImageData(0, 0, w, h).data; postMessage({n, w, h, buf:d.buffer}, [d.buffer]);
+      } catch (err) { postMessage({n, err:String(err)}); } };`;
+      PXW = new Worker(URL.createObjectURL(new Blob([code], {type:'text/javascript'})));
+      PXW.onmessage = e => {
+        const m = e.data, src = ART.src[m.n];
+        if (m.err || !m.buf) { pxwBad = true; if (src) needSheetImg(m.n, src); else ART.pend.delete(m.n); return; }
+        ART.px[m.n] = {w:m.w, h:m.h, d:new Uint8ClampedArray(m.buf)};
+        const stub = mkCanvas(1, 1); stub._px = true; ART.imgs[m.n] = stub; ART.pend.delete(m.n);
+      };
+      PXW.onerror = () => { pxwBad = true; for (const k of [...ART.pend]) if (/^pchar_/.test(k) && !ART.imgs[k] && ART.src[k]) needSheetImg(k, ART.src[k]); };
+    }
+    PXW.postMessage({n, src:typeof src === 'string' ? new URL(src, location.href).href : src});
+    return true;
+  } catch (e) { pxwBad = true; return false; }
+}
+function needSheetImg(n, src) {
   const im = new Image(), url = typeof src === 'string' ? src : URL.createObjectURL(src);
   // iPhone: листы героя (до 33 МБ каждый в раскрытом виде) нельзя рисовать как картинки. Каждый такой лист целиком
   // уезжает в видеопамять, и на первом же ударе или двери (подгружаются «дополнительные» листы, +66 МБ) графический
@@ -41,7 +72,7 @@ function needSheet(n) {
     ART.src[n] = typeof src !== 'string' && ART_EMBED && ART_EMBED.alt && ART_EMBED.alt[n] ? ART_EMBED.alt[n] : null;
     if (typeof logErr === 'function' && !ART.src[n]) logErr(new Error('лист ' + n + ' не открылся'), 'needSheet');
   };
-  im.src = url; return false;
+  im.src = url;
 }
 /*@@ART_EMBED@@*/
 // Sheets are decoded two at a time with progress on the loading screen; a sheet that fails is retried once.
