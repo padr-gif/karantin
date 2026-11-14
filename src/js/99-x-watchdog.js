@@ -109,21 +109,25 @@
     for (const n of ['computeVis', 'buildFlow', 'clearCaches', 'getChunk', 'drawZombie', 'drawWallView', 'drawProc', 'drawCarProp', 'drawRoof', 'drawCorpse', 'drawChar', 'drawPile',
       'attackSwing', 'killZombie', 'doAction', 'renderPanel', 'openPanel', 'closePanel', 'useItem', 'writeSave', 'serialize', 'applySave', 'tasksToday', 'noise', 'updateDrops',
       'spawnZombie', 'mkZombie', 'toast', 'eventBanner', 'startSleep', 'wakeUp', 'enterCar', 'computePath', 'findPath', 'pathTo']) wrapG(n, true);
+    // путь нажатия «открыть дверь» и звук — по шагам
+    for (const n of ['getActions', 'getAction', 'doActionMain', 'doActionBase', 'clearDoorway', 'cellOccupied', 'winAction', 'smp', 'smpPick', 'bus', 'busPlace', 'sndStart', 'loadSamples', 'refreshMenu']) wrapG(n, true);
+    for (const k in SFX) { const f = SFX[k]; if (typeof f !== 'function' || k === 'ok' || k === 'vol') continue; const id = lab('звук ' + k); SFX[k] = function () { beat(id); return f.apply(this, arguments); }; }
+    try { for (const k in ACT) { const d = ACT[k]; if (d && typeof d.run === 'function') { const f = d.run, id = lab('действие ' + k); d.run = function () { beat(id); return f.apply(this, arguments); }; } } } catch (e) {}
+    try { for (const k in XACT) { const f = XACT[k]; if (typeof f === 'function') { const id = lab('действие x ' + k); XACT[k] = function () { beat(id); return f.apply(this, arguments); }; } } } catch (e) {}
     // обработчики кадра и слои поверх мира — по одному, с началом их текста (по нему видно, какой это файл)
     HOOKS.update.forEach((h, i) => { for (const k of ['pre', 'post']) { const f = h[k]; if (!f) continue; const id = lab('update.' + k + '#' + i + ' ' + short(f)); h[k] = function () { beat(id); return f.apply(this, arguments); }; } });
     OVERLAYS.forEach((f, i) => { const id = lab('слой#' + i + ' ' + short(f)); OVERLAYS[i] = function () { beat(id); return f.apply(this, arguments); }; });
-    W.postMessage({lab:LAB, ver:GAME_VER + (PLAT.name ? '-' + PLAT.name : '')});
     // состояние игры — раз в секунду; последние события — что игрок делал
     const recent = [];
     { const t0 = toast; toast = function (text) { recent.push('«' + String(text).slice(0, 40) + '»'); if (recent.length > 8) recent.shift(); return t0.apply(this, arguments); }; }
-    { const d0 = doAction; doAction = function (a) { recent.push('действие:' + (typeof a === 'string' ? a : (a && (a.kind || a.label)) || '?')); if (recent.length > 8) recent.shift(); return d0.apply(this, arguments); }; }
+    { const d0 = doAction; doAction = function (a) { recent.push('действие:' + (typeof a === 'string' ? a : ((a || (typeof curAct !== 'undefined' && curAct) || {}).kind) || '?')); if (recent.length > 8) recent.shift(); return d0.apply(this, arguments); }; }
     const sheetMb = () => { try { let n = 0, px = 0; for (const k in ART.imgs) { const i = ART.imgs[k]; if (i && i.width) { n++; px += i.width * i.height; } } return n + ' шт ' + Math.round(px * 4 / 1048576) + ' МБ'; } catch (e) { return '?'; } };
     let armed = false;
     setInterval(() => W.postMessage(-3), 300);                                 // пульс: главный поток жив, даже если кадры не идут
     // события и таймеры вне кадра: метка перед обработчиками нажатий
     for (const ev of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click', 'keydown', 'resize', 'focus', 'blur', 'visibilitychange', 'pageshow']) {
-      const id = lab('событие ' + ev);
-      addEventListener(ev, () => W.postMessage(id), true);
+      const id = lab('событие ' + ev), idA = lab('после события ' + ev);
+      addEventListener(ev, () => { budget = 120; W.postMessage(id); setTimeout(() => W.postMessage(idA), 0); }, true);   // вне кадра метки идут без ограничения кадра
     }
     let swState = 'нет';
     try { navigator.serviceWorker && navigator.serviceWorker.getRegistration().then(r => { if (!r) return; const upd = () => { swState = (r.installing ? 'ставится ' : '') + (r.waiting ? 'ждёт ' : '') + (r.active ? 'работает' : ''); };
@@ -143,6 +147,7 @@
           ', заготовок ' + SPR.size + '/' + CHUNKS.size + ', кадров перс. ' + frameCache.size + ', листов ' + sheetMb() + ', ошибок ' + ERRLOG.length + ', кэш ' + swState + ', память ' + (performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) + ' МБ' : '?') + ' | ' + recent.join(' ')});
       } catch (e) {}
     }, 1000);
+    W.postMessage({lab:LAB, ver:GAME_VER + (PLAT.name ? '-' + PLAT.name : '')});   // названия шагов — когда все они уже заведены
     document.addEventListener('visibilitychange', () => { if (document.hidden) arm(false); });
     addEventListener('pagehide', () => arm(false));
   } catch (e) { logErr(e, 'сторож'); }
