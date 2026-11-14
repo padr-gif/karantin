@@ -1721,3 +1721,11 @@ body.invglass>*:not(#game):not(#vig):not(#panel):not(#toasts):not(svg){visibilit
 .nb-h,.nb-r .nb-h,.nb-r .nb-h.nb-today{font:700 22px/var(--ln) var(--f-hand);letter-spacing:0;text-transform:none;color:#8a2f25;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
 .nb-r .nb-h{color:#7a5a38}
 .nb-prog{font:500 19px/1 var(--f-hand);background:none;padding:0;color:#6b5a48}
+/* окно сторожа зависаний (99-x-watchdog) */
+.wd-win{position:fixed;inset:0;z-index:99999;background:rgba(6,8,10,.86);display:flex;align-items:center;justify-content:center;padding:12px}
+.wd-card{max-width:760px;width:100%;max-height:100%;overflow:auto;background:#14171b;border:1px solid #c9a255;border-radius:14px;padding:14px 16px;color:#eadfca;font:14px/1.35 var(--f-body,system-ui)}
+.wd-card b{font:700 18px var(--f-head,system-ui);letter-spacing:.5px;text-transform:uppercase;color:#f0c477}
+.wd-card p{margin:6px 0 8px;color:#b9ae98}
+.wd-card pre{margin:0;padding:8px 10px;background:#0b0d10;border-radius:8px;font:11px/1.35 ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:break-word;max-height:46vh;overflow:auto;user-select:text;-webkit-user-select:text}
+.wd-row{display:flex;gap:10px;margin-top:10px}
+.wd-row button{flex:1;padding:10px;border-radius:10px;border:1px solid #c9a255;background:#2a2114;color:#f0c477;font:700 14px var(--f-head,system-ui)}
