@@ -1,6 +1,31 @@
 // ================= sprite & chunk caches =================
 let baking = false;
 const SPR = new Map(), CHUNKS = new Map(), CH = 8;
+// ---- память холстов (главное — iPhone) ----
+// Safari не отдаёт память холста, пока тот жив как объект, а сборщик мусора до выброшенных заготовок добирается не сразу.
+// Каждая полная очистка заготовок (смена масштаба, переход в район, постройка) оставляла в памяти десятки больших холстов;
+// у Safari на все холсты страницы жёсткий потолок, и после него новые холсты остаются пустыми: пропадали пол, герой, стены,
+// а игра перед этим надолго замирала. Теперь выброшенный холст явно обнуляется (ширина и высота 0 — память уходит сразу).
+// Обнуляем с задержкой в полторы секунды: вдруг кадр, который сейчас рисуется, ещё держит на него ссылку.
+const CV_DEAD = [];
+function dropCv(c) { if (c && c.width && !c._dead) { c._dead = true; CV_DEAD.push(c, frameNo + 90); } }
+function reapCv() {
+  let n = 0;
+  while (n < CV_DEAD.length && CV_DEAD[n + 1] <= frameNo) {
+    const c = CV_DEAD[n]; n += 2;
+    try { if (c._bmp && c._bmp.close) c._bmp.close(); } catch (e) {}
+    c._bmp = null; c.width = 0; c.height = 0;
+  }
+  if (n) CV_DEAD.splice(0, n);
+}
+{ const guard = (map, cv) => {
+    const del = map.delete.bind(map), clr = map.clear.bind(map);
+    map.delete = k => { const v = map.get(k); if (v) dropCv(cv(v)); return del(k); };
+    map.clear = () => { for (const v of map.values()) dropCv(cv(v)); return clr(); };
+  };
+  guard(CHUNKS, ch => ch.c);
+  guard(SPR, s => s.slot ? null : s.c);                                        // кусок на общем листе атласа — не свой холст
+}
 let sprU = 0, sprDPR = 0, bakes = 0, stampQ = [];
 const SPR_MAX = 1100, CH_MAX = 56, BAKE_BUDGET = 40;
 function clearCaches() { SPR.clear(); CHUNKS.clear(); stampQ.length = 0; atlasReset(); fogFull = true; }

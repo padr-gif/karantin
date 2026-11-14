@@ -180,12 +180,12 @@ function charFrame(name, palKey, pal, force) {
   { const rn = f[0] + 'r'; if (pal && pal.outfit && (ART.src[rn] || ART.imgs[rn]) && !needSheet(rn)) return null; }
   recolorsThisFrame++;
   c = recolor8(f, pal); frameCache.set(k, c);
-  if (frameCache.size > FRAME_MAX) { let n = 200; for (const key of frameCache.keys()) { frameCache.delete(key); if (--n <= 0) break; } }
+  if (frameCache.size > FRAME_MAX) { let n = 200; for (const [key, v] of frameCache) { frameCache.delete(key); dropCv(v && v.cv); if (--n <= 0) break; } }
   if (c && c.cv) c.cv._st = true;
   return c;
 }
 function drawChar(ent, name, palKey, pal, wx, wy, zoff, flash, alpha, force) {
-  const c = charFrame(name, palKey, pal, force) || ent._lc; if (!c) return;
+  const c = charFrame(name, palKey, pal, force) || (ent._lc && ent._lc.cv && ent._lc.cv.width ? ent._lc : null); if (!c) return;   // прошлый кадр — только если его холст ещё жив
   ent._lc = c;
   const CS = c.s || 1;
   const dx = rd(SX(wx, wy) - c.ax / CS), dy = rd(SY(wx, wy, zoff || 0) - c.ay / CS);

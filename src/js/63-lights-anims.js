@@ -60,7 +60,7 @@ function nearSwitch() {
   defAction('lightsw', {run:a0 => {
     if (mode !== 'play' || paused || panel || P.sleep) return;
     $('actMenu').hidden = true;
-    const r = a0.r; r.off = !r.off; clearCaches();
+    const r = a0.r; r.off = !r.off;                                            // заготовки не сбрасываем: состояние выключателя входит в ключ стены, свет считается каждый кадр
     smp('handle', .35, 1.5);
     const [sx, sy] = swPoint(r); P.face = P.fd = Math.atan2(sy - P.y, sx - P.x);
     if (!poweredAt(P.x, P.y)) toast('Щёлк. Электричества нет — свет не загорится');

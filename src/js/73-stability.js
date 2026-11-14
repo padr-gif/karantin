@@ -3,7 +3,7 @@
 // Если основное не читается или не загружается, игра берёт запасное. Сохранение можно выгрузить файлом и загрузить
 // из файла (перенести игру на другой телефон). Ошибки кадра и скрипта пишутся в журнал; в паузе — «Отчёт об ошибках».
 
-const GAME_VER = '0.101.2';
+const GAME_VER = '0.101.3';
 const PKEY = s => LKEY(s) + '-prev';
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } };
@@ -328,6 +328,7 @@ const bump = c => { if (c) { c._v = (c._v || 0) + 1; c._st = true; } };
 // готовый холст — его ImageBitmap; кусок земли в детальной графике (HDQ× крупнее, _chq) — уменьшить до 1×
 { const di = CanvasRenderingContext2D.prototype.drawImage;
   mainCtx.drawImage = function (img, a, b, c, d, e, f, g, h) {
+    if (img && img.width === 0) return;                                        // обнулённый холст (dropCv) рисовать нельзя — и незачем
     const bm = img && img._st && !bmpOff ? bmpOf(img) : null, n = arguments.length;
     DRAWS.n++; if (bm) DRAWS.bm++; if (img) DRAWS.px += (img.width || 0) * (img.height || 0);
     if (n === 3) {

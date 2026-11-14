@@ -7,9 +7,9 @@
 // 5. Притворщики. Со второго дня часть мертвецов не бродит, а лежит как труп (без лужи крови) и встаёт,
 //    когда герой подходит близко. Крадущегося подпускают вплотную — лежачего можно добить первым.
 {
-  let HS = 0;
+  let HS = 0, HSn = 0;                                                         // пауза кадра: не дольше трёх пропусков подряд, что бы ни было со временем
   const u0 = update;
-  update = function (dt) { if (HS > 0) { HS -= dt; return; } return u0.apply(this, arguments); };
+  update = function (dt) { if (HS > 0 && HSn < 3 && dt > 0) { HS -= dt; HSn++; return; } HS = 0; HSn = 0; return u0.apply(this, arguments); };
   const feel = (stop, sh) => {
     if (reduceMotion) return;
     HS = Math.max(HS, stop);

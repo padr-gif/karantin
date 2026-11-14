@@ -55,7 +55,15 @@ body.popon #bAct{visibility:hidden}
 
   // ---- контур: предмет рисуется один в запасной холст, вокруг силуэта — светящаяся линия ----
   const O = {a:null, b:null, c:null};
-  const cvOf = (k, w, h) => { let c = O[k]; if (!c) { c = O[k] = document.createElement('canvas'); c._g = c.getContext('2d'); } if (c.width !== w || c.height !== h) { c.width = w; c.height = h; } return c; };
+  // холсты контура только растут (шагом 64 px) и очищаются целиком: раньше размер менялся на пиксель при каждом шаге героя,
+  // и четыре холста пересоздавались дважды в секунду — на iPhone это быстро съедало память холстов
+  const cvOf = (k, w, h) => {
+    let c = O[k]; if (!c) { c = O[k] = document.createElement('canvas'); c.width = c.height = 64; c._g = c.getContext('2d'); }
+    const W2 = Math.ceil(w / 64) * 64, H2 = Math.ceil(h / 64) * 64;
+    if (c.width < W2 || c.height < H2) { c.width = Math.max(c.width, W2); c.height = Math.max(c.height, H2); }
+    const g = c._g; g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.shadowBlur = 0; g.clearRect(0, 0, c.width, c.height);
+    return c;
+  };
   function drawAlone(a) {                                                         // нарисовать только цель, в текущий ctx
     if (a.o) { const i = a.o.y * MW + a.o.x; drawWallTile(a.o.x, a.o.y, i, false); return true; }
     const f = a.f; if (!f) return false;
@@ -96,7 +104,7 @@ body.popon #bAct{visibility:hidden}
   function outline(a) {
     const k = DPR, [x, y] = topOf(a), ax = SX(x, y) * k, ay = SY(x, y, 0) * k, now = performance.now();
     const key = tgtKey(a), st = U + '|' + k + '|' + a.kind + '|' + a.label;
-    if (key !== OC.f || st !== OC.key || now - OC.t > 500) { OC.f = key; OC.key = st; OC.t = now; outlineBuild(a, ax, ay); }
+    if (key !== OC.f || st !== OC.key || now - OC.t > 900) { OC.f = key; OC.key = st; OC.t = now; outlineBuild(a, ax, ay); }
     if (!OC.ok) return;
     const rx = ax + OC.dx, ry = ay + OC.dy, pulse = .75 + Math.sin(now / 380) * .25;
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
