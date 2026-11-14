@@ -115,7 +115,7 @@
       const hx = SX(wx, wy) + wm[0], hy = SY(wx, wy, zoff || 0) + wm[1];
       const aiming = !!SL || /_(aim1|shoot)_/.test(name), pull = pullK();
       // вертикаль рогатки: при прицеливании стоит прямо, в опущенной руке — наклонена вперёд
-      const up = aiming ? [cf * .15, sf * .15, 1] : [cf * .35, sf * .35, .94];
+      const up = aiming ? [cf * .15, sf * .15, 1] : [cf * .8, sf * .8, -.35];     // в опущенной руке — развилкой вперёд-вниз
       const P3 = (a, b, c) => {                                                         // a — вперёд, b — вбок, c — по вертикали рогатки
         const wx3 = cf * a - sf * b + up[0] * c, wy3 = sf * a + cf * b + up[1] * c, wz = up[2] * c;
         return [hx + (wx3 - wy3) * 1.45, hy + (wx3 + wy3) * .72 - wz * 1.45];

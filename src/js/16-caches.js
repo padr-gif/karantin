@@ -278,7 +278,10 @@ const WSTYLE = {knife:'stab', shiv:'stab', hammer:'bash', pan:'bash', baton:'bas
   axe:'chop', sledge:'chop', spear:'thrust', shovel:'thrust'};
 const WSTART = {stab:.2, bash:.3, swing:.3, chop:.32, thrust:.25};             // урон — в момент нажатия, поэтому замах показываем уже почти законченным
 // как держит оружие стоя и на ходу: двуручное — на плече (h2), пистолет и рогатка — двумя руками перед собой (g1), ружьё — поперёк тела (g2)
-const holdCls = id => { const w = ITEMS[id]; return !w ? null : w.gun ? (id === 'shotgun' ? 'g2' : 'g1') : TWO_H.has(id) ? 'h2' : null; };
+// 0.104.1: стойки g1 (обе руки сцеплены у живота) и h2 (предплечья прижаты поперёк живота, древко торчит вверх) выглядели
+// скованно — с пистолетом, рогаткой и длинным оружием герой теперь стоит и ходит свободно, оружие в опущенной руке.
+// Ружьё по-прежнему держит поперёк тела (g2) — для него это естественно.
+const holdCls = id => { const w = ITEMS[id]; return !w ? null : w.gun && id === 'shotgun' ? 'g2' : null; };
 function holdAnim(r) {
   const c = P.weapon && holdCls(P.weapon.id); if (!c) return null;
   const an = r[0] === 'run' ? c + 'run' : r[0] === 'walk' ? c + 'walk' : r[0] === 'idle' ? c + 'idle' : null;
