@@ -36,7 +36,7 @@ function tasksToday() {
   if (!P) return null; P.stats = P.stats || {};
   let T = P.tasks;
   if (!T || T.day !== dayNo() || !T.list || T.list.some(t => !TASKS.find(d => d.k === t.k))) {
-    const prev = T, pool = TASKS.slice(), list = [];
+    const prev = T, pool = TASKS.filter(d => !d.fd), list = [];   // дела первого дня (99-new-firstday) в случайный список не попадают
     const streak = prev && prev.day === dayNo() - 1 && prev.list && prev.list.every(t => t.done) ? (prev.streak || 0) + 1 : 0;
     for (let q = 0; q < 3 && pool.length; q++) {
       const d = pool.splice(Math.floor(rng() * pool.length), 1)[0];
