@@ -430,7 +430,7 @@ function takeItems(c) {
   renderInv();
 }
 function startSleep(bed) {
-  if (P.en > 92) { toast('Ты бодр — спать пока не хочется'); return; }        // было 75: при бодрости 80% лечь было нельзя, и казалось, что «выспаться нельзя»
+  if (P.en > 92 && !(typeof enCap === 'function' && enCap() < 80)) { toast('Ты бодр — спать пока не хочется'); return; }   // давно не спал (предел бодрости ниже 80%) — лечь можно всегда        // было 75: при бодрости 80% лечь было нельзя, и казалось, что «выспаться нельзя»
   if (zs.some(z => z.state === 'chase' && Math.hypot(z.x - P.x, z.y - P.y) < 14)) { toast('Нельзя спать: мертвецы рядом'); return; }
   P.sleep = true; P.bed = bed || null; P.act = null; joy.id = null; joy.x = joy.y = 0; $('stick').hidden = true;
   $('sleep').hidden = false; $('ctrl').hidden = true; sleepAlarmUI();

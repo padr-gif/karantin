@@ -215,7 +215,7 @@ function updateCore(dt) {
     if (d < .52 && d > 1e-4) { const p = .52 - d; move(a, dx / d * p, dy / d * p); }
   }
   if (P.sleep) {
-    if (P.en >= 99.5) wake('Ты выспался');
+    if (P.en >= 99.5 && !((P.awake || 0) > 30)) wake('Ты выспался');           // выспался — когда и бодрость полная, и бессонница «отоспана»
     else if (zs.some(z => z.state === 'chase' && Math.hypot(z.x - P.x, z.y - P.y) < 8)) wake('Ты проснулся: рядом мертвецы!');
     else if (P.hyd < 8 || P.sat < 8) wake('Ты проснулся от голода и жажды');
   }
