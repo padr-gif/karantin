@@ -93,7 +93,7 @@
   function wake(z, hit) {
     z.lurk = false; z.down = UP; z.kd = true; z.state = 'chase'; z.lost = 0;
     if (hit) return;
-    SFX.growl && SFX.growl(z.x, z.y);
+    SFX.growl && SFX.growl(z);
     P.stress = Math.min(100, (P.stress || 0) + 6);
     if (!reduceMotion && settings.shake) shake = Math.max(shake, .05);
     once('lurkMsg', 'Он не был мёртв! Не все лежащие — трупы: под настоящим трупом лужа крови. К лежачим подходи крадучись и бей первым');

@@ -316,6 +316,7 @@ function tailorButtons(it, worn) {
 
 // ================= firearms =================
 let gunFx = [];
+let muzzlePt = () => null;                                                     // точка дула на экране (99-guns), иначе — у пояса
 function ammoFor(it) { const d = ITEMS[it.id]; return P.inv.filter(a => a.id === d.ammo && (a.uses || 0) > 0); }
 function startReload() {
   const it = P.weapon, d = it && ITEMS[it.id]; if (!d || !d.gun) return;
@@ -653,11 +654,11 @@ function drawV23() {
   if (mode !== 'play') return;
   // gunfire: tracer and muzzle flash
   for (const s of gunFx) {
-    const k = s.t / .1;
-    ctx.strokeStyle = `rgba(255,230,160,${.85 * k})`; ctx.lineWidth = s.big ? 1.4 : 1; ctx.beginPath(); ctx.moveTo(SX(s.x0, s.y0), SY(s.x0, s.y0, U * 1.1)); ctx.lineTo(SX(s.x1, s.y1), SY(s.x1, s.y1, U * 1)); ctx.stroke();
-    if (s.big) for (const o of [-.18, .18]) { const ex = s.x0 + Math.cos(s.a + o) * 4.5, ey = s.y0 + Math.sin(s.a + o) * 4.5; ctx.strokeStyle = `rgba(255,220,150,${.4 * k})`; ctx.beginPath(); ctx.moveTo(SX(s.x0, s.y0), SY(s.x0, s.y0, U * 1.1)); ctx.lineTo(SX(ex, ey), SY(ex, ey, U)); ctx.stroke(); }
+    const k = s.t / .1, mz = muzzlePt(s), mx = mz ? mz[0] : SX(s.x0, s.y0), my = mz ? mz[1] : SY(s.x0, s.y0, U * 1.1);
+    ctx.strokeStyle = `rgba(255,230,160,${.85 * k})`; ctx.lineWidth = s.big ? 1.4 : 1; ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(SX(s.x1, s.y1), SY(s.x1, s.y1, U * 1)); ctx.stroke();
+    if (s.big) for (const o of [-.18, .18]) { const ex = s.x0 + Math.cos(s.a + o) * 4.5, ey = s.y0 + Math.sin(s.a + o) * 4.5; ctx.strokeStyle = `rgba(255,220,150,${.4 * k})`; ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(SX(ex, ey), SY(ex, ey, U)); ctx.stroke(); }
     ctx.globalCompositeOperation = 'lighter';
-    const fx = SX(s.x0, s.y0), fy = SY(s.x0, s.y0, U * 1.1), g = ctx.createRadialGradient(fx, fy, 0, fx, fy, 10 * k + 2);
+    const fx = mx, fy = my, g = ctx.createRadialGradient(fx, fy, 0, fx, fy, 10 * k + 2);
     g.addColorStop(0, `rgba(255,240,190,${k})`); g.addColorStop(1, 'rgba(255,160,60,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(fx, fy, 10 * k + 2, 0, 6.283); ctx.fill();
     ctx.globalCompositeOperation = 'source-over';
   }
