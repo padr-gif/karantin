@@ -8,13 +8,18 @@ const ART = {meta:null, imgs:{}, ready:false, failed:false};
 // (кадр пропускается и ничего пустого не кэшируется). На планшете все 34 листа сразу — ~600 МБ, и игра тормозила.
 const ART_LAZY = n => /^pchar_/.test(n) || (n === 'furn3' && !(typeof settings !== 'undefined' && settings.smooth));   // детальная включена — furn3 сразу
 ART.src = {}; ART.pend = new Set();
+const ART_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1) || /[?&]iosbmp\b/.test(location.search);
 function needSheet(n) {
   if (ART.imgs[n]) return true;
   const src = ART.src[n]; if (!src || ART.pend.has(n)) return false;
   ART.pend.add(n);
   const im = new Image(), url = typeof src === 'string' ? src : URL.createObjectURL(src);
-  im.onload = () => (im.decode ? im.decode().catch(() => {}) : Promise.resolve()).then(() => {
-    ART.imgs[n] = im; ART.pend.delete(n);
+  // iPhone: большой лист-картинку (33 МБ в раскрытом виде) Safari не держит раскрытым и раскрывает заново при каждом
+  // рисовании из него — первая же дверь (анимация героя из «дополнительного» листа) вешала игру на 15 секунд и дольше.
+  // ImageBitmap хранит пиксели раскрытыми: лист раскрывается один раз.
+  const keep = im => (ART_IOS && typeof createImageBitmap === 'function' ? createImageBitmap(im).then(b => { im.onload = im.onerror = null; try { im.removeAttribute('src'); } catch (e) {} return b; }).catch(() => im) : Promise.resolve(im));
+  im.onload = () => (im.decode ? im.decode().catch(() => {}) : Promise.resolve()).then(() => keep(im)).then(pic => {
+    ART.imgs[n] = pic; ART.pend.delete(n);
     if (n === 'furn3' && typeof SPR !== 'undefined') {                        // мебель была нарисована запасным способом — пересобрать только её
       for (const k of [...SPR.keys()]) if (typeof k === 'string' && k[0] === 'F') SPR.delete(k);
       if (typeof HDFOG !== 'undefined') HDFOG.clear();
@@ -146,7 +151,7 @@ function blitObj(name, sx, sy) {
 }
 // ---- characters: palette-keyed frames recoloured on demand (LRU) ----
 const SHADE8 = [.5, .58, .66, .74, .82, .89, .95, 1];
-const frameCache = new Map(); let recolorsThisFrame = 0;
+const frameCache = new Map(); let recolorsThisFrame = 0, recolorMs = 0;
 const FRAME_MAX = 1600;   // кадры персонажей ~35 КБ: 1600 ≈ 55 МБ. При 640 в толпе кадры выкидывались и перекрашивались заново ~45 раз в секунду
 // один пиксель кадра персонажа: R — слот палитры, G — ступень тени; у кадров из tools/mh3d (метка G&31 = 8)
 // точная яркость лежит в B (0..240 -> .3..1.35, 16 уровней), а тени на коже теплее — как в превью рендера
@@ -174,12 +179,12 @@ const RECOLOR_MAX = /Android/i.test(navigator.userAgent) ? 8 : 16;          // �
 function charFrame(name, palKey, pal, force) {
   const k = palKey + '|' + name; let c = frameCache.get(k);
   if (c) { frameCache.delete(k); frameCache.set(k, c); c.cv._st = true; return c; }
-  if (!force && recolorsThisFrame > RECOLOR_MAX) return null;
+  if (!force && (recolorsThisFrame > RECOLOR_MAX || recolorMs > 14)) return null;   // и по времени: перекраска не должна съедать кадр
   const f = ART.meta.frames[name]; if (!f) return null;
   if (!needSheet(f[0])) return null;                                          // лист ещё раскрывается (по требованию)
   { const rn = f[0] + 'r'; if (pal && pal.outfit && (ART.src[rn] || ART.imgs[rn]) && !needSheet(rn)) return null; }
   recolorsThisFrame++;
-  c = recolor8(f, pal); frameCache.set(k, c);
+  { const t0 = performance.now(); c = recolor8(f, pal); recolorMs += performance.now() - t0; } frameCache.set(k, c);
   if (frameCache.size > FRAME_MAX) { let n = 200; for (const [key, v] of frameCache) { frameCache.delete(key); dropCv(v && v.cv); if (--n <= 0) break; } }
   if (c && c.cv) c.cv._st = true;
   return c;

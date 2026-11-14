@@ -23,7 +23,7 @@ function render(dt) {
   ctx = mainCtx; ctx.imageSmoothingEnabled = false;
   U = 32; hh = 16; WH = 77; DPR = SCALE;
   resetT();
-  cachesValid(); bakes = 0; recolorsThisFrame = 0;
+  cachesValid(); bakes = 0; recolorsThisFrame = 0; recolorMs = 0;
   let shx = 0, shy = 0;
   if (shake > 0) { shx = (rng() - .5) * shake * 6; shy = (rng() - .5) * shake * 6; }
   ox = Math.round((W / 2 - (camX - camY) * U + shx) * SCALE) / SCALE;
