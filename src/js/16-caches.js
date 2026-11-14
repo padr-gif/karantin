@@ -36,7 +36,11 @@ function atlasAlloc(w, h) {
   return null;
 }
 // спрайт из кэша: рисуется один раз (fn) в свой кусок атласа HDQ× крупнее, дальше — готовой картинкой
+// Спрайт целиком за краем экрана? Только для главного холста и не во время заготовки (там свои координаты).
+// Около четверти предметов кадра (деревья, заборы, стены по краям видимой области) раньше рисовались мимо экрана.
+const offScreen = (x, y, w, h, m = 12) => ctx === mainCtx && !baking && (x > W + m || y > H + m || x + w < -m || y + h < -m);
 function sprite(id, key, wx, wy, bx0, by0, bx1, by1, fn, alpha, offX) {
+  if (offScreen(SX(wx, wy) + bx0 + (offX || 0), SY(wx, wy, 0) + by0, bx1 - bx0, by1 - by0, 96)) return;   // запас побольше: рамка у заготовок приблизительная
   let s = SPR.get(id);
   if (s && s.key !== key) bump(s.c);                                            // учёт перерисовок для запекания в ImageBitmap
   const w = Math.max(1, Math.ceil(bx1 - bx0)), h = Math.max(1, Math.ceil(by1 - by0));
@@ -202,11 +206,7 @@ function roofBounds(Hs) {
   Hs._rb = [Math.floor(a - 4), Math.floor(b - 4), Math.ceil(c + 4), Math.ceil(d + 4)]; Hs._rbU = U;
   return Hs._rb;
 }
-function drawHi(fu) {
-  const [x0, y0, x1, y1] = fu.r;
-  ctx.strokeStyle = '#d39b3a'; ctx.lineWidth = 1; ctx.beginPath();
-  ctx.moveTo(SX(x0, y0), SY(x0, y0, 0)); ctx.lineTo(SX(x1, y0), SY(x1, y0, 0)); ctx.lineTo(SX(x1, y1), SY(x1, y1, 0)); ctx.lineTo(SX(x0, y1), SY(x0, y1, 0)); ctx.closePath(); ctx.stroke();
-}
+function drawHi() {}   // подсветку предмета рисует 98-actions-ui
 const WDI = (wd) => wd[1] < 0 ? 0 : wd[0] > 0 ? 1 : wd[1] > 0 ? 2 : 3;
 // имя кадра мебели в атласе: вид, вариант, поворот; своя картинка (fu.art), старая компактная, запасной вариант 0
 function furnName(fu) {

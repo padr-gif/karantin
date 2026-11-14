@@ -38,7 +38,7 @@ function addXp(k, n) {
 }
 // ---- generators ----
 let gens = [], beds = [], airdrops = [], heli = null;
-function poweredAt(x, y) { if (powerOn()) return true; for (const g of gens) if (g.on && g.fuel > 0 && Math.hypot(g.cx - x, g.cy - y) < 7.5) return true; return false; }
+function poweredAt() { return false; }   // считает 99-generator
 function freeFront() {
   let [tx, ty] = frontTile();
   if (tileFree(tx, ty)) return [tx, ty];
@@ -46,13 +46,7 @@ function freeFront() {
   const o = D8.map(([a, b]) => [cx + a, cy + b]).find(([x, y]) => tileFree(x, y));
   return o || null;
 }
-function placeGen(k) {
-  const it = P.inv[k], t = freeFront(); if (!t) { toast('Нет места, чтобы поставить генератор'); return; }
-  const [x, y] = t, p = {type:'gen', proc:true, cx:x + .5, cy:y + .5, solid:true, r:[x + .2, y + .25, x + .8, y + .75], fuel:it.fuel || 0, on:false};
-  if (!addProp(p, [[x, y]])) { toast('Нет места'); return; }
-  gens.push(p); P.inv.splice(k, 1); closePanel(); SFX.knock(p.cx, p.cy);
-  toast(p.fuel > 0 ? 'Генератор установлен. Подойди и включи' : 'Генератор установлен, но бак пуст. Нужна канистра бензина');
-}
+function placeGen() {}   // установка генератора — в 99-generator
 function fuelCans() { return P.inv.filter(i => i.id === 'jerrycan' && i.fuel > 0); }
 function updateGens(dt, gm) {
   for (const g of gens) {
@@ -202,13 +196,7 @@ function drawHeliLight() {
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
 }
 // ---- procedural props for these systems ----
-function drawGen(p, f) {
-  const [x0, y0, x1, y1] = p.r, j = p.on ? Math.sin(animT * 70) * .01 : 0;
-  box(x0 + j, y0, x1 + j, y1, 0, 3, [40, 40, 44], f);
-  box(x0 + .06 + j, y0 + .05, x1 - .06 + j, y1 - .05, 3, 20, [214, 168, 40], f);
-  box(x0 + .2 + j, y0 + .15, x0 + .36 + j, y0 + .3, 20, 25, [60, 60, 64], f);
-  ctx.fillStyle = p.on ? '#7bff6a' : '#5a1a14'; const lx = SX(x1 - .1, y1 - .06), ly = SY(x1 - .1, y1 - .06, 14); ctx.fillRect(lx - .8, ly - .8, 1.6, 1.6);
-}
+function drawGen() {}   // рисует 99-generator
 function drawGbed(p, f) {
   const [x0, y0, x1, y1] = p.r;
   box(x0, y0, x1, y1, 0, 4, [120, 86, 52], f);

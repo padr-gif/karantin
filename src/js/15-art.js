@@ -132,7 +132,7 @@ const ZPALS = [];
   }
 }
 const rd = v => Math.round(v * DPR) / DPR;
-function frameOf(name) { return ART.meta.frames[name]; }
+
 function blitObj(name, sx, sy) {
   const h = HDQ > 1 && ART.meta.frames['hd_' + name];                          // детальный кадр, если есть
   if (h && needSheet(h[0])) {
@@ -330,6 +330,7 @@ function AN(k, a) { if (k === 'p' && heroRig() && ART.meta.anims[heroPre()][a]) 
 // предмет мира из атласа (пиксельный кадр); с туманом f<1 или оттенком — через кэш спрайтов
 function objAtPix(id, name, wx, wy, f, alpha, offX, tint) {
   const fr = ART.meta.frames[name]; if (!fr) return;
+  if (offScreen(SX(wx, wy) - fr[5] + (offX || 0), SY(wx, wy, 0) - fr[6], fr[3], fr[4])) return;   // целиком за экраном — не рисуем
   if (f >= .99 && !tint) {
     if (alpha != null && alpha < 1) ctx.globalAlpha = alpha;
     ctx.drawImage(ART.imgs[fr[0]], fr[1], fr[2], fr[3], fr[4], rd(SX(wx, wy) - fr[5] + (offX || 0)), rd(SY(wx, wy, 0) - fr[6]), fr[3], fr[4]);

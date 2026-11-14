@@ -85,23 +85,5 @@ Object.assign(REGP, {
   legR:'<path d="M46 104 Q57 110 69 108 L67 150 Q66 160 65 172 L64 192 Q58 198 49 196 L52 190 Q51 172 50 160 Q47 148 47 132 Z"/>',
   legL:'<path d="M94 104 Q83 110 71 108 L73 150 Q74 160 75 172 L76 192 Q82 198 91 196 L88 190 Q89 172 90 160 Q93 148 93 132 Z"/>',
 });
-const ANAT_MUSCLE = 'M50 66 Q60 73 69 68 M90 66 Q80 73 71 68 M70 50 L70 80 M70 84 L70 105 M58 88 Q70 90 82 88 M58 96 Q70 98 82 96 ' +
-  'M47 50 Q41 55 41 64 M93 50 Q99 55 99 64 M38 64 Q42 72 40 82 M102 64 Q98 72 100 82 M34 88 Q33 98 30 108 M106 88 Q107 98 110 108 ' +
-  'M54 116 Q58 132 60 146 M86 116 Q82 132 80 146 M55 150 Q60 155 65 150 M85 150 Q80 155 75 150 M52 164 Q56 176 55 186 M88 164 Q84 176 85 186 ' +
-  'M64 39 Q60 44 52 48 M76 39 Q80 44 88 48';
-const ANAT_VEIN = {
-  neck:'M66 36 Q65 41 66 46 M74 36 Q75 41 74 46',
-  armR:'M40 58 Q38 70 37 84 Q34 96 31 110 M37 86 Q36 98 34 112', armL:'M100 58 Q102 70 103 84 Q106 96 109 110 M103 86 Q104 98 106 112',
-  handR:'M29 118 Q30 124 28 129', handL:'M111 118 Q110 124 112 129',
-  legR:'M61 112 Q58 138 59 160 Q58 178 57 192 M52 150 Q53 170 55 189', legL:'M79 112 Q82 138 81 160 Q82 178 83 192 M88 150 Q87 170 85 189',
-  chest:'M58 52 Q62 58 60 64 M82 52 Q78 58 80 64', belly:'M54 100 Q58 104 62 106 M86 100 Q82 104 78 106',
-};
 // мышцы и вены на схеме тела; вены — только там, где кожа не закрыта одеждой
-function bodyAnatSvg(fill, skin) {
-    const open = {}; for (const r in REGP) open[r] = String(fill[r]) === skin;
-    let ov = '<g class="anat" pointer-events="none"><path d="' + ANAT_MUSCLE + '" fill="none" stroke="rgba(40,22,16,.28)" stroke-width=".7" stroke-linecap="round"/>';
-    let vd = ''; for (const r in ANAT_VEIN) if (open[r]) vd += ANAT_VEIN[r] + ' ';
-    if (vd) ov += '<path d="' + vd + '" fill="none" stroke="#5b7fc4" stroke-opacity=".55" stroke-width=".8" stroke-linecap="round"/>';
-    ov += '</g>';
-    return ov;
-}
+

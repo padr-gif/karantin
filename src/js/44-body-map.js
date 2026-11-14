@@ -47,7 +47,6 @@ const REGP = {
   armL:'<path d="M95 48 Q103 50 105 60 L113 108 Q114 117 108 118 L103 116 L94 64 Z"/><circle cx="110" cy="123" r="5.5"/>',
   legR:'<path d="M48 105 L69 105 L67 194 Q60 199 50 197 L52 192 Z"/>', legL:'<path d="M71 105 L92 105 L88 192 L90 197 Q80 199 73 194 Z"/>',
 };
-const rgbS = c => 'rgb(' + c.slice(0, 3).join(',') + ')';
 function woundSvg(w, x, y, k) {
   let s = '';
   if (w.sep > 50) s += `<circle cx="${x}" cy="${y}" r="10" fill="#e8742a" opacity=".35"/>`;
@@ -62,28 +61,7 @@ function woundSvg(w, x, y, k) {
   if (w.where === 'спина') s += `<text x="${x + 10}" y="${y + 3}" font-size="7" fill="#f0c477">спина</text>`;
   return s;
 }
-function bodySvg(sel) {
-  const lk = P.look || look, skin = rgbS(LOOK.skin[lk.skin]), ch = P.cloth && P.cloth.head;
-  const reg = outfitRegs(), at = r => reg[r] ? rgbS(reg[r].d.col) : null;          // цвет одежды на слое (1 — тело, 2/3 — рукава, 8 — ноги, 12 — голова)
-  const g = P.cloth && P.cloth.hands, hand = g ? rgbS(g.id === 'mittens' ? [168, 52, 46] : g.id === 'glovesR' ? [186, 168, 134] : [200, 154, 60]) : skin;
-  const fill = {head:at(12) || (ch ? rgbS(ITEMS[ch.id].col) : skin), neck:skin, chest:at(1) || skin, belly:at(1) || skin, armR:at(3) || at(2) || skin, armL:at(3) || at(2) || skin,
-    legR:at(8) || skin, legL:at(8) || skin, handR:hand, handL:hand};
-  const W = wounds(), byReg = {};
-  for (const w of W) { const r = WHERE2REG[w.where] || 'chest'; (byReg[r] = byReg[r] || []).push(w); }
-  let s = '<svg viewBox="0 0 140 206" class="bodysvg" role="img" aria-label="Схема тела">';
-  s += '<ellipse cx="70" cy="200" rx="34" ry="5" fill="rgba(0,0,0,.35)"/>';
-  for (const r in REGP) {
-    const ws = byReg[r] || [], hurt = ws.length, bad = ws.some(bleeding) ? 'bleed' : ws.some(w => w.sep > 50) ? 'sep' : hurt ? 'hurt' : '';
-    s += `<g class="reg ${bad}${sel === r ? ' sel' : ''}" data-r="${r}" fill="${fill[r]}">${REGP[r]}</g>`;
-  }
-  s += bodyAnatSvg(fill, skin) + bodyScarsSvg();                                   // мышцы и вены на открытой коже, шрамы
-  s += `<g pointer-events="none"><path d="M64 20 h2 M74 20 h2" stroke="#1a1410" stroke-width="2" stroke-linecap="round"/><path d="M66 29 q4 2 8 0" stroke="#1a1410" stroke-width="1.2" fill="none"/></g>`;
-  if (!(P.cloth && P.cloth.head)) s += `<path d="M57 17 Q58 5 70 6 Q82 5 83 17 Q76 11 70 12 Q63 11 57 17 Z" pointer-events="none" fill="${lk.hair < 0 ? skin : rgbS(LOOK.hair[lk.hair])}"/>`;
-  s += '<g pointer-events="none">';
-  for (const r in byReg) { const [x, y] = REG[r].at; byReg[r].forEach((w, k) => { s += woundSvg(w, x + (k % 2 ? 5 : -2), y + (k - (byReg[r].length - 1) / 2) * 13, k); }); }
-  s += '<text x="12" y="16" font-size="8" fill="#8d918c">П</text><text x="124" y="16" font-size="8" fill="#8d918c">Л</text></g></svg>';
-  return s;
-}
+function bodySvg(sel) { return ''; }   // фигурку рисует 98-body-figure
 function statusChips() {
   const out = [], W = wounds();
   if (P.bleed) out.push(['Кровотечение', 'crit']);

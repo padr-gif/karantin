@@ -355,26 +355,13 @@ function mediaNovel(body) {
 // =============== записки ===============
 // Обычные — от руки на тетрадном листе. Сюжетные (67-notes-night) — у каждой своя бумага: бланк с печатью, факс,
 // листовка, клетчатый блокнот врача, пропуск, экран телефона, детский рисунок.
-const NOTE_SKIN = {h1:'fridge', h2:'grid', h3:'grid', h4:'grid', a1:'typed', a2:'log', a3:'fax', p1:'kid', p2:'phone', p3:'hand', p4:'hand', p5:'hand', l1:'card', l2:'hand', l3:'hand', l4:'hand', l5:'hand', r1:'flyer', r2:'list'};
+const NOTE_SKIN = {h1:'fridge', h2:'grid', h3:'grid', h4:'grid', a1:'typed', a2:'log', a3:'fax', p1:'kid', p2:'hand', p3:'hand', p4:'hand', p5:'hand', l1:'card', l2:'hand', l3:'hand', l4:'hand', l5:'hand', r1:'flyer', r2:'list'};
 const NOTE_STAMP = {a1:'СЕКРЕТНО', a3:'ДСП'};
 const HAND_RE = /^(Снизу от руки|Поверх ручкой|Через два дня|Потом)/;
 function mediaNote(body, text, sid) {
   const skin = NOTE_SKIN[sid] || 'hand', paras = String(text || '').split('\n\n');
   const pg = mk('div', 'notep nt-' + skin);
-  if (skin === 'phone') {                                                     // переписка: кавычки — сообщения, остальное — пометки
-    const scr = mk('div', 'nt-scr'); scr.appendChild(mk('div', 'nt-who', 'Солнышко'));
-    for (const p of paras) {
-      const msgs = p.match(/«[^»]*»/g);
-      if (msgs) {
-        const pre = p.slice(0, p.indexOf('«')).replace(/[:\s]+$/, ''), rep = /три сообщения/.test(pre) ? 3 : 1;
-        if (pre) scr.appendChild(mk('div', 'nt-sys', pre.replace(/^Потом ещё три сообщения$/, 'Потом')));
-        for (const m of msgs) for (let k = 0; k < rep; k++) scr.appendChild(mk('div', 'nt-msg', m.slice(1, -1)));
-      }
-      else scr.appendChild(mk('div', 'nt-sys', p));
-    }
-    scr.appendChild(mk('div', 'nt-sys', 'прочитано')); 
-    pg.appendChild(scr);
-  } else if (skin === 'card') {
+  if (skin === 'card') {
     pg.appendChild(mk('div', 'nt-ph'));                                       // пропуск: фото и строки «НИИ…», «Допуск…», «Сотрудник…»
     const t = mk('div', 'nt-ct'); for (const line of paras[0].split(/\.\s+(?=[А-ЯЁ][а-яё])/)) t.appendChild(mk('div', '', line.replace(/([а-яё0-9»])\.$/, '$1'))); pg.appendChild(t);
   } else {

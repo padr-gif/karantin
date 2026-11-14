@@ -221,7 +221,7 @@ function render(dt) {
       for (const Hs of houses) {
         if (Hs.kind === 'shed') continue;
         if (!powerOn() && !poweredAt((Hs.ix0 + Hs.ix1) / 2, (Hs.iy0 + Hs.iy1) / 2)) continue;
-        const sx = SX((Hs.ix0 + Hs.ix1) / 2, (Hs.iy0 + Hs.iy1) / 2); if (sx < -300 || sx > W + 300) continue;
+        const mx = (Hs.ix0 + Hs.ix1) / 2, my = (Hs.iy0 + Hs.iy1) / 2, sx = SX(mx, my), sy = SY(mx, my, 0); if (sx < -300 || sx > W + 300 || sy < -300 || sy > H + 300) continue;   // и по вертикали: дома за экраном сверху и снизу не рисуем
         litHousePoly(Hs);
       }
     }
