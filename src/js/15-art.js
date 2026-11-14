@@ -7,17 +7,27 @@ const ART = {meta:null, imgs:{}, ready:false, failed:false};
 // память раскрываются при первом обращении: needSheet(n) → true, если уже готов; иначе начинает раскрывать и false
 // (кадр пропускается и ничего пустого не кэшируется). На планшете все 34 листа сразу — ~600 МБ, и игра тормозила.
 const ART_LAZY = n => /^pchar_/.test(n) || (n === 'furn3' && !(typeof settings !== 'undefined' && settings.smooth));   // детальная включена — furn3 сразу
-ART.src = {}; ART.pend = new Set();
-const ART_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1) || /[?&]iosbmp\b/.test(location.search);
+ART.src = {}; ART.pend = new Set(); ART.px = {};
+const ART_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1) || /[?&]iospx\b/.test(location.search);
 function needSheet(n) {
   if (ART.imgs[n]) return true;
   const src = ART.src[n]; if (!src || ART.pend.has(n)) return false;
   ART.pend.add(n);
   const im = new Image(), url = typeof src === 'string' ? src : URL.createObjectURL(src);
-  // iPhone: большой лист-картинку (33 МБ в раскрытом виде) Safari не держит раскрытым и раскрывает заново при каждом
-  // рисовании из него — первая же дверь (анимация героя из «дополнительного» листа) вешала игру на 15 секунд и дольше.
-  // ImageBitmap хранит пиксели раскрытыми: лист раскрывается один раз.
-  const keep = im => (ART_IOS && typeof createImageBitmap === 'function' ? createImageBitmap(im).then(b => { im.onload = im.onerror = null; try { im.removeAttribute('src'); } catch (e) {} return b; }).catch(() => im) : Promise.resolve(im));
+  // iPhone: листы героя (до 33 МБ каждый в раскрытом виде) нельзя рисовать как картинки. Каждый такой лист целиком
+  // уезжает в видеопамять, и на первом же ударе или двери (подгружаются «дополнительные» листы, +66 МБ) графический
+  // процесс Safari захлёбывался: игра вставала на 15 секунд и дольше, заготовки пропадали. Теперь лист один раз
+  // раскрывается в обычную память (массив пикселей ART.px), а кадры для перекраски берутся прямо из массива —
+  // без видеокарты. В ART.imgs вместо листа лежит пустышка 1×1.
+  const keep = im => {
+    if (!ART_IOS || !/^pchar_/.test(n)) return im;
+    try {
+      const w = im.naturalWidth, h = im.naturalHeight, c = mkCanvas(w, h), g = c.getContext('2d', {willReadFrequently:true});
+      g.drawImage(im, 0, 0); const d = g.getImageData(0, 0, w, h).data; c.width = c.height = 0;
+      ART.px[n] = {w, h, d}; im.onload = im.onerror = null; try { im.removeAttribute('src'); } catch (e) {}
+      const stub = mkCanvas(1, 1); stub._px = true; return stub;
+    } catch (e) { if (typeof logErr === 'function') logErr(e, 'лист в память ' + n); return im; }
+  };
   im.onload = () => (im.decode ? im.decode().catch(() => {}) : Promise.resolve()).then(() => keep(im)).then(pic => {
     ART.imgs[n] = pic; ART.pend.delete(n);
     if (n === 'furn3' && typeof SPR !== 'undefined') {                        // мебель была нарисована запасным способом — пересобрать только её
@@ -165,9 +175,17 @@ function keyPx(a, i, pal) {
     a[i] = Math.min(255, col[0] * m); a[i + 1] = Math.min(255, col[1] * m); a[i + 2] = Math.min(255, col[2] * m);
   }
 }
+// кусок листа — в холст g (в левый верхний угол): из массива пикселей, если лист раскрыт в память, иначе с картинки
+function sheetBlit(g, n, x, y, w, h) {
+  const S = ART.px[n];
+  if (!S) { g.drawImage(ART.imgs[n], x, y, w, h, 0, 0, w, h); return; }
+  const d = g.createImageData(w, h), a = d.data, src = S.d, W = S.w;
+  for (let r = 0; r < h; r++) { const o = ((y + r) * W + x) * 4; a.set(src.subarray(o, o + w * 4), r * w * 4); }
+  g.putImageData(d, 0, 0);
+}
 function recolor8(f, pal) {
   const c = mkCanvas(f[3], f[4]), g = c.getContext('2d', {willReadFrequently:true});   // перекраска читает пиксели: холст в памяти, без чтения с видеокарты
-  g.drawImage(ART.imgs[f[0]], f[1], f[2], f[3], f[4], 0, 0, f[3], f[4]);
+  sheetBlit(g, f[0], f[1], f[2], f[3], f[4]);
   if (f[8] === 1) return pal && pal.outfit ? dressFrame(f, c, pal.outfit) : {cv:c, ax:f[5], ay:f[6], w:f[3], h:f[4], s:f[7] || 1};   // цветной кадр (готовая модель): не перекрашиваем
   const d = g.getImageData(0, 0, f[3], f[4]), a = d.data;
   for (let i = 0; i < a.length; i += 4) if (a[i + 3]) keyPx(a, i, pal);
@@ -276,7 +294,7 @@ const TORSO = new Map();
 function torsoOf(name) {
   if (TORSO.has(name)) return TORSO.get(name);
   const f = ART.meta.frames[name], rimg = f && needSheet(f[0] + 'r') && ART.imgs[f[0] + 'r']; if (!rimg) return null;   // карта ещё грузится
-  const w = f[3], h = f[4], c = mkCanvas(w, h), g = c.getContext('2d', {willReadFrequently:true}); g.drawImage(rimg, f[1], f[2], w, h, 0, 0, w, h);
+  const w = f[3], h = f[4], c = mkCanvas(w, h), g = c.getContext('2d', {willReadFrequently:true}); sheetBlit(g, f[0] + 'r', f[1], f[2], w, h);
   const R = g.getImageData(0, 0, w, h).data; let x0 = w, x1 = -1, y0 = h, y1 = -1, sx = 0, n = 0;
   for (let p = 0; p < w * h; p++) if (R[p * 4 + 3] >= 128 && (R[p * 4] >> 4) === 1) { const x = p % w, y = (p / w) | 0; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; sx += x; n++; }
   const t = n > 6 ? {cx:sx / n - f[5], top:y0 - f[6], bot:y1 - f[6], w:x1 - x0} : null;

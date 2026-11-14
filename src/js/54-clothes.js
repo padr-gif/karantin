@@ -166,7 +166,7 @@ function dressFrame(f, cv, reg) {
   const rimg = ART.imgs[f[0] + 'r'], w = f[3], h = f[4];
   if (!rimg) return null;                                                        // карта ещё грузится — кадр соберём позже
   if (!tmp34 || tmp34.width < w || tmp34.height < h) tmp34 = mkCanvas(Math.max(w, tmp34 ? tmp34.width : 0), Math.max(h, tmp34 ? tmp34.height : 0));
-  const tg = tmp34.getContext('2d', {willReadFrequently:true}); tg.clearRect(0, 0, w, h); tg.drawImage(rimg, f[1], f[2], w, h, 0, 0, w, h);
+  const tg = tmp34.getContext('2d', {willReadFrequently:true}); tg.clearRect(0, 0, w, h); sheetBlit(tg, f[0] + 'r', f[1], f[2], w, h);
   const R = tg.getImageData(0, 0, w, h).data, g = cv.getContext('2d', {willReadFrequently:true}), D = g.getImageData(0, 0, w, h), a = D.data;
   const n = w * h, O = new Array(n);
   for (let p = 0; p < n; p++) O[p] = R[p * 4 + 3] < 128 ? undefined : reg[R[p * 4] >> 4];
