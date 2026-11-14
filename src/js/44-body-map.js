@@ -164,7 +164,9 @@ const SCROLL_SEL = ['.rlist', '.rdet', '.pcol', '.pdet', '.bodyinfo', '.skillwra
 let scrollKey = '';
 onPanel((a, {key, keep}) => {
   const body = $('pnBody');
-  scrollKey = key;
+  // ключ — по состоянию ПОСЛЕ перерисовки: первая перерисовка сама выставляет вкладку по умолчанию (sub), и раньше ключ
+  // «до» не совпадал с ключом следующего раза — первый же тап по вещи после открытия рюкзака сбрасывал прокрутку наверх
+  scrollKey = panel ? panel.kind + '|' + (panel.tab || '') + '|' + (panel.sub || '') : key;
   const apply = () => { for (const [sel, i, v] of keep) { const e = sel ? body.querySelectorAll(sel)[i] : body; if (e && Math.abs(e.scrollTop - v) > 1) e.scrollTop = v; } };
   apply();
   // на телефоне список иногда ещё не успевает разложиться (значки, инерционная прокрутка) — возвращаем позицию ещё раз
@@ -173,8 +175,9 @@ onPanel((a, {key, keep}) => {
   const sel = body.querySelector('.pcol .cell.sel, .pcol .sel');
   if (sel && keep.length) requestAnimationFrame(() => { const c = sel.closest('.pcol'); if (!c) return; const r = sel.getBoundingClientRect(), cr = c.getBoundingClientRect(); if (r.top < cr.top) c.scrollTop -= cr.top - r.top + 6; else if (r.bottom > cr.bottom) c.scrollTop += r.bottom - cr.bottom + 6; });
 }, () => {
+  // «без подвкладки» = та же вкладка: подвкладку по умолчанию выставляют уже после первой отрисовки
   const body = $('pnBody'), key = panel ? panel.kind + '|' + (panel.tab || '') + '|' + (panel.sub || '') : '', keep = [];
-  if (panel && key === scrollKey) { keep.push(['', 0, body.scrollTop]); for (const sel of SCROLL_SEL) body.querySelectorAll(sel).forEach((e, i) => { if (e.scrollTop) keep.push([sel, i, e.scrollTop]); }); }
+  if (panel && (key === scrollKey || (scrollKey.endsWith('|') && key.startsWith(scrollKey)))) { keep.push(['', 0, body.scrollTop]); for (const sel of SCROLL_SEL) body.querySelectorAll(sel).forEach((e, i) => { if (e.scrollTop) keep.push([sel, i, e.scrollTop]); }); }
   return {key, keep};
 });
 // ---- дневник событий: лента по дням, время слева, точка по смыслу записи ----

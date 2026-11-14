@@ -38,12 +38,12 @@
         if (z.hp <= 0) { emit('blood', z.x, z.y, 1, 10, P.face, 1.6, 2.8); SFX.splat(z.x, z.y); killZombie(z); once('finMsg', 'Добил лежачего. По сбитым с ног удары гораздо сильнее'); }
         continue;
       }
-      let p = dealt > base * 1.55 ? 1 : fists ? .22 : base >= 38 ? .45 : base >= 30 ? .25 : .1;
+      let p = dealt > base * 1.55 ? .5 : fists ? .12 : base >= 38 ? .22 : base >= 30 ? .12 : .05;   // сбить с ног — событие, а не каждый второй удар
       if (z.brute) p = fists ? 0 : p * .3;
       if (z.crawl || z.vt) p = 0;
       if (fists) { z.kx *= 1.6; z.ky *= 1.6; }
       if (rng() < p) {
-        z.down = 1.3 + rng() * .7; z.downT = 0; z.downF = false; z.stun = 0;
+        z.down = 2 + rng() * .8; z.downT = 0; z.downF = false; z.kd = true; z.stun = 0;
         once('kdMsg', fists ? 'Оттолкнул — он упал. Пока лежит, можно уйти или добить' : 'Сбил с ног! Пока он лежит, удары по нему гораздо сильнее');
       }
     }
@@ -52,10 +52,46 @@
     return r;
   };
 
+  // ---------- падение и подъём: не «кадры смерти задом наперёд», а по частям ----------
+  // пошатнулся от удара → падает с ускорением (как под весом) → лежит → поднимается медленно, с усилием.
+  // Плюс поза: отклоняется назад в падении, чуть подпрыгивает при ударе о землю, покачивается, вставая.
+  const KD_HIT = .16, KD_FALL = .5, KD_UP = 1;
+  const sm = k => k * k * (3 - 2 * k);
+  const za0 = zombieAnim;
+  zombieAnim = function (z) {
+    if (!(z.kd && z.down > 0) || z.vt || z.downF) return za0.apply(this, arguments);
+    const m = AN('z', 'death'), t = z.downT || 0;
+    if (z.down < KD_UP) return ['death', Math.max(0, Math.min(m - 1, Math.round(sm(z.down / KD_UP) * (m - 1))))];
+    if (t < KD_HIT) { const h = AN('z', 'hit'); return ['hit', Math.min(h - 1, Math.floor(t / KD_HIT * h))]; }
+    const k = Math.min(1, (t - KD_HIT) / KD_FALL);
+    return ['death', Math.min(m - 1, Math.round(Math.pow(k, 1.8) * (m - 1)))];
+  };
+  const zp0 = zombiePose;
+  zombiePose = function (z, an) {
+    if (reduceMotion || !(z.kd && z.down > 0) || z.vt || z.downF) return zp0.apply(this, arguments);
+    const [vx] = scrDir(z.face), t = z.downT || 0, p = {ox:0, oy:0, r:0, sx:1, sy:1};
+    if (z.down < KD_UP) { const k = 1 - z.down / KD_UP; p.oy -= Math.sin(Math.PI * k) * 1.6; p.r = vx * .05 * Math.sin(Math.PI * 2 * k); return p; }
+    if (t < KD_HIT + KD_FALL) { const k = t / (KD_HIT + KD_FALL); p.r = -vx * .14 * Math.sin(Math.PI * k); p.oy -= Math.sin(Math.PI * Math.min(1, k * 1.6)) * 1.5; return p; }
+    const b = t - KD_HIT - KD_FALL;
+    if (b < .28) p.oy -= Math.sin(Math.PI * b / .28) * 2.2 * (1 - b / .28);       // удар о землю
+    return p;
+  };
+  // удар о землю: глухой стук, облачко пыли и лёгкая отдача в руку (вибрация, если включена)
+  onUpdate(() => {
+    for (const z of zs) {
+      if (!z.kd) continue;
+      if (!(z.down > 0)) { z.kd = false; z.kdL = false; continue; }
+      if (!z.kdL && z.down >= KD_UP && (z.downT || 0) >= KD_HIT + KD_FALL) {
+        z.kdL = true; emit('dust', z.x, z.y, .1, 7, null, 6.283, 1.6); SFX.knock && SFX.knock(z.x, z.y);
+        if (Math.hypot(z.x - P.x, z.y - P.y) < 3) buzz(12, 'kd', 150);
+      }
+    }
+  });
+
   // ---------- притворщики ----------
-  const UP = .85;
+  const UP = KD_UP;
   function wake(z, hit) {
-    z.lurk = false; z.down = UP; z.state = 'chase'; z.lost = 0;
+    z.lurk = false; z.down = UP; z.kd = true; z.state = 'chase'; z.lost = 0;
     if (hit) return;
     SFX.growl && SFX.growl(z.x, z.y);
     P.stress = Math.min(100, (P.stress || 0) + 6);

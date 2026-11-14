@@ -4,6 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import vm from 'node:vm';
 import {spawnSync} from 'node:child_process';
 
 const ROOT = path.dirname(new URL(import.meta.url).pathname);
@@ -68,6 +69,7 @@ export function build({dev = false, pwa = false, plat = '', out = 'dist/karantin
     const src = pwa ? put(`${f}.${hash(buf)}.woff`, buf) : 'data:font/woff;base64,' + buf.toString('base64');
     return `@font-face{font-family:"${fam}";font-weight:${w};font-style:normal;font-display:swap;src:url(${src}) format("woff")}`;
   }).join('\n');
+  try { new vm.Script(js, {filename:'game.js'}); } catch (e) { console.error('ОШИБКА СИНТАКСИСА в собранном коде: ' + e.message + '\n' + String(e.stack).split('\n').slice(0, 3).join('\n')); process.exit(1); }   // сломанную сборку не выпускаем
   const html = rd('src/index.html').replace('/*@@FONTS@@*/', () => fonts).replace('<!--@@PWA@@-->', head).replace('/*@@CSS@@*/', () => rd('src/styles.css')).replace('/*@@SCRIPT@@*/', () => js);
   fs.mkdirSync(path.dirname(dst), {recursive: true});
   fs.writeFileSync(dst, html);
