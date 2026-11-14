@@ -45,6 +45,7 @@ function fitGrid(g) {
   let s = 64, cols = 1;
   for (; s > 46; s--) { cols = Math.max(1, Math.floor((w + gap) / (s + gap))); if (Math.ceil(n / cols) * (s + gap) - gap <= h) break; }   // не мельче 46 px — под палец; что не влезло, листается в колонке
   cols = Math.max(1, Math.floor((w + gap) / (s + gap)));
+  if (cols < 4) { cols = 4; s = Math.max(40, Math.floor((w - gap * 3) / 4)); }       // не меньше четырёх в ряд: меньше листать
   g.style.gridTemplateColumns = `repeat(${cols}, ${s}px)`; g.style.setProperty('--cs', s + 'px'); g.classList.toggle('tiny', s < 50);
 }
 function fitPanel() { const body = $('pnBody'); if (!body.classList.contains('fit')) return; for (const g of body.querySelectorAll('.grid')) fitGrid(g); }
