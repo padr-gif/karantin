@@ -25,9 +25,15 @@ const SY = (x, y, z) => oy + (x + y) * hh - z;
 const resetT = () => ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 const groundT = (z) => ctx.setTransform(DPR * U, DPR * hh, -DPR * U, DPR * hh, DPR * ox, DPR * (oy - (z || 0)));
 // vertical face from p0 to p1 (world), between heights z0..z1 (px); fill = colour or pattern; dark = 0..1 overlay
-function vface(p0x, p0y, p1x, p1y, z0, z1, fill, dark, grain) {
+function vface(p0x, p0y, p1x, p1y, z0, z1, fill, dark, grain, flat) {
   const dx = p1x - p0x, dy = p1y - p0y, len = Math.hypot(dx, dy); if (len < 1e-4 || z1 <= z0) return;
   const ux = dx / len, uy = dy / len;
+  // Грань, повёрнутая к зрителю ребром (створка двери на полпути: ux ≈ uy), на экране уже пикселя, а матрица для неё
+  // вырождена. Заливка текстурой через такую матрицу вешала графику Safari на iPhone на 15 секунд — это и было
+  // «зависание при открывании двери». Грань уже пикселя не рисуем вовсе, узкую (до 3 px) — ровным цветом, без текстуры.
+  const wpx = Math.abs(ux - uy) * len * U * DPR;
+  if (wpx < 1) return;
+  if (wpx < 3) { if (typeof fill !== 'string') fill = flat || '#6a5a48'; grain = false; }
   ctx.setTransform(DPR * (ux - uy) * U, DPR * (ux + uy) * hh, 0, -DPR * U, DPR * (ox + (p0x - p0y) * U), DPR * (oy + (p0x + p0y) * hh));
   // align patterns to world: offset u by the face's world coordinate along its axis
   const u0 = Math.abs(ux) > .5 ? p0x * Math.sign(ux) : p0y * Math.sign(uy);
@@ -69,7 +75,7 @@ function obox(ax, ay, dx, dy, len, th, z0, z1, rgb, f, tex) {
     const ex = q[0] - p[0], ey = q[1] - p[1];
     const onx = -ey, ony = ex; // outward normal
     if (onx + ony <= 0) continue;
-    vface(p[0], p[1], q[0], q[1], z0, z1, tex || C(rgb, 1), 1 - f * (Math.abs(onx) > Math.abs(ony) ? .62 : .82), !tex);
+    vface(p[0], p[1], q[0], q[1], z0, z1, tex || C(rgb, 1), 1 - f * (Math.abs(onx) > Math.abs(ony) ? .62 : .82), !tex, C(rgb, 1));
   }
   resetT();
   ctx.fillStyle = C(rgb, f); ctx.beginPath();
