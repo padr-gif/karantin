@@ -60,7 +60,7 @@
       if (!hangs.length && !stalls.length) return;
       const L = ['Dead Line сейчас ' + GAME_VER + ' · ' + (PLAT.name || 'сайт') + ' · экран ' + innerWidth + '×' + innerHeight + '@' + (devicePixelRatio || 1)];
       for (const r of hangs.slice(-2)) {
-        L.push('', 'ЗАВИСЛА в ' + hhmm(r.t) + ' (версия ' + r.v + ')', 'Где: ' + r.crumb, 'Перед этим: ' + (r.seq || []).slice(-7, -1).map(x => String(x).slice(0, 48)).join(' > '), 'Состояние: ' + r.ctx);
+        L.push('', 'ЗАВИСЛА в ' + hhmm(r.t) + ' (версия ' + r.v + ')', 'Где: ' + r.crumb + (r.alive == null ? '' : r.alive ? ' · код страницы работал, кадры не шли' : ' · страница не отвечала совсем'), 'Перед этим: ' + (r.seq || []).slice(-7, -1).map(x => String(x).slice(0, 48)).join(' > '), 'Состояние: ' + r.ctx);
       }
       if (stalls.length) {
         L.push('', 'Подвисания (' + stalls.length + '):');
@@ -71,9 +71,13 @@
     } catch (e) {}
   })();
 
+  // фоновому кэшу (service worker): докладывать листы спрайтов можно только когда игра не идёт
+  if ('serviceWorker' in navigator) setInterval(() => {
+    try { const c = navigator.serviceWorker.controller; if (c) c.postMessage({t:'idle', v:mode !== 'play' || paused || document.hidden}); } catch (e) {}
+  }, 2000);
   if (on && window.Worker && window.indexedDB) try {
     const WSRC = `
-      let last = Date.now(), crumb = '', ctx = '', armed = false, reported = false, seq = [], LAB = [], ver = '';
+      let last = Date.now(), tick = Date.now(), crumb = '', ctx = '', armed = false, reported = false, seq = [], LAB = [], ver = '';
       const save = r => { try { const q = indexedDB.open('dl-diag', 1); q.onupgradeneeded = () => q.result.createObjectStore('log', {autoIncrement:true});
         q.onsuccess = () => { const db = q.result, tx = db.transaction('log', 'readwrite'); tx.objectStore('log').add(r); tx.oncomplete = () => db.close(); }; } catch (e) {} };
       onmessage = e => { const d = e.data;
@@ -81,11 +85,12 @@
           const now = Date.now();
           if (d === -1) { armed = false; return; }
           if (d === -2) { armed = true; reported = false; last = now; return; }
+          if (d === -3) { tick = now; return; }
           if (armed && now - last > 1500) save({k:'stall', ms:now - last, crumb, seq:seq.slice(-8), ctx, t:now, v:ver});
           reported = false; crumb = LAB[d] || ('#' + d); if (seq[seq.length - 1] !== crumb) seq.push(crumb); if (seq.length > 60) seq.splice(0, 30); last = now;
         } else if (d && d.lab) { LAB = d.lab; ver = d.ver; } else if (d && d.ctx) ctx = d.ctx;
       };
-      setInterval(() => { if (armed && !reported && Date.now() - last > 3000) { reported = true; save({k:'hang', crumb, seq:seq.slice(-14), ctx, t:Date.now(), v:ver}); } }, 500);`;
+      setInterval(() => { if (armed && !reported && Date.now() - last > 3000) { reported = true; save({k:'hang', crumb, seq:seq.slice(-14), ctx, t:Date.now(), v:ver, alive:Date.now() - tick < 1200}); } }, 500);`;
     const W = new Worker(URL.createObjectURL(new Blob([WSRC], {type:'text/javascript'})));
     const LAB = []; let sent = 0, budget = 0;
     const lab = s => LAB.push(s) - 1;
@@ -111,8 +116,18 @@
     // состояние игры — раз в секунду; последние события — что игрок делал
     const recent = [];
     { const t0 = toast; toast = function (text) { recent.push('«' + String(text).slice(0, 40) + '»'); if (recent.length > 8) recent.shift(); return t0.apply(this, arguments); }; }
-    { const d0 = doAction; doAction = function (a) { recent.push('действие:' + (a && a.kind)); if (recent.length > 8) recent.shift(); return d0.apply(this, arguments); }; }
+    { const d0 = doAction; doAction = function (a) { recent.push('действие:' + (typeof a === 'string' ? a : (a && (a.kind || a.label)) || '?')); if (recent.length > 8) recent.shift(); return d0.apply(this, arguments); }; }
+    const sheetMb = () => { try { let n = 0, px = 0; for (const k in ART.imgs) { const i = ART.imgs[k]; if (i && i.width) { n++; px += i.width * i.height; } } return n + ' шт ' + Math.round(px * 4 / 1048576) + ' МБ'; } catch (e) { return '?'; } };
     let armed = false;
+    setInterval(() => W.postMessage(-3), 300);                                 // пульс: главный поток жив, даже если кадры не идут
+    // события и таймеры вне кадра: метка перед обработчиками нажатий
+    for (const ev of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click', 'keydown', 'resize', 'focus', 'blur', 'visibilitychange', 'pageshow']) {
+      const id = lab('событие ' + ev);
+      addEventListener(ev, () => W.postMessage(id), true);
+    }
+    let swState = 'нет';
+    try { navigator.serviceWorker && navigator.serviceWorker.getRegistration().then(r => { if (!r) return; const upd = () => { swState = (r.installing ? 'ставится ' : '') + (r.waiting ? 'ждёт ' : '') + (r.active ? 'работает' : ''); };
+      upd(); r.addEventListener('updatefound', () => { upd(); const w = r.installing; if (w) w.addEventListener('statechange', () => { swState = 'новый: ' + w.state; }); }); }).catch(() => {}); } catch (e) {}
     const arm = v => { if (v !== armed) { armed = v; W.postMessage(v ? -2 : -1); } };
     setInterval(() => {
       try {
@@ -125,7 +140,7 @@
           ', герой ' + P.x.toFixed(1) + ';' + P.y.toFixed(1) + (hAt[i] ? ' в доме' : ' на улице') + ', район ' + (world.dx || 0) + ',' + (world.dy || 0) +
           ', масштаб ' + settings.zoom + ', оружие ' + (P.weapon ? P.weapon.id : 'нет') + ', окно ' + (panel ? panel.kind : 'нет') + ', дело ' + (P.act ? P.act.kind : 'нет') +
           (P.car ? ', в машине' : '') + (P.sleep ? ', спит' : '') + ', колонна ' + JSON.stringify(world.cv || null) + ', холст ' + cv.width + '×' + cv.height +
-          ', заготовок ' + SPR.size + '/' + CHUNKS.size + ', ошибок ' + ERRLOG.length + ' | ' + recent.join(' ')});
+          ', заготовок ' + SPR.size + '/' + CHUNKS.size + ', кадров перс. ' + frameCache.size + ', листов ' + sheetMb() + ', ошибок ' + ERRLOG.length + ', кэш ' + swState + ', память ' + (performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) + ' МБ' : '?') + ' | ' + recent.join(' ')});
       } catch (e) {}
     }, 1000);
     document.addEventListener('visibilitychange', () => { if (document.hidden) arm(false); });
