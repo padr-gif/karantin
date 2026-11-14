@@ -264,7 +264,7 @@ function render(dt) {
     }
   }
 
-  drawHeliLight(); drawHeli();
+  // вертолёт и его тень/прожектор не рисуются: он только слышен (гул уводит мертвецов) — так попросили
   // ---- screen-space overlays ----
   mainCtx.setTransform(1, 0, 0, 1, 0, 0); mainCtx.imageSmoothingEnabled = false;
   if (flash > 0) { mainCtx.fillStyle = `rgba(230,236,255,${flash * .55})`; mainCtx.fillRect(0, 0, cv.width, cv.height); flash = Math.max(0, flash - dt * (flash > .6 ? 6 : 2.2)); }

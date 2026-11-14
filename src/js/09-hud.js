@@ -45,5 +45,5 @@ function updateHud() {
   renderHotbar();
   if (!!curBar !== lastBar) { lastBar = !!curBar; $('bBar').hidden = !curBar; stackKey = ''; }
   $('vig').style.opacity = Math.max(P.hurt * 1.6, P.hp < 30 ? (30 - P.hp) / 45 : 0).toFixed(2);
-  if (P.sleep) { $('sTime').textContent = hasClock() ? (hasDate() ? 'День ' + (Math.floor(gameMin / 1440) + 1) + ', ' : '') + fmtTime(gameMin) : partOfDay(); $('sEn').textContent = 'Бодрость ' + Math.round(P.en) + '%'; }
+  if (P.sleep) { $('sTime').textContent = hasClock() ? (hasDate() ? 'День ' + (Math.floor(gameMin / 1440) + 1) + ', ' : '') + fmtTime(gameMin) : partOfDay(); { const left = Math.max(0, 99.5 - P.en) / (.22 * (hasTr('insomnia') ? .65 : 1)) / 60; $('sEn').textContent = 'Бодрость ' + Math.round(P.en) + '%' + (left > .1 ? ' · до полной ≈ ' + (left < 1 ? Math.round(left * 60) + ' мин' : left.toFixed(1).replace('.0', '').replace('.', ',') + ' ч') : ''); } }
 }

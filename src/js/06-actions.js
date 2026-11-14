@@ -227,7 +227,11 @@ function getAction(excl) {
     const ob = obs[o.i];
     let cands;
     if (ob.t === 'win') cands = windowActions(o);
-    else { cands = []; if (ob.bhp > 0) cands.push({kind:'unbar', label:'Оторвать доску', o}); else if (!ob.dead) cands.push(ob.locked && !ob.open ? {kind:'locked', label:hasTool('crowbar') ? 'взломать ломом' : 'заперто', o} : {kind:'door', label: ob.open ? 'Закрыть' : 'Открыть', o}); const al = doorAlarmAction(o); if (al) cands.push(al); }
+    else { cands = []; if (ob.bhp > 0) cands.push({kind:'unbar', label:'Оторвать доску', o}); else if (!ob.dead) {
+      const inH = insideHouse(P.x, P.y);                                    // изнутри замок открывается и запирается рукой (99-door-lock)
+      if (ob.locked && !ob.open) cands.push(inH && !ob.jam ? {kind:'unlock', label:'Отпереть', o} : {kind:'locked', label:ob.jam ? (hasTool('crowbar') ? 'замок заклинило: ломом' : 'замок заклинило') : hasTool('crowbar') ? 'взломать ломом' : 'заперто', o});
+      else { cands.push({kind:'door', label: ob.open ? 'Закрыть' : 'Открыть', o}); if (inH && !ob.jam) cands.push({kind:'lock', label:ob.open ? 'Закрыть и запереть' : 'Запереть', o, tk:'lk' + o.i}); }
+    } const al = doorAlarmAction(o); if (al) cands.push(al); }
     for (const a of cands) { if (excl && excl.has(a.tk || ob)) continue; best = a; bd = o.d; break; }
   }
   if (!best) { const fa = forageAction(excl); if (fa) best = fa; }
@@ -390,7 +394,7 @@ function finishAct(a) {
   if (a.kind === 'cookx') { a.fn(); return; }
   if (a.kind === 'furn') { finishFurn(a); return; }
   if (a.kind === 'fish') { if (rng() < .5 + .05 * skillLv('farm')) { if (!invFull()) P.inv.push(mkItem('fish')); else addToPile(P.x, P.y, mkItem('fish')); stat('fish'); ach('fish'); toast('Клюёт! Поймал карася'); addXp('farm', 1); } else toast('Сорвалась. Попробуй ещё'); SFX.rustle(); return; }
-  if (a.kind === 'pry') { const ob = obs[a.o.i]; ob.locked = false; ob.open = true; ob.ang = 1; noise(P.x, P.y, 9); SFX.wood(a.o.x, a.o.y); toast('Дверь взломана'); addXp('carp', 1); return; }
+  if (a.kind === 'pry') { const ob = obs[a.o.i]; ob.locked = false; ob.open = true; ob.jam = true; ob.ang = 1; noise(P.x, P.y, 9); SFX.wood(a.o.x, a.o.y); toast('Дверь взломана'); addXp('carp', 1); return; }
   if (a.kind === 'use') { finishUse(a); return; }
   if (a.kind === 'pickup') { pickFromPile(a.f); return; }
   if (a.kind === 'search') { if (a.f.air) ach('drop'); a.f.searched = true; { const H = furns.includes(a.f) && houseOf(a.f); if (H && !H._done && houseSearched(H)) toast('✓ Дом обыскан полностью. Отмечено на карте'); } noise(P.x, P.y, a.f.type === 'car' ? 4 : 2.5); openPanel('loot', {src:a.f}); if (a.f.type === 'car') toast(a.f.key ? 'В замке зажигания торчат ключи! Бензин: ' + Math.round(a.f.fuel) + '%' : 'Ключей нет. Бензин: ' + Math.round(a.f.fuel) + '%'); }
@@ -426,7 +430,7 @@ function takeItems(c) {
   renderInv();
 }
 function startSleep(bed) {
-  if (P.en > 75) { toast('Пока не хочется спать'); return; }
+  if (P.en > 92) { toast('Ты бодр — спать пока не хочется'); return; }        // было 75: при бодрости 80% лечь было нельзя, и казалось, что «выспаться нельзя»
   if (zs.some(z => z.state === 'chase' && Math.hypot(z.x - P.x, z.y - P.y) < 14)) { toast('Нельзя спать: мертвецы рядом'); return; }
   P.sleep = true; P.bed = bed || null; P.act = null; joy.id = null; joy.x = joy.y = 0; $('stick').hidden = true;
   $('sleep').hidden = false; $('ctrl').hidden = true; sleepAlarmUI();
@@ -586,7 +590,7 @@ function itemText(it) {
   if (it.id === 'flare') return 'горит ~30 секунд, шумит';
   if (d.kind === 'bino') return 'обзор на 30 секунд';
   if (d.kind === 'trap') return 'урон 30, держит ~9 секунд';
-  if (d.kind === 'book') return 'навык «' + SKILLS[d.skill].name + '» · читать ~6 секунд';
+  if (d.kind === 'book') return 'навык «' + SKILLS[d.skill].name + '» · ' + (d.sbook ? 'книга, читать ~2 минуты · учишься втрое быстрее' : 'журнал, читать ~45 секунд · разовый опыт');
   if (d.antibio) return 'сбивает жар после укуса';
   if (d.uses) return d.info + ' · осталось ' + it.uses;
   if (d.info) return d.info;

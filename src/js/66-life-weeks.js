@@ -98,7 +98,7 @@ function runWeekEvent(k) {
       for (const dd of H.doors || []) { const o = obs[dd.y * MW + dd.x]; if (o) { o.open = true; o.ang = 1; o.locked = false; } } }
     clearCaches(); return 'Мародёры прошлись по соседним улицам: ' + n + ' дома выпотрошены, двери нараспашку. Туда можно не ходить.';
   }
-  if (k === 'drop') { dropSupply(); return 'Над городом кружил вертолёт и сбросил груз. Место отмечено на карте.'; }
+  if (k === 'drop') { if (rng() < .15) { dropSupply(); return 'Над городом кружил вертолёт и сбросил груз. Место отмечено на карте.'; } return 'Над городом кружил вертолёт — гул слышно за кварталы. Груза в этот раз не было.'; }
   if (k === 'barricade') {                                                  // чужое убежище: заколочено, внутри припасы
     const H = farHouse(20); if (!H) return null;
     for (let y = H.y; y < H.y + H.h; y++) for (let x = H.x; x < H.x + H.w; x++) { const i = y * MW + x, o = obs[i]; if (o && map[i] === WIN) o.bhp = 90; }

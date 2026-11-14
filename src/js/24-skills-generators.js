@@ -85,7 +85,7 @@ const HELI_FAR = 85;                                                         // 
 function scheduleHeli(from) { world.heliAt = from + 1440 * ri(1, 2) + ri(-240, 360); }
 function startHeli() {
   const a = rng() * 6.283;
-  heli = {x:P.x + Math.cos(a) * HELI_FAR, y:P.y + Math.sin(a) * HELI_FAR, ph:'in', hover:75, ang:0, lx:P.x, ly:P.y, vx:0, vy:0, nT:0, sT:0, drop:rng() < .65};
+  heli = {x:P.x + Math.cos(a) * HELI_FAR, y:P.y + Math.sin(a) * HELI_FAR, ph:'in', hover:75, ang:0, lx:P.x, ly:P.y, vx:0, vy:0, nT:0, sT:0, drop:rng() < .15};   // груз — редко (было 65%: при пропуске дней припасов было слишком много)
   if (P.sleep) wake('Тебя разбудил гул вертолёта');
   toast('Слышен гул вертолёта. Он привлечёт мертвецов со всей округи');
   scheduleHeli(gameMin);

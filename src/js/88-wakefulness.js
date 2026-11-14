@@ -26,7 +26,7 @@ function wakeTick(gm) {
     // за час-полтора до отключки — предупреждение: найди кровать, пока не уснул посреди улицы
     if (!(P.wakeG > 0) && (cap < 6 || P.en < 8) && !P._koMsg && !P.car) { P._koMsg = 1; toast('Глаза слипаются: скоро уснёшь прямо на месте. Найди кровать или запрись'); if (typeof vib === 'function') vib(60); }
     if (cap > 15 && P.en > 15) P._koMsg = 0;
-    if (cap < 50 && !P._capMsg) { P._capMsg = 1; toast('Ты давно не спал: без сна бодрость больше не поднимется выше ' + Math.round(cap) + '%'); }
+    if (cap < 50 && !P._capMsg) { P._capMsg = 1; toast('Ты давно не спал: отдыхом и сидя бодрость не поднять выше ' + Math.round(cap) + '%. Сон восстанавливает до конца'); }
     // отключка: потолок 0 или бодрость кончилась — засыпает прямо здесь
     if ((cap <= 0 || P.en <= 0) && !(P.wakeG > 0) && !P.car && !(typeof TUT !== 'undefined' && TUT.on)) {
       P.en = Math.max(0, P.en); P.act = null; P.sleep = true; P.bed = null; joy.id = null; joy.x = joy.y = 0; $('stick').hidden = true;

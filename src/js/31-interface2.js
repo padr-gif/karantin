@@ -146,7 +146,7 @@ function drawMinimap(dt) {
   for (const a of airdrops) if (a.landed && !(a.f && a.f.searched)) dot(a.x, a.y, 3, '#f2ead8');
   for (const z of zs) { const i = Math.floor(z.y) * MW + Math.floor(z.x); if (vis[i] && Math.abs(z.x - px) < R && Math.abs(z.y - py) < R && (zAlpha(z) || 1) >= .5) dot(z.x, z.y, 1.8, '#e8473a'); }
   for (const s of stashes) if (!s.gone) dot(s.cx, s.cy, 2, '#c9a46a');
-  if (heli) dot(heli.x, heli.y, 4, '#d6e4ff');
+  // вертолёт на мини-карте не показываем — его не видно, только слышно
   // player arrow
   const a = P.car ? P.car.ang : (P.fd != null ? P.fd : P.face), fx = Math.cos(a), fy = Math.sin(a), ax = (fx - fy), ay = (fx + fy) / 2, l = Math.hypot(ax, ay) || 1;
   g.translate(cx, cy); g.rotate(Math.atan2(ay / l, ax / l)); g.fillStyle = '#ffffff'; g.beginPath(); g.moveTo(6, 0); g.lineTo(-4, 4); g.lineTo(-2, 0); g.lineTo(-4, -4); g.closePath(); g.fill();

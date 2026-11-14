@@ -1735,3 +1735,17 @@ body.invglass>*:not(#game):not(#vig):not(#panel):not(#toasts):not(svg){visibilit
 .ph-card.on{opacity:1;transform:translate(-50%,-62%) rotate(-2deg) scale(1)}
 .ph-card canvas{display:block;width:min(260px,52vw);height:auto;image-rendering:auto;filter:contrast(.95)}
 .ph-cap{font-family:var(--f-hand);color:#3a3128;font-size:19px;line-height:1.1;text-align:center;margin-top:5px}
+/* экран смерти: четыре кнопки ровной сеткой 2×2 одной ширины (кнопка «Загрузить» выбивалась) */
+#dead .row-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;justify-content:stretch}
+#dead .row-btns>button{width:100%;justify-content:center;margin:0}
+/* дневник: страница по высоте разворота вместе с отступами — иначе низ уходил под край окна и не прокручивался */
+#pnBody.nbody .nb-pg{box-sizing:border-box;height:100%;max-height:100%}
+/* осмотр одежды (99-laundry) */
+.cv-win{position:fixed;inset:0;z-index:9000;visibility:visible!important;display:grid;place-items:center;background:rgba(6,8,10,.55)}
+.cv-card{display:grid;justify-items:center;gap:8px;padding:14px 16px 12px;border-radius:14px;background:#171b1e;border:1px solid var(--edge,#2c3236);box-shadow:0 18px 50px rgba(0,0,0,.6);max-width:min(92vw,420px)}
+.cv-t{font:700 18px/1.1 var(--f-display);letter-spacing:.05em;text-transform:uppercase;color:#efe6d2}
+.cv-pic{width:min(220px,46vh);height:auto;aspect-ratio:1;border-radius:10px;background:radial-gradient(#2a2f33,#1b1f22);cursor:pointer;touch-action:manipulation}
+.cv-info{font-size:13px;color:#c9c2b2;text-align:center;max-width:300px}
+.cv-btns{display:flex;gap:8px}
+.cv-btns button{appearance:none;padding:9px 18px;border-radius:10px;border:1px solid #3a4146;background:#242a2e;color:#efe6d2;font:600 15px/1 var(--f-display);letter-spacing:.04em;text-transform:uppercase;cursor:pointer}
+.cv-btns button:active{background:#30373c}
