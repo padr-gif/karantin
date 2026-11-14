@@ -7,9 +7,10 @@ const ART = {meta:null, imgs:{}, ready:false, failed:false};
 // память раскрываются при первом обращении: needSheet(n) → true, если уже готов; иначе начинает раскрывать и false
 // (кадр пропускается и ничего пустого не кэшируется). На планшете все 34 листа сразу — ~600 МБ, и игра тормозила.
 const ART_LAZY = n => /^pchar_/.test(n) || (n === 'furn3' && !(typeof settings !== 'undefined' && settings.smooth));   // детальная включена — furn3 сразу
-ART.src = {}; ART.pend = new Set(); ART.px = {};
+ART.src = {}; ART.pend = new Set(); ART.px = {}; ART.use = {};
 const ART_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1) || /[?&]iospx\b/.test(location.search);
 function needSheet(n) {
+  try { ART.use[n] = frameNo; } catch (e) {}                                                    // лист нужен — отметка для выгрузки неиспользуемых (trimCaches)
   if (ART.imgs[n]) return true;
   const src = ART.src[n]; if (!src || ART.pend.has(n)) return false;
   ART.pend.add(n);
@@ -196,7 +197,7 @@ function recolor8(f, pal) {
 const RECOLOR_MAX = /Android/i.test(navigator.userAgent) ? 8 : 16;          // перекрасок за кадр: толпа появляется за пару кадров, без рывка
 function charFrame(name, palKey, pal, force) {
   const k = palKey + '|' + name; let c = frameCache.get(k);
-  if (c) { frameCache.delete(k); frameCache.set(k, c); c.cv._st = true; return c; }
+  if (c) { frameCache.delete(k); frameCache.set(k, c); c.cv._st = true; c.u = frameNo; return c; }
   if (!force && (recolorsThisFrame > RECOLOR_MAX || recolorMs > 14)) return null;   // и по времени: перекраска не должна съедать кадр
   const f = ART.meta.frames[name]; if (!f) return null;
   if (!needSheet(f[0])) return null;                                          // лист ещё раскрывается (по требованию)
@@ -205,6 +206,7 @@ function charFrame(name, palKey, pal, force) {
   { const t0 = performance.now(); c = recolor8(f, pal); recolorMs += performance.now() - t0; } frameCache.set(k, c);
   if (frameCache.size > FRAME_MAX) { let n = 200; for (const [key, v] of frameCache) { frameCache.delete(key); dropCv(v && v.cv); if (--n <= 0) break; } }
   if (c && c.cv) c.cv._st = true;
+  if (c) c.u = frameNo;
   return c;
 }
 function drawChar(ent, name, palKey, pal, wx, wy, zoff, flash, alpha, force) {

@@ -309,6 +309,7 @@ function render(dt) {
   }
   drawTvSubs();                                                               // реплики над включённым телевизором (98-tv-shows)
   if (frameNo % 60 === 0) evict();
+  if (frameNo % 120 === 7) trimCaches();
   if (frameNo % 15 === 0) reapCv();
 }
 let frameNo = 0;

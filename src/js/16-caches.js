@@ -97,6 +97,27 @@ function sprite(id, key, wx, wy, bx0, by0, bx1, by1, fn, alpha, offX) {
   ctx.globalAlpha = 1;
   if (!s.slot && !s.c._st) bump(s.c);
 }
+// ---- неиспользуемое — из памяти (0.102). Раньше кэши чистились только по количеству: всё, что когда-то нарисовано,
+// лежало в памяти, пока не наберётся предел (1100 заготовок, 1600 кадров персонажей). Теперь всё, чего не было на
+// экране полминуты-минуту, выбрасывается: заготовки и куски земли, перекрашенные кадры персонажей, а листы героя,
+// из которых давно ничего не брали, выгружаются целиком (понадобятся — раскроются снова).
+const TRIM_SPR = 1500, TRIM_CH = 2400, TRIM_FR = 2400, TRIM_SHEET = 7200;     // в кадрах
+function trimCaches() {
+  let n = 0;
+  for (const [k, s] of SPR) if (!s.slot && frameNo - s.used > TRIM_SPR) { SPR.delete(k); if (++n > 80) break; }      // не всё разом — без рывка
+  n = 0;
+  for (const [k, ch] of CHUNKS) if (frameNo - ch.used > TRIM_CH) { CHUNKS.delete(k); if (++n > 6) break; }
+  n = 0;
+  for (const [k, v] of frameCache) {                                             // порядок в Map — от давно не тронутых к свежим
+    if (!v || frameNo - (v.u || 0) <= TRIM_FR || ++n > 150) break;
+    frameCache.delete(k); dropCv(v.cv);
+  }
+  if (typeof ART_LAZY === 'function') for (const name in ART.imgs) {
+    if (!/^pchar_/.test(name) || !ART.src[name] || frameNo - (ART.use[name] || 0) <= TRIM_SHEET) continue;
+    const im = ART.imgs[name]; delete ART.imgs[name]; delete ART.px[name];
+    try { if (im && im.close) im.close(); else if (im && im.removeAttribute && !im._px) { im.onload = im.onerror = null; im.removeAttribute('src'); } } catch (e) {}
+  }
+}
 // выбросить давно не нужные спрайты и куски земли; в детальной графике — следить за памятью кусков
 function evict() {
   if (SPR.size > SPR_MAX) { const arr = [...SPR].sort((a, b) => a[1].used - b[1].used); for (let k = 0; k < arr.length - SPR_MAX * .75; k++) SPR.delete(arr[k][0]); }
@@ -122,7 +143,7 @@ function getChunk(cx, cy) {
   let ch = CHUNKS.get(key);
   if (!ch || ch.q !== HDQ) {
     const c = mkCanvas((2 * CH * U + 2) * HDQ, (CH * U + 2) * HDQ);
-    ch = {c, g:hdCtx(c.getContext('2d')), ax:cx * CH, ay:cy * CH, used:0, q:HDQ};
+    ch = {c, g:hdCtx(c.getContext('2d')), ax:cx * CH, ay:cy * CH, used:frameNo, q:HDQ};
     ch.g.imageSmoothingEnabled = false;
     withChunk(ch, () => drawGroundRange(ch.ax - 1, ch.ay - 1, ch.ax + CH, ch.ay + CH));
     CHUNKS.set(key, ch);
