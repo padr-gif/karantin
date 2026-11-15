@@ -158,6 +158,8 @@ function patCol(d, x, y) {
     case 'denim': { const k = .9 + hash34(x, y) * .18; return [c[0] * k, c[1] * k, c[2] * k]; }
     case 'hiviz': return y % 7 < 1 ? [226, 230, 214] : c;
     case 'armor': return (x + y) % 9 === 0 ? [c[0] * .7, c[1] * .7, c[2] * .7] : c;
+    case 'stripe': return y % 11 < 2 ? d.acc : c;                                   // коллекция ежедневного груза (99-daily)
+    case 'chevron': return (x + y) % 8 < 1 || (x - y + 64) % 8 < 1 ? d.acc : c;
   }
   return c;
 }

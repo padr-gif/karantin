@@ -189,6 +189,7 @@ function radioNews() {
   if (world.hordeAt - gameMin < 720 && world.hordeAt > gameMin) out.push(['Военные', 'Крупная группа заражённых смещается через город. Укрепите окна и не шумите.']);
   out.push(['Погода', dateStr(gameMin) + ', ' + seasonName() + '. Сейчас около ' + Math.round(outsideTemp()) + '°C' + (outsideTemp() < 4 ? ', ночью заморозки.' : ', ночью будет холоднее.') + ' Одевайтесь теплее.']);
   if (airdrops.some(a => a.landed && a.f && !a.f.searched)) out.push(['Военные', 'Над районом сброшен груз гуманитарной помощи. Ищите парашют.']);
+  if (world.dly && !world.dly.known && airdrops.some(dlyHidden)) { world.dly.known = true; out.push(['Военные', 'Ежедневный груз сброшен. Координаты переданы — место отмечено на карте.']); }   // 99-daily
   const near = zs.filter(z => Math.hypot(z.x - P.x, z.y - P.y) < 14).length;
   out.push(['Гражданская оборона', near >= 6 ? `Рядом с вами скопление заражённых (${near}). Не шумите и не бегите.` : RADIO_TIPS[Math.floor(Math.random() * RADIO_TIPS.length)]]);
   return out;
@@ -257,7 +258,8 @@ function drawMapCanvas(c) {
   for (const b of beds) dot(b.cx, b.cy, 2.2, '#7bc46a');
   for (const l of lures) if (!l.dead) dot(l.cx, l.cy, 2.4, '#ff7ab0');
   for (const t of stashes) if (!t.gone) dot(t.cx, t.cy, 2.6, '#c9a46a');
-  for (const a of airdrops) if (!(a.f && a.f.searched && !a.f.items.length)) { const [qx, qy] = dot(a.x, a.y, 4, '#f2ead8'); g.strokeStyle = '#d0472f'; g.lineWidth = 1.5; g.beginPath(); g.arc(qx, qy, 6 * big, 0, 6.283); g.stroke(); }
+  for (const a of airdrops) if (dlyHidden(a)) { const [qx, qy] = dot(world.dly.ox + .5, world.dly.oy + .5, 0, '#000'); g.strokeStyle = '#d0472f'; g.lineWidth = 1.5; g.setLineDash([4, 4]); g.beginPath(); g.arc(qx, qy, Math.max(14, 9 * s), 0, 6.283); g.stroke(); g.setLineDash([]); }   // ежедневный груз без радио — только круг (99-daily)
+  for (const a of airdrops) if (!dlyHidden(a) && !(a.f && a.f.searched && !a.f.items.length)) { const [qx, qy] = dot(a.x, a.y, 4, '#f2ead8'); g.strokeStyle = '#d0472f'; g.lineWidth = 1.5; g.beginPath(); g.arc(qx, qy, 6 * big, 0, 6.283); g.stroke(); }
   for (const m of world.marks || []) { const [qx, qy] = dot(m.x, m.y, 0, '#000'); if (!out(qx, qy)) drawMark(g, qx, qy, m); }   // значки — 69-world
   for (const k of CHECKPOINTS) { const [qx, qy] = dot(k.x, k.y, 4.5, '#c4312a'); g.strokeStyle = '#fff'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(qx - 2.4, qy - 2.4); g.lineTo(qx + 2.4, qy + 2.4); g.moveTo(qx + 2.4, qy - 2.4); g.lineTo(qx - 2.4, qy + 2.4); g.stroke(); }
   // вывески домов — только когда приблизил (на «весь город» они слипались в кашу)

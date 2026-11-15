@@ -596,6 +596,24 @@ const nb = await D(`(() => { openPanel('inv'); panel.tab = 'tasks'; panel.dpage 
   closePanel(); return r; })()`);
 check('дневник — разворот блокнота: дела слева, что было и итог справа, строки по линейкам', nb.pages === 2 && nb.tasks >= 1 && nb.sum === 3 && /^День \d+$/.test(nb.day) && nb.aligned, nb);
 
+console.log('v0.107: ежедневный груз');
+await fresh();
+const dl = await D(`(() => { localStorage.removeItem(DLY_KEY); world.dly = null; P.inv = P.inv.filter(it => ITEMS[it.id].kind !== 'radio');
+  const t = dlyToday(), st = d => dlyNextStep(d, t);
+  const steps = [st({}), st({day:t - 1, step:3}), st({day:t - 2, step:3}), st({day:t - 5, step:3}), st({day:t - 1, step:7}), st({day:t - 2, step:7}), st({day:t, step:2})];
+  const ok = dlyCheck(true), D0 = world.dly, a = dlyDrop(), hidden = !!a && dlyHidden(a), prof = JSON.parse(localStorage.getItem(DLY_KEY));
+  const loot7 = dlyLoot(7), cos = loot7.filter(it => ITEMS[it.id].cosm).length, n7 = loot7.length;
+  for (let k = 0; k < 400 && a && !a.landed; k++) update(.05);
+  const landed = !!(a && a.f), items = a && a.f ? a.f.items.length : 0;
+  const again = dlyCheck(false);
+  P.x = a.x + 3; P.y = a.y; DLY.acc = 5; update(.016); const known = world.dly && world.dly.known;
+  const s = serialize(); const saved = !!s.xDly;
+  localStorage.removeItem(DLY_KEY); return {steps, ok, hidden, step:D0 && D0.step, prof, cos, n7, landed, items, again, known, saved}; })()`);
+check('серия: подряд — дальше, пропуск — назад, после 7-го — снова 1, дважды в день нельзя', JSON.stringify(dl.steps) === '[1,4,3,2,1,1,0]', dl.steps);
+check('груз падает в мир, без радио место скрыто, рядом — найдено', dl.ok && dl.hidden && dl.landed && dl.items >= 2 && dl.known, dl);
+check('седьмой день: вещь из коллекции и ценная вещь; повторно за сутки — нет', dl.cos === 1 && dl.n7 >= 5 && dl.again === false && dl.saved, dl);
+check('одежда коллекции рисуется своим узором', await D("patCol(ITEMS.dl_jacket, 3, 0).join() === ITEMS.dl_jacket.acc.join() && patCol(ITEMS.dl_jacket, 3, 5).join() === ITEMS.dl_jacket.col.join()"));
+
 console.log('Живая игра 15 секунд');
 await fresh("['coward']");
 await D("P.weapon = mkItem('shotgun'); P.weapon.mag = 2; P.inv.push(mkItem('shells')); gameMin += 14 * 60; for (let i = 0; i < 25; i++) spawnZombie(4, false);");
