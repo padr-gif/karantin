@@ -1,17 +1,14 @@
-// ================= ежедневный груз: награда за вход (v107) =================
-// Раз в реальные сутки (по часам телефона) над районом героя сбрасывают груз на парашюте — в 26–46 клетках,
-// не у самого дома: за ним надо сходить. Серия на 7 дней: в дни 1–6 скромные припасы, на 3-й и 5-й день —
-// вещь из коллекции «Dead Line» (одежда с особым видом, характеристики как у обычной), на 7-й — ценное:
-// редкая кассета VHS, электронные часы, фонарик или радио, и вещь из коллекции. Пропустил день — серия
-// откатывается на день, пропустил больше — на два; после 7-го дня — снова с первого.
-//  • С радио (заряженным) герой слышит точное место: метка на карте. Без радио — на карте только круг,
-//    где искать. Над ящиком, пока его не обыскали, поднимается красный дым. Подошёл ближе 12 клеток — место известно.
-//  • Не забрал до следующего сброса — старый ящик разграблен (пустеет).
-//  • Серия и день — в профиле браузера (`karantin.daily`), не в сохранении: награда одна на устройство в сутки,
-//    и попадает в тот мир, где играешь. Переведённые назад часы награды не дают.
-//  • В обучении и в отладочной сборке (?dbg, тесты) сам не срабатывает: `dlyCheck(true)` — вручную.
+// ================= награды за ежедневный вход (v107) =================
+// Главное меню → «Награды»: календарь на 7 дней, раз в реальные сутки (по часам телефона) — «Забрать».
+// Забранная награда ждёт в профиле и прилетает в мир, когда герой в игре: груз на парашюте в 26–46 клетках,
+// за ним надо сходить. Что в какой день — DLY_TABLE: припасы, на 3-й и 5-й день — вещь из коллекции «Dead Line»
+// (одежда с особым видом, характеристики как у обычной), на 7-й — вещь из коллекции и ценное: кассета VHS,
+// электронные часы, фонарик или радио. Пропустил день — тот же день серии, больше — на день назад; после 7-го — с первого.
+//  • С заряженным радио — точная метка на карте. Без радио — на карте только круг, где искать, над ящиком красный дым
+//    (пока не обыскан). Подошёл ближе 12 клеток — место известно.
+//  • Серия и ждущая награда — в профиле браузера (`karantin.daily`), не в сохранении: награда одна на устройство в сутки
+//    и прилетает в тот мир, где играешь. Переведённые назад часы награды не дают. В обучении груз не прилетает.
 const DLY_KEY = 'karantin.daily';
-const DLY_OFF = /[?&]dbg\b/.test(location.search) && !/[?&]daily\b/.test(location.search);
 const DLY_STEPS = 7;
 const DLY = {acc:0, warned:false, puffs:[], pt:0};
 
@@ -44,7 +41,7 @@ const DLY_COSM = Object.keys(ITEMS).filter(id => ITEMS[id].cosm);
 function dlyProf() { try { return JSON.parse(localStorage.getItem(DLY_KEY)) || {}; } catch (e) { return {}; } }
 function dlyPut(p) { try { localStorage.setItem(DLY_KEY, JSON.stringify(p)); } catch (e) {} }
 const dlyToday = (t = Date.now()) => Math.floor((t - new Date(t).getTimezoneOffset() * 60000) / 864e5);   // номер местных суток
-// какой день серии будет сегодня: 1 подряд — дальше, пропустил день — тот же, больше — на шаг назад
+// какой день серии будет сегодня: 1 подряд — дальше, пропустил день — тот же, больше — на шаг назад; 0 — сегодня уже забрал
 function dlyNextStep(p, today) {
   if (p.day == null) return 1;
   const gap = today - p.day, base = p.step >= DLY_STEPS ? 0 : (p.step || 0);
@@ -53,31 +50,45 @@ function dlyNextStep(p, today) {
   if (gap === 2) return Math.max(1, base);
   return Math.max(1, base - 1);
 }
+const dlyBackClock = p => !!p.ts && Date.now() < p.ts - 3600e3;              // часы перевели назад
 
-// ---- что внутри ----
-const DLY_POOL = [['canned', 'beans', 'tuna', 'crackers', 'water', 'water'], ['bandage', 'bandage', 'painkill', 'antisep'],
-  ['battery', 'matches', 'nails', 'seeds', 'candle', 'lighter']].map(L => L.filter(id => ITEMS[id]));
+// ---- что в какой день: '@cosm' — вещь из коллекции, '@rare' — ценная вещь (выбираются, когда забираешь) ----
+const DLY_TABLE = [
+  ['canned', 'canned', 'water'],
+  ['bandage', 'bandage', 'battery'],
+  ['@cosm', 'beans', 'water'],
+  ['matches', 'nails', 'seeds', 'tuna'],
+  ['@cosm', 'painkill', 'canned'],
+  ['tuna', 'crackers', 'antisep', 'candle'],
+  ['@rare', '@cosm', 'canned', 'water'],
+].map(L => L.filter(id => id[0] === '@' || ITEMS[id]));
+const dlyPick = L => L[Math.floor(Math.random() * L.length)];
 function dlyLoot(step) {
-  const R = Math.random, pk = L => L[Math.floor(R() * L.length)], out = [];
-  const n = step >= DLY_STEPS ? 3 : 2 + (step >> 1);                         // 2, 3, 3, 4, 4, 5 … и 3 на седьмой
-  for (let k = 0; k < n; k++) out.push(mkItem(pk(DLY_POOL[k % DLY_POOL.length])));
-  const have = new Set((P.inv || []).map(it => it.id).concat(Object.values(P.cloth || {}).filter(Boolean).map(it => it.id)));
-  if (step === 3 || step === 5 || step >= DLY_STEPS) {
-    const fresh = DLY_COSM.filter(id => !have.has(id));
-    out.push(mkItem(pk(fresh.length ? fresh : DLY_COSM)));
-  }
-  if (step >= DLY_STEPS) {
-    const rare = Object.keys(ITEMS).filter(id => ITEMS[id].kind === 'vhs' && id !== 'vhs_film' && !have.has(id));
-    for (const id of ['watchD', 'flashlight', 'radio']) if (ITEMS[id] && !have.has(id)) rare.push(id);
-    if (rare.length) out.push(mkItem(pk(rare)));
-  }
-  return out;
+  const own = dlyProf().own || [];
+  return DLY_TABLE[step - 1].map(id => {
+    if (id === '@cosm') { const f = DLY_COSM.filter(c => !own.includes(c)); return dlyPick(f.length ? f : DLY_COSM); }
+    if (id === '@rare') return dlyPick(Object.keys(ITEMS).filter(k => ITEMS[k].kind === 'vhs' && k !== 'vhs_film').concat(['watchD', 'flashlight', 'radio'].filter(k => ITEMS[k])));
+    return id;
+  });
+}
+// забрать сегодняшнюю награду (из меню); force — без проверки дня (тесты)
+function dlyClaim(force) {
+  const p = dlyProf(), now = Date.now(), today = dlyToday(now);
+  if (!force && dlyBackClock(p)) return 0;
+  const step = force ? (p.step >= DLY_STEPS ? 1 : (p.step || 0) + 1) : dlyNextStep(p, today);
+  if (!step) return 0;
+  const ids = dlyLoot(step);
+  p.day = today; p.step = step; p.ts = Math.max(now, p.ts || 0);
+  p.pend = (p.pend || []).concat(ids); p.pstep = step;
+  p.own = (p.own || []).concat(ids.filter(id => ITEMS[id].cosm));
+  dlyPut(p);
+  return step;
 }
 
-// ---- сброс ----
+// ---- доставка в мир ----
 const dlyDK = () => (world.dx || 0) + ',' + (world.dy || 0);
 const dlyRadio = () => (P.inv || []).some(it => ITEMS[it.id] && ITEMS[it.id].kind === 'radio' && it.ch > 0);
-// ящик ежедневного груза в этом районе (или null)
+// последний ящик награды в этом районе (или null)
 function dlyDrop() {
   const D = world.dly; if (!D || D.dk !== dlyDK()) return null;
   return airdrops.find(a => a.tx === D.x && a.ty === D.y) || null;
@@ -95,42 +106,26 @@ function dlyPlace(items) {
   }
   return null;
 }
-// прошлый ящик, если его не забрали, к новому сбросу разграблен
-function dlyExpire() {
-  const a = dlyDrop();
-  if (a && a.f && !a.f.searched) { a.f.items = []; a.f.searched = true; logEv('Вчерашний груз так и не забрал — его разграбили'); }
-  world.dly = null;
-}
-function dlyCheck(force) {
+function dlyDeliver() {
   if (!P || mode !== 'play' || (typeof TUT !== 'undefined' && TUT.on)) return false;
-  const p = dlyProf(), now = Date.now(), today = dlyToday(now);
-  if (p.ts && now < p.ts - 3600e3) {                                           // часы перевели назад
-    if (!DLY.warned) { DLY.warned = true; toast('Часы телефона переведены назад — ежедневного груза сегодня не будет'); }
-    return false;
-  }
-  const step = force ? (p.step >= DLY_STEPS ? 1 : (p.step || 0) + 1) : dlyNextStep(p, today);
-  if (!step) return false;
-  dlyExpire();
-  const items = dlyLoot(step), at = dlyPlace(items);
+  const p = dlyProf(); if (!p.pend || !p.pend.length) return false;
+  const at = dlyPlace(p.pend.filter(id => ITEMS[id]).map(mkItem));
   if (!at) return false;
-  const known = dlyRadio(), ox = at[0] + Math.round((Math.random() - .5) * 12), oy = at[1] + Math.round((Math.random() - .5) * 12);
-  world.dly = {x:at[0], y:at[1], dk:dlyDK(), known, ox, oy, step};
-  dlyPut({day:today, step, ts:Math.max(now, p.ts || 0)});
-  const strip = '●'.repeat(step) + '○'.repeat(DLY_STEPS - step);
-  const big = step >= DLY_STEPS ? ' Сегодня в нём что-то ценное.' : step === 3 || step === 5 ? ' Внутри есть вещь из коллекции.' : '';
-  eventBanner('Ежедневный груз · день ' + step + ' из ' + DLY_STEPS + '  ' + strip,
-    (known ? 'По радио передали, где упал груз — место отмечено на карте.' : 'Над районом прошёл самолёт и сбросил груз. Ищи красный дым — примерное место обведено на карте.') + big, '', 'i-star');
-  logEv('Ежедневный груз, день ' + step + ' из ' + DLY_STEPS);
+  const known = dlyRadio(), step = p.pstep || p.step || 1;
+  world.dly = {x:at[0], y:at[1], dk:dlyDK(), known, ox:at[0] + Math.round((Math.random() - .5) * 12), oy:at[1] + Math.round((Math.random() - .5) * 12), step};
+  p.pend = []; dlyPut(p);
+  eventBanner('Награда за вход · день ' + step + ' из ' + DLY_STEPS,
+    known ? 'По радио передали, где упал груз — место отмечено на карте.' : 'Над районом прошёл самолёт и сбросил груз. Ищи красный дым — примерное место обведено на карте.', '', 'i-star');
+  logEv('Прилетел груз — награда за вход, день ' + step);
   return true;
 }
-
 onUpdate(dt => {
   if (!P || mode !== 'play' || paused) return;
   DLY.acc += dt; if (DLY.acc < 2) return; DLY.acc = 0;
   const D = world.dly, a = dlyDrop();
   if (D && a && !D.known && Math.hypot(P.x - a.x, P.y - a.y) < 12) { D.known = true; toast('Вот он, ящик с грузом!'); }
   if (D && a && a.f && a.f.searched && !D.got) { D.got = true; stat('daily'); }
-  if (!DLY_OFF && !P.sleep && !traveling) dlyCheck(false);
+  if (!P.sleep && !traveling) dlyDeliver();
 });
 onStartNew(() => { world.dly = null; });
 onSave(d => { if (world.dly) d.xDly = world.dly; });
@@ -153,3 +148,58 @@ onDraw(() => {
   }
   ctx.restore();
 });
+
+// ---- экран «Награды» в главном меню ----
+function dlyState() {
+  const p = dlyProf(), today = dlyToday(), next = dlyNextStep(p, today), back = dlyBackClock(p);
+  return {p, next, back, can:!!next && !back, done:next ? next - 1 : (p.step || 0)};
+}
+function dlyMenuBtn() {
+  const b = $('mDaily'); if (!b) return;
+  const S = dlyState(), t = b.querySelector('.pz-t') || b;
+  t.textContent = S.can ? 'Награды · забрать!' : 'Награды';
+  b.classList.toggle('dly-has', S.can);
+}
+function dlyLeft() {
+  const n = new Date(), m = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1) - n, h = Math.floor(m / 3600e3), mi = Math.floor(m % 3600e3 / 60e3);
+  return h ? h + ' ч ' + mi + ' мин' : mi + ' мин';
+}
+function renderDaily(got) {
+  const S = dlyState(), box = $('dlyList'); box.textContent = '';
+  $('dlyCount').textContent = 'День ' + (S.can ? S.next : S.done || 1) + ' из ' + DLY_STEPS;
+  for (let d = 1; d <= DLY_STEPS; d++) {
+    const st = d <= S.done && !(S.can && d >= S.next) ? 'got' : S.can && d === S.next ? 'now' : 'wait';
+    const c = mk('div', 'dlyc ' + st + (d === DLY_STEPS ? ' big' : ''));
+    c.appendChild(mk('b', 'dlyd', st === 'got' ? '✓ День ' + d : 'День ' + d));
+    const row = mk('div', 'dlyi'), cnt = {};
+    for (const id of DLY_TABLE[d - 1]) cnt[id] = (cnt[id] || 0) + 1;
+    for (const id in cnt) {
+      const cell = mk('span', 'dlyit'), ic = id === '@cosm' ? 'dl_jacket' : id === '@rare' ? 'vhs_cook' : id;
+      cell.appendChild(iconEl(ic, 30));
+      cell.title = id === '@cosm' ? 'Вещь из коллекции «Dead Line»' : id === '@rare' ? 'Ценная находка: кассета, часы, фонарик или радио' : ITEMS[id].name;
+      if (cnt[id] > 1) cell.appendChild(mk('i', '', '×' + cnt[id]));
+      if (id[0] === '@') cell.classList.add('sp');
+      row.appendChild(cell);
+    }
+    c.appendChild(row);
+    if (DLY_TABLE[d - 1].includes('@rare')) c.appendChild(mk('small', '', 'ценная находка + коллекция'));
+    else if (DLY_TABLE[d - 1].includes('@cosm')) c.appendChild(mk('small', '', 'вещь из коллекции'));
+    box.appendChild(c);
+  }
+  const info = $('dlyInfo'), b = $('dlyGet');
+  b.hidden = !S.can;
+  if (S.back) info.textContent = 'Часы телефона переведены назад — награду сейчас забрать нельзя.';
+  else if (got) info.textContent = 'Забрал! Груз прилетит в твой мир, когда зайдёшь в игру: ищи красный дым, а с радио место будет на карте. Следующая награда — через ' + dlyLeft() + '.';
+  else if (S.can) info.textContent = S.p.day != null && S.next <= (S.p.step || 0) && S.p.step < DLY_STEPS ? 'Ты пропустил день — серия откатилась. Заходи каждый день, чтобы дойти до седьмого.' : 'Награда прилетит в твой мир грузом на парашюте.';
+  else info.textContent = 'Сегодня награда уже получена' + ((S.p.pend || []).length ? ' — она ждёт тебя в игре' : '') + '. Следующая — через ' + dlyLeft() + '.';
+}
+{
+  const nav = $('mAch') && $('mAch').parentNode;
+  if (nav) {
+    const b = btn('Награды', () => { backTo = 'menu'; renderDaily(); show('daily'); }, 'mbtn'); b.id = 'mDaily';
+    nav.insertBefore(b, $('mAch'));
+  }
+  $('dlyBack').addEventListener('click', () => { show('menu'); dlyMenuBtn(); });
+  $('dlyGet').addEventListener('click', () => { if (dlyClaim(false)) { try { SFX.ui(); } catch (e) {} renderDaily(true); dlyMenuBtn(); } });
+  dlyMenuBtn();
+}

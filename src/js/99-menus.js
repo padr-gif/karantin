@@ -14,6 +14,7 @@ const MENU_IC = (() => {
     book:I('<path d="M4 5.5A2 2 0 0 1 6 4h5v15H6a2 2 0 0 0-2 1.5zM20 5.5A2 2 0 0 0 18 4h-5v15h5a2 2 0 0 1 2 1.5z"/>'),
     cap:I('<path d="M2.5 9.5L12 5l9.5 4.5L12 14z"/><path d="M6.5 11.5v4c1.5 1.6 3.4 2.4 5.5 2.4s4-.8 5.5-2.4v-4M21.5 9.5v5"/>'),
     back:I('<path d="M15 5l-7 7 7 7"/>'),
+    gift:I('<rect x="3.5" y="9" width="17" height="11" rx="1.5"/><path d="M2.5 9h19M12 9v11M12 9c-1.5-3.5-6-4.5-6-1.8C6 9 12 9 12 9zM12 9c1.5-3.5 6-4.5 6-1.8C18 9 12 9 12 9z"/>'),
     check:I('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
     again:I('<path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"/><path d="M4 4.5v4h4"/>'),
     sun:I('<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>'),
@@ -31,7 +32,7 @@ function menuIcon(id, ic) {
   const s = mk('span', 'pz-t', txt); if (small) b.insertBefore(s, small); else b.appendChild(s);
 }
 {
-  const MAP = {mContinue:'play', mNew:'play', mTut:'cap', mLoad:'load', mSettings:'gear', mAch:'ach', mHelp:'book',
+  const MAP = {mContinue:'play', mNew:'play', mTut:'cap', mLoad:'load', mSettings:'gear', mAch:'ach', mDaily:'gift', dlyBack:'back', mHelp:'book',
     svBack:'back', setBack:'check', helpBack:'check', achBack:'back', cBack:'back', cStart:'play',
     bLife:'play', bAgain:'again', dLoad:'load', dMenu:'exit', bWake:'sun'};
   const apply = () => { for (const id in MAP) menuIcon(id, MAP[id]); };

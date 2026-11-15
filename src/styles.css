@@ -1749,3 +1749,21 @@ body.invglass>*:not(#game):not(#vig):not(#panel):not(#toasts):not(svg){visibilit
 .cv-btns{display:flex;gap:8px}
 .cv-btns button{appearance:none;padding:9px 18px;border-radius:10px;border:1px solid #3a4146;background:#242a2e;color:#efe6d2;font:600 15px/1 var(--f-display);letter-spacing:.04em;text-transform:uppercase;cursor:pointer}
 .cv-btns button:active{background:#30373c}
+
+/* ---- награды за вход (99-daily) ---- */
+.dlys{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.dlyc{display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 4px;border:1px solid var(--edge,rgba(255,255,255,.14));border-radius:11px;background:rgba(255,255,255,.03);text-align:center;min-width:0}
+.dlyc .dlyd{font-size:12.5px;letter-spacing:.04em;white-space:nowrap}
+.dlyc small{font-size:10.5px;color:var(--muted);line-height:1.2}
+.dlyi{display:flex;flex-wrap:wrap;justify-content:center;gap:3px}
+.dlyit{position:relative;display:inline-block}
+.dlyit .ico{display:block;background-repeat:no-repeat;filter:drop-shadow(0 2px 2px rgba(0,0,0,.55))}
+.dlyit.sp .ico{filter:drop-shadow(0 0 4px rgba(240,196,119,.9))}
+.dlyit i{position:absolute;right:-3px;bottom:-3px;font-style:normal;font-size:10px;font-weight:700;background:rgba(0,0,0,.75);border-radius:5px;padding:0 3px;color:#f2ead8}
+.dlyc.got{opacity:.45}.dlyc.got .dlyd{color:#7bc46a}
+.dlyc.now{border-color:#c99a2e;background:radial-gradient(circle at 50% 20%,rgba(201,154,46,.22),transparent 75%);box-shadow:0 0 0 1px rgba(201,154,46,.4),0 0 16px rgba(201,154,46,.25)}
+.dlyc.now .dlyd{color:#f0c477}
+.dlyc.big{background:linear-gradient(180deg,rgba(208,71,47,.14),rgba(255,255,255,.03))}
+.dlyinfo{margin:10px 2px 4px;font-size:13.5px;color:var(--muted);line-height:1.4}
+#mDaily.dly-has{border-color:#c99a2e!important;color:#f0c477!important;box-shadow:0 0 12px rgba(201,154,46,.35)}
+@media (max-height:440px),(max-width:620px){.dlys{gap:4px}.dlyc{padding:6px 2px}.dlyc .dlyd{font-size:11px}.dlyc small{display:none}}

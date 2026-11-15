@@ -1,5 +1,5 @@
 // ================= screens =================
-const SCREENS = ['menu', 'create', 'saves', 'settings', 'help', 'pause', 'dead', 'ach', 'story'];
+const SCREENS = ['menu', 'create', 'saves', 'settings', 'help', 'pause', 'dead', 'ach', 'story', 'daily'];
 let backTo = 'menu', svMode = 'load';
 function show(id) { for (const s of SCREENS) $(s).hidden = s !== id; }
 const visibleScreen = () => SCREENS.find(s => !$(s).hidden);
@@ -28,6 +28,7 @@ async function refreshMenu() {
   latestSlot = null; let best = 0;
   for (const s of SAVE_SLOTS) if (metas[s] && metas[s].t > best) { best = metas[s].t; latestSlot = s; }
   $('mContinue').hidden = !latestSlot;
+  if (typeof dlyMenuBtn === 'function') dlyMenuBtn();                     // награды за вход (99-daily)
   if (latestSlot) {                                                        // номер дня — только если в сохранении на руке электронные часы
     const m = metas[latestSlot], t = 'Продолжить' + (m.clk > 1 ? ' · день ' + m.day : ''), sp = $('mContinue').querySelector('.pz-t');
     if (sp) sp.textContent = t; else $('mContinue').textContent = t;
